@@ -1,0 +1,300 @@
+import db from '../../../infra/database/db';
+import type { AuthorizeNfceRequest, NfcePaymentInput, NfcePaymentMethod } from '../types/fiscal.types';
+import { storeRepository } from '../persistence/repositories/StoreRepository';
+import { salesRepository } from '../persistence/repositories/SalesRepository';
+import { fiscalDocumentRepository } from '../persistence/repositories/FiscalDocumentRepository';
+import { FiscalDocumentStatuses } from '../persistence/types/schema.types';
+import { fiscalNumberingService } from './FiscalNumberingService';
+
+type LegacySaleRow = {
+  id: number;
+  ambiente: number;
+  data_emissao: string;
+  valor_produtos: number;
+  valor_desconto: number;
+  valor_total: number;
+  valor_troco: number;
+  cliente_nome: string | null;
+  cpf_cliente: string | null;
+  cnpj_cliente: string | null;
+};
+
+type LegacySaleItemRow = {
+  id: number;
+  produto_id: string | null;
+  codigo_produto: string;
+  nome_produto: string;
+  gtin: string | null;
+  unidade_comercial: string;
+  quantidade_comercial: number;
+  valor_unitario_comercial: number;
+  valor_bruto: number;
+  valor_desconto: number;
+  subtotal: number;
+  ncm: string | null;
+  cfop: string | null;
+  cest: string | null;
+  origin_code: string | null;
+  csosn: string | null;
+  icms_cst: string | null;
+  pis_cst: string | null;
+  cofins_cst: string | null;
+};
+
+type LegacyPaymentRow = {
+  id: number;
+  tpag: string;
+  valor: number;
+  valor_recebido: number | null;
+  troco: number | null;
+  descricao_outro: string | null;
+};
+
+function mapPaymentMethod(tpag: string): NfcePaymentMethod {
+  const map: Record<string, NfcePaymentMethod> = {
+    '01': 'DINHEIRO',
+    '03': 'CREDITO',
+    '04': 'DEBITO',
+    '10': 'VOUCHER',
+    '17': 'PIX',
+  };
+
+  return map[tpag] ?? 'OUTROS';
+}
+
+function mapEnvironment(ambiente: number): 'production' | 'homologation' {
+  return ambiente === 1 ? 'production' : 'homologation';
+}
+
+function resolvePrimaryPaymentMethod(payments: NfcePaymentInput[]): NfcePaymentMethod {
+  if (payments.length === 0) {
+    return 'OUTROS';
+  }
+
+  const unique = new Set(payments.map((payment) => payment.method));
+  return unique.size === 1 ? payments[0].method : 'OUTROS';
+}
+
+export class PdvSaleFiscalAdapter {
+  private loadLegacySale(legacySaleId: number): LegacySaleRow {
+    const sale = db.prepare(`
+      SELECT
+        id, ambiente, data_emissao, valor_produtos, valor_desconto,
+        valor_total, valor_troco, cliente_nome, cpf_cliente, cnpj_cliente
+      FROM vendas
+      WHERE id = ?
+      LIMIT 1
+    `).get(legacySaleId) as LegacySaleRow | undefined;
+
+    if (!sale) {
+      throw new Error(`Venda ${legacySaleId} não encontrada para emissão fiscal.`);
+    }
+
+    return sale;
+  }
+
+  private loadLegacyItems(legacySaleId: number): LegacySaleItemRow[] {
+    return db.prepare(`
+      SELECT
+        vi.id,
+        vi.produto_id,
+        vi.codigo_produto,
+        vi.nome_produto,
+        vi.gtin,
+        vi.unidade_comercial,
+        vi.quantidade_comercial,
+        vi.valor_unitario_comercial,
+        vi.valor_bruto,
+        vi.valor_desconto,
+        vi.subtotal,
+        vi.ncm,
+        vi.cfop,
+        vi.cest,
+        snapshot.origin_code,
+        snapshot.csosn,
+        snapshot.icms_cst,
+        snapshot.pis_cst,
+        snapshot.cofins_cst
+      FROM venda_itens vi
+      LEFT JOIN sale_item_tax_snapshot snapshot
+        ON snapshot.sale_item_id = vi.id
+      WHERE vi.venda_id = ?
+      ORDER BY vi.id ASC
+    `).all(legacySaleId) as LegacySaleItemRow[];
+  }
+
+  private loadLegacyPayments(legacySaleId: number): LegacyPaymentRow[] {
+    return db.prepare(`
+      SELECT id, tpag, valor, valor_recebido, troco, descricao_outro
+      FROM venda_pagamento
+      WHERE venda_id = ?
+      ORDER BY id ASC
+    `).all(legacySaleId) as LegacyPaymentRow[];
+  }
+
+  buildAuthorizeRequest(
+    legacySaleId: number,
+    storeId: number,
+    series: number,
+    number: number
+  ): AuthorizeNfceRequest {
+    const sale = this.loadLegacySale(legacySaleId);
+    const store = storeRepository.findById(storeId);
+
+    if (!store) {
+      throw new Error(`Store fiscal ${storeId} não encontrada para emissão.`);
+    }
+
+    const items = this.loadLegacyItems(legacySaleId);
+    const payments = this.loadLegacyPayments(legacySaleId).map((payment): NfcePaymentInput => ({
+      method: mapPaymentMethod(payment.tpag),
+      amount: Number(payment.valor ?? 0),
+      receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : undefined,
+      changeAmount: payment.troco != null ? Number(payment.troco) : undefined,
+      description: payment.descricao_outro ?? null,
+    }));
+
+    return {
+      saleId: sale.id,
+      companyId: store.id,
+      number,
+      series,
+      environment: mapEnvironment(sale.ambiente),
+      paymentMethod: resolvePrimaryPaymentMethod(payments),
+      payments,
+      issuedAt: sale.data_emissao,
+      emitter: {
+        cnpj: store.cnpj,
+        stateRegistration: store.stateRegistration,
+        legalName: store.legalName,
+        tradeName: store.name,
+        taxRegimeCode: String(store.taxRegimeCode),
+        address: {
+          street: store.addressStreet,
+          number: store.addressNumber,
+          neighborhood: store.addressNeighborhood,
+          city: store.addressCity,
+          state: store.addressState,
+          zipCode: store.addressZipCode,
+          cityIbgeCode: store.addressCityIbgeCode,
+        },
+      },
+      customer: {
+        name: sale.cliente_nome ?? undefined,
+        cpfCnpj: sale.cpf_cliente ?? sale.cnpj_cliente ?? null,
+      },
+      items: items.map((item) => ({
+        id: item.produto_id ?? item.codigo_produto,
+        description: item.nome_produto,
+        unit: item.unidade_comercial,
+        quantity: Number(item.quantidade_comercial ?? 0),
+        unitPrice: Number(item.valor_unitario_comercial ?? 0),
+        grossAmount: Number(item.valor_bruto ?? 0),
+        discountAmount: Number(item.valor_desconto ?? 0),
+        totalAmount: Number(item.subtotal ?? 0),
+        gtin: item.gtin,
+        tax: {
+          ncm: item.ncm ?? '',
+          cfop: item.cfop ?? '',
+          cest: item.cest,
+          originCode: item.origin_code ?? '',
+          csosn: item.csosn,
+          icmsCst: item.icms_cst,
+          pisCst: item.pis_cst ?? '',
+          cofinsCst: item.cofins_cst ?? '',
+        },
+      })),
+      totals: {
+        productsAmount: Number(sale.valor_produtos ?? 0),
+        discountAmount: Number(sale.valor_desconto ?? 0),
+        finalAmount: Number(sale.valor_total ?? 0),
+        receivedAmount: payments.reduce((sum, payment) => sum + Number(payment.receivedAmount ?? payment.amount ?? 0), 0),
+        changeAmount: payments.reduce((sum, payment) => sum + Number(payment.changeAmount ?? 0), 0) || Number(sale.valor_troco ?? 0),
+      },
+      additionalInfo: `Venda PDV ${sale.id}`,
+      offlineFallbackMode: 'queue',
+      idempotencyKey: `nfce-sale-${sale.id}`,
+    };
+  }
+
+  mirrorLegacySale(legacySaleId: number) {
+    const store = storeRepository.findActive();
+    if (!store) {
+      throw new Error('Nenhuma store ativa encontrada para espelhar a venda fiscal.');
+    }
+
+    const sale = this.loadLegacySale(legacySaleId);
+    const items = this.loadLegacyItems(legacySaleId);
+    const payments = this.loadLegacyPayments(legacySaleId);
+    const externalReference = `legacy-sale:${legacySaleId}`;
+    const existing = salesRepository.findByExternalReference(externalReference);
+
+    const aggregate =
+      existing ??
+      salesRepository.create({
+        storeId: store.id,
+        customerName: sale.cliente_nome ?? null,
+        customerDocument: sale.cpf_cliente ?? sale.cnpj_cliente ?? null,
+        status: 'PAID',
+        subtotalAmount: Number(sale.valor_produtos ?? 0),
+        discountAmount: Number(sale.valor_desconto ?? 0),
+        totalAmount: Number(sale.valor_total ?? 0),
+        changeAmount: Number(sale.valor_troco ?? 0),
+        externalReference,
+        items: items.map((item) => ({
+          productId: item.produto_id ?? item.codigo_produto,
+          description: item.nome_produto,
+          unit: item.unidade_comercial,
+          quantity: Number(item.quantidade_comercial ?? 0),
+          unitPrice: Number(item.valor_unitario_comercial ?? 0),
+          grossAmount: Number(item.valor_bruto ?? 0),
+          discountAmount: Number(item.valor_desconto ?? 0),
+          totalAmount: Number(item.subtotal ?? 0),
+          ncm: item.ncm ?? null,
+          cfop: item.cfop ?? null,
+          cest: item.cest,
+          originCode: item.origin_code,
+          taxSnapshot: {
+            ncm: item.ncm,
+            cfop: item.cfop,
+            cest: item.cest,
+            originCode: item.origin_code,
+            csosn: item.csosn,
+            icmsCst: item.icms_cst,
+            pisCst: item.pis_cst,
+            cofinsCst: item.cofins_cst,
+          },
+        })),
+        payments: payments.map((payment) => ({
+          method: mapPaymentMethod(payment.tpag),
+          amount: Number(payment.valor ?? 0),
+          receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : Number(payment.valor ?? 0),
+          changeAmount: Number(payment.troco ?? 0),
+          integrationReference: payment.descricao_outro ?? null,
+        })),
+      });
+
+    const numbering = fiscalNumberingService.getOrReserveForSale(aggregate.sale.id, store.id);
+    const request = this.buildAuthorizeRequest(legacySaleId, store.id, numbering.series, numbering.number);
+    const persistedDocument = fiscalDocumentRepository.upsertBySale({
+      saleId: aggregate.sale.id,
+      storeId: store.id,
+      series: numbering.series,
+      number: numbering.number,
+      environment: request.environment,
+      status: FiscalDocumentStatuses.DRAFT,
+      issuedDatetime: request.issuedAt,
+      contingencyType: request.offlineFallbackMode === 'queue' ? 'queue' : null,
+      provider: null,
+    });
+
+    return {
+      request,
+      store,
+      mirroredSale: aggregate,
+      mirroredFiscalDocument: persistedDocument,
+    };
+  }
+}
+
+export const pdvSaleFiscalAdapter = new PdvSaleFiscalAdapter();
