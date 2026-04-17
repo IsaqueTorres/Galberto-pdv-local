@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fiscalDocumentRepository } from '../persistence/repositories/FiscalDocumentRepository.ts';
-import { storeRepository } from '../persistence/repositories/StoreRepository.ts';
-import { fiscalNumberingService } from './FiscalNumberingService.ts';
+import { fiscalDocumentRepository } from '../persistence/repositories/FiscalDocumentRepository';
+import { storeRepository } from '../persistence/repositories/StoreRepository';
+import { fiscalNumberingService } from './FiscalNumberingService';
 
 test('numbering reuses an already reserved fiscal number for the same sale', () => {
   const originalFindBySaleId = fiscalDocumentRepository.findBySaleId;

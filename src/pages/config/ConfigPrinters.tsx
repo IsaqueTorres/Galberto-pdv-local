@@ -22,6 +22,10 @@ export default function ConfigPrinters() {
   const [driver_version, setDriverVersion] = useState("");
   const [photo_path, setPhotoPath] = useState("");
   const [notes, setNotes] = useState("");
+  const [paperWidthMm, setPaperWidthMm] = useState(80);
+  const [contentWidthMm, setContentWidthMm] = useState(76);
+  const [baseFontSizePx, setBaseFontSizePx] = useState(14);
+  const [lineHeight, setLineHeight] = useState(1.55);
   const [is_default, setIsDefault] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -48,6 +52,10 @@ export default function ConfigPrinters() {
     setDriverVersion("");
     setPhotoPath("");
     setNotes("");
+    setPaperWidthMm(80);
+    setContentWidthMm(76);
+    setBaseFontSizePx(14);
+    setLineHeight(1.55);
     setIsDefault(true);
   };
 
@@ -66,6 +74,23 @@ export default function ConfigPrinters() {
       driver_name,
       driver_version,
       photo_path,
+      paper_width_mm: paperWidthMm,
+      content_width_mm: contentWidthMm,
+      base_font_size_px: baseFontSizePx,
+      line_height: lineHeight,
+      receipt_settings_json: JSON.stringify({
+        templateMode: "default",
+        thankYouMessage: "Documento impresso pelo Galberto PDV",
+        showLogo: false,
+        showLegalName: true,
+        showDocument: true,
+        showAddress: true,
+        showOperator: true,
+        showCustomer: true,
+        showItemCodes: true,
+        showPaymentBreakdown: true,
+        showFiscalSection: true,
+      }),
       notes,
       is_default: is_default ? 1 : 0,
     });
@@ -184,6 +209,65 @@ export default function ConfigPrinters() {
                   />
                 </div>
               </div>
+            </section>
+
+            <section className="bg-white rounded-xl shadow p-6">
+              <h2 className="text-lg font-semibold text-gray-700 mb-4">
+                Layout do Cupom
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Largura do papel (mm)</label>
+                  <input
+                    type="number"
+                    min="58"
+                    max="80"
+                    step="1"
+                    className="w-full border rounded-md bg-gray-100 text-gray-900 border-gray-300 p-2"
+                    value={paperWidthMm}
+                    onChange={(e) => setPaperWidthMm(Number(e.target.value || 80))}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Largura útil (mm)</label>
+                  <input
+                    type="number"
+                    min="48"
+                    max="76"
+                    step="1"
+                    className="w-full border rounded-md bg-gray-100 text-gray-900 border-gray-300 p-2"
+                    value={contentWidthMm}
+                    onChange={(e) => setContentWidthMm(Number(e.target.value || 76))}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Fonte base (px)</label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="22"
+                    step="0.5"
+                    className="w-full border rounded-md bg-gray-100 text-gray-900 border-gray-300 p-2"
+                    value={baseFontSizePx}
+                    onChange={(e) => setBaseFontSizePx(Number(e.target.value || 14))}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Espaçamento entre linhas</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="2.4"
+                    step="0.05"
+                    className="w-full border rounded-md bg-gray-100 text-gray-900 border-gray-300 p-2"
+                    value={lineHeight}
+                    onChange={(e) => setLineHeight(Number(e.target.value || 1.55))}
+                  />
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-gray-500">
+                Se o cupom estiver pequeno, aumente a fonte base para 16 ou 18 px. Se ficar apertado, suba também o espaçamento.
+              </p>
             </section>
 
             {/* INFORMAÇÕES TÉCNICAS */}

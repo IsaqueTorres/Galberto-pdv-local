@@ -630,6 +630,11 @@ function createTablePrinters() {
       driver_name TEXT,
       driver_version TEXT,
       photo_path TEXT,
+      paper_width_mm REAL NOT NULL DEFAULT 80,
+      content_width_mm REAL NOT NULL DEFAULT 76,
+      base_font_size_px REAL NOT NULL DEFAULT 13,
+      line_height REAL NOT NULL DEFAULT 1.5,
+      receipt_settings_json TEXT,
       is_default INTEGER DEFAULT 0,
       installed_at TEXT,
       notes TEXT
@@ -637,6 +642,28 @@ function createTablePrinters() {
   `;
   db.exec(sqlComand);
   logger.info("-> Tabela 'printers' checada/criada");
+}
+
+function ensurePrintersColumns() {
+  try {
+    db.exec(`ALTER TABLE printers ADD COLUMN paper_width_mm REAL NOT NULL DEFAULT 80`);
+  } catch {}
+
+  try {
+    db.exec(`ALTER TABLE printers ADD COLUMN content_width_mm REAL NOT NULL DEFAULT 76`);
+  } catch {}
+
+  try {
+    db.exec(`ALTER TABLE printers ADD COLUMN base_font_size_px REAL NOT NULL DEFAULT 13`);
+  } catch {}
+
+  try {
+    db.exec(`ALTER TABLE printers ADD COLUMN line_height REAL NOT NULL DEFAULT 1.5`);
+  } catch {}
+
+  try {
+    db.exec(`ALTER TABLE printers ADD COLUMN receipt_settings_json TEXT`);
+  } catch {}
 }
 
 function createTablePrinterLogs() {
@@ -759,12 +786,34 @@ function createTableCashRegisterSessions() {
       status TEXT NOT NULL CHECK (status IN ('OPEN', 'CLOSED')),
       opening_cash_amount REAL NOT NULL DEFAULT 0,
       closing_cash_amount REAL,
+      expected_cash_amount REAL,
+      closing_difference REAL,
+      opening_notes TEXT,
+      closing_notes TEXT,
       opened_at TEXT NOT NULL,
       closed_at TEXT
     );
   `;
   db.exec(sqlComand);
   logger.info("-> Tabela 'cash_register_sessions' checada/criada")
+}
+
+function ensureCashRegisterSessionsColumns() {
+  try {
+    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN expected_cash_amount REAL`);
+  } catch {}
+
+  try {
+    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN closing_difference REAL`);
+  } catch {}
+
+  try {
+    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN opening_notes TEXT`);
+  } catch {}
+
+  try {
+    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN closing_notes TEXT`);
+  } catch {}
 }
 
 function createTableCashRegisterMovements() {
@@ -831,6 +880,70 @@ function createTableIntegrations() {
   } catch (err) {
     console.error("Erro ao criar tabela:", err);
   }
+}
+
+function createTablePrintedDocuments() {
+  const sqlComand = `
+    CREATE TABLE IF NOT EXISTS printed_documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      document_type TEXT NOT NULL CHECK (document_type IN ('SALE_RECEIPT', 'CASH_OPENING_RECEIPT', 'CASH_CLOSING_RECEIPT')),
+      reference_type TEXT NOT NULL CHECK (reference_type IN ('SALE', 'CASH_SESSION')),
+      reference_id INTEGER NOT NULL,
+      sale_id INTEGER,
+      cash_session_id INTEGER,
+      printer_id INTEGER,
+      title TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('PENDING', 'PRINTED', 'FAILED')),
+      template_version TEXT NOT NULL DEFAULT 'thermal-v1',
+      payload_json TEXT NOT NULL,
+      content_html TEXT NOT NULL,
+      print_count INTEGER NOT NULL DEFAULT 0,
+      last_printed_at TEXT,
+      last_error TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sale_id) REFERENCES vendas(id) ON DELETE CASCADE,
+      FOREIGN KEY (cash_session_id) REFERENCES cash_register_sessions(id) ON DELETE CASCADE,
+      FOREIGN KEY (printer_id) REFERENCES printers(id) ON DELETE SET NULL,
+      UNIQUE(document_type, reference_type, reference_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_printed_documents_sale_id
+      ON printed_documents (sale_id);
+
+    CREATE INDEX IF NOT EXISTS idx_printed_documents_cash_session_id
+      ON printed_documents (cash_session_id);
+  `;
+
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'printed_documents' checada/criada");
+}
+
+function createTablePrintJobs() {
+  const sqlComand = `
+    CREATE TABLE IF NOT EXISTS print_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      printed_document_id INTEGER NOT NULL,
+      printer_id INTEGER,
+      trigger_source TEXT NOT NULL CHECK (trigger_source IN ('AUTO', 'MANUAL')),
+      status TEXT NOT NULL CHECK (status IN ('SUCCESS', 'FAILED', 'SKIPPED')),
+      error_message TEXT,
+      copies INTEGER NOT NULL DEFAULT 1,
+      attempted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      completed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (printed_document_id) REFERENCES printed_documents(id) ON DELETE CASCADE,
+      FOREIGN KEY (printer_id) REFERENCES printers(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_print_jobs_document_id
+      ON print_jobs (printed_document_id);
+
+    CREATE INDEX IF NOT EXISTS idx_print_jobs_status
+      ON print_jobs (status);
+  `;
+
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'print_jobs' checada/criada");
 }
 
 function createTableSyncState() {
@@ -918,6 +1031,7 @@ createTableVendas();
 createTableVendaItens();
 createTableCompany();
 createTablePrinters();
+ensurePrintersColumns();
 createTablePrinterLogs();
 createTableSession();
 createTableCnaes();
@@ -929,10 +1043,13 @@ createTableVendaPagamento();
 ensureVendaPagamentoColumns();
 createTableDocumentosFiscais();
 createTableCashRegisterSessions();
+ensureCashRegisterSessionsColumns();
 createTableCashRegisterMovements();
 createTableIntegrations();
 createTableSyncState();
 createTableSyncLogs();
+createTablePrintedDocuments();
+createTablePrintJobs();
 runFiscalPersistenceMigrations(db);
 
 //#endregion
@@ -1134,7 +1251,9 @@ function getCashSessionSummaryById(sessionId: number) {
       s.operator_id,
       s.pdv_id,
       s.opening_cash_amount,
+      s.closing_cash_amount,
       s.opened_at,
+      s.closed_at,
       COALESCE((
         SELECT SUM(m.amount)
         FROM cash_register_movements m
@@ -1389,14 +1508,15 @@ export function inserirVenda(
 export function insertCashSession(data: CashSessionData): CashRestoredSession {
   const stmt = db.prepare(`
     INSERT INTO cash_register_sessions
-      (operator_id, pdv_id, status, opening_cash_amount, opened_at)
-    VALUES(?, ?, 'OPEN', ?, datetime('now'))
+      (operator_id, pdv_id, status, opening_cash_amount, opening_notes, opened_at)
+    VALUES(?, ?, 'OPEN', ?, ?, datetime('now'))
       `);
 
   const result = stmt.run(
     data.operator_id,
     data.pdv_id,
-    data.opening_cash_amount
+    data.opening_cash_amount,
+    data.opening_notes?.trim() || null,
   );
 
   const session = getCashSessionSummaryById(result.lastInsertRowid as number);
@@ -1470,12 +1590,15 @@ export function registerCashWithdrawal(data: {
 }
 
 
-export function closeCashSession(data: CloseCashSessionData): void {
+export function closeCashSession(data: CloseCashSessionData): CashRestoredSession {
   const stmt = db.prepare(`
     UPDATE cash_register_sessions
     SET
-    status = 'CLOSED',
+      status = 'CLOSED',
       closing_cash_amount = ?,
+      expected_cash_amount = ?,
+      closing_difference = ?,
+      closing_notes = ?,
       closed_at = datetime('now')
       
     WHERE operator_id = ?
@@ -1485,6 +1608,9 @@ export function closeCashSession(data: CloseCashSessionData): void {
 
   const result = stmt.run(
     data.closing_cash_amount,
+    data.expected_cash_amount,
+    data.difference,
+    data.closing_notes?.trim() || null,
     data.operator_id,
     data.pdv_id
   );
@@ -1492,6 +1618,27 @@ export function closeCashSession(data: CloseCashSessionData): void {
   if (result.changes === 0) {
     throw new Error("Nenhum caixa aberto foi encontrado para fechamento.");
   }
+
+  const closedSession = db.prepare(`
+    SELECT id
+    FROM cash_register_sessions
+    WHERE operator_id = ?
+      AND pdv_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+  `).get(data.operator_id, data.pdv_id) as { id: number } | undefined;
+
+  if (!closedSession) {
+    throw new Error("Sessão de caixa não encontrada após o fechamento.");
+  }
+
+  const summary = getCashSessionSummaryById(closedSession.id);
+
+  if (!summary) {
+    throw new Error("Resumo da sessão de caixa não encontrado após o fechamento.");
+  }
+
+  return summary;
 }
 
 
@@ -1955,9 +2102,14 @@ export function addPrinter(dados: any) {
   }
 
   const stmt = db.prepare(`
-    INSERT INTO printers(name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path, notes, is_default)
-    VALUES(@selectedPrinter, @display_name, @brand, @model, @connection_type, @driver_name, @driver_version,
-      @photo_path, @notes, @is_default)
+    INSERT INTO printers(
+      name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
+      paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json, notes, is_default
+    )
+    VALUES(
+      @selectedPrinter, @display_name, @brand, @model, @connection_type, @driver_name, @driver_version,
+      @photo_path, @paper_width_mm, @content_width_mm, @base_font_size_px, @line_height, @receipt_settings_json, @notes, @is_default
+    )
       `);
 
   stmt.run(dados);
@@ -1965,7 +2117,8 @@ export function addPrinter(dados: any) {
 
 export function listarPrinters() {
   const stmt = db.prepare(`
-    SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path, notes, is_default, installed_at
+    SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
+           paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json, notes, is_default, installed_at
     FROM printers
     ORDER BY is_default DESC, id DESC
       `);
@@ -1974,12 +2127,44 @@ export function listarPrinters() {
 
 export function getPrinterPadrao() {
   const stmt = db.prepare(`
-    SELECT id, name, display_name, brand, model, connection_type, is_default
+    SELECT id, name, display_name, brand, model, connection_type, is_default,
+           paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json
     FROM printers
     WHERE is_default = 1
     LIMIT 1
   `);
   return stmt.get();
+}
+
+export function atualizarLayoutPrinter(id: number, dados: {
+  paper_width_mm: number;
+  content_width_mm: number;
+  base_font_size_px: number;
+  line_height: number;
+}) {
+  return db.prepare(`
+    UPDATE printers
+    SET
+      paper_width_mm = ?,
+      content_width_mm = ?,
+      base_font_size_px = ?,
+      line_height = ?
+    WHERE id = ?
+  `).run(
+    dados.paper_width_mm,
+    dados.content_width_mm,
+    dados.base_font_size_px,
+    dados.line_height,
+    id,
+  );
+}
+
+export function atualizarPersonalizacaoCupomPrinter(id: number, receiptSettingsJson: string) {
+  return db.prepare(`
+    UPDATE printers
+    SET receipt_settings_json = ?
+    WHERE id = ?
+  `).run(receiptSettingsJson, id);
 }
 
 export function removerPrinter(id: number) {

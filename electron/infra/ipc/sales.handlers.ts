@@ -3,6 +3,7 @@ import {
   finalizarVendaComBaixaEstoque, listarVendas, cancelarVenda, buscarVendaPorId, inserirVenda, salvarVendaPendente
 } from "../database/db";
 import { issueFiscalDocumentForSaleService } from "../../application/fiscal/services/IssueFiscalDocumentForSaleService";
+import { printDocumentService } from "../../application/printing";
 
 
 export default function registerSalesHandlers() {
@@ -12,11 +13,31 @@ export default function registerSalesHandlers() {
 
     const vendaId = typeof vendaPayload === 'number' ? vendaPayload : vendaPayload.vendaId;
     const fiscalResult = await issueFiscalDocumentForSaleService.execute(vendaId);
+    let printResult;
+
+    try {
+      printResult = await printDocumentService.printSaleReceipt(vendaId, {
+        triggerSource: "AUTO",
+        fiscal: fiscalResult.fiscal ?? null,
+      });
+    } catch (error) {
+      printResult = {
+        success: false,
+        status: 'FAILED',
+        documentId: 0,
+        printerId: null,
+        printerName: null,
+        message: error instanceof Error ? error.message : 'Falha ao imprimir o cupom da venda.',
+        jobId: 0,
+        reprint: false,
+      };
+    }
 
     return {
       success: true,
       vendaId,
       fiscal: fiscalResult.fiscal,
+      print: printResult,
     };
   })
 

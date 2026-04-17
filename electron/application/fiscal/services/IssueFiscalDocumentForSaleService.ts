@@ -24,22 +24,22 @@ export type IssueFiscalSaleResult = {
 
 export class IssueFiscalDocumentForSaleService {
   async execute(legacySaleId: number): Promise<IssueFiscalSaleResult> {
-    const mirrored = pdvSaleFiscalAdapter.mirrorLegacySale(legacySaleId);
-    const fiscalRequest = {
-      ...mirrored.request,
-      saleId: mirrored.mirroredSale.sale.id,
-      companyId: mirrored.store.id,
-      idempotencyKey: `nfce-sale-${mirrored.mirroredSale.sale.id}`,
-    };
-
-    fiscalEventRepository.create({
-      fiscalDocumentId: mirrored.mirroredFiscalDocument.id,
-      eventType: FiscalEventTypes.AUTHORIZATION_REQUESTED,
-      payload: { legacySaleId, request: fiscalRequest },
-      status: FiscalDocumentStatuses.TRANSMITTING,
-    });
-
     try {
+      const mirrored = pdvSaleFiscalAdapter.mirrorLegacySale(legacySaleId);
+      const fiscalRequest = {
+        ...mirrored.request,
+        saleId: mirrored.mirroredSale.sale.id,
+        companyId: mirrored.store.id,
+        idempotencyKey: `nfce-sale-${mirrored.mirroredSale.sale.id}`,
+      };
+
+      fiscalEventRepository.create({
+        fiscalDocumentId: mirrored.mirroredFiscalDocument.id,
+        eventType: FiscalEventTypes.AUTHORIZATION_REQUESTED,
+        payload: { legacySaleId, request: fiscalRequest },
+        status: FiscalDocumentStatuses.TRANSMITTING,
+      });
+
       const response = await fiscalService.authorizeNfce(fiscalRequest);
       const document = fiscalDocumentRepository.findBySaleId(mirrored.mirroredSale.sale.id);
 
@@ -71,13 +71,13 @@ export class IssueFiscalDocumentForSaleService {
       };
     } catch (error) {
       const fiscalError = normalizeFiscalError(error, 'ISSUE_FISCAL_SALE_FAILED');
-      const document = fiscalDocumentRepository.findBySaleId(mirrored.mirroredSale.sale.id);
+      const document = fiscalDocumentRepository.findBySaleId(legacySaleId);
 
       if (document) {
         fiscalEventRepository.create({
           fiscalDocumentId: document.id,
           eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
-          payload: { legacySaleId, request: fiscalRequest },
+          payload: { legacySaleId },
           response: {
             status: 'ERROR',
             statusCode: fiscalError.code,

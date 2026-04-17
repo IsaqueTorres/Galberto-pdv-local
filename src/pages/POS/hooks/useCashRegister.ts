@@ -14,8 +14,8 @@ type UseCashRegisterParams = {
   pdvId: string;
   vendaAtiva: boolean;
   onError: (message: string) => void;
-  onAfterCloseCash?: () => void;
-  onAfterOpenCash?: () => void;
+  onAfterCloseCash?: (result: { message: string; success: boolean; print?: { success: boolean; status: string; message: string } }) => void;
+  onAfterOpenCash?: (result: { message: string; success: boolean; print?: { success: boolean; status: string; message: string } }) => void;
 };
 
 export function useCashRegister({
@@ -139,11 +139,13 @@ const carregarSessaoAberta = useCallback(async () => {
     try {
       setSalvandoCaixa(true);
 
-      const session = await openCashSession({
+      const result = await openCashSession({
         operator_id: operatorId,
         pdv_id: pdvId,
         opening_cash_amount: valor,
+        opening_notes: observacaoAbertura,
       });
+      const session = result.session;
 
       setCashSessionId(session.id);
       setCaixaAberto(true);
@@ -153,7 +155,11 @@ const carregarSessaoAberta = useCallback(async () => {
       setTotalVendasDinheiro(Number(session.total_vendas_dinheiro || 0));
       onError("");
       setModalAbertura(false);
-      onAfterOpenCash?.();
+      onAfterOpenCash?.({
+        message: "Caixa aberto com sucesso.",
+        success: true,
+        print: result.print,
+      });
     } catch (error) {
       console.error("Erro ao abrir caixa:", error);
       onError("Não foi possível abrir o caixa.");
@@ -180,7 +186,7 @@ const carregarSessaoAberta = useCallback(async () => {
 
       const closedAt = new Date().toISOString();
 
-      await closeCashSession({
+      const result = await closeCashSession({
         operator_id: operatorId,
         pdv_id: pdvId,
         opening_cash_amount: valorAbertura,
@@ -189,6 +195,7 @@ const carregarSessaoAberta = useCallback(async () => {
         difference: valor - valorEsperadoFechamento,
         opened_at: abertoEm || new Date().toISOString(),
         closed_at: closedAt,
+        closing_notes: observacaoFechamento,
       });
 
       setCashSessionId(null);
@@ -204,7 +211,11 @@ const carregarSessaoAberta = useCallback(async () => {
       setObservacaoSangria("");
       setModalFechamento(false);
       onError("");
-      onAfterCloseCash?.();
+      onAfterCloseCash?.({
+        message: "Caixa fechado com sucesso.",
+        success: true,
+        print: result.print,
+      });
     } catch (error) {
       console.error("Erro ao fechar caixa:", error);
       onError("Erro ao fechar o caixa.");

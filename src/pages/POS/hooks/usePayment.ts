@@ -32,6 +32,12 @@ type UsePaymentParams = {
       statusCode?: string | null;
       statusMessage: string;
     };
+    print?: {
+      success: boolean;
+      status: string;
+      message: string;
+      printerName?: string | null;
+    };
   }) => void | Promise<void>;
 };
 

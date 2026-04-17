@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import { getCurrentSession } from "./infra/session/session.store";
 import {
   CashMovementData,
+  CashSessionActionResult,
   CashSessionData,
   CloseCashSessionData,
   CashRestoreSessionData,
@@ -91,6 +92,10 @@ contextBridge.exposeInMainWorld("api", {
   getPrinterPadrao: () => ipcRenderer.invoke("printer:get-padrao"),
   removerPrinter: (id: number) => ipcRenderer.invoke("printer:remover", id),
   definirPrinterPadrao: (id: number) => ipcRenderer.invoke("printer:definir-padrao", id),
+  atualizarLayoutPrinter: (id: number, dados: unknown) => ipcRenderer.invoke("printer:atualizar-layout", id, dados),
+  atualizarPersonalizacaoPrinter: (id: number, receiptSettingsJson: string) => ipcRenderer.invoke("printer:atualizar-personalizacao", id, receiptSettingsJson),
+  testPrint: (printerId: number) => ipcRenderer.invoke("printer:test-print", printerId),
+  reprintSaleReceipt: (saleId: number) => ipcRenderer.invoke("printer:reprint-sale-receipt", saleId),
 
   // Chamada IPC Segura para autenticação
   login: (username: string, password: string) => ipcRenderer.invoke("auth:login", username, password),
@@ -100,8 +105,8 @@ contextBridge.exposeInMainWorld("api", {
   removeUser: (id: number) => ipcRenderer.invoke("delete-user", id),
 
 
-  openCashSession: (data: CashSessionData) => ipcRenderer.invoke('open-cash-session', data),
-  closeCashSession: (data: CloseCashSessionData) => ipcRenderer.invoke('close-cash-session', data),
+  openCashSession: (data: CashSessionData): Promise<CashSessionActionResult> => ipcRenderer.invoke('open-cash-session', data),
+  closeCashSession: (data: CloseCashSessionData): Promise<CashSessionActionResult> => ipcRenderer.invoke('close-cash-session', data),
   getOpenCashSession: (data: CashRestoreSessionData) => ipcRenderer.invoke('get-open-cash-session', data),
   registerCashWithdrawal: (data: CashMovementData) => ipcRenderer.invoke('register-cash-withdrawal', data),
 

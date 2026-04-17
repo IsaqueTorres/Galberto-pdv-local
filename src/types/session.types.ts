@@ -16,6 +16,7 @@ export interface CashSessionData {
   operator_id: string;
   pdv_id: string;
   opening_cash_amount: number;
+  opening_notes?: string;
 }
 
 export interface CashMovementData {
@@ -36,6 +37,7 @@ export interface CloseCashSessionData {
   difference: number;
   opened_at: string;
   closed_at: string;
+  closing_notes?: string;
 }
 
 export interface CashRestoreSessionData {
@@ -52,6 +54,23 @@ export interface CashRestoredSession {
   total_sangrias: number;
   total_vendas_dinheiro: number;
   expected_cash_amount: number;
+  closing_cash_amount?: number | null;
+  closed_at?: string | null;
 }
 
+export interface PrintFeedback {
+  success: boolean;
+  status: "SUCCESS" | "FAILED" | "SKIPPED";
+  documentId: number;
+  printerId: number | null;
+  printerName: string | null;
+  message: string;
+  jobId: number;
+  reprint: boolean;
+}
+
+export interface CashSessionActionResult {
+  session: CashRestoredSession;
+  print: PrintFeedback;
+}
 

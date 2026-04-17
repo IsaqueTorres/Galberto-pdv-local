@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { buscarVendaPorId, listarVendas, retomarVendaNoPdv } from "./services/sales.service";
+import { buscarVendaPorId, listarVendas, reprintSaleReceipt, retomarVendaNoPdv } from "./services/sales.service";
 
 type SaleStatus = "FINALIZADA" | "ABERTA_PAGAMENTO" | "CANCELADA" | "ORCAMENTO" | "TESTE" | "PAUSADA";
 
@@ -79,6 +79,8 @@ export default function Sales() {
   const [statusFilter, setStatusFilter] = useState<"todos" | SaleStatus>("todos");
   const [selectedSale, setSelectedSale] = useState<SaleDetail | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [actionMessage, setActionMessage] = useState("");
+  const [actionTone, setActionTone] = useState<"success" | "error">("success");
 
   async function loadSales() {
     try {
@@ -140,6 +142,18 @@ export default function Sales() {
     } catch (err) {
       console.error("Erro ao retomar venda:", err);
       setError("Nao foi possivel retomar a venda.");
+    }
+  }
+
+  async function handleReprint(id: number) {
+    try {
+      const result = await reprintSaleReceipt(id);
+      setActionTone(result?.success ? "success" : "error");
+      setActionMessage(result?.message ?? "Não foi possível reimprimir o cupom.");
+    } catch (err) {
+      console.error("Erro ao reimprimir cupom:", err);
+      setActionTone("error");
+      setActionMessage("Não foi possível reimprimir o cupom.");
     }
   }
 
@@ -232,6 +246,18 @@ export default function Sales() {
             </div>
           )}
 
+          {actionMessage && (
+            <div
+              className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
+                actionTone === "success"
+                  ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border border-amber-200 bg-amber-50 text-amber-700"
+              }`}
+            >
+              {actionMessage}
+            </div>
+          )}
+
           <div className="overflow-hidden rounded-2xl border border-slate-200">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
@@ -270,6 +296,15 @@ export default function Sales() {
                             >
                               Detalhes
                             </button>
+                            {sale.status === "FINALIZADA" && (
+                              <button
+                                type="button"
+                                onClick={() => handleReprint(sale.id)}
+                                className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 font-medium text-blue-700 transition hover:bg-blue-100"
+                              >
+                                Reimprimir Cupom
+                              </button>
+                            )}
                             {(sale.status === "PAUSADA" || sale.status === "ABERTA_PAGAMENTO") && (
                               <button
                                 type="button"
@@ -305,13 +340,24 @@ export default function Sales() {
                 <h2 className="text-xl font-bold text-slate-900">Venda #{selectedSale.id}</h2>
                 <p className="text-sm text-slate-500">{formatDateTime(selectedSale.data_emissao)}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setDetailsOpen(false)}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Fechar
-              </button>
+              <div className="flex items-center gap-2">
+                {selectedSale.status === "FINALIZADA" && (
+                  <button
+                    type="button"
+                    onClick={() => handleReprint(selectedSale.id)}
+                    className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                  >
+                    Reimprimir Cupom
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setDetailsOpen(false)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
 
             <div className="grid gap-4 border-b border-slate-200 px-6 py-5 md:grid-cols-4">

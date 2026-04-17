@@ -1,6 +1,7 @@
 import { ProductFormData, insertStockMovement, ProdutoInput, Produto, ProdutoCarrinho } from "../pages/products/types/products.types";
 import {
     CashMovementData,
+    CashSessionActionResult,
     CashRestoredSession,
     CashRestoreSessionData,
     CashSessionData,
@@ -32,9 +33,9 @@ declare global {
             abrirVenda: (id: number) => Promise<number>;
             editSales: (id: number) => Promise<number>;
             buscarVendaPorId: (id: number) => Promise<any>;
-            openCashSession: (data: CashSessionData) => Promise<CashRestoredSession>;
+            openCashSession: (data: CashSessionData) => Promise<CashSessionActionResult>;
             getOpenCashSession: (data: CashRestoreSessionData) => Promise<CashRestoredSession | null>;
-            closeCashSession: (data: CloseCashSessionData) => Promise<void>;
+            closeCashSession: (data: CloseCashSessionData) => Promise<CashSessionActionResult>;
             registerCashWithdrawal: (data: CashMovementData) => Promise<CashRestoredSession>;
             preVendas: () => void;
             // PAGINA VENDAS
@@ -148,6 +149,10 @@ declare global {
             removerPrinter: (id: any) => Promise<number>;
             getPrinterPadrao: () => any;
             listarPrintersCadastradas: () => any;
+            atualizarLayoutPrinter: (id: number, dados: any) => Promise<any>;
+            atualizarPersonalizacaoPrinter: (id: number, receiptSettingsJson: string) => Promise<any>;
+            testPrint: (printerId: number) => Promise<any>;
+            reprintSaleReceipt: (saleId: number) => Promise<any>;
             abrirUsuario: (id: number) => Promise<number>;
             salvarFotoUsuario: (dados: FotoPerfil) => Promise<FotoPerfil>
 

@@ -138,8 +138,26 @@ export default function PdvRapido() {
     pdvId,
     vendaAtiva,
     onError: setErro,
-    onAfterCloseCash: resetarVenda,
-    onAfterOpenCash: () => inputCodigoRef.current?.focus(),
+    onAfterCloseCash: (result) => {
+      resetarVenda();
+      setAlertaEstoqueTitulo("Caixa fechado");
+      setAlertaEstoqueMensagem(
+        result.print
+          ? `${result.message} ${result.print.message}`
+          : result.message
+      );
+      setAlertaEstoqueOpen(true);
+    },
+    onAfterOpenCash: (result) => {
+      inputCodigoRef.current?.focus();
+      setAlertaEstoqueTitulo("Caixa aberto");
+      setAlertaEstoqueMensagem(
+        result.print
+          ? `${result.message} ${result.print.message}`
+          : result.message
+      );
+      setAlertaEstoqueOpen(true);
+    },
   });
 
   const {
@@ -178,7 +196,7 @@ export default function PdvRapido() {
       if (fiscalStatus === 'AUTHORIZED') {
         setAlertaEstoqueTitulo('Cupom fiscal autorizado');
         setAlertaEstoqueMensagem(
-          `NFC-e autorizada com sucesso. Protocolo: ${result.fiscal?.protocol ?? 'pendente'}.`
+          `NFC-e autorizada com sucesso. Protocolo: ${result.fiscal?.protocol ?? 'pendente'}. ${result.print?.message ?? ''}`.trim()
         );
         setAlertaEstoqueOpen(true);
         return;
@@ -187,7 +205,7 @@ export default function PdvRapido() {
       if (fiscalStatus === 'QUEUED') {
         setAlertaEstoqueTitulo('Cupom fiscal enfileirado');
         setAlertaEstoqueMensagem(
-          `A venda foi concluída e a NFC-e entrou na fila de reprocessamento. Motivo: ${result.fiscal?.statusMessage ?? 'sem detalhes'}.`
+          `A venda foi concluída e a NFC-e entrou na fila de reprocessamento. Motivo: ${result.fiscal?.statusMessage ?? 'sem detalhes'}. ${result.print?.message ?? ''}`.trim()
         );
         setAlertaEstoqueOpen(true);
         return;
@@ -196,10 +214,15 @@ export default function PdvRapido() {
       if (fiscalStatus === 'ERROR') {
         setAlertaEstoqueTitulo('Falha fiscal');
         setAlertaEstoqueMensagem(
-          `A venda foi concluída, mas a emissão fiscal falhou. ${result.fiscal?.statusMessage ?? 'Verifique a aba Fiscal.'}`
+          `A venda foi concluída, mas a emissão fiscal falhou. ${result.fiscal?.statusMessage ?? 'Verifique a aba Fiscal.'} ${result.print?.message ?? ''}`.trim()
         );
         setAlertaEstoqueOpen(true);
+        return;
       }
+
+      setAlertaEstoqueTitulo(result.print?.success ? 'Cupom impresso' : 'Venda concluída');
+      setAlertaEstoqueMensagem(result.print?.message ?? 'Venda concluída com sucesso.');
+      setAlertaEstoqueOpen(true);
     },
   });
 

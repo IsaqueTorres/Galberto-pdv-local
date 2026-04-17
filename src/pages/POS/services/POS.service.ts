@@ -1,17 +1,18 @@
 import {
   CashMovementData,
+  CashSessionActionResult,
   CashRestoredSession,
   CashRestoreSessionData,
   CashSessionData,
   CloseCashSessionData,
 } from "../../../types/session.types";
 
-export async function openCashSession(data: CashSessionData): Promise<CashRestoredSession> {
+export async function openCashSession(data: CashSessionData): Promise<CashSessionActionResult> {
     console.log("Abrindo caixa com dados: ", data);
     return window.api.openCashSession(data);
 }
 
-export async function closeCashSession(data: CloseCashSessionData): Promise<void> {
+export async function closeCashSession(data: CloseCashSessionData): Promise<CashSessionActionResult> {
     console.log("Fechando caixa com dados: ", data);
     return window.api.closeCashSession(data);
 }

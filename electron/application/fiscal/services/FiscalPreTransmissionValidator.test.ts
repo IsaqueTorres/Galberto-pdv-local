@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import db from '../../../infra/database/db.ts';
-import { storeRepository } from '../persistence/repositories/StoreRepository.ts';
-import { FiscalError } from '../errors/FiscalError.ts';
-import { fiscalPreTransmissionValidator } from './FiscalPreTransmissionValidator.ts';
-import type { AuthorizeNfceRequest, FiscalProviderConfig } from '../types/fiscal.types.ts';
+import db from '../../../infra/database/db';
+import { storeRepository } from '../persistence/repositories/StoreRepository';
+import { FiscalError } from '../errors/FiscalError';
+import { fiscalPreTransmissionValidator } from './FiscalPreTransmissionValidator';
+import type { AuthorizeNfceRequest, FiscalProviderConfig } from '../types/fiscal.types';
 
 const validConfig: FiscalProviderConfig = {
   provider: 'mock',

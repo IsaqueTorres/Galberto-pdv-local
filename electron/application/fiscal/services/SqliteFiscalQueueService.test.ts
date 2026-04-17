@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SqliteFiscalQueueService } from './SqliteFiscalQueueService.ts';
-import type { FiscalRepository } from '../contracts/FiscalRepository.ts';
+import { SqliteFiscalQueueService } from './SqliteFiscalQueueService';
+import type { FiscalRepository } from '../contracts/FiscalRepository';
 import type {
   AuthorizeNfceRequest,
   AuthorizeNfceResponse,
@@ -13,7 +13,7 @@ import type {
   FiscalQueueSummary,
   PersistedFiscalDocument,
   QueueEnqueueRequest,
-} from '../types/fiscal.types.ts';
+} from '../types/fiscal.types';
 
 class RepositoryStub implements FiscalRepository {
   queue = new Map<string, FiscalQueueItem>();
@@ -53,7 +53,7 @@ class RepositoryStub implements FiscalRepository {
     return item;
   }
   findQueueItemByIdempotencyKey(idempotencyKey: string): FiscalQueueItem | null {
-    return [...this.queue.values()].find((item) => item.idempotencyKey === idempotencyKey) ?? null;
+    return Array.from(this.queue.values()).find((item) => item.idempotencyKey === idempotencyKey) ?? null;
   }
   findQueueItemById(queueId: string): FiscalQueueItem | null {
     return this.queue.get(queueId) ?? null;
@@ -79,7 +79,7 @@ class RepositoryStub implements FiscalRepository {
       item.nextRetryAt = nextRetryAtIso;
     }
   }
-  listQueueItems(): FiscalQueueItem[] { return [...this.queue.values()]; }
+  listQueueItems(): FiscalQueueItem[] { return Array.from(this.queue.values()); }
   summarizeQueue(): FiscalQueueSummary { return { pending: 0, processing: 0, failed: 0, done: 0, nextRetryAt: null }; }
 }
 

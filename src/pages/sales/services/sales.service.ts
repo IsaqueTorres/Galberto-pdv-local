@@ -63,6 +63,10 @@ export function retomarVendaNoPdv(venda: unknown) {
   window.api.retomarVendaNoPdv(venda)
 }
 
+export async function reprintSaleReceipt(id: number) {
+  return window.api.reprintSaleReceipt(id)
+}
+
 export async function editSales(id: number) {
   return window.api.editSales(id)
 }
