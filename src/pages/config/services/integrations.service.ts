@@ -13,6 +13,7 @@ export const integrationsService = {
 
   // Sync completo: categorias → produtos
   async syncAll() {
+    console.log("syncronizando all")
     return await window.electron.integrations.syncAll();
   },
 
