@@ -59,7 +59,7 @@ export function CashOpenModal({
             autoFocus
             value={valorAbertura}
             onChange={(e) => setValorAbertura(parseFloat(e.target.value) || 0)}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-2xl font-black text-emerald-500 outline-none focus:border-emerald-500"
+            className="w-full bg-white border border-blue-200 rounded-2xl px-4 py-4 text-2xl font-black text-blue-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             placeholder="0,00"
           />
           <p className="text-xs text-zinc-500 mt-2">
@@ -75,7 +75,7 @@ export function CashOpenModal({
             value={observacaoAbertura}
             onChange={(e) => setObservacaoAbertura(e.target.value)}
             rows={5}
-            className="w-full resize-none bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-3 text-sm text-zinc-200 outline-none focus:border-emerald-500"
+            className="w-full resize-none bg-white border border-blue-200 rounded-2xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             placeholder="Ex.: caixa recebido do turno anterior, conferido sem divergência..."
           />
         </div>
@@ -84,7 +84,7 @@ export function CashOpenModal({
       <div className="mt-8 flex justify-end gap-3">
         <button
           onClick={onCloseApp}
-          className="px-5 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-black uppercase tracking-widest text-xs"
+          className="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black uppercase tracking-widest text-xs"
         >
           Sair do PDV
         </button>
@@ -92,7 +92,7 @@ export function CashOpenModal({
         <button
           onClick={onConfirm}
           disabled={salvandoCaixa}
-          className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black uppercase tracking-widest text-xs shadow-lg flex items-center gap-2"
+          className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-200 flex items-center gap-2"
         >
           <ShieldCheck size={16} />
           {salvandoCaixa ? "Abrindo..." : "Confirmar Abertura"}

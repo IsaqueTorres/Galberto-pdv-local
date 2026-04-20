@@ -512,12 +512,12 @@ export default function PdvRapido() {
   });
 
   return (
-    <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans overflow-hidden">
+    <div className="h-screen bg-blue-100 text-slate-900 flex flex-col font-sans overflow-hidden">
       <PdvHeader caixaAberto={caixaAberto} pdvId={pdvId} operatorName={user?.nome} />
 
       {!caixaAberto && <PdvClosedAlert onOpenCash={abrirModalAbertura} />}
 
-      <main className="flex flex-1 p-6 gap-6 overflow-hidden">
+      <main className="flex flex-1 p-6 gap-6 overflow-hidden bg-blue-100">
         <PdvSidebar
           inputCodigoRef={inputCodigoRef}
           codigoBarras={codigoBarras}

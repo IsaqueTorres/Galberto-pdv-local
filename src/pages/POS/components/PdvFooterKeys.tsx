@@ -32,7 +32,7 @@ export function PdvFooterKeys({
   onConfig,
 }: PdvFooterKeysProps) {
   return (
-    <footer className="bg-zinc-900 border-t border-zinc-800 p-3 grid grid-cols-6 lg:grid-cols-12 gap-2">
+    <footer className="bg-blue-950 border-t border-blue-900 p-3 grid grid-cols-6 lg:grid-cols-12 gap-2 shadow-[0_-8px_24px_rgba(30,64,175,0.28)]">
       <FunctionKey tecla="F1" label="Ajuda" color="zinc" onClick={onAjuda} />
       <FunctionKey tecla="F2" label="Buscar Vendas" color="zinc" onClick={onBuscarVendas} />
       <FunctionKey tecla="F3" label="Buscar Produtos" color="zinc" onClick={onBuscarProduto}/>

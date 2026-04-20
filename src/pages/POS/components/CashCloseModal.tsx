@@ -95,23 +95,23 @@ export function CashCloseModal({
             step="0.01"
             value={valorFechamento}
             onChange={(e) => setValorFechamento(parseFloat(e.target.value) || 0)}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-2xl font-black text-emerald-500 outline-none focus:border-emerald-500"
+            className="w-full bg-white border border-blue-200 rounded-2xl px-4 py-4 text-2xl font-black text-blue-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             placeholder="0,00"
           />
-          <div className="mt-3 rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-widest mb-2">
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center gap-2 text-slate-500 text-xs font-bold uppercase tracking-widest mb-2">
               <Calculator size={14} />
               Apuração
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">Diferença apurada</span>
+              <span className="text-slate-500">Diferença apurada</span>
               <span
                 className={`font-black ${
                   diferencaFechamento === 0
-                    ? "text-emerald-500"
+                    ? "text-blue-700"
                     : diferencaFechamento > 0
-                      ? "text-amber-400"
-                      : "text-rose-400"
+                      ? "text-blue-700"
+                      : "text-rose-600"
                 }`}
               >
                 {formatMoney(diferencaFechamento)}
@@ -128,7 +128,7 @@ export function CashCloseModal({
             value={observacaoFechamento}
             onChange={(e) => setObservacaoFechamento(e.target.value)}
             rows={8}
-            className="w-full resize-none bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-3 text-sm text-zinc-200 outline-none focus:border-emerald-500"
+            className="w-full resize-none bg-white border border-blue-200 rounded-2xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             placeholder="Ex.: diferença por troco, conferência realizada, caixa entregue ao responsável..."
           />
         </div>
@@ -137,7 +137,7 @@ export function CashCloseModal({
       <div className="mt-8 flex justify-end gap-3">
         <button
           onClick={onClose}
-          className="px-5 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-black uppercase tracking-widest text-xs"
+          className="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black uppercase tracking-widest text-xs"
         >
           Voltar
         </button>

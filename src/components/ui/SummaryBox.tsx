@@ -11,16 +11,16 @@ export function SummaryBox({
     <div
       className={`rounded-2xl border p-4 ${
         highlight
-          ? "bg-emerald-500/10 border-emerald-500/20"
-          : "bg-zinc-950/50 border-zinc-800"
+          ? "bg-blue-600 border-blue-700"
+          : "bg-slate-50 border-slate-200"
       }`}
     >
-      <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">
+      <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">
         {label}
       </div>
       <div
         className={`text-lg font-black tracking-tight ${
-          highlight ? "text-emerald-500" : "text-zinc-100"
+          highlight ? "text-white" : "text-slate-900"
         }`}
       >
         {value}

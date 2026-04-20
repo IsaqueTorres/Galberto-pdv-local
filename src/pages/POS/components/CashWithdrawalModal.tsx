@@ -57,7 +57,7 @@ export function CashWithdrawalModal({
         }}
       >
         <div>
-          <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1 mb-1 block">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-1 block">
             Valor da sangria
           </label>
           <input
@@ -67,32 +67,32 @@ export function CashWithdrawalModal({
             autoFocus
             value={valorSangria || ""}
             onChange={(e) => setValorSangria(parseFloat(e.target.value) || 0)}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-2xl font-black text-amber-400 outline-none focus:border-amber-400"
+            className="w-full bg-white border border-blue-200 rounded-2xl px-4 py-4 text-2xl font-black text-blue-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             placeholder="0,00"
           />
-          <p className="text-xs text-zinc-500 mt-2">
+          <p className="text-xs text-slate-500 mt-2">
             O valor retirado será descontado do caixa esperado no fechamento.
           </p>
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1 mb-1 block">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-1 block">
             Motivo da sangria
           </label>
           <textarea
             value={observacaoSangria}
             onChange={(e) => setObservacaoSangria(e.target.value)}
             rows={5}
-            className="w-full resize-none bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-3 text-sm text-zinc-200 outline-none focus:border-amber-400"
+            className="w-full resize-none bg-white border border-blue-200 rounded-2xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             placeholder="Ex.: retirada para cofre, excesso de dinheiro no caixa, recolhimento parcial..."
           />
         </div>
 
-        <div className="md:col-span-2 rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 flex items-start gap-3">
-          <Wallet className="text-zinc-500 mt-0.5" size={18} />
-          <div className="text-sm text-zinc-300">
+        <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 flex items-start gap-3">
+          <Wallet className="text-slate-500 mt-0.5" size={18} />
+          <div className="text-sm text-slate-700">
             Registre toda retirada de dinheiro para manter o fechamento coerente com o caixa físico.
-            O operador pode confirmar com <span className="font-black text-zinc-100">Enter</span>.
+            O operador pode confirmar com <span className="font-black text-slate-900">Enter</span>.
           </div>
         </div>
       </form>
@@ -100,7 +100,7 @@ export function CashWithdrawalModal({
       <div className="mt-8 flex justify-end gap-3">
         <button
           onClick={onClose}
-          className="px-5 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-black uppercase tracking-widest text-xs"
+          className="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black uppercase tracking-widest text-xs"
         >
           Voltar
         </button>
@@ -109,7 +109,7 @@ export function CashWithdrawalModal({
           type="submit"
           form="cash-withdrawal-form"
           disabled={salvandoCaixa}
-          className="px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-zinc-950 font-black uppercase tracking-widest text-xs shadow-lg flex items-center gap-2"
+          className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-200 flex items-center gap-2"
         >
           <ArrowUpCircle size={16} />
           {salvandoCaixa ? "Registrando..." : "Confirmar Sangria"}

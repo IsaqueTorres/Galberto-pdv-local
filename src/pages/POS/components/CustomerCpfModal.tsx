@@ -105,14 +105,14 @@ export function CustomerCpfModal({
           <SummaryBox label="Status" value="Nova venda" highlight />
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 mb-6">
-          <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 mb-6">
+          <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
             Primeiro produto da venda
           </div>
-          <div className="text-lg font-black text-white">
+          <div className="text-lg font-black text-slate-900">
             {produtoPendente?.nome || "Produto não identificado"}
           </div>
-          <div className="text-sm text-zinc-400 mt-1">
+          <div className="text-sm text-slate-500 mt-1">
             {produtoPendente
               ? `Valor unitário: ${formatMoney(produtoPendente.preco_venda)}`
               : "Aguardando produto"}
@@ -120,14 +120,14 @@ export function CustomerCpfModal({
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1 mb-1 block">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-1 block">
             CPF do cliente
           </label>
 
           <div className="relative">
             <IdCard
               size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
             />
             <input
               ref={cpfInputRef}
@@ -146,19 +146,19 @@ export function CustomerCpfModal({
                   onConfirm();
                 }
               }}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-12 pr-4 py-4 text-2xl font-black text-emerald-500 outline-none focus:border-emerald-500"
+              className="w-full bg-white border border-blue-200 rounded-2xl pl-12 pr-4 py-4 text-2xl font-black text-blue-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               placeholder="000.000.000-00"
             />
           </div>
 
           {erroCliente && (
-            <div className="mt-2 text-rose-400 text-sm font-semibold flex items-center gap-2">
+            <div className="mt-2 text-rose-600 text-sm font-semibold flex items-center gap-2">
               <AlertCircle size={14} />
               {erroCliente}
             </div>
           )}
 
-          <p className="text-xs text-zinc-500 mt-3">
+          <p className="text-xs text-slate-500 mt-3">
             Enter confirma o CPF. Escape segue sem identificação.
           </p>
         </div>
@@ -168,7 +168,7 @@ export function CustomerCpfModal({
             ref={noInfoButtonRef}
             type="button"
             onClick={onContinueWithoutCpf}
-            className="px-5 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-black uppercase tracking-widest text-xs"
+            className="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black uppercase tracking-widest text-xs"
           >
             NÃO INFORMAR
           </button>
@@ -177,7 +177,7 @@ export function CustomerCpfModal({
             ref={confirmButtonRef}
             type="button"
             onClick={onConfirm}
-            className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs shadow-lg flex items-center gap-2"
+            className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-200 flex items-center gap-2"
           >
             <CheckCircle2 size={16} />
             Confirmar Cliente

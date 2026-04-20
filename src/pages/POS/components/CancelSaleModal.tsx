@@ -17,9 +17,9 @@ export function CancelSaleModal({ open, onClose, onConfirm }: CancelSaleModalPro
       icon={Ban}
       onClose={onClose}
     >
-      <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-5 flex gap-3 mb-8">
-        <AlertTriangle className="text-rose-400 mt-0.5" size={18} />
-        <div className="text-sm text-zinc-200">
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 flex gap-3 mb-8">
+        <AlertTriangle className="text-rose-600 mt-0.5" size={18} />
+        <div className="text-sm text-slate-700">
           Esta ação gera um registro de venda cancelada para auditoria. Pressione <span className="font-black">Enter</span> para confirmar ou <span className="font-black">Esc</span> para voltar.
         </div>
       </div>
@@ -28,7 +28,7 @@ export function CancelSaleModal({ open, onClose, onConfirm }: CancelSaleModalPro
         <button
           type="button"
           onClick={onClose}
-          className="px-5 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-black uppercase tracking-widest text-xs"
+          className="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black uppercase tracking-widest text-xs"
         >
           Voltar
         </button>

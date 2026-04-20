@@ -53,19 +53,19 @@ const handleSubmit = async (e: React.FormEvent) => {
 };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-green-300 via-green-800 to-green-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-blue-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo / Título */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg shadow-blue-200">
             <span className="text-3xl font-bold text-white">G</span>
           </div>
-          <h1 className="text-3xl font-bold text-white">Galberto</h1>
-          <p className="text-slate-400 mt-2">Sistema PDV</p>
+          <h1 className="text-3xl font-bold text-blue-950">Galberto</h1>
+          <p className="text-blue-800 mt-2">Sistema PDV</p>
         </div>
 
         {/* Card de Login */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white rounded-3xl border border-blue-200 shadow-xl shadow-blue-200/70 p-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">
             Entrar no sistema
           </h2>
@@ -126,7 +126,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300
                        text-white font-semibold py-3 px-4 rounded-lg
                        transition-colors flex items-center justify-center gap-2"
             >

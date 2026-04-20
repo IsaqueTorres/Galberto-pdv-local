@@ -25,16 +25,16 @@ export function EditQuantityModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-4xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl animate-in zoom-in-95">
-        <h2 className="mb-6 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-500">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md rounded-4xl border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-900/20 animate-in zoom-in-95">
+        <h2 className="mb-6 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-700">
           <Package size={14} />
           Quantidade e Desconto
         </h2>
 
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-zinc-500">
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
               Quantidade do item
             </label>
             <input
@@ -49,12 +49,12 @@ export function EditQuantityModal({
                 if (e.key === "Enter") onConfirm();
                 if (e.key === "Escape") onClose();
               }}
-              className="w-full rounded-2xl border-2 border-zinc-800 bg-zinc-950 px-4 py-4 text-center text-3xl font-black text-white outline-none transition-all focus:border-emerald-500"
+              className="w-full rounded-2xl border-2 border-blue-200 bg-white px-4 py-4 text-center text-3xl font-black text-slate-900 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             />
           </div>
 
           <div>
-            <label className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+            <label className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
               <BadgePercent size={12} />
               Desconto total do item
             </label>
@@ -68,7 +68,7 @@ export function EditQuantityModal({
                 if (e.key === "Enter") onConfirm();
                 if (e.key === "Escape") onClose();
               }}
-              className="w-full rounded-2xl border-2 border-zinc-800 bg-zinc-950 px-4 py-4 text-center text-2xl font-black text-amber-400 outline-none transition-all focus:border-amber-400"
+              className="w-full rounded-2xl border-2 border-blue-200 bg-white px-4 py-4 text-center text-2xl font-black text-blue-700 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               placeholder="0,00"
             />
           </div>
@@ -78,7 +78,7 @@ export function EditQuantityModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl bg-zinc-800 py-3 text-[10px] font-bold uppercase text-zinc-400 transition-all hover:bg-zinc-700"
+            className="rounded-xl bg-slate-100 py-3 text-[10px] font-bold uppercase text-slate-600 transition-all hover:bg-slate-200"
           >
             Cancelar
           </button>
@@ -86,7 +86,7 @@ export function EditQuantityModal({
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-xl bg-emerald-600 py-3 text-[10px] font-bold uppercase text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-500"
+            className="rounded-xl bg-blue-600 py-3 text-[10px] font-bold uppercase text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700"
           >
             Aplicar
           </button>

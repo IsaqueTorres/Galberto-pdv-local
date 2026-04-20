@@ -12,35 +12,35 @@ export function PdvHeader({
   operatorName,
 }: PdvHeaderProps) {
   return (
-    <header className="bg-zinc-900 border-b border-zinc-800 px-6 py-3 flex justify-between items-center shadow-xl">
-      <div className="flex items-center gap-3">
+    <header className="bg-blue-600 border-b border-blue-700 px-6 py-3 flex justify-between items-center shadow-lg shadow-blue-200">
+      <div className="flex items-center gap-4">
         <div
-          className={`p-2 rounded-xl shadow-lg ${
+          className={`p-3 rounded-2xl shadow-lg ${
             caixaAberto
-              ? "bg-emerald-600 shadow-emerald-900/20"
-              : "bg-amber-600 shadow-amber-900/20"
+              ? "bg-blue-800 shadow-blue-900/20"
+              : "bg-blue-500 shadow-blue-900/20"
           }`}
         >
-          <ShoppingCart size={18} className="text-white" />
+          <ShoppingCart size={26} className="text-white" />
         </div>
 
         <div>
-          <h1 className="text-lg font-black tracking-tighter uppercase">
+          <h1 className="text-3xl font-black tracking-tight uppercase text-white leading-none">
             Galberto{" "}
-            <span className={caixaAberto ? "text-emerald-500" : "text-amber-500"}>
+            <span className="text-blue-100">
               PDV
             </span>
           </h1>
-          <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
+          <p className="text-[11px] uppercase tracking-widest text-blue-100 font-bold mt-1">
             {pdvId}
           </p>
         </div>
       </div>
 
       <div className="flex items-center gap-3 text-[10px] font-bold flex-wrap justify-end">
-        <div className="flex items-center gap-2 bg-zinc-800 px-3 py-1 rounded-full border border-zinc-700">
-          <User size={12} className="text-emerald-500" />
-          <span className="uppercase tracking-widest text-zinc-400">
+        <div className="flex items-center gap-2 bg-blue-700 px-3 py-1 rounded-full border border-blue-500">
+          <User size={12} className="text-blue-100" />
+          <span className="uppercase tracking-widest text-white">
             Operador: {operatorName || "Não identificado"}
           </span>
         </div>
@@ -48,13 +48,13 @@ export function PdvHeader({
         <div
           className={`flex items-center gap-2 px-3 py-1 rounded-full border ${
             caixaAberto
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
-              : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+              ? "bg-white border-blue-200 text-blue-700"
+              : "bg-rose-50 border-rose-200 text-rose-600"
           }`}
         >
           <div
             className={`w-1.5 h-1.5 rounded-full ${
-              caixaAberto ? "bg-emerald-500 animate-pulse" : "bg-rose-400"
+              caixaAberto ? "bg-blue-600 animate-pulse" : "bg-rose-400"
             }`}
           />
           {caixaAberto ? "CAIXA ABERTO" : "CAIXA FECHADO"}
