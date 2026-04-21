@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain, shell } from "electron"
 import { VITE_DEV_SERVER_URL } from '../../main'
 import path from 'node:path';
+import { currentUserHasPermission } from "../security/permission.guard";
 
 let viewVendaWindow: BrowserWindow | null = null;
 let viewUsuarioWindow: BrowserWindow | null = null;
@@ -9,6 +10,7 @@ let editUserWindow: BrowserWindow | null = null;
 let searchProductWindow: BrowserWindow | null = null;
 let configAppWindow: BrowserWindow | null = null;
 let searchSalesWindow: BrowserWindow | null = null;
+let pdvWindow: BrowserWindow | null = null;
 
 const __dirname = import.meta.dirname;
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -50,6 +52,31 @@ export default function registerWindowHandlers() {
     } else {
       // win.loadFile('dist/index.html')
       searchSalesWindow.loadFile(path.join('dist/index.html'))
+    }
+  }
+
+  function createPdvWindow() {
+    pdvWindow = new BrowserWindow({
+      title: "Galberto PDV",
+      width: 1280,
+      height: 820,
+      center: true,
+      maximizable: true,
+      webPreferences: {
+        preload: path.join(__dirname, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+
+    pdvWindow.maximize();
+
+    if (VITE_DEV_SERVER_URL) {
+      pdvWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv`);
+    } else {
+      pdvWindow.loadFile(path.join("dist/index.html")), {
+        hash: "/pdv",
+      };
     }
   }
 
@@ -123,7 +150,7 @@ export default function registerWindowHandlers() {
   }
 
   function createConfigWindow() {
-    editUserWindow = new BrowserWindow({
+    configAppWindow = new BrowserWindow({
       width: 764,
       height: 717,
       title: `Config PDV`,
@@ -136,10 +163,10 @@ export default function registerWindowHandlers() {
     })
 
     if (VITE_DEV_SERVER_URL) {
-      editUserWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/app`)
+      configAppWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/app`)
     } else {
       // win.loadFile('dist/index.html')
-      editUserWindow.loadFile(path.join('dist/index.html')), {
+      configAppWindow.loadFile(path.join('dist/index.html')), {
         hash: `/config/app`,
       }
     }
@@ -158,12 +185,29 @@ export default function registerWindowHandlers() {
 
   // Esse handler cria a janela config, dentro de pdv Rapido menu SHIFT + S, nao apagar!
   ipcMain.on("window:open:config", () => {
+    if (!currentUserHasPermission("config:access")) {
+      return;
+    }
+
     // condicao if que impede usuario de abrir varias janelas
     if (configAppWindow && !configAppWindow.isDestroyed()) {
       configAppWindow.focus();
       return;
     }
     createConfigWindow();
+  });
+
+  ipcMain.on("window:open:pdv", () => {
+    if (!currentUserHasPermission("pdv:access")) {
+      return;
+    }
+
+    if (pdvWindow && !pdvWindow.isDestroyed()) {
+      pdvWindow.focus();
+      return;
+    }
+
+    createPdvWindow();
   });
 
   // Essa janela esta localizada em algumas paginas, nao apagar
@@ -189,6 +233,10 @@ export default function registerWindowHandlers() {
   });
 
   ipcMain.on("usuarios:criar-janela-ver-usuario", (_, id: number) => {
+    if (!currentUserHasPermission("users:manage")) {
+      return;
+    }
+
     if (viewUsuarioWindow && !viewUsuarioWindow.isDestroyed()) {
       viewUsuarioWindow.focus();
       return;
@@ -197,6 +245,9 @@ export default function registerWindowHandlers() {
   });
 
   ipcMain.on("window:open:create-user", () => {
+    if (!currentUserHasPermission("users:manage")) {
+      return;
+    }
 
     // condicao if que impede usuario de abrir varias janelas
     if (cadastrarUsuarioWindow && !cadastrarUsuarioWindow.isDestroyed()) {
@@ -207,6 +258,10 @@ export default function registerWindowHandlers() {
   });
 
   ipcMain.on("window:open:edit-user", (_, id: number) => {
+    if (!currentUserHasPermission("users:manage")) {
+      return;
+    }
+
     //condicao if que impede usuario de abrir varias janelas
     if (editUserWindow && !editUserWindow.isDestroyed()) {
       editUserWindow.focus();

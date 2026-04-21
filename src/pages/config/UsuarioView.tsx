@@ -12,18 +12,20 @@ import {
   UserCog,
   Briefcase
 } from 'lucide-react'
-import euFoto from "../../images/users/eu2.jpg";
+import { editUser } from './services/users.service';
 
 export default function UsuarioView() {
     const { id } = useParams()
     const navigate = useNavigate()
     const [usuario, setUsuario] = useState<any | null>(null);
+    const [fotoComErro, setFotoComErro] = useState(false);
 
     useEffect(() => {
         if (!id) return
         buscarUsuario(Number(id))
             .then((data) => {
                 setUsuario(data)
+                setFotoComErro(false)
             })
             .catch((err) => {
                 console.error('Erro ao buscar usuario:', err)
@@ -38,6 +40,11 @@ export default function UsuarioView() {
             </div>
         )
     }
+
+    const nomeUsuario = String(usuario.nome ?? "Usuario");
+    const inicialUsuario = nomeUsuario.trim().charAt(0).toUpperCase() || "U";
+    const fotoPath = usuario.foto_path || usuario.foto;
+    const fotoUrl = fotoPath && !fotoComErro ? window.api.getFileUrl(fotoPath) : null;
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 md:p-8">
@@ -55,7 +62,10 @@ export default function UsuarioView() {
                         <span className="dark:text-zinc-300">Voltar</span>
                     </button>
 
-                    <button className="flex items-center gap-2 px-6 py-2.5 bg-zinc-900 dark:bg-emerald-600 hover:bg-zinc-800 dark:hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95">
+                    <button
+                        className="flex items-center gap-2 px-6 py-2.5 bg-zinc-900 dark:bg-emerald-600 hover:bg-zinc-800 dark:hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95"
+                        onClick={() => editUser(Number(usuario.id ?? id))}
+                    >
                         <Edit3 size={18} />
                         Editar Perfil
                     </button>
@@ -68,11 +78,18 @@ export default function UsuarioView() {
                         {/* FOTO DE PERFIL ESTILIZADA */}
                         <div className="relative group">
                             <div className="w-32 h-32 rounded-3xl overflow-hidden border-4 border-white dark:border-zinc-800 shadow-2xl">
-                                <img 
-                                    src={euFoto} 
-                                    alt="Foto de perfil" 
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                />
+                                {fotoUrl ? (
+                                    <img
+                                        src={fotoUrl}
+                                        alt={`Foto de ${nomeUsuario}`}
+                                        onError={() => setFotoComErro(true)}
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                    />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center bg-emerald-100 text-5xl font-black text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                                        {inicialUsuario}
+                                    </div>
+                                )}
                             </div>
                             <div className="absolute -bottom-2 -right-2 p-1.5 bg-emerald-500 rounded-lg text-white shadow-lg border-2 border-white dark:border-zinc-900">
                                 <UserCog size={16} />

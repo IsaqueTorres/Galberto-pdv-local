@@ -1,5 +1,5 @@
 
-import { FotoPerfil, UsuarioFiltro, UsuarioListagem } from "../types/Usuario";
+import { FotoPerfil, UsuarioFiltro, UsuarioListagem } from "../../../types/Usuario";
 
 
 export async function abrirUsuario(id: number) {

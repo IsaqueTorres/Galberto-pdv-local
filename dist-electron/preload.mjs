@@ -1,5 +1,6 @@
 "use strict";
 const electron = require("electron");
+const node_url = require("node:url");
 let currentSessionId = null;
 function getCurrentSession() {
   return currentSessionId;
@@ -10,6 +11,7 @@ electron.contextBridge.exposeInMainWorld("api", {
   getCurrentSession,
   searchSalesWindow: () => electron.ipcRenderer.send("window:open:sales-search"),
   //VALIDADO POS MIGRACAO, PADRAO DE IPC CALL
+  abrirPdvRapido: () => electron.ipcRenderer.send("window:open:pdv"),
   openConfigWindow: () => electron.ipcRenderer.send("window:open:config"),
   //VALIDADO POS MIGRACAO, PADRAO DE IPC CALL, PDV Rapido menu SHIFT + S
   openSearchProductWindow: () => electron.ipcRenderer.send("window:open:products-search"),
@@ -52,6 +54,7 @@ electron.contextBridge.exposeInMainWorld("api", {
   addUsuario: (dados) => electron.ipcRenderer.invoke("usuarios:add", dados),
   abrirUsuario: (id) => electron.ipcRenderer.send("usuarios:criar-janela-ver-usuario", id),
   salvarFotoUsuario: (dados) => electron.ipcRenderer.invoke("salvar-foto-usuario", dados),
+  getFileUrl: (filePath) => node_url.pathToFileURL(filePath).toString(),
   updateUser: (data) => electron.ipcRenderer.invoke("update-user", data),
   disableUser: (id) => electron.ipcRenderer.invoke("disable-user", id),
   enableUser: (id) => electron.ipcRenderer.invoke("enable-user", id),

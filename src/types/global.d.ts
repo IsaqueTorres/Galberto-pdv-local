@@ -59,7 +59,7 @@ declare global {
             }>
 
             //PAGINA CLIENTES
-            abrirPdvRapido?: () => void;
+            abrirPdvRapido: () => void;
             openCustomerRegistration
             CadastrarNovoCliente?: () => void;
             PesquisarCliente: () => void;
@@ -154,7 +154,8 @@ declare global {
             testPrint: (printerId: number) => Promise<any>;
             reprintSaleReceipt: (saleId: number) => Promise<any>;
             abrirUsuario: (id: number) => Promise<number>;
-            salvarFotoUsuario: (dados: FotoPerfil) => Promise<FotoPerfil>
+            salvarFotoUsuario: (dados: FotoPerfil) => Promise<string>
+            getFileUrl: (filePath: string) => string;
 
             // ESTOQUE
 

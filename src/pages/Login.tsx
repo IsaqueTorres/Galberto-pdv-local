@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Lock, User, AlertCircle, Loader2 } from "lucide-react";
 import { login } from "../services/auth.service";
 import { useSessionStore } from "../stores/session.store"
+import { normalizeRole } from "../types/permissions";
 
 export default function Login() {
     const navigate = useNavigate();
@@ -42,7 +43,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             openedAt: new Date().toISOString(),
             cashRegisterId: null,
         });
-        navigate("/pdv");
+        navigate(normalizeRole(usuario.role) === "cashier" ? "/pdv" : "/home");
 
     } catch (err) {
         setErro("Erro ao fazer login. Tente novamente.");

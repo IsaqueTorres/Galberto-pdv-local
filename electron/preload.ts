@@ -1,5 +1,6 @@
 import { FotoPerfil, Usuario } from "@/types/Usuario";
 import { contextBridge, ipcRenderer } from "electron";
+import { pathToFileURL } from "node:url";
 import { getCurrentSession } from "./infra/session/session.store";
 import {
   CashMovementData,
@@ -17,6 +18,7 @@ contextBridge.exposeInMainWorld("api", {
 
   getCurrentSession,
   searchSalesWindow: () => ipcRenderer.send("window:open:sales-search"), //VALIDADO POS MIGRACAO, PADRAO DE IPC CALL
+  abrirPdvRapido: () => ipcRenderer.send("window:open:pdv"),
   openConfigWindow: () => ipcRenderer.send("window:open:config"), //VALIDADO POS MIGRACAO, PADRAO DE IPC CALL, PDV Rapido menu SHIFT + S
   openSearchProductWindow: () => ipcRenderer.send("window:open:products-search"), //VALIDADO POS MIGRACAO, PADRAO DE IPC CALL
   openExternalUrl: (url: string) => ipcRenderer.invoke("app:open-external-url", url),
@@ -70,6 +72,7 @@ contextBridge.exposeInMainWorld("api", {
   addUsuario: (dados: any) => ipcRenderer.invoke("usuarios:add", dados),
   abrirUsuario: (id: number) => ipcRenderer.send("usuarios:criar-janela-ver-usuario", id),
   salvarFotoUsuario: (dados: FotoPerfil) => ipcRenderer.invoke("salvar-foto-usuario", dados),
+  getFileUrl: (filePath: string) => pathToFileURL(filePath).toString(),
   updateUser: (data: Usuario) => ipcRenderer.invoke("update-user", data),
   disableUser: (id: number) => ipcRenderer.invoke("disable-user", id),
   enableUser: (id: number) => ipcRenderer.invoke("enable-user", id),

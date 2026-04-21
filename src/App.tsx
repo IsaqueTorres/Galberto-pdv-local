@@ -11,6 +11,9 @@ import ConfigPrinters from "./pages/config/ConfigPrinters"
 import UsuarioView from "./pages/config/UsuarioView";
 import CadastrarUsuarios from "./pages/config/CadastrarUsuarios";
 import EditUser from "./pages/config/EditUser";
+import { RequirePermission } from "./components/RequirePermission";
+import Home from "./pages/Home";
+import Base from "./pages/Base";
 
 export default function App() {
   return (
@@ -20,28 +23,31 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Login />} />
 
+        <Route path="/pdv" element={<RequirePermission anyOf={["pdv:access"]}><PdvRapido /></RequirePermission>} />
 
-        <Route path="/config" element={<Config />} />
-        <Route path="/pdv" element={<PdvRapido />} />
+        <Route element={<RequirePermission anyOf={["home:access"]}><Base /></RequirePermission>}>
+          <Route path="/home" element={<Home />} />
+          <Route path="/config" element={<RequirePermission anyOf={["config:access"]}><Config /></RequirePermission>} />
+          <Route path="/config/app" element={<RequirePermission anyOf={["config:access"]}><Config /></RequirePermission>} />
+          <Route path="/products" element={<RequirePermission anyOf={["products:manage"]}><ProductsMainPage /></RequirePermission>} />
+          <Route path="/vendas" element={<RequirePermission anyOf={["sales:view"]}><Vendas /></RequirePermission>} />
+        </Route>
 
         {/* ROTAS DA PAGINA PRODUTOS */}
-        <Route path="/products" element={<ProductsMainPage />} />
-        <Route path="/products/search" element={<SearchProduct />} />
+        <Route path="/products/search" element={<RequirePermission anyOf={["products:view"]}><SearchProduct /></RequirePermission>} />
 
 
         {/* ROTAS DA PAGINA  VENDAS*/}
-        <Route path="/sales/search" element={<Vendas />} /> {/*Validado 23/03/2026 - CRIA PAGINA PESQUISAR VENDAS EM PDV RAPIDO, MENU F2 */}
-        <Route path="/vendas" element={<Vendas />} />
+        <Route path="/sales/search" element={<RequirePermission anyOf={["sales:view"]}><Vendas /></RequirePermission>} /> {/*Validado 23/03/2026 - CRIA PAGINA PESQUISAR VENDAS EM PDV RAPIDO, MENU F2 */}
 
 
 
         {/* ROTAS DA PAGINA USUARIOS */}
-        <Route path="/config/perfil/" element={<ConfigUsuarios />} />
-        <Route path="/config/app" element={<Config />} /> {/*Validado 31/03/2026 - CRIA PAGINA PESQUISAR CONFIG EM PDV RAPIDO, MENU F2 */}
-        <Route path="/config/printers/" element={<ConfigPrinters />} />
-        <Route path="/config/usuarios/:id" element={<UsuarioView />} />
-        <Route path="/config/usuarios/cadastrar_usuario" element={<CadastrarUsuarios />} />
-        <Route path="/config/users/edit_user/:id" element={<EditUser />} />
+        <Route path="/config/perfil/" element={<RequirePermission anyOf={["users:manage"]}><ConfigUsuarios /></RequirePermission>} />
+        <Route path="/config/printers/" element={<RequirePermission anyOf={["printers:manage"]}><ConfigPrinters /></RequirePermission>} />
+        <Route path="/config/usuarios/:id" element={<RequirePermission anyOf={["users:manage"]}><UsuarioView /></RequirePermission>} />
+        <Route path="/config/usuarios/cadastrar_usuario" element={<RequirePermission anyOf={["users:manage"]}><CadastrarUsuarios /></RequirePermission>} />
+        <Route path="/config/users/edit_user/:id" element={<RequirePermission anyOf={["users:manage"]}><EditUser /></RequirePermission>} />
 
       </Routes>
 

@@ -2438,7 +2438,7 @@ function criarUsuarioAdmin() {
 }
 function buscarUsuario(id) {
   const stmt = db.prepare(`
-    SELECT id, nome, funcao, email, username, ativo
+    SELECT id, nome, funcao, email, username, ativo, foto_path
     FROM usuarios
     WHERE id = ?
       `);
@@ -2486,11 +2486,12 @@ function selectUsers({ name, role, login, ativo, page = 1, limit = 20 }) {
 }
 function addUsuario(dados) {
   const stmt = db.prepare(`
-    INSERT INTO usuarios(nome, funcao, email, username, password, ativo)
-    VALUES(@nome, @funcao, @email, @username, @password, @ativo)
+    INSERT INTO usuarios(nome, funcao, email, username, password, ativo, foto_path)
+    VALUES(@nome, @funcao, @email, @username, @password, @ativo, @foto_path)
   `);
   return stmt.run({
     ...dados,
+    foto_path: dados.foto_path ?? null,
     password: hashSenha(dados.password)
   });
 }
@@ -4432,12 +4433,115 @@ function startFiscalQueueWorker(intervalMs = 15e3) {
     void fiscalQueueService.processNext();
   }, intervalMs);
 }
+let currentSessionId = null;
+function setCurrentSession(id) {
+  currentSessionId = id;
+}
+function getCurrentSession() {
+  return currentSessionId;
+}
+const ROLE_ALIASES = {
+  admin: ["admin", "administrador", "administrator", "dono", "owner"],
+  manager: ["gerente", "gestor", "manager", "supervisor"],
+  cashier: ["caixa", "operador", "operador de caixa", "atendente", "vendedor"],
+  stock: ["estoque", "almoxarife"],
+  unknown: []
+};
+const ROLE_PERMISSIONS = {
+  admin: [
+    "pdv:access",
+    "home:access",
+    "sales:view",
+    "products:view",
+    "products:manage",
+    "discounts:apply",
+    "cash:withdraw",
+    "config:access",
+    "users:manage",
+    "printers:manage",
+    "integrations:manage",
+    "fiscal:manage"
+  ],
+  manager: [
+    "pdv:access",
+    "home:access",
+    "sales:view",
+    "products:view",
+    "products:manage",
+    "discounts:apply",
+    "cash:withdraw",
+    "config:access",
+    "users:manage"
+  ],
+  cashier: ["pdv:access", "sales:view", "products:view"],
+  stock: ["home:access", "products:view", "products:manage"],
+  unknown: []
+};
+function normalizeRole(role) {
+  const normalized = String(role ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  for (const [roleKey, aliases] of Object.entries(ROLE_ALIASES)) {
+    if (aliases.includes(normalized)) return roleKey;
+  }
+  return "unknown";
+}
+function getPermissionsForRole(role) {
+  return ROLE_PERMISSIONS[normalizeRole(role)];
+}
+function hasPermission(role, permission) {
+  return getPermissionsForRole(role).includes(permission);
+}
+function getPermissionDeniedMessage(permission) {
+  const messages = {
+    "home:access": "Seu perfil não pode acessar a tela inicial.",
+    "pdv:access": "Seu perfil não pode acessar o caixa.",
+    "sales:view": "Seu perfil não pode consultar vendas.",
+    "products:view": "Seu perfil não pode consultar produtos.",
+    "products:manage": "Seu perfil não pode gerenciar produtos.",
+    "discounts:apply": "Somente gerente ou administrador pode conceder descontos.",
+    "cash:withdraw": "Somente gerente ou administrador pode registrar sangria.",
+    "config:access": "Seu perfil não pode acessar as configurações.",
+    "users:manage": "Somente gerente ou administrador pode gerenciar usuários.",
+    "printers:manage": "Somente gerente ou administrador pode gerenciar impressoras.",
+    "integrations:manage": "Somente gerente ou administrador pode gerenciar integrações.",
+    "fiscal:manage": "Somente gerente ou administrador pode gerenciar configurações fiscais."
+  };
+  return messages[permission];
+}
+function getCurrentUser() {
+  const sessionId = getCurrentSession();
+  if (!sessionId) return null;
+  const user = db.prepare(`
+    SELECT u.id, u.nome, u.funcao, u.ativo
+    FROM sessions s
+    INNER JOIN usuarios u ON u.id = s.user_id
+    WHERE s.id = ?
+      AND s.active = 1
+    LIMIT 1
+  `).get(sessionId);
+  return user ?? null;
+}
+function assertCurrentUserPermission(permission) {
+  const user = getCurrentUser();
+  if (!user || !user.ativo) {
+    throw new Error("Sessão inválida ou usuário inativo.");
+  }
+  if (!hasPermission(user.funcao, permission)) {
+    throw new Error(getPermissionDeniedMessage(permission));
+  }
+  return user;
+}
+function currentUserHasPermission(permission) {
+  const user = getCurrentUser();
+  return Boolean(user && user.ativo && hasPermission(user.funcao, permission));
+}
 function registerFiscalHandlers() {
   ipcMain.handle("fiscal:get-runtime-config", async () => {
+    assertCurrentUserPermission("fiscal:manage");
     return fiscalService.getConfig();
   });
   ipcMain.handle("fiscal:save-runtime-config", async (_event, input) => {
     try {
+      assertCurrentUserPermission("fiscal:manage");
       return await fiscalService.saveConfig(input);
     } catch (error) {
       const fiscalError = normalizeFiscalError(error, "FISCAL_CONFIG_SAVE_FAILED");
@@ -4453,10 +4557,12 @@ function registerFiscalHandlers() {
     }
   });
   ipcMain.handle("fiscal:get-certificate-info", async () => {
+    assertCurrentUserPermission("fiscal:manage");
     return fiscalCertificateService.getCertificateInfo(fiscalConfigService.getConfig());
   });
   ipcMain.handle("fiscal:authorize-nfce", async (_event, request) => {
     try {
+      assertCurrentUserPermission("fiscal:manage");
       return {
         success: true,
         data: await fiscalService.authorizeNfce(request)
@@ -4476,6 +4582,7 @@ function registerFiscalHandlers() {
   });
   ipcMain.handle("fiscal:cancel-nfce", async (_event, request) => {
     try {
+      assertCurrentUserPermission("fiscal:manage");
       return {
         success: true,
         data: await fiscalService.cancelNfce(request)
@@ -4495,6 +4602,7 @@ function registerFiscalHandlers() {
   });
   ipcMain.handle("fiscal:consult-status", async (_event, accessKey) => {
     try {
+      assertCurrentUserPermission("fiscal:manage");
       return {
         success: true,
         data: await fiscalService.consultStatusByAccessKey(accessKey)
@@ -4514,6 +4622,7 @@ function registerFiscalHandlers() {
   });
   ipcMain.handle("fiscal:get-danfe", async (_event, documentId) => {
     try {
+      assertCurrentUserPermission("fiscal:manage");
       return {
         success: true,
         data: await fiscalService.getDanfe(documentId)
@@ -4532,13 +4641,16 @@ function registerFiscalHandlers() {
     }
   });
   ipcMain.handle("fiscal:get-queue-summary", async () => {
+    assertCurrentUserPermission("fiscal:manage");
     return fiscalService.getQueueSummary();
   });
   ipcMain.handle("fiscal:list-queue", async (_event, limit = 20) => {
+    assertCurrentUserPermission("fiscal:manage");
     return fiscalService.listQueue(limit);
   });
   ipcMain.handle("fiscal:reprocess-queue-item", async (_event, queueId) => {
     try {
+      assertCurrentUserPermission("fiscal:manage");
       return {
         success: true,
         data: await fiscalService.reprocessQueueItem(queueId)
@@ -4557,6 +4669,7 @@ function registerFiscalHandlers() {
     }
   });
   ipcMain.handle("fiscal:process-next-queue-item", async () => {
+    assertCurrentUserPermission("fiscal:manage");
     return fiscalQueueService.processNext();
   });
 }
@@ -6137,8 +6250,19 @@ class PrintDocumentService {
   }
 }
 const printDocumentService = new PrintDocumentService();
+function payloadHasDiscount(vendaPayload) {
+  const totalDiscount = Number((vendaPayload == null ? void 0 : vendaPayload.valorDesconto) ?? (vendaPayload == null ? void 0 : vendaPayload.valor_desconto) ?? 0);
+  const itemDiscount = Array.isArray(vendaPayload == null ? void 0 : vendaPayload.itens) ? vendaPayload.itens.some((item) => Number((item == null ? void 0 : item.valor_desconto) ?? (item == null ? void 0 : item.valorDesconto) ?? 0) > 0) : false;
+  return totalDiscount > 0 || itemDiscount;
+}
+function assertDiscountPermission(vendaPayload) {
+  if (payloadHasDiscount(vendaPayload) && !currentUserHasPermission("discounts:apply")) {
+    throw new Error("Somente gerente ou administrador pode conceder descontos.");
+  }
+}
 function registerSalesHandlers() {
   ipcMain.handle("vendas:finalizar-com-baixa-estoque", async (_, vendaPayload) => {
+    assertDiscountPermission(vendaPayload);
     finalizarVendaComBaixaEstoque(vendaPayload);
     const vendaId = typeof vendaPayload === "number" ? vendaPayload : vendaPayload.vendaId;
     const fiscalResult = await issueFiscalDocumentForSaleService.execute(vendaId);
@@ -6177,10 +6301,12 @@ function registerSalesHandlers() {
     return buscarVendaPorId(vendaId);
   });
   ipcMain.handle("vendas:finalizada-pendente-pagamento", (_, venda) => {
+    assertDiscountPermission(venda);
     const vendaId = salvarVendaPendente(venda, "ABERTA_PAGAMENTO", (venda == null ? void 0 : venda.id) ?? null);
     return vendaId;
   });
   ipcMain.handle("vendas:pausar", (_, venda) => {
+    assertDiscountPermission(venda);
     const vendaId = salvarVendaPendente(venda, "PAUSADA", (venda == null ? void 0 : venda.id) ?? null);
     return vendaId;
   });
@@ -6190,7 +6316,9 @@ let viewUsuarioWindow = null;
 let cadastrarUsuarioWindow = null;
 let editUserWindow = null;
 let searchProductWindow = null;
+let configAppWindow = null;
 let searchSalesWindow = null;
+let pdvWindow = null;
 const __dirname$2 = import.meta.dirname;
 process.env.APP_ROOT = path__default.join(__dirname$2, "..");
 function registerWindowHandlers() {
@@ -6223,6 +6351,26 @@ function registerWindowHandlers() {
       searchSalesWindow.loadURL(`${VITE_DEV_SERVER_URL}#/sales/search`);
     } else {
       searchSalesWindow.loadFile(path__default.join("dist/index.html"));
+    }
+  }
+  function createPdvWindow() {
+    pdvWindow = new BrowserWindow({
+      title: "Galberto PDV",
+      width: 1280,
+      height: 820,
+      center: true,
+      maximizable: true,
+      webPreferences: {
+        preload: path__default.join(__dirname$2, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false
+      }
+    });
+    pdvWindow.maximize();
+    if (VITE_DEV_SERVER_URL) {
+      pdvWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv`);
+    } else {
+      pdvWindow.loadFile(path__default.join("dist/index.html"));
     }
   }
   function createViewVendaWindow(id) {
@@ -6278,7 +6426,7 @@ function registerWindowHandlers() {
     }
   }
   function createConfigWindow() {
-    editUserWindow = new BrowserWindow({
+    configAppWindow = new BrowserWindow({
       width: 764,
       height: 717,
       title: `Config PDV`,
@@ -6290,9 +6438,9 @@ function registerWindowHandlers() {
       }
     });
     if (VITE_DEV_SERVER_URL) {
-      editUserWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/app`);
+      configAppWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/app`);
     } else {
-      editUserWindow.loadFile(path__default.join("dist/index.html"));
+      configAppWindow.loadFile(path__default.join("dist/index.html"));
     }
   }
   ipcMain.on("open-search-sales-window", () => {
@@ -6303,7 +6451,24 @@ function registerWindowHandlers() {
     createSearchSalesWindow();
   });
   ipcMain.on("window:open:config", () => {
+    if (!currentUserHasPermission("config:access")) {
+      return;
+    }
+    if (configAppWindow && !configAppWindow.isDestroyed()) {
+      configAppWindow.focus();
+      return;
+    }
     createConfigWindow();
+  });
+  ipcMain.on("window:open:pdv", () => {
+    if (!currentUserHasPermission("pdv:access")) {
+      return;
+    }
+    if (pdvWindow && !pdvWindow.isDestroyed()) {
+      pdvWindow.focus();
+      return;
+    }
+    createPdvWindow();
   });
   ipcMain.on("window:open:products-search", () => {
     if (searchProductWindow && !searchProductWindow.isDestroyed()) {
@@ -6320,6 +6485,9 @@ function registerWindowHandlers() {
     createViewVendaWindow(id);
   });
   ipcMain.on("usuarios:criar-janela-ver-usuario", (_, id) => {
+    if (!currentUserHasPermission("users:manage")) {
+      return;
+    }
     if (viewUsuarioWindow && !viewUsuarioWindow.isDestroyed()) {
       viewUsuarioWindow.focus();
       return;
@@ -6327,6 +6495,9 @@ function registerWindowHandlers() {
     createViewUsuarioWindow(id);
   });
   ipcMain.on("window:open:create-user", () => {
+    if (!currentUserHasPermission("users:manage")) {
+      return;
+    }
     if (cadastrarUsuarioWindow && !cadastrarUsuarioWindow.isDestroyed()) {
       cadastrarUsuarioWindow.focus();
       return;
@@ -6334,6 +6505,9 @@ function registerWindowHandlers() {
     createCadastroUsuarioWindow();
   });
   ipcMain.on("window:open:edit-user", (_, id) => {
+    if (!currentUserHasPermission("users:manage")) {
+      return;
+    }
     if (editUserWindow && !editUserWindow.isDestroyed()) {
       editUserWindow.focus();
       return;
@@ -6399,34 +6573,43 @@ function registerProductHandlers() {
 }
 function registerPrinterhandlers() {
   ipcMain.handle("printer:buscar-impressoras", async () => {
+    assertCurrentUserPermission("printers:manage");
     const win2 = BrowserWindow.getAllWindows()[0];
     return win2.webContents.getPrintersAsync();
   });
   ipcMain.handle("printer:add-impressora", (_event, dados) => {
+    assertCurrentUserPermission("printers:manage");
     return addPrinter(dados);
   });
   ipcMain.handle("printer:listar-cadastradas", () => {
+    assertCurrentUserPermission("printers:manage");
     return listarPrinters();
   });
   ipcMain.handle("printer:get-padrao", () => {
     return getPrinterPadrao();
   });
   ipcMain.handle("printer:remover", (_event, id) => {
+    assertCurrentUserPermission("printers:manage");
     return removerPrinter(id);
   });
   ipcMain.handle("printer:definir-padrao", (_event, id) => {
+    assertCurrentUserPermission("printers:manage");
     return definirPrinterPadrao(id);
   });
   ipcMain.handle("printer:atualizar-layout", (_event, id, dados) => {
+    assertCurrentUserPermission("printers:manage");
     return atualizarLayoutPrinter(id, dados);
   });
   ipcMain.handle("printer:atualizar-personalizacao", (_event, id, receiptSettingsJson) => {
+    assertCurrentUserPermission("printers:manage");
     return atualizarPersonalizacaoCupomPrinter(id, receiptSettingsJson);
   });
   ipcMain.handle("printer:test-print", (_event, printerId) => {
+    assertCurrentUserPermission("printers:manage");
     return printDocumentService.printTestReceipt(printerId);
   });
   ipcMain.handle("printer:reprint-sale-receipt", (_event, saleId) => {
+    assertCurrentUserPermission("sales:view");
     return printDocumentService.reprintSaleReceipt(saleId);
   });
 }
@@ -6438,13 +6621,6 @@ function encerrarSessao(sessionId) {
     WHERE id = ?
   `).run(sessionId);
 }
-let currentSessionId = null;
-function setCurrentSession(id) {
-  currentSessionId = id;
-}
-function getCurrentSession() {
-  return currentSessionId;
-}
 function registerAuthHandlers() {
   ipcMain.handle("auth:login", (_event, username, password) => {
     const user = autenticarUsuario(username, password);
@@ -6453,6 +6629,7 @@ function registerAuthHandlers() {
   });
   ipcMain.handle("auth:buscar-usuario", (_, id) => {
     if (!id) throw new Error("ID inválido");
+    assertCurrentUserPermission("users:manage");
     return buscarUsuario(id);
   });
   ipcMain.handle("app:logoff-with-confirm", async () => {
@@ -6478,32 +6655,42 @@ function registerAuthHandlers() {
 }
 function registerUserHandlers() {
   ipcMain.handle("salvar-foto-usuario", async (_, dados) => {
+    assertCurrentUserPermission("users:manage");
     const userData = app.getPath("userData");
     const pasta = path__default.join(userData, "fotos");
     if (!fs$2.existsSync(pasta)) fs$2.mkdirSync(pasta);
-    const caminho = path__default.join(pasta, dados.nomeArquivo);
+    const extensao = path__default.extname(dados.nomeArquivo || "");
+    const baseName = path__default.basename(dados.nomeArquivo || "foto", extensao).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
+    const caminho = path__default.join(pasta, `${Date.now()}-${baseName}${extensao}`);
     fs$2.writeFileSync(caminho, Buffer.from(dados.buffer));
     return caminho;
   });
   ipcMain.handle("update-user", (_, data) => {
+    assertCurrentUserPermission("users:manage");
     return updateUser(data);
   });
   ipcMain.handle("disable-user", (_, id) => {
+    assertCurrentUserPermission("users:manage");
     return disableUser(id);
   });
   ipcMain.handle("enable-user", (_, id) => {
+    assertCurrentUserPermission("users:manage");
     return enableUser(id);
   });
   ipcMain.handle("user:update-password", (_event, id, newPassword) => {
+    assertCurrentUserPermission("users:manage");
     return alterarSenhaUsuario(id, newPassword);
   });
   ipcMain.handle("get-users", (_, params) => {
+    assertCurrentUserPermission("users:manage");
     return selectUsers(params);
   });
   ipcMain.handle("usuarios:add", (_event, dados) => {
+    assertCurrentUserPermission("users:manage");
     return addUsuario(dados);
   });
   ipcMain.handle("delete-user", (_event, id) => {
+    assertCurrentUserPermission("users:manage");
     return removerUsuario(id);
   });
 }
@@ -6552,6 +6739,7 @@ function registerPosHandlers() {
     return getOpenCashSession(data);
   });
   ipcMain.handle("register-cash-withdrawal", async (_event, data) => {
+    assertCurrentUserPermission("cash:withdraw");
     return registerCashWithdrawal(data);
   });
   ipcMain.on("pdv:selecionar-produto", (_event, produto) => {
@@ -7725,12 +7913,14 @@ class SyncAllFromBlingService {
 const syncAllFromBlingService = new SyncAllFromBlingService();
 function registerIntegrationHandlers() {
   ipcMain.handle("integrations:status", async (_event, integrationId) => {
+    assertCurrentUserPermission("integrations:manage");
     if (integrationId !== "bling") {
       return { connected: false };
     }
     return await blingOAuthService.getStatus();
   });
   ipcMain.handle("integrations:connect", async (_event, integrationId) => {
+    assertCurrentUserPermission("integrations:manage");
     if (integrationId !== "bling") {
       return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
     }
@@ -7742,6 +7932,7 @@ function registerIntegrationHandlers() {
     }
   });
   ipcMain.handle("integrations:disconnect", async (_event, integrationId) => {
+    assertCurrentUserPermission("integrations:manage");
     if (integrationId !== "bling") {
       return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
     }
@@ -7753,6 +7944,7 @@ function registerIntegrationHandlers() {
     }
   });
   ipcMain.handle("integrations:bling:sync-all", async () => {
+    assertCurrentUserPermission("integrations:manage");
     try {
       const result = await syncAllFromBlingService.execute();
       return { success: true, ...result };
@@ -7765,6 +7957,7 @@ function registerIntegrationHandlers() {
     }
   });
   ipcMain.handle("integrations:bling:sync", async () => {
+    assertCurrentUserPermission("integrations:manage");
     try {
       const result = await syncProductsFromBlingService.execute();
       return { success: true, ...result };
@@ -7777,6 +7970,7 @@ function registerIntegrationHandlers() {
     }
   });
   ipcMain.handle("integrations:bling:sync-categories", async () => {
+    assertCurrentUserPermission("integrations:manage");
     try {
       const result = await syncCategoriesFromBlingService.execute();
       return { success: true, ...result };
@@ -7789,24 +7983,31 @@ function registerIntegrationHandlers() {
     }
   });
   ipcMain.handle("integrations:bling:sync-status", () => {
+    assertCurrentUserPermission("integrations:manage");
     return syncStateRepository.get("bling", "products");
   });
   ipcMain.handle("integrations:bling:sync-status-categories", () => {
+    assertCurrentUserPermission("integrations:manage");
     return syncStateRepository.get("bling", "categories");
   });
   ipcMain.handle("integrations:bling:sync-logs", () => {
+    assertCurrentUserPermission("integrations:manage");
     return syncLogRepository.listByIntegration("bling", "products", 10);
   });
   ipcMain.handle("integrations:bling:sync-logs-categories", () => {
+    assertCurrentUserPermission("integrations:manage");
     return syncLogRepository.listByIntegration("bling", "categories", 10);
   });
   ipcMain.handle("integrations:bling:test", async () => {
+    assertCurrentUserPermission("integrations:manage");
     return await blingApiService.getProducts({ page: 1, limit: 5 });
   });
   ipcMain.handle("integrations:bling:test-categories", async () => {
+    assertCurrentUserPermission("integrations:manage");
     return await blingApiService.getCategories({ page: 1, limit: 5 });
   });
   ipcMain.handle("integrations:bling:test-icmp", async () => {
+    assertCurrentUserPermission("integrations:manage");
     return await blingApiService.ping();
   });
 }

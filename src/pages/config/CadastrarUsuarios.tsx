@@ -1,21 +1,25 @@
 import { Camera, User, Mail, KeyRound, AtSign } from 'lucide-react'; // Sugestão: use lucide-react para ícones
 import { useState, useRef } from 'react';
 import { addUsuario } from '../../services/auth.service';
+import { ROLE_OPTIONS } from '../../types/permissions';
 
 export default function CadastrarUsuarios() {
     const [fotoPreview, setFotoPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [novoUsuario, setNovoUsuario] = useState({
         nome: '',
-        role: '',
+        role: 'Caixa',
         email: '',
         login: '',
         senha: '',
         ativo: 1
     })
+    const selectedRole = ROLE_OPTIONS.find((role) => role.value === novoUsuario.role) ?? ROLE_OPTIONS[0];
+
     const adicionarUsuario = async () => {
+        let fotoPath: string | null = null;
         if (foto) {
-            await uploadFoto(foto)
+            fotoPath = await uploadFoto(foto)
         }
         await addUsuario({
             nome: novoUsuario.nome,
@@ -23,10 +27,12 @@ export default function CadastrarUsuarios() {
             email: novoUsuario.email,
             username: novoUsuario.login,
             password: novoUsuario.senha,
-            ativo: 1
+            ativo: 1,
+            foto_path: fotoPath,
         })
-        setNovoUsuario({ nome: '', role: '', email: '', login: '', senha: '', ativo: 1 })
+        setNovoUsuario({ nome: '', role: 'Caixa', email: '', login: '', senha: '', ativo: 1 })
         setFoto(null)
+        setFotoPreview(null)
         if (fileInputRef.current) {
             fileInputRef.current.value = ''
         }
@@ -36,18 +42,19 @@ export default function CadastrarUsuarios() {
         if (file) {
             // Cria uma URL temporária para o preview
             setFotoPreview(URL.createObjectURL(file));
-            // setFoto(file); // Sua função original
+            setFoto(file);
         }
     };
     const [foto, setFoto] = useState<File | null>(null)
 
-    async function uploadFoto(file: File): Promise<void> {
+    async function uploadFoto(file: File): Promise<string> {
         const buffer = await file.arrayBuffer();
-        await window.api.salvarFotoUsuario({
+        const savedPath = await window.api.salvarFotoUsuario({
             nomeArquivo: file.name,
             tipo: file.type,
             buffer: Array.from(new Uint8Array(buffer)),
         });
+        return String(savedPath);
     }
 
     return (
@@ -104,17 +111,28 @@ export default function CadastrarUsuarios() {
                                 />
                             </div>
                             <div className="md:col-span-2 space-y-1.5">
-                                <label className="text-[13px] font-medium text-gray-600 dark:text-gray-300 ml-1">Função</label>
+                                <label className="text-[13px] font-medium text-gray-600 dark:text-gray-300 ml-1">Perfil de acesso</label>
                                 <select
                                     value={novoUsuario.role}
                                     onChange={e => setNovoUsuario({ ...novoUsuario, role: e.target.value })}
                                     className="w-full px-4 py-3 rounded-xl bg-gray-50/80 dark:bg-zinc-800/80 border border-gray-200/80 dark:border-zinc-700 text-gray-800 dark:text-gray-100 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23A0AEC0%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2087.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%20100c3.6-3.6%205.4-7.8%205.4-12.8%200-5-1.8-9.3-5.4-12.9z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[right_1rem_center] bg-no-repeat pr-10"
                                 >
-                                    <option value="Vendedor">Vendedor</option>
-                                    <option value="Gerente">Gerente</option>
-                                    <option value="Admin">Administrador</option>
+                                    {ROLE_OPTIONS.map((role) => (
+                                        <option key={role.value} value={role.value}>
+                                            {role.label}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 dark:border-blue-900/40 dark:bg-blue-950/30">
+                            <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                                Permissões do perfil: {selectedRole.label}
+                            </div>
+                            <p className="mt-1 text-sm leading-5 text-blue-800 dark:text-blue-200">
+                                {selectedRole.description}
+                            </p>
                         </div>
 
                         {/* Email com Ícone */}

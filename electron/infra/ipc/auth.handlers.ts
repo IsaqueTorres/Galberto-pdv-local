@@ -4,6 +4,7 @@ import { autenticarUsuario } from "../../auth";
 import { encerrarSessao } from "../../../electron/session";
 import { logger } from "../../logger/logger";
 import { setCurrentSession, getCurrentSession } from "../session/session.store";
+import { assertCurrentUserPermission } from "../security/permission.guard";
 
 
 
@@ -17,6 +18,7 @@ export default function registerAuthHandlers() {
 
     ipcMain.handle("auth:buscar-usuario", (_, id: number) => {
         if (!id) throw new Error("ID inválido");
+        assertCurrentUserPermission("users:manage");
         return buscarUsuario(id);
     });
 

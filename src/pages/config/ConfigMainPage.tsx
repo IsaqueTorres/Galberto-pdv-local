@@ -1,49 +1,89 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import ConfigUsuarios from './ConfigUsuarios'
 import ConfigPrinters from './ConfigPrinters'
 import ConfigERP from './ConfigERP'
 import ConfigFiscal from './ConfigFiscal'
+import ConfigPerfis from './ConfigPerfis'
 import { Tab } from './components/Tab'
 import { AbaConfig } from './types/config.types'
+import { useSessionStore } from '../../stores/session.store'
+import { hasPermission, type Permission } from '../../types/permissions'
+
+type ConfigTabDefinition = {
+  key: AbaConfig;
+  label: string;
+  permission: Permission;
+  component: ReactNode;
+};
 
 export default function Config() {
+  const user = useSessionStore((state) => state.user);
   const [abaAtiva, setAbaAtiva] = useState<AbaConfig>('Usuarios')
+  const tabs = useMemo<ConfigTabDefinition[]>(() => [
+    {
+      key: 'Usuarios',
+      label: 'Usuários',
+      permission: 'users:manage',
+      component: <ConfigUsuarios />,
+    },
+    {
+      key: 'Perfis',
+      label: 'Perfis',
+      permission: 'users:manage',
+      component: <ConfigPerfis />,
+    },
+    {
+      key: 'Impressoras',
+      label: 'Impressoras',
+      permission: 'printers:manage',
+      component: <ConfigPrinters />,
+    },
+    {
+      key: 'Integracoes / ERP',
+      label: 'Integracoes / ERP',
+      permission: 'integrations:manage',
+      component: <ConfigERP />,
+    },
+    {
+      key: 'Fiscal',
+      label: 'Fiscal',
+      permission: 'fiscal:manage',
+      component: <ConfigFiscal />,
+    },
+  ], []);
+  const allowedTabs = tabs.filter((tab) => hasPermission(user?.role, tab.permission));
+  const activeTab = allowedTabs.find((tab) => tab.key === abaAtiva) ?? allowedTabs[0];
+
+  useEffect(() => {
+    if (activeTab && activeTab.key !== abaAtiva) {
+      setAbaAtiva(activeTab.key);
+    }
+  }, [abaAtiva, activeTab]);
 
   return (
-    <div className="h-full w-full bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <div className="h-full w-full bg-blue-100 text-blue-950">
       <div className="flex h-full flex-col">
         {/* Cabeçalho */}
-        <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/80 backdrop-blur-sm">
+        <div className="rounded-3xl border border-blue-200 bg-white/90 shadow-sm backdrop-blur-sm">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-6 py-5">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Configurações do sistema</h1>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <h1 className="text-2xl font-black tracking-tight text-blue-950">Configurações do sistema</h1>
+              <p className="text-sm text-blue-800">
                 Gerencie usuários, impressoras e integrações do PDV.
               </p>
             </div>
 
             {/* Tabs */}
             <div className="flex flex-wrap gap-2">
-              <Tab
-                label="Usuários"
-                ativa={abaAtiva === 'Usuarios'}
-                onClick={() => setAbaAtiva('Usuarios')}
-              />
-              <Tab
-                label="Impressoras"
-                ativa={abaAtiva === 'Impressoras'}
-                onClick={() => setAbaAtiva('Impressoras')}
-              />
-              <Tab
-                label="Integracoes / ERP"
-                ativa={abaAtiva === 'Integracoes / ERP'}
-                onClick={() => setAbaAtiva('Integracoes / ERP')}
-              />
-              <Tab
-                label="Fiscal"
-                ativa={abaAtiva === 'Fiscal'}
-                onClick={() => setAbaAtiva('Fiscal')}
-              />
+              {allowedTabs.map((tab) => (
+                <Tab
+                  key={tab.key}
+                  label={tab.label}
+                  ativa={activeTab?.key === tab.key}
+                  onClick={() => setAbaAtiva(tab.key)}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -51,12 +91,9 @@ export default function Config() {
         {/* Conteúdo */}
         <div className="flex-1 overflow-auto">
           <div className="mx-auto w-full max-w-7xl px-6 py-6">
-            <div className="min-h-[calc(100vh-180px)] rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="min-h-[calc(100vh-180px)] rounded-3xl border border-blue-200 bg-white shadow-sm">
               <div className="p-6 md:p-8">
-                {abaAtiva === 'Usuarios' && <ConfigUsuarios />}
-                {abaAtiva === 'Impressoras' && <ConfigPrinters />}
-                {abaAtiva === 'Integracoes / ERP' && <ConfigERP />}
-                {abaAtiva === 'Fiscal' && <ConfigFiscal />}
+                {activeTab?.component}
               </div>
             </div>
           </div>

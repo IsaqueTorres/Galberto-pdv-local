@@ -13,7 +13,8 @@ type PdvFooterKeysProps = {
   onCancelarVenda: (() => void) | undefined;
   onToggleCaixa: () => void;
   onSair: () => void;
-  onConfig: () => void;
+  onConfig: (() => void) | undefined;
+  canApplyDiscount: boolean;
 };
 
 export function PdvFooterKeys({
@@ -30,13 +31,14 @@ export function PdvFooterKeys({
   onToggleCaixa,
   onSair,
   onConfig,
+  canApplyDiscount,
 }: PdvFooterKeysProps) {
   return (
     <footer className="bg-blue-950 border-t border-blue-900 p-3 grid grid-cols-6 lg:grid-cols-12 gap-2 shadow-[0_-8px_24px_rgba(30,64,175,0.28)]">
       <FunctionKey tecla="F1" label="Ajuda" color="zinc" onClick={onAjuda} />
       <FunctionKey tecla="F2" label="Buscar Vendas" color="zinc" onClick={onBuscarVendas} />
       <FunctionKey tecla="F3" label="Buscar Produtos" color="zinc" onClick={onBuscarProduto}/>
-      <FunctionKey tecla="F4" label="Qtd / Desc" color="zinc" onClick={onAlterarQuantidade}/>
+      <FunctionKey tecla="F4" label={canApplyDiscount ? "Qtd / Desc" : "Qtd"} color="zinc" onClick={onAlterarQuantidade}/>
       <FunctionKey tecla="F5" label="Finalizar venda" color="emerald" onClick={onPagar} />
       <FunctionKey tecla="F6" label="Remover Item" color="rose" onClick={onExcluirItem} />
       <FunctionKey tecla="F7" label="Pausar Venda" color="yellow" onClick={onPausarVenda} />

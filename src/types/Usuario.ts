@@ -12,7 +12,10 @@ export interface Usuario {
   role: string;
   email: string;
   login: string;
-  foto:string;
+  foto?: string;
+  foto_path?: string | null;
+  username?: string;
+  funcao?: string;
   ativo: number;
 }
 

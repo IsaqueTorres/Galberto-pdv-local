@@ -27,6 +27,7 @@ import { useCashRegister } from "./hooks/useCashRegister";
 import { useCustomerSale } from "./hooks/useCustomerSale";
 import { usePdvKeyboardShortcuts } from "./hooks/usePdvKeyboardShortcuts";
 import { usePayment } from "./hooks/usePayment";
+import { hasPermission } from "../../types/permissions";
 
 export default function PdvRapido() {
   const DOCUMENTATION_URL = "https://www.hostsourcetecnologia.com.br/galberto/documentacao";
@@ -46,6 +47,9 @@ export default function PdvRapido() {
   const user = useSessionStore((state) => state.user);
   const operatorId = user?.id || "";
   const pdvId = "PDV-001";
+  const canAccessConfig = hasPermission(user?.role, "config:access");
+  const canApplyDiscount = hasPermission(user?.role, "discounts:apply");
+  const canRegisterCashWithdrawal = hasPermission(user?.role, "cash:withdraw");
 
   const [produtoAtual, setProdutoAtual] = useState<ProdutoPDV | null>(null);
   const [codigoBarras, setCodigoBarras] = useState("");
@@ -185,6 +189,7 @@ export default function PdvRapido() {
     totalDescontoItens: totalDesconto,
     clienteVenda,
     vendaAtualId: vendaPendenteId,
+    canApplyDiscount,
     onError: setErro,
     onVendaPersistida: setVendaPendenteId,
     cashSessionId,
@@ -486,7 +491,7 @@ export default function PdvRapido() {
     onAbrirEdicaoQuantidade: abrirEdicaoQuantidade,
     onFecharPagamento: fecharPagamento,
     onRemoverItem: removerItem,
-    onAbrirSangria: abrirModalSangria,
+    onAbrirSangria: canRegisterCashWithdrawal ? abrirModalSangria : () => setErro("Somente gerente ou administrador pode registrar sangria."),
     sangriaOpen: modalSangria,
     onFecharSangria: () => setModalSangria(false),
     onPausarVenda: handlePausarVenda,
@@ -552,12 +557,13 @@ export default function PdvRapido() {
         onAlterarQuantidade={caixaAberto ? abrirEdicaoQuantidade : undefined}
         onPagar={caixaAberto ? iniciarPagamento : undefined}
         onPausarVenda={caixaAberto ? handlePausarVenda : undefined}
-        onSangria={caixaAberto ? abrirModalSangria : undefined}
+        onSangria={caixaAberto && canRegisterCashWithdrawal ? abrirModalSangria : undefined}
         onExcluirItem={caixaAberto ? removerItem : undefined}
         onCancelarVenda={caixaAberto ? abrirConfirmacaoCancelamento : undefined}
         onToggleCaixa={caixaAberto ? abrirModalFechamento : abrirModalAbertura}
         onSair={fecharJanela}
-        onConfig={configWindow}
+        onConfig={canAccessConfig ? configWindow : undefined}
+        canApplyDiscount={canApplyDiscount}
       />
 
       <EditQuantityModal
@@ -569,6 +575,7 @@ export default function PdvRapido() {
         onDiscountChange={setNovoDesconto}
         onClose={() => setEditandoQtd(false)}
         onConfirm={confirmarEdicaoQuantidade}
+        canApplyDiscount={canApplyDiscount}
       />
 
       <PaymentModal
@@ -587,6 +594,7 @@ export default function PdvRapido() {
         pagamentoSuficiente={pagamentoSuficiente}
         onConfirm={confirmarPagamento}
         onClose={fecharPagamento}
+        canApplyDiscount={canApplyDiscount}
       />
 
       <CashOpenModal

@@ -22,6 +22,7 @@ export async function addUsuario(dados: {
   username: string;
   password: string;
   ativo: number;
+  foto_path?: string | null;
 }) {
   console.log(dados)
   return await window.api.addUsuario(dados);
@@ -31,4 +32,3 @@ export async function updateUserPassword(id: number, newPassword: string) {
   //console.log("Verificando valores da nova senha, id: ", id ," e password: ", newPassword)
   return await window.api.updateUserPassword(id, newPassword);
 }
-

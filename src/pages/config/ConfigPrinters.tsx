@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PlusCircle } from "lucide-react";
-import { buscarImpressoras, addPrinter } from "../../services/printers";
+import { buscarImpressoras, addPrinter } from "./services/printers";
 import PrintersList from "./PrintersList";
 
 type SubAba = "listar" | "cadastrar";

@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain } from 'electron';
 import { closeCashSession, insertCashSession, getOpenCashSession, registerCashWithdrawal } from "../database/db";
 import { CashRestoredSession, CashRestoreSessionData } from '@/types/session.types';
 import { printDocumentService } from "../../application/printing";
+import { assertCurrentUserPermission } from '../security/permission.guard';
 
 
 // Aqui você pode adicionar os handlers relacionados ao PDV (Ponto de Venda) POS
@@ -58,6 +59,7 @@ export default function registerPosHandlers() {
     });
 
     ipcMain.handle('register-cash-withdrawal', async (_event, data) => {
+        assertCurrentUserPermission('cash:withdraw');
         return registerCashWithdrawal(data);
     });
 

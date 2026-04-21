@@ -20,6 +20,7 @@ type UsePaymentParams = {
   totalDescontoItens: number;
   clienteVenda: ClienteVenda | null;
   vendaAtualId: number | null;
+  canApplyDiscount: boolean;
   onError: (message: string) => void;
   onVendaPersistida: (vendaId: number) => void;
   onAfterConfirmPayment: (result: {
@@ -50,6 +51,7 @@ export function usePayment({
   totalDescontoItens,
   clienteVenda,
   vendaAtualId,
+  canApplyDiscount,
   onError,
   onVendaPersistida,
   onAfterConfirmPayment,
@@ -62,10 +64,11 @@ export function usePayment({
 
   const valorPagoNumber = useMemo(() => Number(valorPago || 0), [valorPago]);
   const descontoVendaNumber = useMemo(() => {
+    if (!canApplyDiscount) return 0;
     const desconto = Number(descontoVenda || 0);
     if (Number.isNaN(desconto) || desconto <= 0) return 0;
     return Math.min(desconto, total);
-  }, [descontoVenda, total]);
+  }, [canApplyDiscount, descontoVenda, total]);
 
   const totalComDesconto = useMemo(
     () => Math.max(total - descontoVendaNumber, 0),

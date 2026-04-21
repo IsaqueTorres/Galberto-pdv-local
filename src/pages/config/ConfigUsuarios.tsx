@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { getUsers } from "../../services/users.service"
+import { getUsers } from "./services/users.service"
 import { Usuario } from '../../types/Usuario'
-import { abrirUsuario, abrirCadastroUsuarios, editUser } from '../../services/users.service'
-import { UserPlus, Search, RotateCcw, ShieldCheck, UserX, NotebookPenIcon } from 'lucide-react'
+import { abrirUsuario, abrirCadastroUsuarios } from './services/users.service'
+import { UserPlus, Search, Settings, RotateCcw, ShieldCheck, UserX } from 'lucide-react'
 
 
 export default function ConfigUsuarios() {
@@ -145,14 +145,7 @@ export default function ConfigUsuarios() {
                         className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
                         title="Ver"
                       >
-                        <Search size={18} />
-                      </button>
-                      <button
-                        onClick={() => editUser(u.id)}
-                        className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
-                        title="Editar"
-                      >
-                        <NotebookPenIcon size={18} />
+                        <Settings size={18} />
                       </button>
                     </div>
                   </td>

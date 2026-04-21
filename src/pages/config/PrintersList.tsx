@@ -8,7 +8,7 @@ import {
   listarPrintersCadastradas,
   removerPrinter,
   testPrint,
-} from "../../services/printers";
+} from "./services/printers";
 
 type PrinterCadastrada = {
   id: number;

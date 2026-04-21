@@ -2210,7 +2210,7 @@ export function criarUsuarioAdmin() {
 
 export function buscarUsuario(id: number) {
   const stmt = db.prepare(`
-    SELECT id, nome, funcao, email, username, ativo
+    SELECT id, nome, funcao, email, username, ativo, foto_path
     FROM usuarios
     WHERE id = ?
       `);
@@ -2286,14 +2286,16 @@ export function addUsuario(dados: {
   username: string;
   password: string;
   ativo: number;
+  foto_path?: string | null;
 }) {
   const stmt = db.prepare(`
-    INSERT INTO usuarios(nome, funcao, email, username, password, ativo)
-    VALUES(@nome, @funcao, @email, @username, @password, @ativo)
+    INSERT INTO usuarios(nome, funcao, email, username, password, ativo, foto_path)
+    VALUES(@nome, @funcao, @email, @username, @password, @ativo, @foto_path)
   `);
 
   return stmt.run({
     ...dados,
+    foto_path: dados.foto_path ?? null,
     password: hashSenha(dados.password)
   });
 }

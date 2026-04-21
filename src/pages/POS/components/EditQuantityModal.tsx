@@ -10,6 +10,7 @@ type EditQuantityModalProps = {
   onDiscountChange: (value: string) => void;
   onClose: () => void;
   onConfirm: () => void;
+  canApplyDiscount: boolean;
 };
 
 export function EditQuantityModal({
@@ -21,6 +22,7 @@ export function EditQuantityModal({
   onDiscountChange,
   onClose,
   onConfirm,
+  canApplyDiscount,
 }: EditQuantityModalProps) {
   if (!open) return null;
 
@@ -53,25 +55,31 @@ export function EditQuantityModal({
             />
           </div>
 
-          <div>
-            <label className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-              <BadgePercent size={12} />
-              Desconto total do item
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={discountValue}
-              onChange={(e) => onDiscountChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onConfirm();
-                if (e.key === "Escape") onClose();
-              }}
-              className="w-full rounded-2xl border-2 border-blue-200 bg-white px-4 py-4 text-center text-2xl font-black text-blue-700 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              placeholder="0,00"
-            />
-          </div>
+          {canApplyDiscount ? (
+            <div>
+              <label className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                <BadgePercent size={12} />
+                Desconto total do item
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={discountValue}
+                onChange={(e) => onDiscountChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onConfirm();
+                  if (e.key === "Escape") onClose();
+                }}
+                className="w-full rounded-2xl border-2 border-blue-200 bg-white px-4 py-4 text-center text-2xl font-black text-blue-700 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                placeholder="0,00"
+              />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              Desconto bloqueado para este perfil. Apenas gerente ou administrador pode conceder desconto.
+            </div>
+          )}
         </div>
 
         <div className="mt-8 grid grid-cols-2 gap-3">

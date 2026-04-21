@@ -18,6 +18,7 @@ type PaymentModalProps = {
   pagamentoSuficiente: boolean;
   onConfirm: () => void;
   onClose: () => void;
+  canApplyDiscount: boolean;
 };
 
 const paymentMethods: MeioPagamento[] = [
@@ -43,6 +44,7 @@ export function PaymentModal({
   pagamentoSuficiente,
   onConfirm,
   onClose,
+  canApplyDiscount,
 }: PaymentModalProps) {
   if (!open) return null;
 
@@ -93,20 +95,26 @@ export function PaymentModal({
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2 mb-1 block">
-              Desconto total da venda
-            </label>
-            <input
-              type="number"
-              value={descontoVenda}
-              onChange={(e) => setDescontoVenda(e.target.value)}
-              step="0.01"
-              min="0"
-              className="w-full bg-white border-2 border-blue-200 rounded-2xl px-6 py-4 text-2xl font-black text-blue-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              placeholder="0,00"
-            />
-          </div>
+          {canApplyDiscount ? (
+            <div>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2 mb-1 block">
+                Desconto total da venda
+              </label>
+              <input
+                type="number"
+                value={descontoVenda}
+                onChange={(e) => setDescontoVenda(e.target.value)}
+                step="0.01"
+                min="0"
+                className="w-full bg-white border-2 border-blue-200 rounded-2xl px-6 py-4 text-2xl font-black text-blue-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                placeholder="0,00"
+              />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              Desconto bloqueado para este perfil. Apenas gerente ou administrador pode conceder desconto.
+            </div>
+          )}
 
           {isCashPayment && (
             <div className="relative">

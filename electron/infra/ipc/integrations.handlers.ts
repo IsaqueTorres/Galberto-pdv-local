@@ -6,9 +6,11 @@ import { syncProductsFromBlingService } from '../../application/integrations/ser
 import { syncCategoriesFromBlingService } from '../../application/integrations/services/SyncCategoriesFromBlingService';
 import { syncStateRepository } from '../database/repositories/syncState.repository';
 import { syncLogRepository } from '../database/repositories/syncLog.repository';
+import { assertCurrentUserPermission } from '../security/permission.guard';
 
 export default function registerIntegrationHandlers() {
   ipcMain.handle('integrations:status', async (_event, integrationId: string) => {
+    assertCurrentUserPermission('integrations:manage');
     if (integrationId !== 'bling') {
       return { connected: false };
     }
@@ -16,6 +18,7 @@ export default function registerIntegrationHandlers() {
   });
 
   ipcMain.handle('integrations:connect', async (_event, integrationId: string) => {
+    assertCurrentUserPermission('integrations:manage');
     if (integrationId !== 'bling') {
       return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
     }
@@ -28,6 +31,7 @@ export default function registerIntegrationHandlers() {
   });
 
   ipcMain.handle('integrations:disconnect', async (_event, integrationId: string) => {
+    assertCurrentUserPermission('integrations:manage');
     if (integrationId !== 'bling') {
       return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
     }
@@ -41,6 +45,7 @@ export default function registerIntegrationHandlers() {
 
   // Sync completo: categorias → produtos (ordem obrigatória)
   ipcMain.handle('integrations:bling:sync-all', async () => {
+    assertCurrentUserPermission('integrations:manage');
     try {
       const result = await syncAllFromBlingService.execute();
       return { success: true, ...result };
@@ -55,6 +60,7 @@ export default function registerIntegrationHandlers() {
 
   // Sync individual: apenas produtos
   ipcMain.handle('integrations:bling:sync', async () => {
+    assertCurrentUserPermission('integrations:manage');
     try {
       const result = await syncProductsFromBlingService.execute();
       return { success: true, ...result };
@@ -69,6 +75,7 @@ export default function registerIntegrationHandlers() {
 
   // Sync individual: apenas categorias
   ipcMain.handle('integrations:bling:sync-categories', async () => {
+    assertCurrentUserPermission('integrations:manage');
     try {
       const result = await syncCategoriesFromBlingService.execute();
       return { success: true, ...result };
@@ -83,32 +90,39 @@ export default function registerIntegrationHandlers() {
 
   // Estados de sync
   ipcMain.handle('integrations:bling:sync-status', () => {
+    assertCurrentUserPermission('integrations:manage');
     return syncStateRepository.get('bling', 'products');
   });
 
   ipcMain.handle('integrations:bling:sync-status-categories', () => {
+    assertCurrentUserPermission('integrations:manage');
     return syncStateRepository.get('bling', 'categories');
   });
 
   // Logs de sync
   ipcMain.handle('integrations:bling:sync-logs', () => {
+    assertCurrentUserPermission('integrations:manage');
     return syncLogRepository.listByIntegration('bling', 'products', 10);
   });
 
   ipcMain.handle('integrations:bling:sync-logs-categories', () => {
+    assertCurrentUserPermission('integrations:manage');
     return syncLogRepository.listByIntegration('bling', 'categories', 10);
   });
 
   // Utilitários de teste
   ipcMain.handle('integrations:bling:test', async () => {
+    assertCurrentUserPermission('integrations:manage');
     return await blingApiService.getProducts({ page: 1, limit: 5 });
   });
 
   ipcMain.handle('integrations:bling:test-categories', async () => {
+    assertCurrentUserPermission('integrations:manage');
     return await blingApiService.getCategories({ page: 1, limit: 5 });
   });
 
   ipcMain.handle('integrations:bling:test-icmp', async () => {
+    assertCurrentUserPermission('integrations:manage');
     return await blingApiService.ping();
   });
 }

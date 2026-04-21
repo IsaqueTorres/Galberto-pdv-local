@@ -21,7 +21,8 @@ import {
     ChevronDown,
 
 } from 'lucide-react'
-import { updateUser, removeUser, disableUser, enableUser } from '../../services/users.service'
+import { updateUser, removeUser, disableUser, enableUser } from './services/users.service'
+import { ROLE_OPTIONS } from '../../types/permissions'
 
 
 export default function EditUser() {
@@ -224,10 +225,11 @@ export default function EditUser() {
                                         onChange={(e) => setUser({ ...user, funcao: e.target.value })}
                                         className="w-full bg-zinc-950 border-2 border-zinc-800 rounded-2xl pl-12 pr-10 py-3.5 text-sm font-bold text-zinc-200 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all appearance-none cursor-pointer"
                                     >
-                                        <option value="Caixa">Caixa</option>
-                                        <option value="Gerente">Gerente</option>
-                                        <option value="Admin">Admin</option>
-                                        <option value="Almoxarife">Almoxarife</option>
+                                        {ROLE_OPTIONS.map((role) => (
+                                            <option key={role.value} value={role.value}>
+                                                {role.label}
+                                            </option>
+                                        ))}
                                     </select>
 
                                     {/* Ícone customizado de seta para matar o visual padrão do navegador */}
