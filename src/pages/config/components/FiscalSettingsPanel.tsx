@@ -128,23 +128,23 @@ export function FiscalSettingsPanel() {
   ];
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="rounded-2xl border border-blue-300 bg-gradient-to-br from-blue-50 via-white to-blue-50/70 p-5 shadow-lg shadow-blue-900/10">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-800 dark:text-white">Camada Fiscal NFC-e</h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <h2 className="text-lg font-black text-blue-950">Camada Fiscal NFC-e</h2>
+          <p className="mt-1 text-sm font-medium text-blue-800">
             Configuração do provider fiscal, certificado e fila offline-first no Main Process.
           </p>
         </div>
         {config && (
-          <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+          <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
             {config.integrationId}
           </div>
         )}
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/30 dark:bg-rose-900/10 dark:text-rose-400">
+        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
           {error}
         </div>
       )}
@@ -230,10 +230,10 @@ export function FiscalSettingsPanel() {
             />
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex items-center justify-between rounded-xl border border-blue-300 bg-white px-4 py-3 shadow-md shadow-blue-900/5">
             <div>
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Persistência em `integrations`</p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="text-sm font-bold text-blue-950">Persistência em `integrations`</p>
+              <p className="text-xs font-medium text-blue-600">
                 Config salva em `raw_json` do registro `fiscal:nfce`. Segredos não voltam para o React.
               </p>
             </div>
@@ -241,7 +241,7 @@ export function FiscalSettingsPanel() {
               type="button"
               onClick={handleSave}
               disabled={loading || saving}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? 'Salvando...' : 'Salvar Fiscal'}
             </button>
@@ -249,16 +249,16 @@ export function FiscalSettingsPanel() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
-            <h3 className="text-sm font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Fila Fiscal</h3>
+          <div className="rounded-xl border border-blue-300 bg-gradient-to-br from-white to-blue-50 p-4 shadow-md shadow-blue-900/5">
+            <h3 className="text-sm font-black uppercase tracking-wide text-blue-600">Fila Fiscal</h3>
             <div className="mt-3 flex items-center justify-between gap-3">
-              <div className="text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="text-xs font-medium text-blue-700">
                 Certificado: {certificateInfo?.configured ? `${certificateInfo.type} · ${certificateInfo.alias ?? 'configurado'}` : 'não configurado'}
               </div>
               <button
                 type="button"
                 onClick={handleProcessNow}
-                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-400"
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
               >
                 Processar agora
               </button>
@@ -269,39 +269,39 @@ export function FiscalSettingsPanel() {
               <Metric label="Falhas" value={queueSummary?.failed ?? 0} tone="rose" />
               <Metric label="Concluídos" value={queueSummary?.done ?? 0} tone="zinc" />
             </div>
-            <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="mt-3 text-xs font-medium text-blue-600">
               Próxima tentativa: {queueSummary?.nextRetryAt ? new Date(queueSummary.nextRetryAt).toLocaleString('pt-BR') : '—'}
             </p>
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
-            <h3 className="text-sm font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Últimos Jobs</h3>
+          <div className="rounded-xl border border-blue-300 bg-gradient-to-br from-white to-blue-50 p-4 shadow-md shadow-blue-900/5">
+            <h3 className="text-sm font-black uppercase tracking-wide text-blue-600">Últimos Jobs</h3>
             <div className="mt-3 space-y-3">
               {queueItems.length === 0 && (
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">Nenhum item na fila fiscal.</p>
+                <p className="text-sm font-medium text-blue-600">Nenhum item na fila fiscal.</p>
               )}
               {queueItems.map((item) => (
-                <div key={item.id} className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                <div key={item.id} className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">{item.operation}</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      <p className="text-sm font-semibold text-blue-950">{item.operation}</p>
+                      <p className="text-xs font-medium text-blue-600">
                         Venda #{item.saleId} · Tentativas {item.attempts}/{item.maxAttempts}
                       </p>
                     </div>
-                    <span className="rounded-full bg-zinc-100 px-2 py-1 text-[11px] font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                    <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-blue-700">
                       {item.status}
                     </span>
                   </div>
                   {item.lastErrorMessage && (
-                    <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{item.lastErrorMessage}</p>
+                    <p className="mt-2 text-xs font-medium text-rose-600">{item.lastErrorMessage}</p>
                   )}
-                  <div className="mt-3 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                  <div className="mt-3 flex items-center justify-between text-xs font-medium text-blue-600">
                     <span>{new Date(item.createdAt).toLocaleString('pt-BR')}</span>
                     <button
                       type="button"
                       onClick={() => handleRetry(item.id)}
-                      className="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                      className="font-semibold text-blue-600 hover:text-blue-800"
                     >
                       Reprocessar
                     </button>
@@ -330,13 +330,13 @@ function SelectCard({
   disabled?: boolean;
 }) {
   return (
-    <label className="block rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
-      <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{label}</span>
+    <label className="block rounded-xl border border-blue-300 bg-white p-4 shadow-md shadow-blue-900/5">
+      <span className="mb-2 block text-xs font-black uppercase tracking-wide text-blue-600">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none ring-0 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+        className="w-full rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2 text-sm font-medium text-blue-950 outline-none ring-0 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -362,14 +362,14 @@ function InputCard({
   type?: string;
 }) {
   return (
-    <label className="block rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
-      <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{label}</span>
+    <label className="block rounded-xl border border-blue-300 bg-white p-4 shadow-md shadow-blue-900/5">
+      <span className="mb-2 block text-xs font-black uppercase tracking-wide text-blue-600">{label}</span>
       <input
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+        className="w-full rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2 text-sm font-medium text-blue-950 placeholder:text-blue-300 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
       />
     </label>
   );
@@ -385,15 +385,15 @@ function Metric({
   tone: 'emerald' | 'blue' | 'rose' | 'zinc';
 }) {
   const tones = {
-    emerald: 'text-emerald-600 dark:text-emerald-400',
-    blue: 'text-blue-600 dark:text-blue-400',
-    rose: 'text-rose-600 dark:text-rose-400',
-    zinc: 'text-zinc-700 dark:text-zinc-300',
+    emerald: 'text-emerald-600',
+    blue: 'text-blue-600',
+    rose: 'text-rose-600',
+    zinc: 'text-blue-950',
   };
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{label}</p>
+    <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
+      <p className="text-[11px] font-black uppercase tracking-wide text-blue-500">{label}</p>
       <p className={`mt-2 text-2xl font-black ${tones[tone]}`}>{value}</p>
     </div>
   );

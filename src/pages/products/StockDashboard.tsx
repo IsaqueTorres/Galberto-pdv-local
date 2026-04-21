@@ -107,8 +107,8 @@ export default function StockDashboard() {
     <section className="animate-in fade-in duration-500">
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-800 dark:text-white">Painel de Estoque</h2>
-          <p className="text-sm text-gray-500 dark:text-zinc-400">
+          <h2 className="text-2xl font-black tracking-tight text-blue-950">Painel de Estoque</h2>
+          <p className="text-sm font-medium text-blue-800">
             Visão somente leitura. Entradas e saídas continuam sendo controladas pelo Bling.
           </p>
         </div>
@@ -116,7 +116,7 @@ export default function StockDashboard() {
         <button
           onClick={() => void loadStock()}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-50"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Atualizar
@@ -137,11 +137,11 @@ export default function StockDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 xl:col-span-2">
+        <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-white to-blue-50 p-6 shadow-md shadow-blue-900/5 xl:col-span-2">
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Distribuição do estoque</h3>
-              <p className="text-sm text-zinc-500">Classificação simples por quantidade atual.</p>
+              <h3 className="text-lg font-black text-blue-950">Distribuição do estoque</h3>
+              <p className="text-sm font-medium text-blue-700">Classificação simples por quantidade atual.</p>
             </div>
           </div>
 
@@ -153,14 +153,14 @@ export default function StockDashboard() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-orange-200 bg-orange-50 p-6 shadow-sm dark:border-orange-900/60 dark:bg-orange-950/20">
+        <div className="rounded-3xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-white p-6 shadow-md shadow-amber-900/10">
           <div className="mb-4 flex items-center gap-3">
-            <div className="rounded-2xl bg-orange-100 p-3 text-orange-700">
+            <div className="rounded-2xl bg-amber-500 p-3 text-white shadow-lg shadow-amber-600/20">
               <AlertTriangle className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-orange-950 dark:text-orange-100">Atenção</h3>
-              <p className="text-sm text-orange-800 dark:text-orange-200">Produtos com estoque crítico.</p>
+              <h3 className="text-lg font-black text-amber-950">Atenção</h3>
+              <p className="text-sm font-medium text-amber-800">Produtos com estoque crítico.</p>
             </div>
           </div>
 
@@ -172,13 +172,13 @@ export default function StockDashboard() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h3 className="mb-4 text-lg font-bold text-zinc-900 dark:text-white">Maior volume em estoque</h3>
+        <div className="rounded-3xl border border-blue-200 bg-white p-6 shadow-md shadow-blue-900/5">
+          <h3 className="mb-4 text-lg font-black text-blue-950">Maior volume em estoque</h3>
           <ProductList emptyMessage="Nenhum produto com estoque." products={metrics.topStock} />
         </div>
 
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h3 className="mb-4 text-lg font-bold text-zinc-900 dark:text-white">Sem estoque</h3>
+        <div className="rounded-3xl border border-rose-200 bg-gradient-to-br from-rose-50 via-white to-white p-6 shadow-md shadow-rose-900/5">
+          <h3 className="mb-4 text-lg font-black text-rose-950">Sem estoque</h3>
           <ProductList emptyMessage="Nenhum produto sem estoque." products={metrics.outOfStock.slice(0, 8)} />
         </div>
       </div>
@@ -198,20 +198,20 @@ function MetricCard({
   tone: "blue" | "emerald" | "rose" | "amber";
 }) {
   const tones = {
-    blue: "bg-blue-50 text-blue-700 border-blue-100",
-    emerald: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    rose: "bg-rose-50 text-rose-700 border-rose-100",
-    amber: "bg-amber-50 text-amber-700 border-amber-100",
+    blue: "bg-gradient-to-br from-white to-blue-100 text-blue-700 border-blue-300 shadow-blue-900/10",
+    emerald: "bg-gradient-to-br from-white to-emerald-100 text-emerald-700 border-emerald-300 shadow-emerald-900/10",
+    rose: "bg-gradient-to-br from-white to-rose-100 text-rose-700 border-rose-300 shadow-rose-900/10",
+    amber: "bg-gradient-to-br from-white to-amber-100 text-amber-700 border-amber-300 shadow-amber-900/10",
   };
 
   return (
-    <div className={`rounded-3xl border p-5 shadow-sm ${tones[tone]}`}>
+    <div className={`rounded-3xl border p-5 shadow-md ${tones[tone]}`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-widest opacity-70">{title}</p>
-          <p className="mt-2 text-2xl font-black text-zinc-900">{value}</p>
+          <p className="text-xs font-black uppercase tracking-widest opacity-80">{title}</p>
+          <p className="mt-2 text-2xl font-black text-blue-950">{value}</p>
         </div>
-        <div className="rounded-2xl bg-white/80 p-3">
+        <div className="rounded-2xl bg-white p-3 shadow-sm">
           <Icon className="h-6 w-6" />
         </div>
       </div>
@@ -225,10 +225,10 @@ function StockBar({ label, count, max, color }: { label: string; count: number; 
   return (
     <div>
       <div className="mb-2 flex items-center justify-between text-sm">
-        <span className="font-semibold text-zinc-700 dark:text-zinc-200">{label}</span>
-        <span className="font-bold text-zinc-900 dark:text-white">{count}</span>
+        <span className="font-semibold text-blue-900">{label}</span>
+        <span className="font-bold text-blue-950">{count}</span>
       </div>
-      <div className="h-4 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+      <div className="h-4 overflow-hidden rounded-full bg-blue-100">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${width}%` }} />
       </div>
     </div>
@@ -237,22 +237,22 @@ function StockBar({ label, count, max, color }: { label: string; count: number; 
 
 function ProductList({ products, emptyMessage }: { products: StockProduct[]; emptyMessage: string }) {
   if (products.length === 0) {
-    return <div className="rounded-2xl bg-zinc-50 px-4 py-5 text-center text-sm text-zinc-500">{emptyMessage}</div>;
+    return <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-5 text-center text-sm font-medium text-blue-600">{emptyMessage}</div>;
   }
 
   return (
     <div className="space-y-3">
       {products.map((product) => (
-        <div key={product.id} className="flex items-center justify-between rounded-2xl border border-zinc-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/40">
+        <div key={product.id} className="flex items-center justify-between rounded-2xl border border-blue-100 bg-white px-4 py-3 shadow-sm transition hover:border-blue-300 hover:bg-blue-50/50">
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-zinc-900 dark:text-white">{product.nome}</div>
-            <div className="text-xs text-zinc-500">
+            <div className="truncate text-sm font-bold text-blue-950">{product.nome}</div>
+            <div className="text-xs font-medium text-blue-500">
               {product.codigo_barras || "Sem código"} · {getStockStatus(product)}
             </div>
           </div>
           <div className="ml-4 text-right">
-            <div className="text-lg font-black text-zinc-900 dark:text-white">{Number(product.estoque_atual ?? 0)}</div>
-            <div className="text-[10px] font-bold uppercase text-zinc-400">unid.</div>
+            <div className="text-lg font-black text-blue-950">{Number(product.estoque_atual ?? 0)}</div>
+            <div className="text-[10px] font-bold uppercase text-blue-400">unid.</div>
           </div>
         </div>
       ))}

@@ -157,20 +157,20 @@ export default function ConfigERP() {
   const blingConnected = statusMap['bling']?.connected;
 
   const syncStateLabel = (state: SyncState) => {
-    if (!state) return { text: 'Nunca sincronizado', color: 'text-zinc-500 dark:text-zinc-400' };
+    if (!state) return { text: 'Nunca sincronizado', color: 'text-blue-500' };
     switch (state.status) {
-      case 'success': return { text: 'Sucesso', color: 'text-emerald-600 dark:text-emerald-400' };
-      case 'error':   return { text: 'Falhou',  color: 'text-rose-600 dark:text-rose-400' };
-      case 'running': return { text: 'Em andamento...', color: 'text-blue-600 dark:text-blue-400' };
-      default:        return { text: 'Aguardando', color: 'text-zinc-500 dark:text-zinc-400' };
+      case 'success': return { text: 'Sucesso', color: 'text-emerald-600' };
+      case 'error':   return { text: 'Falhou',  color: 'text-rose-600' };
+      case 'running': return { text: 'Em andamento...', color: 'text-blue-600' };
+      default:        return { text: 'Aguardando', color: 'text-blue-500' };
     }
   };
 
   const logStatusBadge = (status: SyncLogEntry['status']) => {
     switch (status) {
-      case 'success': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400';
-      case 'failed':  return 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400';
-      default:        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400';
+      case 'success': return 'bg-emerald-100 text-emerald-700';
+      case 'failed':  return 'bg-rose-100 text-rose-700';
+      default:        return 'bg-blue-100 text-blue-700';
     }
   };
 
@@ -187,13 +187,13 @@ export default function ConfigERP() {
       <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="mb-8 flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white tracking-tight">Sistema / ERP</h1>
-            <p className="text-gray-500 dark:text-zinc-400 mt-1">
+            <h1 className="text-3xl font-black text-blue-950 tracking-tight">Sistema / ERP</h1>
+            <p className="text-blue-800 font-medium mt-1">
               Conecte seu PDV aos principais sistemas de gestão do mercado.
             </p>
           </div>
           <div className="hidden md:block text-right">
-            <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Status Geral</span>
+            <span className="text-xs font-black uppercase tracking-widest text-blue-500">Status Geral</span>
             <div className="flex items-center gap-2 text-emerald-500 font-medium">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Sincronização Ativa
@@ -212,9 +212,9 @@ export default function ConfigERP() {
                 disabled={status?.loading}
                 className={`
                   group relative flex flex-col items-center justify-center p-8
-                  bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800
+                  bg-gradient-to-br from-blue-50 via-white to-white border border-blue-300
                   rounded-xl transition-all duration-300 transform hover:-translate-y-1
-                  hover:shadow-xl active:scale-95
+                  shadow-lg shadow-blue-900/10 hover:shadow-xl active:scale-95
                   ${status?.connected ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : ''}
                   ${status?.loading ? 'opacity-60 cursor-not-allowed' : ''}
                 `}
@@ -223,14 +223,14 @@ export default function ConfigERP() {
                   {erp.logo ? (
                     <img src={erp.logo} alt={erp.name} className="max-h-full max-w-[120px] object-contain" />
                   ) : (
-                    <span className="text-zinc-400 font-bold">EM BREVE</span>
+                    <span className="text-blue-400 font-bold">EM BREVE</span>
                   )}
                 </div>
-                <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white">
+                <span className="text-sm font-semibold text-blue-800 group-hover:text-blue-950">
                   {getButtonLabel(erp.id)} {erp.name}
                 </span>
                 <div className="absolute top-2 right-2">
-                  <div className={`w-2 h-2 rounded-full ${status?.connected ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'}`} />
+                  <div className={`w-2 h-2 rounded-full ${status?.connected ? 'bg-emerald-500' : 'bg-blue-200'}`} />
                 </div>
               </button>
             );
@@ -242,29 +242,29 @@ export default function ConfigERP() {
           <div className="lg:col-span-2 space-y-4">
 
             {/* Status da conexão */}
-            <div className="p-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+            <div className="p-5 bg-gradient-to-br from-white to-blue-50/70 border border-blue-300 rounded-xl shadow-lg shadow-blue-900/10">
               <div className="flex items-center justify-between gap-4 mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-zinc-800 dark:text-white">Conexão Bling</h2>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">Token OAuth e status da integração.</p>
+                  <h2 className="text-lg font-black text-blue-950">Conexão Bling</h2>
+                  <p className="text-sm font-medium text-blue-700">Token OAuth e status da integração.</p>
                 </div>
-                <div className={`px-3 py-1 rounded-full text-xs font-semibold ${blingConnected ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'}`}>
+                <div className={`px-3 py-1 rounded-full text-xs font-semibold ${blingConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
                   {blingConnected ? 'Conectado' : 'Desconectado'}
                 </div>
               </div>
 
               <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-                  <span className="text-zinc-500 dark:text-zinc-400">ERP</span>
-                  <span className="font-medium text-zinc-800 dark:text-white">Bling</span>
+                <div className="flex items-center justify-between border-b border-blue-100 pb-3">
+                  <span className="text-blue-600 font-medium">ERP</span>
+                  <span className="font-semibold text-blue-950">Bling</span>
                 </div>
-                <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-                  <span className="text-zinc-500 dark:text-zinc-400">Status</span>
-                  <span className="font-medium text-zinc-800 dark:text-white">{blingConnected ? 'Ativo' : 'Inativo'}</span>
+                <div className="flex items-center justify-between border-b border-blue-100 pb-3">
+                  <span className="text-blue-600 font-medium">Status</span>
+                  <span className="font-semibold text-blue-950">{blingConnected ? 'Ativo' : 'Inativo'}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-zinc-500 dark:text-zinc-400">Token expira em</span>
-                  <span className="font-medium text-zinc-800 dark:text-white">{formatDate(statusMap['bling']?.expiresAt)}</span>
+                  <span className="text-blue-600 font-medium">Token expira em</span>
+                  <span className="font-semibold text-blue-950">{formatDate(statusMap['bling']?.expiresAt)}</span>
                 </div>
               </div>
 
@@ -272,7 +272,7 @@ export default function ConfigERP() {
                 <button
                   onClick={() => handleConnect('bling')}
                   disabled={statusMap['bling']?.loading}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${statusMap['bling']?.loading ? 'bg-zinc-200 text-zinc-500 cursor-not-allowed dark:bg-zinc-800 dark:text-zinc-500' : blingConnected ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${statusMap['bling']?.loading ? 'bg-blue-100 text-blue-400 cursor-not-allowed' : blingConnected ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                 >
                   {statusMap['bling']?.loading ? 'Processando...' : blingConnected ? 'Desconectar' : 'Integrar com Bling'}
                 </button>
@@ -280,11 +280,11 @@ export default function ConfigERP() {
             </div>
 
             {/* Sincronização */}
-            <div className="p-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+            <div className="p-5 bg-gradient-to-br from-white to-blue-50/70 border border-blue-300 rounded-xl shadow-lg shadow-blue-900/10">
               <div className="flex items-center justify-between gap-4 mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-zinc-800 dark:text-white">Sincronização de Catálogo</h2>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  <h2 className="text-lg font-black text-blue-950">Sincronização de Catálogo</h2>
+                  <p className="text-sm font-medium text-blue-700">
                     Importa categorias e produtos do Bling para o banco local.
                   </p>
                 </div>
@@ -292,22 +292,22 @@ export default function ConfigERP() {
 
               {/* Grid de status por recurso */}
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
-                  <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Categorias</p>
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <p className="text-xs font-black text-blue-500 uppercase tracking-wide mb-2">Categorias</p>
                   <p className={`text-sm font-medium ${syncStateLabel(categoriesSyncState).color}`}>
                     {syncStateLabel(categoriesSyncState).text}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1">{formatDate(categoriesSyncState?.lastSuccessAt)}</p>
+                  <p className="text-xs text-blue-400 mt-1">{formatDate(categoriesSyncState?.lastSuccessAt)}</p>
                   {categoriesSyncState?.errorMessage && (
                     <p className="text-xs text-rose-500 mt-1 break-all">{categoriesSyncState.errorMessage}</p>
                   )}
                 </div>
-                <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
-                  <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Produtos</p>
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <p className="text-xs font-black text-blue-500 uppercase tracking-wide mb-2">Produtos</p>
                   <p className={`text-sm font-medium ${syncStateLabel(productsSyncState).color}`}>
                     {syncStateLabel(productsSyncState).text}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1">{formatDate(productsSyncState?.lastSuccessAt)}</p>
+                  <p className="text-xs text-blue-400 mt-1">{formatDate(productsSyncState?.lastSuccessAt)}</p>
                   {productsSyncState?.errorMessage && (
                     <p className="text-xs text-rose-500 mt-1 break-all">{productsSyncState.errorMessage}</p>
                   )}
@@ -316,9 +316,9 @@ export default function ConfigERP() {
 
               {/* Resultado do sync desta sessão */}
               {lastSyncResult && (
-                <div className={`mb-4 p-3 rounded-lg text-sm ${lastSyncResult.success ? 'bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30' : 'bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30'}`}>
+                <div className={`mb-4 p-3 rounded-lg text-sm ${lastSyncResult.success ? 'bg-emerald-50 border border-emerald-100' : 'bg-rose-50 border border-rose-100'}`}>
                   {lastSyncResult.success ? (
-                    <div className="space-y-1 text-emerald-700 dark:text-emerald-400">
+                    <div className="space-y-1 text-emerald-700">
                       {lastSyncResult.categories && (
                         <p>
                           <span className="font-semibold">Categorias</span> ({lastSyncResult.categories.mode === 'initial' ? 'inicial' : 'incremental'}):
@@ -339,7 +339,7 @@ export default function ConfigERP() {
                       )}
                     </div>
                   ) : (
-                    <p className="text-rose-600 dark:text-rose-400">{lastSyncResult.message}</p>
+                    <p className="text-rose-600">{lastSyncResult.message}</p>
                   )}
                 </div>
               )}
@@ -347,7 +347,7 @@ export default function ConfigERP() {
               <button
                 onClick={handleSyncAll}
                 disabled={!blingConnected || syncing}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${!blingConnected || syncing ? 'bg-zinc-200 text-zinc-500 cursor-not-allowed dark:bg-zinc-800 dark:text-zinc-500' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 ${!blingConnected || syncing ? 'bg-blue-100 text-blue-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
               >
                 {syncing && (
                   <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -361,12 +361,12 @@ export default function ConfigERP() {
 
             {/* Histórico de sincronizações */}
             {syncLogs.length > 0 && (
-              <div className="p-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
-                <h2 className="text-base font-semibold text-zinc-800 dark:text-white mb-4">Histórico de Sincronizações</h2>
+              <div className="p-5 bg-gradient-to-br from-white to-blue-50/70 border border-blue-300 rounded-xl shadow-lg shadow-blue-900/10">
+                <h2 className="text-base font-black text-blue-950 mb-4">Histórico de Sincronizações</h2>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-left text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide border-b border-zinc-100 dark:border-zinc-800">
+                      <tr className="text-left text-xs font-black text-blue-500 uppercase tracking-wide border-b border-blue-100">
                         <th className="pb-2 pr-4">Job</th>
                         <th className="pb-2 pr-4">Recurso</th>
                         <th className="pb-2 pr-4">Modo</th>
@@ -379,10 +379,10 @@ export default function ConfigERP() {
                         <th className="pb-2">Início</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    <tbody className="divide-y divide-blue-50">
                       {syncLogs.map((log) => (
-                        <tr key={log.id} className="text-zinc-600 dark:text-zinc-300">
-                          <td className="py-2 pr-4 font-mono text-xs text-zinc-400">{shortJobId(log.id)}</td>
+                        <tr key={log.id} className="text-blue-800">
+                          <td className="py-2 pr-4 font-mono text-xs text-blue-400">{shortJobId(log.id)}</td>
                           <td className="py-2 pr-4 font-medium capitalize">{log.resource}</td>
                           <td className="py-2 pr-4 capitalize">{log.mode === 'initial' ? 'Inicial' : 'Incremental'}</td>
                           <td className="py-2 pr-4">
@@ -391,11 +391,11 @@ export default function ConfigERP() {
                             </span>
                           </td>
                           <td className="py-2 pr-4">{log.itemsProcessed}</td>
-                          <td className="py-2 pr-4 text-emerald-600 dark:text-emerald-400">+{log.itemsCreated}</td>
-                          <td className="py-2 pr-4 text-blue-600 dark:text-blue-400">~{log.itemsUpdated}</td>
-                          <td className="py-2 pr-4 text-rose-600 dark:text-rose-400">{log.itemsFailed}</td>
-                          <td className="py-2 pr-4 text-zinc-400">{formatDuration(log.startedAt, log.finishedAt)}</td>
-                          <td className="py-2 text-xs text-zinc-400">{formatDate(log.startedAt)}</td>
+                          <td className="py-2 pr-4 text-emerald-600">+{log.itemsCreated}</td>
+                          <td className="py-2 pr-4 text-blue-600">~{log.itemsUpdated}</td>
+                          <td className="py-2 pr-4 text-rose-600">{log.itemsFailed}</td>
+                          <td className="py-2 pr-4 text-blue-400">{formatDuration(log.startedAt, log.finishedAt)}</td>
+                          <td className="py-2 text-xs text-blue-400">{formatDate(log.startedAt)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -404,7 +404,7 @@ export default function ConfigERP() {
                 {syncLogs.some(l => l.errorMessage) && (
                   <div className="mt-3 space-y-2">
                     {syncLogs.filter(l => l.errorMessage).map(l => (
-                      <div key={l.id} className="p-2 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded text-xs text-rose-600 dark:text-rose-400 break-all">
+                      <div key={l.id} className="p-2 bg-rose-50 border border-rose-100 rounded text-xs text-rose-600 break-all">
                         <span className="font-semibold">{l.resource}:</span> {l.errorMessage}
                       </div>
                     ))}
@@ -416,33 +416,33 @@ export default function ConfigERP() {
 
           {/* Observações */}
           <div className="space-y-4">
-            <div className="p-5 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl">
-              <h3 className="text-sm font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wide mb-2">
+            <div className="p-5 bg-blue-50 border border-blue-100 rounded-xl">
+              <h3 className="text-sm font-black text-blue-700 uppercase tracking-wide mb-2">
                 Observações
               </h3>
-              <p className="text-sm text-blue-600 dark:text-blue-400 leading-relaxed">
+              <p className="text-sm text-blue-700 leading-relaxed">
                 Configure as variáveis
                 <span className="font-semibold"> BLING_CLIENT_ID</span>,
                 <span className="font-semibold"> BLING_CLIENT_SECRET</span> e
                 <span className="font-semibold"> BLING_REDIRECT_URI</span> no ambiente.
               </p>
-              <p className="text-sm text-blue-600 dark:text-blue-400 leading-relaxed mt-3">
+              <p className="text-sm text-blue-700 leading-relaxed mt-3">
                 O sync <span className="font-semibold">inicial</span> importa todo o catálogo.
                 Os syncs seguintes são <span className="font-semibold">incrementais</span> — buscam apenas alterações desde a última execução.
               </p>
             </div>
 
-            <div className="p-5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl">
-              <h3 className="text-sm font-bold text-zinc-600 dark:text-zinc-300 uppercase tracking-wide mb-2">
+            <div className="p-5 bg-gradient-to-br from-white to-blue-50/70 border border-blue-300 rounded-xl shadow-md shadow-blue-900/5">
+              <h3 className="text-sm font-black text-blue-700 uppercase tracking-wide mb-2">
                 Ordem do Sync
               </h3>
-              <ol className="text-sm text-zinc-500 dark:text-zinc-400 space-y-2 list-none">
+              <ol className="text-sm text-blue-700 space-y-2 list-none">
                 <li className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                  <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
                   Categorias sincronizadas
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                  <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
                   Produtos com categoria vinculada
                 </li>
               </ol>
@@ -450,8 +450,8 @@ export default function ConfigERP() {
           </div>
         </div>
 
-        <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg">
-          <p className="text-sm text-blue-600 dark:text-blue-400 text-center">
+        <div className="mt-8 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+          <p className="text-sm text-blue-700 text-center">
             Precisa de uma integração personalizada?{' '}
             <span className="font-bold underline cursor-pointer">Fale com o suporte.</span>
           </p>

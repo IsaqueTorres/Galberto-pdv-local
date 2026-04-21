@@ -104,7 +104,8 @@ export default function registerWindowHandlers() {
     }
   }
 
-  // Validado 23/03/2026 - Janela chamada no PDV Rapido menu F3
+  // Validado 23/03/2026 - Janela chamada no PDV Rapido menu F3.
+  // Usa rota dedicada do PDV para nunca herdar o layout Base/sidebar da gestão.
   function createSearchProductWindow() {
     searchProductWindow = new BrowserWindow({
       title: "Search Product",
@@ -117,12 +118,11 @@ export default function registerWindowHandlers() {
     })
 
     if (VITE_DEV_SERVER_URL) {
-      searchProductWindow.loadURL(`${VITE_DEV_SERVER_URL}#/products/search`)
+      searchProductWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv/products/search`)
     } else {
-      // win.loadFile('dist/index.html')
-      searchProductWindow.loadFile(path.join('dist/index.html')), {
-        hash: `/products/search`,
-      }
+      searchProductWindow.loadFile(path.join('dist/index.html'), {
+        hash: `/pdv/products/search`,
+      })
     }
   }
 
@@ -163,12 +163,11 @@ export default function registerWindowHandlers() {
     })
 
     if (VITE_DEV_SERVER_URL) {
-      configAppWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/app`)
+      configAppWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv/config/app`)
     } else {
-      // win.loadFile('dist/index.html')
-      configAppWindow.loadFile(path.join('dist/index.html')), {
-        hash: `/config/app`,
-      }
+      configAppWindow.loadFile(path.join('dist/index.html'), {
+        hash: `/pdv/config/app`,
+      })
     }
   }
 

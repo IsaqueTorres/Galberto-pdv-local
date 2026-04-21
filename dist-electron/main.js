@@ -1,27 +1,23 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-import { app, ipcMain, BrowserWindow, shell, dialog } from "electron";
-import * as fs$2 from "fs";
-import fs__default from "fs";
-import path$2 from "path";
-import require$$2 from "os";
-import require$$3 from "crypto";
-import * as fs$1 from "node:fs";
-import * as path$1 from "node:path";
-import path__default from "node:path";
-import Database from "better-sqlite3";
-import { fileURLToPath } from "url";
-import { execFileSync } from "node:child_process";
-import crypto$1, { X509Certificate } from "node:crypto";
-import http from "node:http";
-import { URL as URL$1 } from "node:url";
-var main = { exports: {} };
-const fs = fs__default;
-const path = path$2;
-const os = require$$2;
-const crypto = require$$3;
-const TIPS = [
+var Zt = Object.defineProperty;
+var ea = (t, e, a) => e in t ? Zt(t, e, { enumerable: !0, configurable: !0, writable: !0, value: a }) : t[e] = a;
+var M = (t, e, a) => ea(t, typeof e != "symbol" ? e + "" : e, a);
+import { app as X, ipcMain as u, BrowserWindow as O, shell as vt, dialog as Ot } from "electron";
+import * as Fe from "fs";
+import Le from "fs";
+import Se from "path";
+import ta from "os";
+import yt from "crypto";
+import * as ue from "node:fs";
+import * as ge from "node:path";
+import g from "node:path";
+import aa from "better-sqlite3";
+import { fileURLToPath as sa } from "url";
+import { execFileSync as na } from "node:child_process";
+import Ut, { X509Certificate as rt } from "node:crypto";
+import ra from "node:http";
+import { URL as Ke } from "node:url";
+var z = { exports: {} };
+const qe = Le, Oe = Se, oa = ta, ia = yt, ot = [
   "◈ encrypted .env [www.dotenvx.com]",
   "◈ secrets for agents [www.dotenvx.com]",
   "⌁ auth for agents [www.vestauth.com]",
@@ -31,477 +27,342 @@ const TIPS = [
   "⌘ suppress logs { quiet: true }",
   "⌘ multiple files { path: ['.env.local', '.env'] }"
 ];
-function _getRandomTip() {
-  return TIPS[Math.floor(Math.random() * TIPS.length)];
+function ca() {
+  return ot[Math.floor(Math.random() * ot.length)];
 }
-function parseBoolean(value) {
-  if (typeof value === "string") {
-    return !["false", "0", "no", "off", ""].includes(value.toLowerCase());
-  }
-  return Boolean(value);
+function le(t) {
+  return typeof t == "string" ? !["false", "0", "no", "off", ""].includes(t.toLowerCase()) : !!t;
 }
-function supportsAnsi() {
+function da() {
   return process.stdout.isTTY;
 }
-function dim(text) {
-  return supportsAnsi() ? `\x1B[2m${text}\x1B[0m` : text;
+function la(t) {
+  return da() ? `\x1B[2m${t}\x1B[0m` : t;
 }
-const LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
-function parse(src) {
-  const obj = {};
-  let lines = src.toString();
-  lines = lines.replace(/\r\n?/mg, "\n");
-  let match;
-  while ((match = LINE.exec(lines)) != null) {
-    const key = match[1];
-    let value = match[2] || "";
-    value = value.trim();
-    const maybeQuote = value[0];
-    value = value.replace(/^(['"`])([\s\S]*)\1$/mg, "$2");
-    if (maybeQuote === '"') {
-      value = value.replace(/\\n/g, "\n");
-      value = value.replace(/\\r/g, "\r");
-    }
-    obj[key] = value;
+const ua = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
+function Ea(t) {
+  const e = {};
+  let a = t.toString();
+  a = a.replace(/\r\n?/mg, `
+`);
+  let s;
+  for (; (s = ua.exec(a)) != null; ) {
+    const n = s[1];
+    let r = s[2] || "";
+    r = r.trim();
+    const i = r[0];
+    r = r.replace(/^(['"`])([\s\S]*)\1$/mg, "$2"), i === '"' && (r = r.replace(/\\n/g, `
+`), r = r.replace(/\\r/g, "\r")), e[n] = r;
   }
-  return obj;
+  return e;
 }
-function _parseVault(options2) {
-  options2 = options2 || {};
-  const vaultPath = _vaultPath(options2);
-  options2.path = vaultPath;
-  const result = DotenvModule.configDotenv(options2);
-  if (!result.parsed) {
-    const err = new Error(`MISSING_DATA: Cannot parse ${vaultPath} for an unknown reason`);
-    err.code = "MISSING_DATA";
-    throw err;
+function Ta(t) {
+  t = t || {};
+  const e = Ft(t);
+  t.path = e;
+  const a = C.configDotenv(t);
+  if (!a.parsed) {
+    const i = new Error(`MISSING_DATA: Cannot parse ${e} for an unknown reason`);
+    throw i.code = "MISSING_DATA", i;
   }
-  const keys = _dotenvKey(options2).split(",");
-  const length = keys.length;
-  let decrypted;
-  for (let i = 0; i < length; i++) {
+  const s = bt(t).split(","), n = s.length;
+  let r;
+  for (let i = 0; i < n; i++)
     try {
-      const key = keys[i].trim();
-      const attrs = _instructions(result, key);
-      decrypted = DotenvModule.decrypt(attrs.ciphertext, attrs.key);
+      const c = s[i].trim(), d = _a(a, c);
+      r = C.decrypt(d.ciphertext, d.key);
       break;
-    } catch (error) {
-      if (i + 1 >= length) {
-        throw error;
-      }
+    } catch (c) {
+      if (i + 1 >= n)
+        throw c;
     }
-  }
-  return DotenvModule.parse(decrypted);
+  return C.parse(r);
 }
-function _warn(message) {
-  console.error(`⚠ ${message}`);
+function ma(t) {
+  console.error(`⚠ ${t}`);
 }
-function _debug(message) {
-  console.log(`┆ ${message}`);
+function Ie(t) {
+  console.log(`┆ ${t}`);
 }
-function _log(message) {
-  console.log(`◇ ${message}`);
+function Dt(t) {
+  console.log(`◇ ${t}`);
 }
-function _dotenvKey(options2) {
-  if (options2 && options2.DOTENV_KEY && options2.DOTENV_KEY.length > 0) {
-    return options2.DOTENV_KEY;
-  }
-  if (process.env.DOTENV_KEY && process.env.DOTENV_KEY.length > 0) {
-    return process.env.DOTENV_KEY;
-  }
-  return "";
+function bt(t) {
+  return t && t.DOTENV_KEY && t.DOTENV_KEY.length > 0 ? t.DOTENV_KEY : process.env.DOTENV_KEY && process.env.DOTENV_KEY.length > 0 ? process.env.DOTENV_KEY : "";
 }
-function _instructions(result, dotenvKey) {
-  let uri;
+function _a(t, e) {
+  let a;
   try {
-    uri = new URL(dotenvKey);
-  } catch (error) {
-    if (error.code === "ERR_INVALID_URL") {
-      const err = new Error("INVALID_DOTENV_KEY: Wrong format. Must be in valid uri format like dotenv://:key_1234@dotenvx.com/vault/.env.vault?environment=development");
-      err.code = "INVALID_DOTENV_KEY";
-      throw err;
+    a = new URL(e);
+  } catch (c) {
+    if (c.code === "ERR_INVALID_URL") {
+      const d = new Error("INVALID_DOTENV_KEY: Wrong format. Must be in valid uri format like dotenv://:key_1234@dotenvx.com/vault/.env.vault?environment=development");
+      throw d.code = "INVALID_DOTENV_KEY", d;
     }
-    throw error;
+    throw c;
   }
-  const key = uri.password;
-  if (!key) {
-    const err = new Error("INVALID_DOTENV_KEY: Missing key part");
-    err.code = "INVALID_DOTENV_KEY";
-    throw err;
+  const s = a.password;
+  if (!s) {
+    const c = new Error("INVALID_DOTENV_KEY: Missing key part");
+    throw c.code = "INVALID_DOTENV_KEY", c;
   }
-  const environment = uri.searchParams.get("environment");
-  if (!environment) {
-    const err = new Error("INVALID_DOTENV_KEY: Missing environment part");
-    err.code = "INVALID_DOTENV_KEY";
-    throw err;
+  const n = a.searchParams.get("environment");
+  if (!n) {
+    const c = new Error("INVALID_DOTENV_KEY: Missing environment part");
+    throw c.code = "INVALID_DOTENV_KEY", c;
   }
-  const environmentKey = `DOTENV_VAULT_${environment.toUpperCase()}`;
-  const ciphertext = result.parsed[environmentKey];
-  if (!ciphertext) {
-    const err = new Error(`NOT_FOUND_DOTENV_ENVIRONMENT: Cannot locate environment ${environmentKey} in your .env.vault file.`);
-    err.code = "NOT_FOUND_DOTENV_ENVIRONMENT";
-    throw err;
+  const r = `DOTENV_VAULT_${n.toUpperCase()}`, i = t.parsed[r];
+  if (!i) {
+    const c = new Error(`NOT_FOUND_DOTENV_ENVIRONMENT: Cannot locate environment ${r} in your .env.vault file.`);
+    throw c.code = "NOT_FOUND_DOTENV_ENVIRONMENT", c;
   }
-  return { ciphertext, key };
+  return { ciphertext: i, key: s };
 }
-function _vaultPath(options2) {
-  let possibleVaultPath = null;
-  if (options2 && options2.path && options2.path.length > 0) {
-    if (Array.isArray(options2.path)) {
-      for (const filepath of options2.path) {
-        if (fs.existsSync(filepath)) {
-          possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
-        }
-      }
-    } else {
-      possibleVaultPath = options2.path.endsWith(".vault") ? options2.path : `${options2.path}.vault`;
+function Ft(t) {
+  let e = null;
+  if (t && t.path && t.path.length > 0)
+    if (Array.isArray(t.path))
+      for (const a of t.path)
+        qe.existsSync(a) && (e = a.endsWith(".vault") ? a : `${a}.vault`);
+    else
+      e = t.path.endsWith(".vault") ? t.path : `${t.path}.vault`;
+  else
+    e = Oe.resolve(process.cwd(), ".env.vault");
+  return qe.existsSync(e) ? e : null;
+}
+function it(t) {
+  return t[0] === "~" ? Oe.join(oa.homedir(), t.slice(1)) : t;
+}
+function pa(t) {
+  const e = le(process.env.DOTENV_CONFIG_DEBUG || t && t.debug), a = le(process.env.DOTENV_CONFIG_QUIET || t && t.quiet);
+  (e || !a) && Dt("loading env from encrypted .env.vault");
+  const s = C._parseVault(t);
+  let n = process.env;
+  return t && t.processEnv != null && (n = t.processEnv), C.populate(n, s, t), { parsed: s };
+}
+function Na(t) {
+  const e = Oe.resolve(process.cwd(), ".env");
+  let a = "utf8", s = process.env;
+  t && t.processEnv != null && (s = t.processEnv);
+  let n = le(s.DOTENV_CONFIG_DEBUG || t && t.debug), r = le(s.DOTENV_CONFIG_QUIET || t && t.quiet);
+  t && t.encoding ? a = t.encoding : n && Ie("no encoding is specified (UTF-8 is used by default)");
+  let i = [e];
+  if (t && t.path)
+    if (!Array.isArray(t.path))
+      i = [it(t.path)];
+    else {
+      i = [];
+      for (const E of t.path)
+        i.push(it(E));
     }
-  } else {
-    possibleVaultPath = path.resolve(process.cwd(), ".env.vault");
-  }
-  if (fs.existsSync(possibleVaultPath)) {
-    return possibleVaultPath;
-  }
-  return null;
-}
-function _resolveHome(envPath) {
-  return envPath[0] === "~" ? path.join(os.homedir(), envPath.slice(1)) : envPath;
-}
-function _configVault(options2) {
-  const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options2 && options2.debug);
-  const quiet = parseBoolean(process.env.DOTENV_CONFIG_QUIET || options2 && options2.quiet);
-  if (debug || !quiet) {
-    _log("loading env from encrypted .env.vault");
-  }
-  const parsed = DotenvModule._parseVault(options2);
-  let processEnv = process.env;
-  if (options2 && options2.processEnv != null) {
-    processEnv = options2.processEnv;
-  }
-  DotenvModule.populate(processEnv, parsed, options2);
-  return { parsed };
-}
-function configDotenv(options2) {
-  const dotenvPath = path.resolve(process.cwd(), ".env");
-  let encoding = "utf8";
-  let processEnv = process.env;
-  if (options2 && options2.processEnv != null) {
-    processEnv = options2.processEnv;
-  }
-  let debug = parseBoolean(processEnv.DOTENV_CONFIG_DEBUG || options2 && options2.debug);
-  let quiet = parseBoolean(processEnv.DOTENV_CONFIG_QUIET || options2 && options2.quiet);
-  if (options2 && options2.encoding) {
-    encoding = options2.encoding;
-  } else {
-    if (debug) {
-      _debug("no encoding is specified (UTF-8 is used by default)");
-    }
-  }
-  let optionPaths = [dotenvPath];
-  if (options2 && options2.path) {
-    if (!Array.isArray(options2.path)) {
-      optionPaths = [_resolveHome(options2.path)];
-    } else {
-      optionPaths = [];
-      for (const filepath of options2.path) {
-        optionPaths.push(_resolveHome(filepath));
-      }
-    }
-  }
-  let lastError;
-  const parsedAll = {};
-  for (const path2 of optionPaths) {
+  let c;
+  const d = {};
+  for (const E of i)
     try {
-      const parsed = DotenvModule.parse(fs.readFileSync(path2, { encoding }));
-      DotenvModule.populate(parsedAll, parsed, options2);
-    } catch (e) {
-      if (debug) {
-        _debug(`failed to load ${path2} ${e.message}`);
-      }
-      lastError = e;
+      const _ = C.parse(qe.readFileSync(E, { encoding: a }));
+      C.populate(d, _, t);
+    } catch (_) {
+      n && Ie(`failed to load ${E} ${_.message}`), c = _;
     }
-  }
-  const populated = DotenvModule.populate(processEnv, parsedAll, options2);
-  debug = parseBoolean(processEnv.DOTENV_CONFIG_DEBUG || debug);
-  quiet = parseBoolean(processEnv.DOTENV_CONFIG_QUIET || quiet);
-  if (debug || !quiet) {
-    const keysCount = Object.keys(populated).length;
-    const shortPaths = [];
-    for (const filePath of optionPaths) {
+  const l = C.populate(s, d, t);
+  if (n = le(s.DOTENV_CONFIG_DEBUG || n), r = le(s.DOTENV_CONFIG_QUIET || r), n || !r) {
+    const E = Object.keys(l).length, _ = [];
+    for (const T of i)
       try {
-        const relative = path.relative(process.cwd(), filePath);
-        shortPaths.push(relative);
-      } catch (e) {
-        if (debug) {
-          _debug(`failed to load ${filePath} ${e.message}`);
-        }
-        lastError = e;
+        const N = Oe.relative(process.cwd(), T);
+        _.push(N);
+      } catch (N) {
+        n && Ie(`failed to load ${T} ${N.message}`), c = N;
       }
-    }
-    _log(`injecting env (${keysCount}) from ${shortPaths.join(",")} ${dim(`// tip: ${_getRandomTip()}`)}`);
+    Dt(`injecting env (${E}) from ${_.join(",")} ${la(`// tip: ${ca()}`)}`);
   }
-  if (lastError) {
-    return { parsed: parsedAll, error: lastError };
-  } else {
-    return { parsed: parsedAll };
-  }
+  return c ? { parsed: d, error: c } : { parsed: d };
 }
-function config(options2) {
-  if (_dotenvKey(options2).length === 0) {
-    return DotenvModule.configDotenv(options2);
-  }
-  const vaultPath = _vaultPath(options2);
-  if (!vaultPath) {
-    _warn(`you set DOTENV_KEY but you are missing a .env.vault file at ${vaultPath}`);
-    return DotenvModule.configDotenv(options2);
-  }
-  return DotenvModule._configVault(options2);
+function fa(t) {
+  if (bt(t).length === 0)
+    return C.configDotenv(t);
+  const e = Ft(t);
+  return e ? C._configVault(t) : (ma(`you set DOTENV_KEY but you are missing a .env.vault file at ${e}`), C.configDotenv(t));
 }
-function decrypt(encrypted, keyStr) {
-  const key = Buffer.from(keyStr.slice(-64), "hex");
-  let ciphertext = Buffer.from(encrypted, "base64");
-  const nonce = ciphertext.subarray(0, 12);
-  const authTag = ciphertext.subarray(-16);
-  ciphertext = ciphertext.subarray(12, -16);
+function ga(t, e) {
+  const a = Buffer.from(e.slice(-64), "hex");
+  let s = Buffer.from(t, "base64");
+  const n = s.subarray(0, 12), r = s.subarray(-16);
+  s = s.subarray(12, -16);
   try {
-    const aesgcm = crypto.createDecipheriv("aes-256-gcm", key, nonce);
-    aesgcm.setAuthTag(authTag);
-    return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
-  } catch (error) {
-    const isRange = error instanceof RangeError;
-    const invalidKeyLength = error.message === "Invalid key length";
-    const decryptionFailed = error.message === "Unsupported state or unable to authenticate data";
-    if (isRange || invalidKeyLength) {
-      const err = new Error("INVALID_DOTENV_KEY: It must be 64 characters long (or more)");
-      err.code = "INVALID_DOTENV_KEY";
-      throw err;
-    } else if (decryptionFailed) {
-      const err = new Error("DECRYPTION_FAILED: Please check your DOTENV_KEY");
-      err.code = "DECRYPTION_FAILED";
-      throw err;
-    } else {
-      throw error;
-    }
+    const i = ia.createDecipheriv("aes-256-gcm", a, n);
+    return i.setAuthTag(r), `${i.update(s)}${i.final()}`;
+  } catch (i) {
+    const c = i instanceof RangeError, d = i.message === "Invalid key length", l = i.message === "Unsupported state or unable to authenticate data";
+    if (c || d) {
+      const E = new Error("INVALID_DOTENV_KEY: It must be 64 characters long (or more)");
+      throw E.code = "INVALID_DOTENV_KEY", E;
+    } else if (l) {
+      const E = new Error("DECRYPTION_FAILED: Please check your DOTENV_KEY");
+      throw E.code = "DECRYPTION_FAILED", E;
+    } else
+      throw i;
   }
 }
-function populate(processEnv, parsed, options2 = {}) {
-  const debug = Boolean(options2 && options2.debug);
-  const override = Boolean(options2 && options2.override);
-  const populated = {};
-  if (typeof parsed !== "object") {
-    const err = new Error("OBJECT_REQUIRED: Please check the processEnv argument being passed to populate");
-    err.code = "OBJECT_REQUIRED";
-    throw err;
+function Ia(t, e, a = {}) {
+  const s = !!(a && a.debug), n = !!(a && a.override), r = {};
+  if (typeof e != "object") {
+    const i = new Error("OBJECT_REQUIRED: Please check the processEnv argument being passed to populate");
+    throw i.code = "OBJECT_REQUIRED", i;
   }
-  for (const key of Object.keys(parsed)) {
-    if (Object.prototype.hasOwnProperty.call(processEnv, key)) {
-      if (override === true) {
-        processEnv[key] = parsed[key];
-        populated[key] = parsed[key];
-      }
-      if (debug) {
-        if (override === true) {
-          _debug(`"${key}" is already defined and WAS overwritten`);
-        } else {
-          _debug(`"${key}" is already defined and was NOT overwritten`);
-        }
-      }
-    } else {
-      processEnv[key] = parsed[key];
-      populated[key] = parsed[key];
-    }
-  }
-  return populated;
+  for (const i of Object.keys(e))
+    Object.prototype.hasOwnProperty.call(t, i) ? (n === !0 && (t[i] = e[i], r[i] = e[i]), s && Ie(n === !0 ? `"${i}" is already defined and WAS overwritten` : `"${i}" is already defined and was NOT overwritten`)) : (t[i] = e[i], r[i] = e[i]);
+  return r;
 }
-const DotenvModule = {
-  configDotenv,
-  _configVault,
-  _parseVault,
-  config,
-  decrypt,
-  parse,
-  populate
+const C = {
+  configDotenv: Na,
+  _configVault: pa,
+  _parseVault: Ta,
+  config: fa,
+  decrypt: ga,
+  parse: Ea,
+  populate: Ia
 };
-main.exports.configDotenv = DotenvModule.configDotenv;
-main.exports._configVault = DotenvModule._configVault;
-main.exports._parseVault = DotenvModule._parseVault;
-main.exports.config = DotenvModule.config;
-main.exports.decrypt = DotenvModule.decrypt;
-main.exports.parse = DotenvModule.parse;
-main.exports.populate = DotenvModule.populate;
-main.exports = DotenvModule;
-var mainExports = main.exports;
-const options = {};
-if (process.env.DOTENV_CONFIG_ENCODING != null) {
-  options.encoding = process.env.DOTENV_CONFIG_ENCODING;
-}
-if (process.env.DOTENV_CONFIG_PATH != null) {
-  options.path = process.env.DOTENV_CONFIG_PATH;
-}
-if (process.env.DOTENV_CONFIG_QUIET != null) {
-  options.quiet = process.env.DOTENV_CONFIG_QUIET;
-}
-if (process.env.DOTENV_CONFIG_DEBUG != null) {
-  options.debug = process.env.DOTENV_CONFIG_DEBUG;
-}
-if (process.env.DOTENV_CONFIG_OVERRIDE != null) {
-  options.override = process.env.DOTENV_CONFIG_OVERRIDE;
-}
-if (process.env.DOTENV_CONFIG_DOTENV_KEY != null) {
-  options.DOTENV_KEY = process.env.DOTENV_CONFIG_DOTENV_KEY;
-}
-var envOptions = options;
-const re = /^dotenv_config_(encoding|path|quiet|debug|override|DOTENV_KEY)=(.+)$/;
-var cliOptions = function optionMatcher(args) {
-  const options2 = args.reduce(function(acc, cur) {
-    const matches = cur.match(re);
-    if (matches) {
-      acc[matches[1]] = matches[2];
-    }
-    return acc;
+z.exports.configDotenv = C.configDotenv;
+z.exports._configVault = C._configVault;
+z.exports._parseVault = C._parseVault;
+z.exports.config = C.config;
+z.exports.decrypt = C.decrypt;
+z.exports.parse = C.parse;
+z.exports.populate = C.populate;
+z.exports = C;
+var Aa = z.exports;
+const te = {};
+process.env.DOTENV_CONFIG_ENCODING != null && (te.encoding = process.env.DOTENV_CONFIG_ENCODING);
+process.env.DOTENV_CONFIG_PATH != null && (te.path = process.env.DOTENV_CONFIG_PATH);
+process.env.DOTENV_CONFIG_QUIET != null && (te.quiet = process.env.DOTENV_CONFIG_QUIET);
+process.env.DOTENV_CONFIG_DEBUG != null && (te.debug = process.env.DOTENV_CONFIG_DEBUG);
+process.env.DOTENV_CONFIG_OVERRIDE != null && (te.override = process.env.DOTENV_CONFIG_OVERRIDE);
+process.env.DOTENV_CONFIG_DOTENV_KEY != null && (te.DOTENV_KEY = process.env.DOTENV_CONFIG_DOTENV_KEY);
+var La = te;
+const Ra = /^dotenv_config_(encoding|path|quiet|debug|override|DOTENV_KEY)=(.+)$/;
+var ha = function(e) {
+  const a = e.reduce(function(s, n) {
+    const r = n.match(Ra);
+    return r && (s[r[1]] = r[2]), s;
   }, {});
-  if (!("quiet" in options2)) {
-    options2.quiet = "true";
-  }
-  return options2;
+  return "quiet" in a || (a.quiet = "true"), a;
 };
 (function() {
-  mainExports.config(
+  Aa.config(
     Object.assign(
       {},
-      envOptions,
-      cliOptions(process.argv)
+      La,
+      ha(process.argv)
     )
   );
 })();
-const logDir = path$2.join(app.getPath("userData"), "logs");
-if (!fs__default.existsSync(logDir)) {
-  fs__default.mkdirSync(logDir, { recursive: true });
-}
-function writeLog(level, message) {
-  const date = /* @__PURE__ */ new Date();
-  const dateISO = date.toLocaleString("sv-SE", {
+const Qe = Se.join(X.getPath("userData"), "logs");
+Le.existsSync(Qe) || Le.mkdirSync(Qe, { recursive: !0 });
+function Me(t, e) {
+  const s = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", {
     timeZone: "America/Sao_Paulo"
-  }).replace(" ", "T");
-  const line = `${dateISO} [${level}] ${message}
-`;
-  const fileName = `${dateISO.slice(0, 10)}.log`;
-  const filePath = path$2.join(logDir, fileName);
-  fs__default.appendFileSync(filePath, line, { encoding: "utf-8" });
+  }).replace(" ", "T"), n = `${s} [${t}] ${e}
+`, r = `${s.slice(0, 10)}.log`, i = Se.join(Qe, r);
+  Le.appendFileSync(i, n, { encoding: "utf-8" });
 }
-const logger = {
-  info: (msg) => writeLog("INFO", msg),
-  warn: (msg) => writeLog("WARN", msg),
-  error: (msg) => writeLog("ERROR", msg)
+const f = {
+  info: (t) => Me("INFO", t),
+  warn: (t) => Me("WARN", t),
+  error: (t) => Me("ERROR", t)
 };
-function hashSenha(senha) {
-  return require$$3.createHash("sha256").update(senha).digest("hex");
+function De(t) {
+  return yt.createHash("sha256").update(t).digest("hex");
 }
-function compareSenha(senhaDigitada, hashBanco) {
-  return hashSenha(senhaDigitada) === hashBanco;
+function Sa(t, e) {
+  return De(t) === e;
 }
-function autenticarUsuario(username, password) {
-  const user = db.prepare(`
+function Ca(t, e) {
+  const a = o.prepare(`
     SELECT id, nome, funcao, email, username, password, ativo
     FROM usuarios
     WHERE username = ?
     LIMIT 1
-  `).get(username);
-  if (!user) {
+  `).get(t);
+  if (!a)
     throw new Error("Usuário inválido");
-  }
-  if (!compareSenha(password, user.password)) {
+  if (!Sa(e, a.password))
     throw new Error("Senha inválida");
-  }
-  if (!user.ativo) {
+  if (!a.ativo)
     throw new Error("Usuário desabilitado");
-  }
-  const sessionId = db.transaction(() => {
-    db.prepare(`
+  const s = o.transaction(() => {
+    o.prepare(`
       UPDATE sessions
       SET active = 0,
           logout_at = CURRENT_TIMESTAMP
       WHERE user_id = ? AND active = 1
-    `).run(user.id);
-    const result = db.prepare(`
+    `).run(a.id);
+    const n = o.prepare(`
       INSERT INTO sessions (user_id)
       VALUES (?)
-    `).run(user.id);
-    return Number(result.lastInsertRowid);
+    `).run(a.id);
+    return Number(n.lastInsertRowid);
   })();
   return {
-    id: user.id,
-    nome: user.nome,
-    role: user.funcao,
-    email: user.email,
-    login: user.username,
-    sessionId
+    id: a.id,
+    nome: a.nome,
+    role: a.funcao,
+    email: a.email,
+    login: a.username,
+    sessionId: s
   };
 }
-const __filename$1 = fileURLToPath(import.meta.url);
-const __dirname$3 = path$2.dirname(__filename$1);
-function seedCnaes(db2) {
-  const count = db2.prepare("SELECT COUNT(*) as total FROM cnaes").get();
-  if (count.total > 0) {
+const va = sa(import.meta.url), Oa = Se.dirname(va);
+function ya(t) {
+  if (t.prepare("SELECT COUNT(*) as total FROM cnaes").get().total > 0) {
     console.log("CNAEs já cadastrados. Seed ignorado.");
     return;
   }
   console.log("Iniciando seed de CNAEs...");
-  const filePath = path$2.join(__dirname$3, "../electron/infra/database/seeds/files/cnaes-1.csv");
-  const fileContent = fs__default.readFileSync(filePath, "utf-8");
-  const lines = fileContent.split(/\r?\n/).slice(1);
-  const insert = db2.prepare(`
+  const a = Se.join(Oa, "../electron/infra/database/seeds/files/cnaes-1.csv"), n = Le.readFileSync(a, "utf-8").split(/\r?\n/).slice(1), r = t.prepare(`
     INSERT INTO cnaes 
     (codigo, secao, divisao, grupo, classe, denominacao, ativo)
     VALUES (?, ?, ?, ?, ?, ?, 1)
-  `);
-  const insertMany = db2.transaction((rows) => {
-    for (const row of rows) {
-      insert.run(
-        row[3],
+  `), i = t.transaction((d) => {
+    for (const l of d)
+      r.run(
+        l[3],
         // codigo
-        row[0],
+        l[0],
         // secao
-        row[1],
+        l[1],
         // divisao
-        row[2],
+        l[2],
         // grupo
-        row[3],
+        l[3],
         // classe
-        row[4]
+        l[4]
         // denominacao
       );
-    }
-  });
-  const parsedRows = lines.filter((line) => line.trim() !== "").map((line) => line.split("%"));
-  insertMany(parsedRows);
-  for (const row of parsedRows) {
-    if (!row[3]) {
-      console.log("LINHA COM PROBLEMA:", row);
-    }
-  }
+  }), c = n.filter((d) => d.trim() !== "").map((d) => d.split("%"));
+  i(c);
+  for (const d of c)
+    d[3] || console.log("LINHA COM PROBLEMA:", d);
   console.log("Seed de CNAEs concluído.");
 }
-const MIGRATION_ID = "2026-04-16-fiscal-persistence-v1";
-function ensureMigrationsTable(database) {
-  database.exec(`
+const Mt = "2026-04-16-fiscal-persistence-v1";
+function Ua(t) {
+  t.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       id TEXT PRIMARY KEY,
       executed_at TEXT NOT NULL
     );
   `);
 }
-function hasMigration(database, migrationId) {
-  const row = database.prepare(`SELECT 1 FROM schema_migrations WHERE id = ? LIMIT 1`).get(migrationId);
-  return Boolean(row);
+function Da(t, e) {
+  return !!t.prepare("SELECT 1 FROM schema_migrations WHERE id = ? LIMIT 1").get(e);
 }
-function hasColumn(database, table, column) {
-  const rows = database.prepare(`PRAGMA table_info(${table})`).all();
-  return rows.some((row) => row.name === column);
+function xe(t, e, a) {
+  return t.prepare(`PRAGMA table_info(${e})`).all().some((n) => n.name === a);
 }
-function executeMigration(database) {
-  const transaction = database.transaction(() => {
-    database.exec(`
+function ba(t) {
+  t.transaction(() => {
+    t.exec(`
       CREATE TABLE IF NOT EXISTS stores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT NOT NULL UNIQUE,
@@ -666,8 +527,7 @@ function executeMigration(database) {
 
       CREATE INDEX IF NOT EXISTS idx_sync_queue_entity
       ON sync_queue(entity_type, entity_id, operation);
-    `);
-    database.exec(`
+    `), t.exec(`
       INSERT INTO stores (
         code,
         name,
@@ -716,42 +576,25 @@ function executeMigration(database) {
       FROM company
       WHERE NOT EXISTS (SELECT 1 FROM stores)
       LIMIT 1;
-    `);
-    database.prepare(`INSERT INTO schema_migrations (id, executed_at) VALUES (?, CURRENT_TIMESTAMP)`).run(MIGRATION_ID);
-  });
-  transaction();
+    `), t.prepare("INSERT INTO schema_migrations (id, executed_at) VALUES (?, CURRENT_TIMESTAMP)").run(Mt);
+  })();
 }
-function ensureFiscalPersistenceColumns(database) {
-  const statements = [];
-  if (!hasColumn(database, "fiscal_documents", "issued_datetime")) {
-    statements.push(`ALTER TABLE fiscal_documents ADD COLUMN issued_datetime TEXT`);
-  }
-  if (!hasColumn(database, "fiscal_documents", "xml_authorized")) {
-    statements.push(`ALTER TABLE fiscal_documents ADD COLUMN xml_authorized TEXT`);
-  }
-  if (!hasColumn(database, "fiscal_documents", "xml_cancellation")) {
-    statements.push(`ALTER TABLE fiscal_documents ADD COLUMN xml_cancellation TEXT`);
-  }
-  if (statements.length > 0) {
-    database.exec(statements.join(";\n"));
-  }
+function Fa(t) {
+  const e = [];
+  xe(t, "fiscal_documents", "issued_datetime") || e.push("ALTER TABLE fiscal_documents ADD COLUMN issued_datetime TEXT"), xe(t, "fiscal_documents", "xml_authorized") || e.push("ALTER TABLE fiscal_documents ADD COLUMN xml_authorized TEXT"), xe(t, "fiscal_documents", "xml_cancellation") || e.push("ALTER TABLE fiscal_documents ADD COLUMN xml_cancellation TEXT"), e.length > 0 && t.exec(e.join(`;
+`));
 }
-function runFiscalPersistenceMigrations(database) {
-  ensureMigrationsTable(database);
-  if (!hasMigration(database, MIGRATION_ID)) {
-    executeMigration(database);
-  }
-  ensureFiscalPersistenceColumns(database);
+function Ma(t) {
+  Ua(t), Da(t, Mt) || ba(t), Fa(t);
 }
-const dbPath = path__default.join(app.getPath("userData"), "galberto.db");
-console.log(" Criando/abrindo banco de dados em: ", dbPath);
-const db = new Database(dbPath);
-function enableForeignKeys() {
-  db.exec("PRAGMA foreign_keys = ON;");
-  logger.info("-> Foreign keys ativadas");
+const xt = g.join(X.getPath("userData"), "galberto.db");
+console.log(" Criando/abrindo banco de dados em: ", xt);
+const o = new aa(xt);
+function xa() {
+  o.exec("PRAGMA foreign_keys = ON;"), f.info("-> Foreign keys ativadas");
 }
-function createTableProducts() {
-  const sqlComand = `
+function Pa() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
     external_id TEXT,
@@ -815,22 +658,14 @@ function createTableProducts() {
 
   CREATE INDEX IF NOT EXISTS idx_produtos_gtin
     ON produtos (gtin);
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'products' checada/criada");
+  `), f.info("-> Tabela 'products' checada/criada");
 }
-function ensureProductsColumns() {
-  const columns = db.prepare(`PRAGMA table_info(products)`).all();
-  const columnNames = new Set(columns.map((column) => column.name));
-  if (!columnNames.has("current_stock")) {
-    db.exec(`ALTER TABLE products ADD COLUMN current_stock REAL NOT NULL DEFAULT 0;`);
-  }
-  if (!columnNames.has("minimum_stock")) {
-    db.exec(`ALTER TABLE products ADD COLUMN minimum_stock REAL NOT NULL DEFAULT 0;`);
-  }
+function wa() {
+  const t = o.prepare("PRAGMA table_info(products)").all(), e = new Set(t.map((a) => a.name));
+  e.has("current_stock") || o.exec("ALTER TABLE products ADD COLUMN current_stock REAL NOT NULL DEFAULT 0;"), e.has("minimum_stock") || o.exec("ALTER TABLE products ADD COLUMN minimum_stock REAL NOT NULL DEFAULT 0;");
 }
-function syncLegacyProductsMirror() {
-  db.exec(`
+function Xa() {
+  o.exec(`
     INSERT OR REPLACE INTO produtos (
       id, internal_code, gtin, nome, preco_custo, preco_venda,
       estoque_atual, estoque_minimo, unidade_medida, ativo, created_at, updated_at
@@ -852,8 +687,8 @@ function syncLegacyProductsMirror() {
     LEFT JOIN produtos prod ON prod.id = p.id;
   `);
 }
-function createTableCategories() {
-  const sqlComand = `
+function $a() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS categories (
     id TEXT PRIMARY KEY,
     external_id TEXT,
@@ -875,12 +710,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_categories_integration_external
 
 CREATE INDEX IF NOT EXISTS idx_categories_name
   ON categories (name);
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'categories' checada/criada");
+  `), f.info("-> Tabela 'categories' checada/criada");
 }
-function createTableTaxProfile() {
-  const sqlComand = `
+function Ba() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS tax_profiles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -922,12 +755,10 @@ function createTableTaxProfile() {
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'tax_profiles' checada/criada");
+  `), f.info("-> Tabela 'tax_profiles' checada/criada");
 }
-function createTableFornecedores() {
-  const sqlComand = `
+function ka() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS fornecedores (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       razao_social TEXT NOT NULL,
@@ -950,12 +781,10 @@ function createTableFornecedores() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'fornecedores' checada/criada");
+  `), f.info("-> Tabela 'fornecedores' checada/criada");
 }
-function createTableClientes() {
-  const sqlComand = `
+function Ga() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS customers (
     id TEXT PRIMARY KEY,
     external_id TEXT,
@@ -1023,12 +852,10 @@ CREATE INDEX IF NOT EXISTS idx_customers_cnpj
 
   CREATE INDEX IF NOT EXISTS idx_clientes_cnpj
     ON clientes (cnpj);
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Created table customer");
+  `), f.info("-> Created table customer");
 }
-function createTableCompany() {
-  const sqlComand = `
+function Ha() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS company (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1077,12 +904,10 @@ function createTableCompany() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'company' checada/criada");
+  `), f.info("-> Tabela 'company' checada/criada");
 }
-function createTableVendas() {
-  const sqlComand = `
+function ja() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS vendas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1130,12 +955,10 @@ function createTableVendas() {
 
       UNIQUE (modelo_documento, serie, numero, ambiente)
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'vendas' checada/criada");
+  `), f.info("-> Tabela 'vendas' checada/criada");
 }
-function createTableVendaItens() {
-  const sqlComand = `
+function Va() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS venda_itens (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1175,12 +998,10 @@ function createTableVendaItens() {
       FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE,
       FOREIGN KEY (produto_id) REFERENCES products(id)
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'venda_itens' checada/criada");
+  `), f.info("-> Tabela 'venda_itens' checada/criada");
 }
-function createTableSaleItemTaxSnapshot() {
-  const sqlComand = `
+function za() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS sale_item_tax_snapshot (
       sale_item_id INTEGER PRIMARY KEY,
 
@@ -1236,12 +1057,10 @@ function createTableSaleItemTaxSnapshot() {
 
       FOREIGN KEY (sale_item_id) REFERENCES venda_itens(id) ON DELETE CASCADE
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'sale_item_tax_snapshot' checada/criada");
+  `), f.info("-> Tabela 'sale_item_tax_snapshot' checada/criada");
 }
-function createTableVendaPagamento() {
-  const sqlComand = `
+function Ya() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS venda_pagamento (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       venda_id INTEGER NOT NULL,
@@ -1255,12 +1074,10 @@ function createTableVendaPagamento() {
 
       FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'venda_pagamento' checada/criada");
+  `), f.info("-> Tabela 'venda_pagamento' checada/criada");
 }
-function createTableDocumentosFiscais() {
-  const sqlComand = `
+function Wa() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS documentos_fiscais (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1309,12 +1126,10 @@ function createTableDocumentosFiscais() {
 
       UNIQUE (modelo, serie, numero, ambiente, company_id)
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela legada 'documentos_fiscais' checada/criada");
+  `), f.info("-> Tabela legada 'documentos_fiscais' checada/criada");
 }
-function createTablePrinters() {
-  const sqlComand = `
+function Ka() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS printers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -1337,34 +1152,32 @@ function createTablePrinters() {
       installed_at TEXT,
       notes TEXT
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'printers' checada/criada");
+  `), f.info("-> Tabela 'printers' checada/criada");
 }
-function ensurePrintersColumns() {
+function qa() {
   try {
-    db.exec(`ALTER TABLE printers ADD COLUMN paper_width_mm REAL NOT NULL DEFAULT 80`);
+    o.exec("ALTER TABLE printers ADD COLUMN paper_width_mm REAL NOT NULL DEFAULT 80");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE printers ADD COLUMN content_width_mm REAL NOT NULL DEFAULT 76`);
+    o.exec("ALTER TABLE printers ADD COLUMN content_width_mm REAL NOT NULL DEFAULT 76");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE printers ADD COLUMN base_font_size_px REAL NOT NULL DEFAULT 13`);
+    o.exec("ALTER TABLE printers ADD COLUMN base_font_size_px REAL NOT NULL DEFAULT 13");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE printers ADD COLUMN line_height REAL NOT NULL DEFAULT 1.5`);
+    o.exec("ALTER TABLE printers ADD COLUMN line_height REAL NOT NULL DEFAULT 1.5");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE printers ADD COLUMN receipt_settings_json TEXT`);
+    o.exec("ALTER TABLE printers ADD COLUMN receipt_settings_json TEXT");
   } catch {
   }
 }
-function createTablePrinterLogs() {
-  const sqlComand = `
+function Qa() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS printer_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       printer_id INTEGER NOT NULL,
@@ -1372,12 +1185,10 @@ function createTablePrinterLogs() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (printer_id) REFERENCES printers(id) ON DELETE CASCADE
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'printer_logs' checada/criada");
+  `), f.info("-> Tabela 'printer_logs' checada/criada");
 }
-function createTableUsuarios() {
-  const sqlComand = `
+function Ja() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome TEXT NOT NULL,
@@ -1390,12 +1201,10 @@ function createTableUsuarios() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'usuarios' checada/criada");
+  `), f.info("-> Tabela 'usuarios' checada/criada");
 }
-function createTableSession() {
-  const sqlComand = `
+function Za() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -1404,12 +1213,10 @@ function createTableSession() {
       active INTEGER DEFAULT 1,
       FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'sessions' checada/criada");
+  `), f.info("-> Tabela 'sessions' checada/criada");
 }
-function createTableCnaes() {
-  const sqlComand = `
+function es() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS cnaes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       codigo TEXT NOT NULL UNIQUE,
@@ -1424,12 +1231,10 @@ function createTableCnaes() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'cnaes' checada/criada");
+  `), f.info("-> Tabela 'cnaes' checada/criada");
 }
-function createTableStockMoviments() {
-  const sqlComand = `CREATE TABLE IF NOT EXISTS stock_movements (
+function ts() {
+  const t = `CREATE TABLE IF NOT EXISTS stock_movements (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 
   product_id TEXT NOT NULL,
@@ -1466,11 +1271,10 @@ function createTableStockMoviments() {
   FOREIGN KEY (reversed_by_user_id) REFERENCES usuarios(id)
 );
 `;
-  logger.info("-> Tabela 'stock_movements' checada/criada");
-  db.exec(sqlComand);
+  f.info("-> Tabela 'stock_movements' checada/criada"), o.exec(t);
 }
-function createTableCashRegisterSessions() {
-  const sqlComand = `
+function as() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS cash_register_sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       operator_id INTEGER NOT NULL,
@@ -1485,30 +1289,28 @@ function createTableCashRegisterSessions() {
       opened_at TEXT NOT NULL,
       closed_at TEXT
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'cash_register_sessions' checada/criada");
+  `), f.info("-> Tabela 'cash_register_sessions' checada/criada");
 }
-function ensureCashRegisterSessionsColumns() {
+function ss() {
   try {
-    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN expected_cash_amount REAL`);
+    o.exec("ALTER TABLE cash_register_sessions ADD COLUMN expected_cash_amount REAL");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN closing_difference REAL`);
+    o.exec("ALTER TABLE cash_register_sessions ADD COLUMN closing_difference REAL");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN opening_notes TEXT`);
+    o.exec("ALTER TABLE cash_register_sessions ADD COLUMN opening_notes TEXT");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN closing_notes TEXT`);
+    o.exec("ALTER TABLE cash_register_sessions ADD COLUMN closing_notes TEXT");
   } catch {
   }
 }
-function createTableCashRegisterMovements() {
-  const sqlComand = `
+function ns() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS cash_register_movements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       cash_session_id INTEGER NOT NULL,
@@ -1521,27 +1323,25 @@ function createTableCashRegisterMovements() {
 
       FOREIGN KEY (cash_session_id) REFERENCES cash_register_sessions(id) ON DELETE CASCADE
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'cash_register_movements' checada/criada");
+  `), f.info("-> Tabela 'cash_register_movements' checada/criada");
 }
-function ensureVendaPagamentoColumns() {
+function rs() {
   try {
-    db.exec(`ALTER TABLE venda_pagamento ADD COLUMN cash_session_id INTEGER REFERENCES cash_register_sessions(id)`);
+    o.exec("ALTER TABLE venda_pagamento ADD COLUMN cash_session_id INTEGER REFERENCES cash_register_sessions(id)");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE venda_pagamento ADD COLUMN valor_recebido REAL NOT NULL DEFAULT 0`);
+    o.exec("ALTER TABLE venda_pagamento ADD COLUMN valor_recebido REAL NOT NULL DEFAULT 0");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE venda_pagamento ADD COLUMN troco REAL NOT NULL DEFAULT 0`);
+    o.exec("ALTER TABLE venda_pagamento ADD COLUMN troco REAL NOT NULL DEFAULT 0");
   } catch {
   }
 }
-function createTableIntegrations() {
+function os() {
   try {
-    const sqlComand = `
+    const t = `
       CREATE TABLE IF NOT EXISTS integrations (
         integration_id TEXT PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -1553,19 +1353,17 @@ function createTableIntegrations() {
         updated_at TEXT NOT NULL
       );
     `;
-    console.log("Criando tabela integrations...");
-    db.exec(sqlComand);
-    console.log("Tabela criada com sucesso!");
-    const test = db.prepare(`
+    console.log("Criando tabela integrations..."), o.exec(t), console.log("Tabela criada com sucesso!");
+    const e = o.prepare(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='integrations';
     `).get();
-    console.log("Tabela existe?", test);
-  } catch (err) {
-    console.error("Erro ao criar tabela:", err);
+    console.log("Tabela existe?", e);
+  } catch (t) {
+    console.error("Erro ao criar tabela:", t);
   }
 }
-function createTablePrintedDocuments() {
-  const sqlComand = `
+function is() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS printed_documents (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       document_type TEXT NOT NULL CHECK (document_type IN ('SALE_RECEIPT', 'CASH_OPENING_RECEIPT', 'CASH_CLOSING_RECEIPT')),
@@ -1595,12 +1393,10 @@ function createTablePrintedDocuments() {
 
     CREATE INDEX IF NOT EXISTS idx_printed_documents_cash_session_id
       ON printed_documents (cash_session_id);
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'printed_documents' checada/criada");
+  `), f.info("-> Tabela 'printed_documents' checada/criada");
 }
-function createTablePrintJobs() {
-  const sqlComand = `
+function cs() {
+  o.exec(`
     CREATE TABLE IF NOT EXISTS print_jobs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       printed_document_id INTEGER NOT NULL,
@@ -1620,13 +1416,11 @@ function createTablePrintJobs() {
 
     CREATE INDEX IF NOT EXISTS idx_print_jobs_status
       ON print_jobs (status);
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'print_jobs' checada/criada");
+  `), f.info("-> Tabela 'print_jobs' checada/criada");
 }
-function createTableSyncState() {
+function ds() {
   try {
-    const sqlComand = `
+    const t = `
       CREATE TABLE IF NOT EXISTS sync_states (
           id TEXT PRIMARY KEY,
           integration_id TEXT NOT NULL,
@@ -1641,20 +1435,18 @@ function createTableSyncState() {
           UNIQUE(integration_id, resource)
       );
     `;
-    console.log("Criando tabela sync_state...");
-    db.exec(sqlComand);
-    console.log("Tabela criada com sucesso!");
-    const test = db.prepare(`
+    console.log("Criando tabela sync_state..."), o.exec(t), console.log("Tabela criada com sucesso!");
+    const e = o.prepare(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='integrations';
     `).get();
-    console.log("Tabela existe?", test);
-  } catch (err) {
-    console.error("Erro ao criar tabela:", err);
+    console.log("Tabela existe?", e);
+  } catch (t) {
+    console.error("Erro ao criar tabela:", t);
   }
 }
-function createTableSyncLogs() {
+function ls() {
   try {
-    const sqlComand = `
+    const t = `
       CREATE TABLE IF NOT EXISTS sync_logs (
           id TEXT PRIMARY KEY,
           integration_id TEXT NOT NULL,
@@ -1670,94 +1462,88 @@ function createTableSyncLogs() {
           error_message TEXT
       );
     `;
-    console.log("Criando tabela sync_logs...");
-    db.exec(sqlComand);
-    console.log("Tabela criada com sucesso!");
-    const test = db.prepare(`
+    console.log("Criando tabela sync_logs..."), o.exec(t), console.log("Tabela criada com sucesso!");
+    const e = o.prepare(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='integrations';
     `).get();
-    console.log("Tabela existe?", test);
-  } catch (err) {
-    console.error("Erro ao criar tabela:", err);
+    console.log("Tabela existe?", e);
+  } catch (t) {
+    console.error("Erro ao criar tabela:", t);
   }
 }
-createTableProducts();
-ensureProductsColumns();
-syncLegacyProductsMirror();
-createTableCategories();
-createTableClientes();
-createTableUsuarios();
-createTableFornecedores();
-createTableVendas();
-createTableVendaItens();
-createTableCompany();
-createTablePrinters();
-ensurePrintersColumns();
-createTablePrinterLogs();
-createTableSession();
-createTableCnaes();
-seedCnaes(db);
-createTableTaxProfile();
-createTableSaleItemTaxSnapshot();
-createTableStockMoviments();
-createTableVendaPagamento();
-ensureVendaPagamentoColumns();
-createTableDocumentosFiscais();
-createTableCashRegisterSessions();
-ensureCashRegisterSessionsColumns();
-createTableCashRegisterMovements();
-createTableIntegrations();
-createTableSyncState();
-createTableSyncLogs();
-createTablePrintedDocuments();
-createTablePrintJobs();
-runFiscalPersistenceMigrations(db);
-function getSaleDefaults() {
-  const company = db.prepare(`
+Pa();
+wa();
+Xa();
+$a();
+Ga();
+Ja();
+ka();
+ja();
+Va();
+Ha();
+Ka();
+qa();
+Qa();
+Za();
+es();
+ya(o);
+Ba();
+za();
+ts();
+Ya();
+rs();
+Wa();
+as();
+ss();
+ns();
+os();
+ds();
+ls();
+is();
+cs();
+Ma(o);
+function Pt() {
+  const t = o.prepare(`
     SELECT ambiente_emissao, serie_nfce
     FROM company
     WHERE ativo = 1
     LIMIT 1
-  `).get();
-  const ambiente = (company == null ? void 0 : company.ambiente_emissao) ?? 2;
-  const serie = (company == null ? void 0 : company.serie_nfce) ?? 1;
-  const nextNumberRow = db.prepare(`
+  `).get(), e = (t == null ? void 0 : t.ambiente_emissao) ?? 2, a = (t == null ? void 0 : t.serie_nfce) ?? 1, s = o.prepare(`
     SELECT COALESCE(MAX(numero), 0) + 1 AS nextNumber
     FROM vendas
     WHERE modelo_documento = 65 AND serie = ? AND ambiente = ?
-  `).get(serie, ambiente);
+  `).get(a, e);
   return {
-    ambiente,
-    serie,
-    numero: nextNumberRow.nextNumber,
+    ambiente: e,
+    serie: a,
+    numero: s.nextNumber,
     naturezaOperacao: "VENDA PDV",
     modeloDocumento: 65
   };
 }
-function getSaleItemSnapshot(productId) {
-  const product = db.prepare(`
+function us(t) {
+  const e = o.prepare(`
     SELECT id, barcode, name, unit, sale_price_cents
     FROM products
     WHERE id = ? AND deleted_at IS NULL
     LIMIT 1
-  `).get(productId);
-  if (!product) {
-    throw new Error(`Produto não encontrado para venda: ${productId}`);
-  }
+  `).get(t);
+  if (!e)
+    throw new Error(`Produto não encontrado para venda: ${t}`);
   return {
-    codigoProduto: product.barcode || product.id,
-    nomeProduto: product.name,
-    gtin: product.barcode,
-    unidade: product.unit || "UN",
-    precoUnitario: Number(product.sale_price_cents ?? 0) / 100,
+    codigoProduto: e.barcode || e.id,
+    nomeProduto: e.name,
+    gtin: e.barcode,
+    unidade: e.unit || "UN",
+    precoUnitario: Number(e.sale_price_cents ?? 0) / 100,
     ncm: "",
     cfop: "5102",
     cest: null
   };
 }
-function replaceSaleItems(vendaId, itens) {
-  db.prepare(`DELETE FROM venda_itens WHERE venda_id = ?`).run(vendaId);
-  const insertItem = db.prepare(`
+function wt(t, e) {
+  o.prepare("DELETE FROM venda_itens WHERE venda_id = ?").run(t);
+  const a = o.prepare(`
     INSERT INTO venda_itens(
       venda_id, produto_id, codigo_produto, nome_produto, gtin, gtin_tributavel,
       ncm, cfop, cest, unidade_comercial, quantidade_comercial, valor_unitario_comercial,
@@ -1766,44 +1552,35 @@ function replaceSaleItems(vendaId, itens) {
     )
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  for (const item of itens) {
-    const snapshot = getSaleItemSnapshot(item.produto_id);
-    const quantidade = Number(item.quantidade ?? item.estoque_atual ?? 0);
-    const precoUnitario = Number(item.preco_venda ?? snapshot.precoUnitario);
-    const valorBruto = Number(item.valor_bruto ?? quantidade * precoUnitario);
-    const valorDesconto = Math.max(0, Math.min(Number(item.valor_desconto ?? 0), valorBruto));
-    const subtotal = Number(item.subtotal ?? Math.max(valorBruto - valorDesconto, 0));
-    insertItem.run(
-      vendaId,
-      item.produto_id,
-      snapshot.codigoProduto,
-      item.nome ?? snapshot.nomeProduto,
-      snapshot.gtin,
-      snapshot.gtin,
-      snapshot.ncm,
-      snapshot.cfop,
-      snapshot.cest,
-      snapshot.unidade,
-      quantidade,
-      precoUnitario,
-      snapshot.unidade,
-      quantidade,
-      precoUnitario,
-      valorBruto,
-      valorDesconto,
-      subtotal
+  for (const s of e) {
+    const n = us(s.produto_id), r = Number(s.quantidade ?? s.estoque_atual ?? 0), i = Number(s.preco_venda ?? n.precoUnitario), c = Number(s.valor_bruto ?? r * i), d = Math.max(0, Math.min(Number(s.valor_desconto ?? 0), c)), l = Number(s.subtotal ?? Math.max(c - d, 0));
+    a.run(
+      t,
+      s.produto_id,
+      n.codigoProduto,
+      s.nome ?? n.nomeProduto,
+      n.gtin,
+      n.gtin,
+      n.ncm,
+      n.cfop,
+      n.cest,
+      n.unidade,
+      r,
+      i,
+      n.unidade,
+      r,
+      i,
+      c,
+      d,
+      l
     );
   }
 }
-function salvarVendaPendente(venda, status, vendaId) {
-  const saleDefaults = getSaleDefaults();
-  const valorProdutos = Number(venda.valor_produtos ?? venda.total ?? 0);
-  const valorDesconto = Number(venda.valor_desconto ?? 0);
-  const valorTotal = Number(venda.total ?? 0);
-  const transaction = db.transaction(() => {
-    let persistedSaleId = vendaId ?? null;
-    if (persistedSaleId) {
-      db.prepare(`
+function ct(t, e, a) {
+  const s = Pt(), n = Number(t.valor_produtos ?? t.total ?? 0), r = Number(t.valor_desconto ?? 0), i = Number(t.total ?? 0);
+  return o.transaction(() => {
+    let d = a ?? null;
+    return d ? o.prepare(`
         UPDATE vendas
         SET
           data_movimento = datetime('now'),
@@ -1816,54 +1593,46 @@ function salvarVendaPendente(venda, status, vendaId) {
           updated_at = datetime('now')
         WHERE id = ?
       `).run(
-        status,
-        venda.cpf_cliente ?? null,
-        venda.consumidor_identificado ? venda.cpf_cliente ?? null : "Consumidor final",
-        valorProdutos,
-        valorDesconto,
-        valorTotal,
-        persistedSaleId
-      );
-    } else {
-      const result = db.prepare(`
+      e,
+      t.cpf_cliente ?? null,
+      t.consumidor_identificado ? t.cpf_cliente ?? null : "Consumidor final",
+      n,
+      r,
+      i,
+      d
+    ) : d = o.prepare(`
         INSERT INTO vendas(
           data_emissao, data_movimento, status, natureza_operacao, modelo_documento,
           serie, numero, ambiente, cliente_nome, cpf_cliente, valor_produtos, valor_desconto, valor_total
         )
         VALUES(datetime('now'), datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        status,
-        saleDefaults.naturezaOperacao,
-        saleDefaults.modeloDocumento,
-        saleDefaults.serie,
-        saleDefaults.numero,
-        saleDefaults.ambiente,
-        venda.consumidor_identificado ? venda.cpf_cliente ?? null : "Consumidor final",
-        venda.cpf_cliente ?? null,
-        valorProdutos,
-        valorDesconto,
-        valorTotal
-      );
-      persistedSaleId = result.lastInsertRowid;
-    }
-    replaceSaleItems(persistedSaleId, venda.itens);
-    return persistedSaleId;
-  });
-  return transaction();
+      e,
+      s.naturezaOperacao,
+      s.modeloDocumento,
+      s.serie,
+      s.numero,
+      s.ambiente,
+      t.consumidor_identificado ? t.cpf_cliente ?? null : "Consumidor final",
+      t.cpf_cliente ?? null,
+      n,
+      r,
+      i
+    ).lastInsertRowid, wt(d, t.itens), d;
+  })();
 }
-function mapPaymentTypeToFiscalCode(meioPagamento) {
-  const paymentTypeMap = {
+function Es(t) {
+  return {
     DINHEIRO: "01",
     CHEQUE: "02",
     CREDITO: "03",
     DEBITO: "04",
     VOUCHER: "10",
     PIX: "17"
-  };
-  return paymentTypeMap[meioPagamento] ?? "99";
+  }[t] ?? "99";
 }
-function getCashSessionSummaryById(sessionId) {
-  const stmt = db.prepare(`
+function Re(t) {
+  const a = o.prepare(`
     SELECT
       s.id,
       s.operator_id,
@@ -1887,58 +1656,46 @@ function getCashSessionSummaryById(sessionId) {
     FROM cash_register_sessions s
     WHERE s.id = ?
     LIMIT 1
-  `);
-  const session = stmt.get(sessionId);
-  if (!session) {
-    return null;
-  }
-  return {
-    ...session,
-    total_sangrias: Number(session.total_sangrias ?? 0),
-    total_vendas_dinheiro: Number(session.total_vendas_dinheiro ?? 0),
-    expected_cash_amount: Number(session.opening_cash_amount ?? 0) + Number(session.total_vendas_dinheiro ?? 0) - Number(session.total_sangrias ?? 0)
-  };
+  `).get(t);
+  return a ? {
+    ...a,
+    total_sangrias: Number(a.total_sangrias ?? 0),
+    total_vendas_dinheiro: Number(a.total_vendas_dinheiro ?? 0),
+    expected_cash_amount: Number(a.opening_cash_amount ?? 0) + Number(a.total_vendas_dinheiro ?? 0) - Number(a.total_sangrias ?? 0)
+  } : null;
 }
-function registrarPagamentoVenda(vendaId, paymentData) {
-  if (!(paymentData == null ? void 0 : paymentData.meioPagamento)) {
+function Ts(t, e) {
+  if (!(e != null && e.meioPagamento))
     return;
-  }
-  const sale = db.prepare(`
+  const a = o.prepare(`
     SELECT valor_total
     FROM vendas
     WHERE id = ?
     LIMIT 1
-  `).get(vendaId);
-  if (!sale) {
-    throw new Error(`Venda não encontrada para registrar pagamento: ${vendaId}`);
-  }
-  db.prepare(`DELETE FROM venda_pagamento WHERE venda_id = ?`).run(vendaId);
-  const valorVenda = Number(sale.valor_total ?? 0);
-  const troco = Number(paymentData.troco ?? 0);
-  const valorRecebido = paymentData.meioPagamento === "DINHEIRO" ? Number(paymentData.valorPago ?? valorVenda) : valorVenda;
-  db.prepare(`
+  `).get(t);
+  if (!a)
+    throw new Error(`Venda não encontrada para registrar pagamento: ${t}`);
+  o.prepare("DELETE FROM venda_pagamento WHERE venda_id = ?").run(t);
+  const s = Number(a.valor_total ?? 0), n = Number(e.troco ?? 0), r = e.meioPagamento === "DINHEIRO" ? Number(e.valorPago ?? s) : s;
+  o.prepare(`
     INSERT INTO venda_pagamento(
       venda_id, cash_session_id, tpag, valor, valor_recebido, troco, descricao_outro
     )
     VALUES(?, ?, ?, ?, ?, ?, ?)
   `).run(
-    vendaId,
-    paymentData.cashSessionId ?? null,
-    mapPaymentTypeToFiscalCode(paymentData.meioPagamento),
-    valorVenda,
-    valorRecebido,
-    troco,
+    t,
+    e.cashSessionId ?? null,
+    Es(e.meioPagamento),
+    s,
+    r,
+    n,
     null
   );
 }
-function cancelarVenda(venda) {
-  db.prepare("BEGIN").run();
+function ms(t) {
+  o.prepare("BEGIN").run();
   try {
-    const saleDefaults = getSaleDefaults();
-    const valorProdutos = Number(venda.valor_produtos ?? venda.total ?? 0);
-    const valorDesconto = Number(venda.valor_desconto ?? 0);
-    const valorTotal = Number(venda.total ?? 0);
-    const vendaResult = db.prepare(`
+    const e = Pt(), a = Number(t.valor_produtos ?? t.total ?? 0), s = Number(t.valor_desconto ?? 0), n = Number(t.total ?? 0), i = o.prepare(`
         INSERT INTO vendas(
           data_emissao, data_movimento, status, natureza_operacao, modelo_documento,
           serie, numero, ambiente, valor_produtos, valor_desconto, valor_total
@@ -1946,56 +1703,46 @@ function cancelarVenda(venda) {
         VALUES(datetime('now'), datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
       "CANCELADA",
-      saleDefaults.naturezaOperacao,
-      saleDefaults.modeloDocumento,
-      saleDefaults.serie,
-      saleDefaults.numero,
-      saleDefaults.ambiente,
-      valorProdutos,
-      valorDesconto,
-      valorTotal
-    );
-    const vendaId = vendaResult.lastInsertRowid;
-    replaceSaleItems(vendaId, venda.itens);
-    db.prepare("COMMIT").run();
-    return { sucesso: true, vendaId };
-  } catch (error) {
-    db.prepare("ROLLBACK").run();
-    throw error;
+      e.naturezaOperacao,
+      e.modeloDocumento,
+      e.serie,
+      e.numero,
+      e.ambiente,
+      a,
+      s,
+      n
+    ).lastInsertRowid;
+    return wt(i, t.itens), o.prepare("COMMIT").run(), { sucesso: !0, vendaId: i };
+  } catch (e) {
+    throw o.prepare("ROLLBACK").run(), e;
   }
 }
-function finalizarVendaComBaixaEstoque(vendaPayload) {
-  const vendaId = typeof vendaPayload === "number" ? vendaPayload : vendaPayload.vendaId;
-  const selectItens = db.prepare(
+function _s(t) {
+  const e = typeof t == "number" ? t : t.vendaId, a = o.prepare(
     `SELECT produto_id, quantidade_comercial AS quantidade
      FROM venda_itens
      WHERE venda_id = ? `
-  );
-  const selectSaldo = db.prepare(
+  ), s = o.prepare(
     `SELECT current_stock
      FROM products
      WHERE id = ? AND deleted_at IS NULL
      LIMIT 1`
-  );
-  const atualizarEstoque = db.prepare(
+  ), n = o.prepare(
     `UPDATE products
      SET current_stock = current_stock - ?,
          updated_at = datetime('now')
      WHERE id = ?`
-  );
-  const atualizarEstoqueLegado = db.prepare(
+  ), r = o.prepare(
     `UPDATE produtos
      SET estoque_atual = estoque_atual - ?,
          updated_at = datetime('now')
      WHERE id = ?`
-  );
-  const buscarValoresVenda = db.prepare(
+  ), i = o.prepare(
     `SELECT valor_produtos, valor_desconto, valor_total
      FROM vendas
      WHERE id = ?
      LIMIT 1`
-  );
-  const atualizarVenda = db.prepare(
+  ), c = o.prepare(
     `UPDATE vendas
      SET status = 'FINALIZADA'
        , data_movimento = datetime('now')
@@ -2006,63 +1753,50 @@ function finalizarVendaComBaixaEstoque(vendaPayload) {
        , updated_at = datetime('now')
      WHERE id = ? `
   );
-  const transaction = db.transaction(() => {
-    const itens = selectItens.all(vendaId);
-    const vendaAtual = buscarValoresVenda.get(vendaId);
-    if (!vendaAtual) {
-      throw new Error(`Venda não encontrada: ${vendaId}`);
+  o.transaction(() => {
+    const l = a.all(e), E = i.get(e);
+    if (!E)
+      throw new Error(`Venda não encontrada: ${e}`);
+    for (const A of l) {
+      const D = s.get(A.produto_id);
+      if (!D)
+        throw new Error(`Produto da venda não encontrado: ${A.produto_id}`);
+      if (Number(D.current_stock ?? 0) < Number(A.quantidade ?? 0))
+        throw new Error(`Estoque insuficiente para o produto ${A.produto_id}`);
+      n.run(A.quantidade, A.produto_id), r.run(A.quantidade, A.produto_id);
     }
-    for (const item of itens) {
-      const saldo = selectSaldo.get(item.produto_id);
-      if (!saldo) {
-        throw new Error(`Produto da venda não encontrado: ${item.produto_id}`);
-      }
-      if (Number(saldo.current_stock ?? 0) < Number(item.quantidade ?? 0)) {
-        throw new Error(`Estoque insuficiente para o produto ${item.produto_id}`);
-      }
-      atualizarEstoque.run(item.quantidade, item.produto_id);
-      atualizarEstoqueLegado.run(item.quantidade, item.produto_id);
-    }
-    const valorProdutos = typeof vendaPayload === "number" ? Number(vendaAtual.valor_produtos ?? 0) : Number(vendaPayload.valorProdutos ?? vendaAtual.valor_produtos ?? 0);
-    const valorDesconto = typeof vendaPayload === "number" ? Number(vendaAtual.valor_desconto ?? 0) : Number(vendaPayload.valorDesconto ?? vendaAtual.valor_desconto ?? 0);
-    const valorTotal = typeof vendaPayload === "number" ? Number(vendaAtual.valor_total ?? 0) : Number(vendaPayload.valorTotal ?? vendaAtual.valor_total ?? 0);
-    const valorTroco = typeof vendaPayload === "number" ? 0 : Number(vendaPayload.troco ?? 0);
-    atualizarVenda.run(
-      valorProdutos,
-      valorDesconto,
-      valorTotal,
-      valorTroco,
-      vendaId
+    const _ = Number(typeof t == "number" ? E.valor_produtos ?? 0 : t.valorProdutos ?? E.valor_produtos ?? 0), T = Number(typeof t == "number" ? E.valor_desconto ?? 0 : t.valorDesconto ?? E.valor_desconto ?? 0), N = Number(typeof t == "number" ? E.valor_total ?? 0 : t.valorTotal ?? E.valor_total ?? 0), v = typeof t == "number" ? 0 : Number(t.troco ?? 0);
+    c.run(
+      _,
+      T,
+      N,
+      v,
+      e
+    ), Ts(
+      e,
+      typeof t == "number" ? void 0 : t
     );
-    registrarPagamentoVenda(
-      vendaId,
-      typeof vendaPayload === "number" ? void 0 : vendaPayload
-    );
-  });
-  transaction();
+  })();
 }
-function insertCashSession(data) {
-  var _a;
-  const stmt = db.prepare(`
+function ps(t) {
+  var n;
+  const a = o.prepare(`
     INSERT INTO cash_register_sessions
       (operator_id, pdv_id, status, opening_cash_amount, opening_notes, opened_at)
     VALUES(?, ?, 'OPEN', ?, ?, datetime('now'))
-      `);
-  const result = stmt.run(
-    data.operator_id,
-    data.pdv_id,
-    data.opening_cash_amount,
-    ((_a = data.opening_notes) == null ? void 0 : _a.trim()) || null
-  );
-  const session = getCashSessionSummaryById(result.lastInsertRowid);
-  if (!session) {
+      `).run(
+    t.operator_id,
+    t.pdv_id,
+    t.opening_cash_amount,
+    ((n = t.opening_notes) == null ? void 0 : n.trim()) || null
+  ), s = Re(a.lastInsertRowid);
+  if (!s)
     throw new Error("Sessão de caixa não encontrada após abertura.");
-  }
-  return session;
+  return s;
 }
-function registerCashWithdrawal(data) {
-  var _a;
-  const openSession = db.prepare(`
+function Ns(t) {
+  var r;
+  if (!o.prepare(`
     SELECT id
     FROM cash_register_sessions
     WHERE id = ?
@@ -2070,43 +1804,37 @@ function registerCashWithdrawal(data) {
       AND pdv_id = ?
       AND status = 'OPEN'
     LIMIT 1
-  `).get(data.cash_session_id, data.operator_id, data.pdv_id);
-  if (!openSession) {
+  `).get(t.cash_session_id, t.operator_id, t.pdv_id))
     throw new Error("Nenhum caixa aberto foi encontrado para registrar a sangria.");
-  }
-  const session = getCashSessionSummaryById(data.cash_session_id);
-  if (!session) {
+  const a = Re(t.cash_session_id);
+  if (!a)
     throw new Error("Sessão de caixa inválida para sangria.");
-  }
-  const valorSangria = Number(data.amount ?? 0);
-  if (valorSangria <= 0) {
+  const s = Number(t.amount ?? 0);
+  if (s <= 0)
     throw new Error("Informe um valor válido para a sangria.");
-  }
-  if (valorSangria > Number(session.expected_cash_amount ?? 0)) {
+  if (s > Number(a.expected_cash_amount ?? 0))
     throw new Error("A sangria não pode ser maior que o valor disponível em caixa.");
-  }
-  db.prepare(`
+  o.prepare(`
     INSERT INTO cash_register_movements(
       cash_session_id, operator_id, pdv_id, movement_type, amount, reason
     )
     VALUES(?, ?, ?, ?, ?, ?)
   `).run(
-    data.cash_session_id,
-    data.operator_id,
-    data.pdv_id,
-    data.movement_type,
-    valorSangria,
-    ((_a = data.reason) == null ? void 0 : _a.trim()) || null
+    t.cash_session_id,
+    t.operator_id,
+    t.pdv_id,
+    t.movement_type,
+    s,
+    ((r = t.reason) == null ? void 0 : r.trim()) || null
   );
-  const updatedSession = getCashSessionSummaryById(data.cash_session_id);
-  if (!updatedSession) {
+  const n = Re(t.cash_session_id);
+  if (!n)
     throw new Error("Não foi possível recarregar a sessão após a sangria.");
-  }
-  return updatedSession;
+  return n;
 }
-function closeCashSession(data) {
-  var _a;
-  const stmt = db.prepare(`
+function fs(t) {
+  var r;
+  if (o.prepare(`
     UPDATE cash_register_sessions
     SET
       status = 'CLOSED',
@@ -2119,73 +1847,54 @@ function closeCashSession(data) {
     WHERE operator_id = ?
       AND pdv_id = ?
         AND status = 'OPEN'
-          `);
-  const result = stmt.run(
-    data.closing_cash_amount,
-    data.expected_cash_amount,
-    data.difference,
-    ((_a = data.closing_notes) == null ? void 0 : _a.trim()) || null,
-    data.operator_id,
-    data.pdv_id
-  );
-  if (result.changes === 0) {
+          `).run(
+    t.closing_cash_amount,
+    t.expected_cash_amount,
+    t.difference,
+    ((r = t.closing_notes) == null ? void 0 : r.trim()) || null,
+    t.operator_id,
+    t.pdv_id
+  ).changes === 0)
     throw new Error("Nenhum caixa aberto foi encontrado para fechamento.");
-  }
-  const closedSession = db.prepare(`
+  const s = o.prepare(`
     SELECT id
     FROM cash_register_sessions
     WHERE operator_id = ?
       AND pdv_id = ?
     ORDER BY id DESC
     LIMIT 1
-  `).get(data.operator_id, data.pdv_id);
-  if (!closedSession) {
+  `).get(t.operator_id, t.pdv_id);
+  if (!s)
     throw new Error("Sessão de caixa não encontrada após o fechamento.");
-  }
-  const summary = getCashSessionSummaryById(closedSession.id);
-  if (!summary) {
+  const n = Re(s.id);
+  if (!n)
     throw new Error("Resumo da sessão de caixa não encontrado após o fechamento.");
-  }
-  return summary;
+  return n;
 }
-function listarVendas({ venda_id, data, status, page = 1, limit = 20 }) {
-  const offset = (page - 1) * limit;
-  let where = [];
-  let params = [];
-  const statusMap = { 1: "FINALIZADA", 2: "CANCELADA", 3: "ABERTA_PAGAMENTO", 4: "ORCAMENTO", 5: "PAUSADA" };
-  if (venda_id) {
-    where.push("CAST(id AS TEXT) LIKE ?");
-    params.push(`%${venda_id}%`);
-  }
-  if (data) {
-    where.push("date(data_emissao) = date(?)");
-    params.push(data);
-  }
-  if (status !== void 0) {
-    where.push("status = ?");
-    params.push(statusMap[status]);
-  }
-  const whereClause = where.length ? `WHERE ${where.join(" AND ")} ` : "";
-  const stmt = db.prepare(`
+function gs({ venda_id: t, data: e, status: a, page: s = 1, limit: n = 20 }) {
+  const r = (s - 1) * n;
+  let i = [], c = [];
+  const d = { 1: "FINALIZADA", 2: "CANCELADA", 3: "ABERTA_PAGAMENTO", 4: "ORCAMENTO", 5: "PAUSADA" };
+  t && (i.push("CAST(id AS TEXT) LIKE ?"), c.push(`%${t}%`)), e && (i.push("date(data_emissao) = date(?)"), c.push(e)), a !== void 0 && (i.push("status = ?"), c.push(d[a]));
+  const l = i.length ? `WHERE ${i.join(" AND ")} ` : "", E = o.prepare(`
     SELECT * FROM vendas
-      ${whereClause}
+      ${l}
       ORDER BY id DESC
     LIMIT ? OFFSET ?
-      `).all(...params, limit, offset);
-  const total = db.prepare(`
+      `).all(...c, n, r), _ = o.prepare(`
       SELECT COUNT(*) as total
       FROM vendas
-      ${whereClause}
-    `).get(...params);
+      ${l}
+    `).get(...c);
   return {
-    data: stmt,
-    page,
-    limit,
-    total: total.total
+    data: E,
+    page: s,
+    limit: n,
+    total: _.total
   };
 }
-function buscarVendaPorId(vendaId) {
-  const venda = db.prepare(`
+function Is(t) {
+  const e = o.prepare(`
       SELECT
         id,
         data_emissao,
@@ -2200,9 +1909,9 @@ function buscarVendaPorId(vendaId) {
         observacao
       FROM vendas
       WHERE id = ?
-      `).get(vendaId);
-  if (!venda) return null;
-  const itens = db.prepare(`
+      `).get(t);
+  if (!e) return null;
+  const a = o.prepare(`
       SELECT
         produto_id,
         codigo_produto,
@@ -2214,29 +1923,17 @@ function buscarVendaPorId(vendaId) {
         subtotal
       FROM venda_itens
       WHERE venda_id = ?
-      `).all(vendaId);
+      `).all(t);
   return {
-    ...venda,
-    itens
+    ...e,
+    itens: a
   };
 }
-function listarProdutos({ nome, codigo, ativo, page = 1, limit = 20 }) {
-  const offset = (page - 1) * limit;
-  let where = [];
-  let params = [];
-  if (nome) {
-    where.push("name LIKE ?");
-    params.push(`%${nome}%`);
-  }
-  if (codigo) {
-    where.push("(barcode LIKE ? OR sku LIKE ?)");
-    params.push(`%${codigo}%`, `%${codigo}%`);
-  }
-  if (ativo !== void 0) {
-    where.push("active = ?");
-    params.push(ativo);
-  }
-  const data = db.prepare(`
+function As({ nome: t, codigo: e, ativo: a, page: s = 1, limit: n = 20 }) {
+  const r = (s - 1) * n;
+  let i = [], c = [];
+  t && (i.push("name LIKE ?"), c.push(`%${t}%`)), e && (i.push("(barcode LIKE ? OR sku LIKE ?)"), c.push(`%${e}%`, `%${e}%`)), a !== void 0 && (i.push("active = ?"), c.push(a));
+  const d = o.prepare(`
       SELECT
         id,
         barcode AS codigo_barras,
@@ -2246,25 +1943,24 @@ function listarProdutos({ nome, codigo, ativo, page = 1, limit = 20 }) {
         active AS ativo
       FROM products
       WHERE deleted_at IS NULL
-      ${where.length ? `AND ${where.join(" AND ")}` : ""}
+      ${i.length ? `AND ${i.join(" AND ")}` : ""}
       ORDER BY name
     LIMIT ? OFFSET ?
-      `).all(...params, limit, offset);
-  const total = db.prepare(`
+      `).all(...c, n, r), l = o.prepare(`
       SELECT COUNT(*) as total
       FROM products
       WHERE deleted_at IS NULL
-      ${where.length ? `AND ${where.join(" AND ")}` : ""}
-    `).get(...params);
+      ${i.length ? `AND ${i.join(" AND ")}` : ""}
+    `).get(...c);
   return {
-    data,
-    page,
-    limit,
-    total: total.total
+    data: d,
+    page: s,
+    limit: n,
+    total: l.total
   };
 }
-function select_product_by_id(id) {
-  const stmt = db.prepare(`
+function Ls(t) {
+  return o.prepare(`
     SELECT
       id,
       external_id,
@@ -2281,11 +1977,10 @@ function select_product_by_id(id) {
     FROM products
     WHERE id = ? AND deleted_at IS NULL
     LIMIT 1;
-  `);
-  return stmt.get(id);
+  `).get(t);
 }
-function buscarProdutosPorNome(termo) {
-  const stmt = db.prepare(`
+function Rs(t) {
+  return o.prepare(`
     SELECT
       id,
       barcode AS codigo_barras,
@@ -2297,11 +1992,10 @@ function buscarProdutosPorNome(termo) {
       AND LOWER(name) LIKE LOWER(?)
     ORDER BY name
     LIMIT 50
-      `);
-  return stmt.all(`%${termo}%`);
+      `).all(`%${t}%`);
 }
-function buscarProdutoPorCodigoBarras(codigo) {
-  const stmt = db.prepare(`
+function hs(t) {
+  return o.prepare(`
     SELECT
       id,
       barcode AS codigo_barras,
@@ -2312,11 +2006,10 @@ function buscarProdutoPorCodigoBarras(codigo) {
     WHERE deleted_at IS NULL
       AND barcode = ?
     LIMIT 1;
-  `);
-  return stmt.get(codigo);
+  `).get(t);
 }
-function selectSuggestionProduct(term) {
-  const stmt = db.prepare(`
+function Ss(t) {
+  return o.prepare(`
     SELECT *
     FROM products
     WHERE deleted_at IS NULL
@@ -2328,30 +2021,25 @@ function selectSuggestionProduct(term) {
       )
     ORDER BY name
     LIMIT 5
-      `);
-  const rows = stmt.all(term, term, `%${term}%`);
-  return rows.map((product) => ({
-    id: product.id,
-    internalCode: product.sku ?? "",
-    name: product.name,
+      `).all(t, t, `%${t}%`).map((s) => ({
+    id: s.id,
+    internalCode: s.sku ?? "",
+    name: s.name,
     brand: "",
-    gtin: product.barcode ?? "",
-    unitOfMeasure: product.unit ?? "UN",
-    currentStock: Number(product.current_stock ?? 0),
-    minimumStock: Number(product.minimum_stock ?? 0),
-    avgCost: Number(product.cost_price_cents ?? 0) / 100,
-    ncm: product.ncm ?? "",
-    cfop: product.cfop ?? "",
-    controlsExpiration: false,
-    controlsBatch: false
+    gtin: s.barcode ?? "",
+    unitOfMeasure: s.unit ?? "UN",
+    currentStock: Number(s.current_stock ?? 0),
+    minimumStock: Number(s.minimum_stock ?? 0),
+    avgCost: Number(s.cost_price_cents ?? 0) / 100,
+    ncm: s.ncm ?? "",
+    cfop: s.cfop ?? "",
+    controlsExpiration: !1,
+    controlsBatch: !1
   }));
 }
-console.log(db);
-function addPrinter(dados) {
-  if (dados.is_default === 1) {
-    db.prepare(`UPDATE printers SET is_default = 0 WHERE is_default = 1`).run();
-  }
-  const stmt = db.prepare(`
+console.log(o);
+function Cs(t) {
+  t.is_default === 1 && o.prepare("UPDATE printers SET is_default = 0 WHERE is_default = 1").run(), o.prepare(`
     INSERT INTO printers(
       name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
       paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json, notes, is_default
@@ -2360,30 +2048,27 @@ function addPrinter(dados) {
       @selectedPrinter, @display_name, @brand, @model, @connection_type, @driver_name, @driver_version,
       @photo_path, @paper_width_mm, @content_width_mm, @base_font_size_px, @line_height, @receipt_settings_json, @notes, @is_default
     )
-      `);
-  stmt.run(dados);
+      `).run(t);
 }
-function listarPrinters() {
-  const stmt = db.prepare(`
+function vs() {
+  return o.prepare(`
     SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
            paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json, notes, is_default, installed_at
     FROM printers
     ORDER BY is_default DESC, id DESC
-      `);
-  return stmt.all();
+      `).all();
 }
-function getPrinterPadrao() {
-  const stmt = db.prepare(`
+function Os() {
+  return o.prepare(`
     SELECT id, name, display_name, brand, model, connection_type, is_default,
            paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json
     FROM printers
     WHERE is_default = 1
     LIMIT 1
-  `);
-  return stmt.get();
+  `).get();
 }
-function atualizarLayoutPrinter(id, dados) {
-  return db.prepare(`
+function ys(t, e) {
+  return o.prepare(`
     UPDATE printers
     SET
       paper_width_mm = ?,
@@ -2392,157 +2077,106 @@ function atualizarLayoutPrinter(id, dados) {
       line_height = ?
     WHERE id = ?
   `).run(
-    dados.paper_width_mm,
-    dados.content_width_mm,
-    dados.base_font_size_px,
-    dados.line_height,
-    id
+    e.paper_width_mm,
+    e.content_width_mm,
+    e.base_font_size_px,
+    e.line_height,
+    t
   );
 }
-function atualizarPersonalizacaoCupomPrinter(id, receiptSettingsJson) {
-  return db.prepare(`
+function Us(t, e) {
+  return o.prepare(`
     UPDATE printers
     SET receipt_settings_json = ?
     WHERE id = ?
-  `).run(receiptSettingsJson, id);
+  `).run(e, t);
 }
-function removerPrinter(id) {
-  const stmt = db.prepare(`DELETE FROM printers WHERE id = ? `);
-  return stmt.run(id);
+function Ds(t) {
+  return o.prepare("DELETE FROM printers WHERE id = ? ").run(t);
 }
-function definirPrinterPadrao(id) {
-  const transaction = db.transaction(() => {
-    db.prepare(`UPDATE printers SET is_default = 0 WHERE is_default = 1`).run();
-    db.prepare(`UPDATE printers SET is_default = 1 WHERE id = ? `).run(id);
-  });
-  transaction();
+function bs(t) {
+  o.transaction(() => {
+    o.prepare("UPDATE printers SET is_default = 0 WHERE is_default = 1").run(), o.prepare("UPDATE printers SET is_default = 1 WHERE id = ? ").run(t);
+  })();
 }
-function criarUsuarioAdmin() {
-  const existe = db.prepare(`SELECT COUNT(*) as total FROM usuarios`).get();
-  if (existe.total === 0) {
-    const stmt = db.prepare(`
+function Fs() {
+  o.prepare("SELECT COUNT(*) as total FROM usuarios").get().total === 0 && (o.prepare(`
       INSERT INTO usuarios(nome, funcao, email, username, password, ativo)
     VALUES(?, ?, ?, ?, ?, ?)
-      `);
-    stmt.run(
-      "Administrador",
-      "Gerente",
-      "admin@galberto.local",
-      "admin",
-      hashSenha("admin123"),
-      1
-    );
-    logger.info("-> Usuário admin padrão criado (admin / admin123)");
-    console.log("-> Usuário admin padrão criado (admin / admin123)");
-  }
+      `).run(
+    "Administrador",
+    "Gerente",
+    "admin@galberto.local",
+    "admin",
+    De("admin123"),
+    1
+  ), f.info("-> Usuário admin padrão criado (admin / admin123)"), console.log("-> Usuário admin padrão criado (admin / admin123)"));
 }
-function buscarUsuario(id) {
-  const stmt = db.prepare(`
+function Ms(t) {
+  return o.prepare(`
     SELECT id, nome, funcao, email, username, ativo, foto_path
     FROM usuarios
     WHERE id = ?
-      `);
-  return stmt.get(id);
+      `).get(t);
 }
-function selectUsers({ name, role, login, ativo, page = 1, limit = 20 }) {
-  const offset = (page - 1) * limit;
-  let where = [];
-  let params = [];
-  if (name) {
-    where.push("nome LIKE ?");
-    params.push(`% ${name}% `);
-  }
-  if (role) {
-    where.push("funcao LIKE ?");
-    params.push(`% ${role}% `);
-  }
-  if (login) {
-    where.push("username LIKE ?");
-    params.push(`% ${login}% `);
-  }
-  if (ativo !== void 0) {
-    where.push("ativo = ?");
-    params.push(ativo);
-  }
-  const whereClause = where.length ? `WHERE ${where.join(" AND ")} ` : "";
-  const data = db.prepare(`
+function xs({ name: t, role: e, login: a, ativo: s, page: n = 1, limit: r = 20 }) {
+  const i = (n - 1) * r;
+  let c = [], d = [];
+  t && (c.push("nome LIKE ?"), d.push(`% ${t}% `)), e && (c.push("funcao LIKE ?"), d.push(`% ${e}% `)), a && (c.push("username LIKE ?"), d.push(`% ${a}% `)), s !== void 0 && (c.push("ativo = ?"), d.push(s));
+  const l = c.length ? `WHERE ${c.join(" AND ")} ` : "", E = o.prepare(`
       SELECT id, nome, funcao AS role, email, username AS login, ativo
       FROM usuarios
-      ${whereClause}
+      ${l}
       ORDER BY nome
     LIMIT ? OFFSET ?
-      `).all(...params, limit, offset);
-  const total = db.prepare(`
+      `).all(...d, r, i), _ = o.prepare(`
       SELECT COUNT(*) as total
       FROM usuarios
-      ${whereClause}
-    `).get(...params);
+      ${l}
+    `).get(...d);
   return {
-    data,
-    page,
-    limit,
-    total: total.total
+    data: E,
+    page: n,
+    limit: r,
+    total: _.total
   };
 }
-function addUsuario(dados) {
-  const stmt = db.prepare(`
+function Ps(t) {
+  return o.prepare(`
     INSERT INTO usuarios(nome, funcao, email, username, password, ativo, foto_path)
     VALUES(@nome, @funcao, @email, @username, @password, @ativo, @foto_path)
-  `);
-  return stmt.run({
-    ...dados,
-    foto_path: dados.foto_path ?? null,
-    password: hashSenha(dados.password)
+  `).run({
+    ...t,
+    foto_path: t.foto_path ?? null,
+    password: De(t.password)
   });
 }
-function alterarSenhaUsuario(id, newPassword) {
-  const stmt = db.prepare(`UPDATE usuarios SET password = ? WHERE id = ? `);
-  return stmt.run(hashSenha(newPassword), id);
+function ws(t, e) {
+  return o.prepare("UPDATE usuarios SET password = ? WHERE id = ? ").run(De(e), t);
 }
-function removerUsuario(id) {
-  const stmt = db.prepare(`DELETE FROM usuarios WHERE id = ? `);
-  return stmt.run(id);
+function Xs(t) {
+  return o.prepare("DELETE FROM usuarios WHERE id = ? ").run(t);
 }
-function updateUser(data) {
-  console.log("Dados chegando no db.ts", data);
-  const campos = [];
-  const valores = [];
-  if (data.nome !== void 0) {
-    campos.push("nome = ?");
-    valores.push(data.nome);
-  }
-  if (data.email !== void 0) {
-    campos.push("email = ?");
-    valores.push(data.email);
-  }
-  if (data.login !== void 0) {
-    campos.push("username = ?");
-    valores.push(data.login);
-  }
-  if (data.role !== void 0) {
-    campos.push("funcao = ?");
-    valores.push(data.role);
-  }
-  valores.push(data.id);
-  const sql = `
+function $s(t) {
+  console.log("Dados chegando no db.ts", t);
+  const e = [], a = [];
+  t.nome !== void 0 && (e.push("nome = ?"), a.push(t.nome)), t.email !== void 0 && (e.push("email = ?"), a.push(t.email)), t.login !== void 0 && (e.push("username = ?"), a.push(t.login)), t.role !== void 0 && (e.push("funcao = ?"), a.push(t.role)), a.push(t.id);
+  const s = `
   UPDATE usuarios
-  SET ${campos.join(", ")}
+  SET ${e.join(", ")}
   WHERE id = ?
       `;
-  const stmt = db.prepare(sql);
-  stmt.run(...valores);
+  o.prepare(s).run(...a);
 }
-function disableUser(id) {
-  const stmt = db.prepare(`UPDATE usuarios SET ativo = 0 WHERE id = ? `);
-  return stmt.run(id);
+function Bs(t) {
+  return o.prepare("UPDATE usuarios SET ativo = 0 WHERE id = ? ").run(t);
 }
-function enableUser(id) {
-  const stmt = db.prepare(`UPDATE usuarios SET ativo = 1 WHERE id = ? `);
-  return stmt.run(id);
+function ks(t) {
+  return o.prepare("UPDATE usuarios SET ativo = 1 WHERE id = ? ").run(t);
 }
-criarUsuarioAdmin();
-function getOpenCashSession(data) {
-  const stmt = db.prepare(`
+Fs();
+function Gs(t) {
+  const a = o.prepare(`
     SELECT id
       FROM cash_register_sessions
     WHERE pdv_id = ?
@@ -2550,212 +2184,200 @@ function getOpenCashSession(data) {
         AND status = 'OPEN'
     ORDER BY opened_at DESC
     LIMIT 1;
-    `);
-  const session = stmt.get(data.pdv_id, data.operator_id);
-  if (!session) {
-    return null;
-  }
-  return getCashSessionSummaryById(session.id);
+    `).get(t.pdv_id, t.operator_id);
+  return a ? Re(a.id) : null;
 }
-function serializeJson(value) {
-  return JSON.stringify(value ?? null);
+function Je(t) {
+  return JSON.stringify(t ?? null);
 }
-function booleanToInt(value) {
-  return value ? 1 : 0;
+function Hs(t) {
+  return t ? 1 : 0;
 }
-function mapSale(row) {
+function js(t) {
   return {
-    id: row.id,
-    storeId: row.store_id,
-    customerId: row.customer_id,
-    customerName: row.customer_name,
-    customerDocument: row.customer_document,
-    status: row.status,
-    subtotalAmount: row.subtotal_amount,
-    discountAmount: row.discount_amount,
-    surchargeAmount: row.surcharge_amount,
-    totalAmount: row.total_amount,
-    changeAmount: row.change_amount,
-    externalReference: row.external_reference,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    storeId: t.store_id,
+    customerId: t.customer_id,
+    customerName: t.customer_name,
+    customerDocument: t.customer_document,
+    status: t.status,
+    subtotalAmount: t.subtotal_amount,
+    discountAmount: t.discount_amount,
+    surchargeAmount: t.surcharge_amount,
+    totalAmount: t.total_amount,
+    changeAmount: t.change_amount,
+    externalReference: t.external_reference,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-function mapItem(row) {
+function Vs(t) {
   return {
-    id: row.id,
-    saleId: row.sale_id,
-    productId: row.product_id,
-    sku: row.sku,
-    description: row.description,
-    unit: row.unit,
-    quantity: row.quantity,
-    unitPrice: row.unit_price,
-    grossAmount: row.gross_amount,
-    discountAmount: row.discount_amount,
-    totalAmount: row.total_amount,
-    ncm: row.ncm,
-    cfop: row.cfop,
-    cest: row.cest,
-    originCode: row.origin_code,
-    taxSnapshotJson: row.tax_snapshot_json,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    saleId: t.sale_id,
+    productId: t.product_id,
+    sku: t.sku,
+    description: t.description,
+    unit: t.unit,
+    quantity: t.quantity,
+    unitPrice: t.unit_price,
+    grossAmount: t.gross_amount,
+    discountAmount: t.discount_amount,
+    totalAmount: t.total_amount,
+    ncm: t.ncm,
+    cfop: t.cfop,
+    cest: t.cest,
+    originCode: t.origin_code,
+    taxSnapshotJson: t.tax_snapshot_json,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-function mapPayment(row) {
+function zs(t) {
   return {
-    id: row.id,
-    saleId: row.sale_id,
-    method: row.method,
-    amount: row.amount,
-    receivedAmount: row.received_amount,
-    changeAmount: row.change_amount,
-    integrationReference: row.integration_reference,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    saleId: t.sale_id,
+    method: t.method,
+    amount: t.amount,
+    receivedAmount: t.received_amount,
+    changeAmount: t.change_amount,
+    integrationReference: t.integration_reference,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-class SalesRepository {
-  create(input) {
-    const transaction = db.transaction(() => {
-      const saleResult = db.prepare(`
+class Ys {
+  create(e) {
+    return o.transaction(() => {
+      const s = o.prepare(`
         INSERT INTO sales (
           store_id, customer_id, customer_name, customer_document, status,
           subtotal_amount, discount_amount, surcharge_amount, total_amount,
           change_amount, external_reference, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(
-        input.storeId,
-        input.customerId ?? null,
-        input.customerName ?? null,
-        input.customerDocument ?? null,
-        input.status ?? "OPEN",
-        input.subtotalAmount,
-        input.discountAmount ?? 0,
-        input.surchargeAmount ?? 0,
-        input.totalAmount,
-        input.changeAmount ?? 0,
-        input.externalReference ?? null
-      );
-      const saleId = Number(saleResult.lastInsertRowid);
-      const insertItem = db.prepare(`
+        e.storeId,
+        e.customerId ?? null,
+        e.customerName ?? null,
+        e.customerDocument ?? null,
+        e.status ?? "OPEN",
+        e.subtotalAmount,
+        e.discountAmount ?? 0,
+        e.surchargeAmount ?? 0,
+        e.totalAmount,
+        e.changeAmount ?? 0,
+        e.externalReference ?? null
+      ), n = Number(s.lastInsertRowid), r = o.prepare(`
         INSERT INTO sale_items (
           sale_id, product_id, sku, description, unit, quantity, unit_price,
           gross_amount, discount_amount, total_amount, ncm, cfop, cest,
           origin_code, tax_snapshot_json, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `);
-      for (const item of input.items) {
-        insertItem.run(
-          saleId,
-          item.productId ?? null,
-          item.sku ?? null,
-          item.description,
-          item.unit,
-          item.quantity,
-          item.unitPrice,
-          item.grossAmount,
-          item.discountAmount ?? 0,
-          item.totalAmount,
-          item.ncm ?? null,
-          item.cfop ?? null,
-          item.cest ?? null,
-          item.originCode ?? null,
-          item.taxSnapshot ? serializeJson(item.taxSnapshot) : null
+      for (const c of e.items)
+        r.run(
+          n,
+          c.productId ?? null,
+          c.sku ?? null,
+          c.description,
+          c.unit,
+          c.quantity,
+          c.unitPrice,
+          c.grossAmount,
+          c.discountAmount ?? 0,
+          c.totalAmount,
+          c.ncm ?? null,
+          c.cfop ?? null,
+          c.cest ?? null,
+          c.originCode ?? null,
+          c.taxSnapshot ? Je(c.taxSnapshot) : null
         );
-      }
-      const insertPayment = db.prepare(`
+      const i = o.prepare(`
         INSERT INTO payments (
           sale_id, method, amount, received_amount, change_amount,
           integration_reference, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `);
-      for (const payment of input.payments) {
-        insertPayment.run(
-          saleId,
-          payment.method,
-          payment.amount,
-          payment.receivedAmount ?? payment.amount,
-          payment.changeAmount ?? 0,
-          payment.integrationReference ?? null
+      for (const c of e.payments)
+        i.run(
+          n,
+          c.method,
+          c.amount,
+          c.receivedAmount ?? c.amount,
+          c.changeAmount ?? 0,
+          c.integrationReference ?? null
         );
-      }
-      return this.findAggregateById(saleId);
-    });
-    return transaction();
+      return this.findAggregateById(n);
+    })();
   }
-  findById(id) {
-    const row = db.prepare(`SELECT * FROM sales WHERE id = ? LIMIT 1`).get(id);
-    return row ? mapSale(row) : null;
+  findById(e) {
+    const a = o.prepare("SELECT * FROM sales WHERE id = ? LIMIT 1").get(e);
+    return a ? js(a) : null;
   }
-  findByExternalReference(externalReference) {
-    const row = db.prepare(`
+  findByExternalReference(e) {
+    const a = o.prepare(`
       SELECT * FROM sales
       WHERE external_reference = ?
       LIMIT 1
-    `).get(externalReference);
-    return row ? this.findAggregateById(row.id) : null;
+    `).get(e);
+    return a ? this.findAggregateById(a.id) : null;
   }
-  findAggregateById(id) {
-    const sale = this.findById(id);
-    if (!sale) return null;
-    const items = db.prepare(`SELECT * FROM sale_items WHERE sale_id = ? ORDER BY id ASC`).all(id);
-    const payments = db.prepare(`SELECT * FROM payments WHERE sale_id = ? ORDER BY id ASC`).all(id);
-    const fiscalDocument = db.prepare(`SELECT id FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(id);
+  findAggregateById(e) {
+    const a = this.findById(e);
+    if (!a) return null;
+    const s = o.prepare("SELECT * FROM sale_items WHERE sale_id = ? ORDER BY id ASC").all(e), n = o.prepare("SELECT * FROM payments WHERE sale_id = ? ORDER BY id ASC").all(e), r = o.prepare("SELECT id FROM fiscal_documents WHERE sale_id = ? LIMIT 1").get(e);
     return {
-      sale,
-      items: items.map(mapItem),
-      payments: payments.map(mapPayment),
-      fiscalDocument: fiscalDocument ? { id: fiscalDocument.id } : null
+      sale: a,
+      items: s.map(Vs),
+      payments: n.map(zs),
+      fiscalDocument: r ? { id: r.id } : null
     };
   }
-  listRecent(limit = 20) {
-    const sales = db.prepare(`
+  listRecent(e = 20) {
+    return o.prepare(`
       SELECT * FROM sales
       ORDER BY created_at DESC
       LIMIT ?
-    `).all(limit);
-    return sales.map((sale) => this.findAggregateById(sale.id)).filter((sale) => Boolean(sale));
+    `).all(e).map((s) => this.findAggregateById(s.id)).filter((s) => !!s);
   }
-  updateStatus(id, status) {
-    db.prepare(`
+  updateStatus(e, a) {
+    o.prepare(`
       UPDATE sales
       SET status = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(status, id);
+    `).run(a, e);
   }
 }
-const salesRepository = new SalesRepository();
-function mapStore(row) {
+const Ze = new Ys();
+function dt(t) {
   return {
-    id: row.id,
-    code: row.code,
-    name: row.name,
-    legalName: row.legal_name,
-    cnpj: row.cnpj,
-    stateRegistration: row.state_registration,
-    taxRegimeCode: row.tax_regime_code,
-    environment: row.environment,
-    cscId: row.csc_id,
-    cscToken: row.csc_token,
-    defaultSeries: row.default_series,
-    nextNfceNumber: row.next_nfce_number,
-    addressStreet: row.address_street,
-    addressNumber: row.address_number,
-    addressNeighborhood: row.address_neighborhood,
-    addressCity: row.address_city,
-    addressState: row.address_state,
-    addressZipCode: row.address_zip_code,
-    addressCityIbgeCode: row.address_city_ibge_code,
-    active: Boolean(row.active),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    code: t.code,
+    name: t.name,
+    legalName: t.legal_name,
+    cnpj: t.cnpj,
+    stateRegistration: t.state_registration,
+    taxRegimeCode: t.tax_regime_code,
+    environment: t.environment,
+    cscId: t.csc_id,
+    cscToken: t.csc_token,
+    defaultSeries: t.default_series,
+    nextNfceNumber: t.next_nfce_number,
+    addressStreet: t.address_street,
+    addressNumber: t.address_number,
+    addressNeighborhood: t.address_neighborhood,
+    addressCity: t.address_city,
+    addressState: t.address_state,
+    addressZipCode: t.address_zip_code,
+    addressCityIbgeCode: t.address_city_ibge_code,
+    active: !!t.active,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-class StoreRepository {
-  create(input) {
-    const result = db.prepare(`
+class Ws {
+  create(e) {
+    const a = o.prepare(`
       INSERT INTO stores (
         code, name, legal_name, cnpj, state_registration, tax_regime_code,
         environment, csc_id, csc_token, default_series, next_nfce_number,
@@ -2764,112 +2386,99 @@ class StoreRepository {
         created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
-      input.code,
-      input.name,
-      input.legalName,
-      input.cnpj,
-      input.stateRegistration,
-      input.taxRegimeCode,
-      input.environment,
-      input.cscId ?? null,
-      input.cscToken ?? null,
-      input.defaultSeries ?? 1,
-      input.nextNfceNumber ?? 1,
-      input.addressStreet,
-      input.addressNumber,
-      input.addressNeighborhood,
-      input.addressCity,
-      input.addressState,
-      input.addressZipCode,
-      input.addressCityIbgeCode,
-      booleanToInt(input.active ?? true)
+      e.code,
+      e.name,
+      e.legalName,
+      e.cnpj,
+      e.stateRegistration,
+      e.taxRegimeCode,
+      e.environment,
+      e.cscId ?? null,
+      e.cscToken ?? null,
+      e.defaultSeries ?? 1,
+      e.nextNfceNumber ?? 1,
+      e.addressStreet,
+      e.addressNumber,
+      e.addressNeighborhood,
+      e.addressCity,
+      e.addressState,
+      e.addressZipCode,
+      e.addressCityIbgeCode,
+      Hs(e.active ?? !0)
     );
-    return this.findById(Number(result.lastInsertRowid));
+    return this.findById(Number(a.lastInsertRowid));
   }
-  findById(id) {
-    const row = db.prepare(`SELECT * FROM stores WHERE id = ? LIMIT 1`).get(id);
-    return row ? mapStore(row) : null;
+  findById(e) {
+    const a = o.prepare("SELECT * FROM stores WHERE id = ? LIMIT 1").get(e);
+    return a ? dt(a) : null;
   }
   findActive() {
-    const row = db.prepare(`
+    const e = o.prepare(`
       SELECT * FROM stores
       WHERE active = 1
       ORDER BY id ASC
       LIMIT 1
     `).get();
-    return row ? mapStore(row) : null;
+    return e ? dt(e) : null;
   }
-  reserveNextNfceNumber(storeId) {
-    const transaction = db.transaction(() => {
-      const current = db.prepare(`
+  reserveNextNfceNumber(e) {
+    return o.transaction(() => {
+      const s = o.prepare(`
         SELECT default_series, next_nfce_number
         FROM stores
         WHERE id = ?
         LIMIT 1
-      `).get(storeId);
-      if (!current) {
-        throw new Error(`Store ${storeId} não encontrada.`);
-      }
-      db.prepare(`
+      `).get(e);
+      if (!s)
+        throw new Error(`Store ${e} não encontrada.`);
+      return o.prepare(`
         UPDATE stores
         SET next_nfce_number = next_nfce_number + 1, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(storeId);
-      return {
-        series: current.default_series,
-        number: current.next_nfce_number
+      `).run(e), {
+        series: s.default_series,
+        number: s.next_nfce_number
       };
-    });
-    return transaction();
+    })();
   }
 }
-const storeRepository = new StoreRepository();
-function money$1(value) {
-  return Number(value ?? 0).toLocaleString("pt-BR", {
+const ee = new Ws();
+function me(t) {
+  return Number(t ?? 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL"
   });
 }
-class HtmlDanfeService {
+class Ks {
   constructor() {
-    __publicField(this, "outputDir", path$1.join(app.getPath("userData"), "fiscal", "danfe"));
+    M(this, "outputDir", ge.join(X.getPath("userData"), "fiscal", "danfe"));
   }
-  async generate(document) {
-    fs$1.mkdirSync(this.outputDir, { recursive: true });
-    const danfePath = document.danfePath || path$1.join(this.outputDir, `nfce-${document.id}.html`);
-    const html = this.render(document);
-    fs$1.writeFileSync(danfePath, html, "utf8");
-    return {
-      documentId: document.id,
-      danfePath,
+  async generate(e) {
+    ue.mkdirSync(this.outputDir, { recursive: !0 });
+    const a = e.danfePath || ge.join(this.outputDir, `nfce-${e.id}.html`), s = this.render(e);
+    return ue.writeFileSync(a, s, "utf8"), {
+      documentId: e.id,
+      danfePath: a,
       contentType: "text/html",
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
-  async recover(document) {
-    if (!document.danfePath || !fs$1.existsSync(document.danfePath)) {
-      return null;
-    }
-    return {
-      documentId: document.id,
-      danfePath: document.danfePath,
+  async recover(e) {
+    return !e.danfePath || !ue.existsSync(e.danfePath) ? null : {
+      documentId: e.id,
+      danfePath: e.danfePath,
       contentType: "text/html",
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
-  render(document) {
-    const aggregate = salesRepository.findAggregateById(document.saleId);
-    const store = storeRepository.findById(document.companyId);
-    const isHomologation = document.environment === "homologation";
-    const items = (aggregate == null ? void 0 : aggregate.items) ?? [];
-    const payments = (aggregate == null ? void 0 : aggregate.payments) ?? [];
-    const total = (aggregate == null ? void 0 : aggregate.sale.totalAmount) ?? 0;
+  render(e) {
+    const a = Ze.findAggregateById(e.saleId), s = ee.findById(e.companyId), n = e.environment === "homologation", r = (a == null ? void 0 : a.items) ?? [], i = (a == null ? void 0 : a.payments) ?? [], c = (a == null ? void 0 : a.sale.totalAmount) ?? 0;
     return `<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DANFE NFC-e ${document.number}</title>
+    <title>DANFE NFC-e ${e.number}</title>
     <style>
       body { font-family: Arial, sans-serif; background: #f4f4f5; color: #18181b; padding: 12px; }
       .card { width: 320px; margin: 0 auto; background: white; border: 1px solid #d4d4d8; border-radius: 12px; padding: 16px; }
@@ -2888,199 +2497,174 @@ class HtmlDanfeService {
   <body>
     <div class="card">
       <div class="title">DANFE NFC-e</div>
-      <div class="subtitle">${(store == null ? void 0 : store.legalName) ?? "Emitente não encontrado"}</div>
-      <div class="subtitle">CNPJ ${(store == null ? void 0 : store.cnpj) ?? "—"} | IE ${(store == null ? void 0 : store.stateRegistration) ?? "—"}</div>
-      <div class="subtitle">${store ? `${store.addressStreet}, ${store.addressNumber} - ${store.addressNeighborhood}` : "Endereço indisponível"}</div>
-      <div class="subtitle">${store ? `${store.addressCity}/${store.addressState}` : ""}</div>
-      ${isHomologation ? '<div class="warn">EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ""}
+      <div class="subtitle">${(s == null ? void 0 : s.legalName) ?? "Emitente não encontrado"}</div>
+      <div class="subtitle">CNPJ ${(s == null ? void 0 : s.cnpj) ?? "—"} | IE ${(s == null ? void 0 : s.stateRegistration) ?? "—"}</div>
+      <div class="subtitle">${s ? `${s.addressStreet}, ${s.addressNumber} - ${s.addressNeighborhood}` : "Endereço indisponível"}</div>
+      <div class="subtitle">${s ? `${s.addressCity}/${s.addressState}` : ""}</div>
+      ${n ? '<div class="warn">EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ""}
       <div class="divider"></div>
-      <div class="row"><span class="muted">Documento</span><span>${document.id}</span></div>
-      <div class="row"><span class="muted">Venda</span><span>${document.saleId}</span></div>
-      <div class="row"><span class="muted">Número/Série</span><span>${document.number}/${document.series}</span></div>
-      <div class="row"><span class="muted">Status</span><span class="${document.status === "AUTHORIZED" ? "ok" : "muted"}">${document.status}</span></div>
-      <div class="row"><span class="muted">Emissão</span><span>${document.issuedAt}</span></div>
-      <div class="row"><span class="muted">Autorização</span><span>${document.authorizedAt ?? "Pendente"}</span></div>
-      <div class="row"><span class="muted">Protocolo</span><span>${document.authorizationProtocol ?? "Pendente"}</span></div>
+      <div class="row"><span class="muted">Documento</span><span>${e.id}</span></div>
+      <div class="row"><span class="muted">Venda</span><span>${e.saleId}</span></div>
+      <div class="row"><span class="muted">Número/Série</span><span>${e.number}/${e.series}</span></div>
+      <div class="row"><span class="muted">Status</span><span class="${e.status === "AUTHORIZED" ? "ok" : "muted"}">${e.status}</span></div>
+      <div class="row"><span class="muted">Emissão</span><span>${e.issuedAt}</span></div>
+      <div class="row"><span class="muted">Autorização</span><span>${e.authorizedAt ?? "Pendente"}</span></div>
+      <div class="row"><span class="muted">Protocolo</span><span>${e.authorizationProtocol ?? "Pendente"}</span></div>
       <div class="divider"></div>
       <div class="subtitle"><strong>Itens</strong></div>
-      ${items.map((item) => `
+      ${r.map((d) => `
         <div class="item">
-          <strong>${item.description}</strong>
-          <div class="row"><span>${Number(item.quantity).toFixed(3)} x ${money$1(item.unitPrice)}</span><span>${money$1(item.totalAmount)}</span></div>
+          <strong>${d.description}</strong>
+          <div class="row"><span>${Number(d.quantity).toFixed(3)} x ${me(d.unitPrice)}</span><span>${me(d.totalAmount)}</span></div>
         </div>
       `).join("")}
       <div class="divider"></div>
       <div class="subtitle"><strong>Pagamentos</strong></div>
-      ${payments.map((payment) => `
+      ${i.map((d) => `
         <div class="row">
-          <span>${payment.method}</span>
-          <span>${money$1(payment.amount)}</span>
+          <span>${d.method}</span>
+          <span>${me(d.amount)}</span>
         </div>
       `).join("")}
-      <div class="row"><span class="muted">Troco</span><span>${money$1((aggregate == null ? void 0 : aggregate.sale.changeAmount) ?? 0)}</span></div>
-      <div class="row"><span class="muted">Total</span><span><strong>${money$1(total)}</strong></span></div>
+      <div class="row"><span class="muted">Troco</span><span>${me((a == null ? void 0 : a.sale.changeAmount) ?? 0)}</span></div>
+      <div class="row"><span class="muted">Total</span><span><strong>${me(c)}</strong></span></div>
       <div class="divider"></div>
-      <div class="row"><span class="muted">Chave</span><span>${document.accessKey ?? "Pendente"}</span></div>
-      <div class="qr">${document.qrCodeUrl ?? "QR Code indisponível"}</div>
+      <div class="row"><span class="muted">Chave</span><span>${e.accessKey ?? "Pendente"}</span></div>
+      <div class="qr">${e.qrCodeUrl ?? "QR Code indisponível"}</div>
     </div>
   </body>
 </html>`;
   }
 }
-class FiscalError extends Error {
-  constructor(input) {
-    super(input.message);
-    __publicField(this, "code");
-    __publicField(this, "category");
-    __publicField(this, "retryable");
-    __publicField(this, "details");
-    this.name = "FiscalError";
-    this.code = input.code;
-    this.category = input.category;
-    this.retryable = input.retryable ?? false;
-    this.details = input.details;
-    if (input.cause !== void 0) {
-      this.cause = input.cause;
-    }
+class S extends Error {
+  constructor(a) {
+    super(a.message);
+    M(this, "code");
+    M(this, "category");
+    M(this, "retryable");
+    M(this, "details");
+    this.name = "FiscalError", this.code = a.code, this.category = a.category, this.retryable = a.retryable ?? !1, this.details = a.details, a.cause !== void 0 && (this.cause = a.cause);
   }
 }
-function normalizeFiscalError(error, fallbackCode = "FISCAL_INTERNAL_ERROR") {
-  if (error instanceof FiscalError) {
-    return error;
-  }
-  if (error instanceof Error) {
-    return new FiscalError({
-      code: fallbackCode,
-      message: error.message,
-      category: "INTERNAL",
-      retryable: false,
-      cause: error
-    });
-  }
-  return new FiscalError({
-    code: fallbackCode,
+function V(t, e = "FISCAL_INTERNAL_ERROR") {
+  return t instanceof S ? t : t instanceof Error ? new S({
+    code: e,
+    message: t.message,
+    category: "INTERNAL",
+    retryable: !1,
+    cause: t
+  }) : new S({
+    code: e,
     message: "Erro interno na camada fiscal.",
     category: "INTERNAL",
-    retryable: false,
-    details: error
+    retryable: !1,
+    details: t
   });
 }
-class FileSystemCertificateService {
-  readCertificatePem(config2) {
-    var _a;
-    const certificatePath = (_a = config2.certificatePath) == null ? void 0 : _a.trim();
-    if (!certificatePath) {
+class qs {
+  readCertificatePem(e) {
+    var n;
+    const a = (n = e.certificatePath) == null ? void 0 : n.trim();
+    if (!a)
       return null;
-    }
-    const extension = path$1.extname(certificatePath).toLowerCase();
-    if (extension === ".pem" || extension === ".crt" || extension === ".cer") {
-      return fs$1.readFileSync(certificatePath, "utf8");
-    }
-    if (extension === ".pfx" || extension === ".p12") {
-      if (!config2.certificatePassword) {
-        throw new FiscalError({
+    const s = ge.extname(a).toLowerCase();
+    if (s === ".pem" || s === ".crt" || s === ".cer")
+      return ue.readFileSync(a, "utf8");
+    if (s === ".pfx" || s === ".p12") {
+      if (!e.certificatePassword)
+        throw new S({
           code: "CERTIFICATE_PASSWORD_REQUIRED",
           message: "Senha do certificado não configurada.",
           category: "CERTIFICATE"
         });
-      }
       try {
-        return execFileSync(
+        return na(
           "openssl",
-          ["pkcs12", "-in", certificatePath, "-clcerts", "-nokeys", "-passin", `pass:${config2.certificatePassword}`],
+          ["pkcs12", "-in", a, "-clcerts", "-nokeys", "-passin", `pass:${e.certificatePassword}`],
           { encoding: "utf8" }
         );
-      } catch (error) {
-        throw new FiscalError({
+      } catch (r) {
+        throw new S({
           code: "CERTIFICATE_READ_FAILED",
           message: "Não foi possível validar o certificado digital informado.",
           category: "CERTIFICATE",
-          cause: error
+          cause: r
         });
       }
     }
     return null;
   }
-  async getCertificateInfo(config2) {
-    var _a;
-    const certificatePath = (_a = config2.certificatePath) == null ? void 0 : _a.trim();
-    const lastCheckedAt = (/* @__PURE__ */ new Date()).toISOString();
-    if (!certificatePath) {
+  async getCertificateInfo(e) {
+    var i;
+    const a = (i = e.certificatePath) == null ? void 0 : i.trim(), s = (/* @__PURE__ */ new Date()).toISOString();
+    if (!a)
       return {
-        configured: false,
+        configured: !1,
         type: "UNKNOWN",
-        lastCheckedAt
+        lastCheckedAt: s
       };
-    }
-    const exists = fs$1.existsSync(certificatePath);
-    let validUntil = null;
-    if (exists) {
+    const n = ue.existsSync(a);
+    let r = null;
+    if (n)
       try {
-        const pem = this.readCertificatePem(config2);
-        if (pem) {
-          const certificate = new X509Certificate(pem);
-          validUntil = new Date(certificate.validTo).toISOString();
+        const c = this.readCertificatePem(e);
+        if (c) {
+          const d = new rt(c);
+          r = new Date(d.validTo).toISOString();
         }
       } catch {
-        validUntil = null;
+        r = null;
       }
-    }
     return {
-      configured: exists,
-      type: [".pfx", ".p12"].includes(path$1.extname(certificatePath).toLowerCase()) ? "A1" : "UNKNOWN",
-      alias: path$1.basename(certificatePath),
-      source: certificatePath,
-      validUntil,
-      lastCheckedAt
+      configured: n,
+      type: [".pfx", ".p12"].includes(ge.extname(a).toLowerCase()) ? "A1" : "UNKNOWN",
+      alias: ge.basename(a),
+      source: a,
+      validUntil: r,
+      lastCheckedAt: s
     };
   }
-  async assertCertificateReady(config2) {
-    if (config2.provider === "mock") {
+  async assertCertificateReady(e) {
+    if (e.provider === "mock")
       return;
-    }
-    if (!config2.certificatePath) {
-      throw new FiscalError({
+    if (!e.certificatePath)
+      throw new S({
         code: "CERTIFICATE_NOT_CONFIGURED",
         message: "Certificado fiscal não configurado.",
         category: "CERTIFICATE"
       });
-    }
-    if (!fs$1.existsSync(config2.certificatePath)) {
-      throw new FiscalError({
+    if (!ue.existsSync(e.certificatePath))
+      throw new S({
         code: "CERTIFICATE_FILE_NOT_FOUND",
-        message: `Arquivo do certificado não encontrado: ${config2.certificatePath}`,
+        message: `Arquivo do certificado não encontrado: ${e.certificatePath}`,
         category: "CERTIFICATE"
       });
-    }
-    const pem = this.readCertificatePem(config2);
-    if (!pem) {
-      throw new FiscalError({
+    const a = this.readCertificatePem(e);
+    if (!a)
+      throw new S({
         code: "CERTIFICATE_FORMAT_NOT_SUPPORTED",
         message: "Formato de certificado não suportado pela camada fiscal atual.",
         category: "CERTIFICATE"
       });
-    }
-    const certificate = new X509Certificate(pem);
-    if (new Date(certificate.validTo).getTime() < Date.now()) {
-      throw new FiscalError({
+    const s = new rt(a);
+    if (new Date(s.validTo).getTime() < Date.now())
+      throw new S({
         code: "CERTIFICATE_EXPIRED",
         message: "O certificado digital configurado está expirado.",
         category: "CERTIFICATE"
       });
-    }
   }
 }
-const FISCAL_INTEGRATION_ID = "fiscal:nfce";
-const CONFIG_SENTINEL = "__FISCAL_CONFIG__";
-function nowIso$1() {
+const fe = "fiscal:nfce", lt = "__FISCAL_CONFIG__";
+function et() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
-function defaultConfig() {
+function ut() {
   return {
     provider: "mock",
     environment: "homologation",
     contingencyMode: "queue",
-    integrationId: FISCAL_INTEGRATION_ID,
+    integrationId: fe,
     gatewayApiKey: null,
     gatewayBaseUrl: null,
     sefazBaseUrl: null,
@@ -3089,60 +2673,58 @@ function defaultConfig() {
     cscId: null,
     cscToken: null,
     defaultSeries: 1,
-    updatedAt: nowIso$1()
+    updatedAt: et()
   };
 }
-function sanitizeForView(config2) {
+function Et(t) {
   return {
-    provider: config2.provider,
-    environment: config2.environment,
-    contingencyMode: config2.contingencyMode,
-    integrationId: config2.integrationId,
-    gatewayBaseUrl: config2.gatewayBaseUrl ?? null,
-    sefazBaseUrl: config2.sefazBaseUrl ?? null,
-    certificatePath: config2.certificatePath ?? null,
-    cscId: config2.cscId ?? null,
-    defaultSeries: config2.defaultSeries ?? null,
-    hasGatewayApiKey: Boolean(config2.gatewayApiKey),
-    hasCertificatePassword: Boolean(config2.certificatePassword),
-    hasCscToken: Boolean(config2.cscToken),
-    updatedAt: config2.updatedAt
+    provider: t.provider,
+    environment: t.environment,
+    contingencyMode: t.contingencyMode,
+    integrationId: t.integrationId,
+    gatewayBaseUrl: t.gatewayBaseUrl ?? null,
+    sefazBaseUrl: t.sefazBaseUrl ?? null,
+    certificatePath: t.certificatePath ?? null,
+    cscId: t.cscId ?? null,
+    defaultSeries: t.defaultSeries ?? null,
+    hasGatewayApiKey: !!t.gatewayApiKey,
+    hasCertificatePassword: !!t.certificatePassword,
+    hasCscToken: !!t.cscToken,
+    updatedAt: t.updatedAt
   };
 }
-class IntegrationFiscalSettingsService {
+class Qs {
   getConfig() {
-    const row = db.prepare(`
+    const e = o.prepare(`
       SELECT integration_id, raw_json, updated_at
       FROM integrations
       WHERE integration_id = ?
       LIMIT 1
-    `).get(FISCAL_INTEGRATION_ID);
-    if (!(row == null ? void 0 : row.raw_json)) {
-      return defaultConfig();
-    }
-    const parsed = JSON.parse(row.raw_json);
+    `).get(fe);
+    if (!(e != null && e.raw_json))
+      return ut();
+    const a = JSON.parse(e.raw_json);
     return {
-      ...defaultConfig(),
-      ...parsed,
-      integrationId: FISCAL_INTEGRATION_ID,
-      updatedAt: parsed.updatedAt ?? row.updated_at ?? nowIso$1()
+      ...ut(),
+      ...a,
+      integrationId: fe,
+      updatedAt: a.updatedAt ?? e.updated_at ?? et()
     };
   }
   getConfigView() {
-    return sanitizeForView(this.getConfig());
+    return Et(this.getConfig());
   }
-  saveConfig(input) {
-    const current = this.getConfig();
-    const next = {
-      ...current,
-      ...input,
-      gatewayApiKey: input.gatewayApiKey === "" ? current.gatewayApiKey : input.gatewayApiKey ?? current.gatewayApiKey,
-      certificatePassword: input.certificatePassword === "" ? current.certificatePassword : input.certificatePassword ?? current.certificatePassword,
-      cscToken: input.cscToken === "" ? current.cscToken : input.cscToken ?? current.cscToken,
-      integrationId: FISCAL_INTEGRATION_ID,
-      updatedAt: nowIso$1()
+  saveConfig(e) {
+    const a = this.getConfig(), s = {
+      ...a,
+      ...e,
+      gatewayApiKey: e.gatewayApiKey === "" ? a.gatewayApiKey : e.gatewayApiKey ?? a.gatewayApiKey,
+      certificatePassword: e.certificatePassword === "" ? a.certificatePassword : e.certificatePassword ?? a.certificatePassword,
+      cscToken: e.cscToken === "" ? a.cscToken : e.cscToken ?? a.cscToken,
+      integrationId: fe,
+      updatedAt: et()
     };
-    db.prepare(`
+    return o.prepare(`
       INSERT INTO integrations (
         integration_id,
         access_token,
@@ -3162,54 +2744,53 @@ class IntegrationFiscalSettingsService {
         raw_json = excluded.raw_json,
         updated_at = excluded.updated_at
     `).run(
-      FISCAL_INTEGRATION_ID,
-      CONFIG_SENTINEL,
-      CONFIG_SENTINEL,
+      fe,
+      lt,
+      lt,
       "CONFIG",
       "9999-12-31T23:59:59.999Z",
       "fiscal:nfce",
-      JSON.stringify(next),
-      next.updatedAt
-    );
-    return sanitizeForView(next);
+      JSON.stringify(s),
+      s.updatedAt
+    ), Et(s);
   }
 }
-function toPersistedDocument(row) {
+function Pe(t) {
   return {
-    id: row.id,
-    saleId: row.sale_id,
-    companyId: row.store_id,
-    number: row.number,
-    series: row.series,
-    model: row.model,
-    environment: row.environment,
-    status: row.status,
-    issueType: row.contingency_type ? 9 : 1,
-    accessKey: row.access_key,
-    authorizationProtocol: row.protocol,
-    receiptNumber: row.receipt_number,
-    statusCode: row.rejection_code,
-    statusMessage: row.rejection_reason,
-    issuedAt: row.issued_datetime ?? row.created_at,
-    authorizedAt: row.authorization_datetime,
-    cancelledAt: row.cancel_datetime,
-    cancellationProtocol: row.protocol,
-    xmlBuilt: row.xml,
-    xmlSigned: row.xml_signed,
-    xmlSent: row.xml,
-    xmlAuthorized: row.xml_authorized,
-    xmlCancellation: row.xml_cancellation,
-    danfePath: row.danfe_path,
-    qrCodeUrl: row.qr_code_url,
+    id: t.id,
+    saleId: t.sale_id,
+    companyId: t.store_id,
+    number: t.number,
+    series: t.series,
+    model: t.model,
+    environment: t.environment,
+    status: t.status,
+    issueType: t.contingency_type ? 9 : 1,
+    accessKey: t.access_key,
+    authorizationProtocol: t.protocol,
+    receiptNumber: t.receipt_number,
+    statusCode: t.rejection_code,
+    statusMessage: t.rejection_reason,
+    issuedAt: t.issued_datetime ?? t.created_at,
+    authorizedAt: t.authorization_datetime,
+    cancelledAt: t.cancel_datetime,
+    cancellationProtocol: t.protocol,
+    xmlBuilt: t.xml,
+    xmlSigned: t.xml_signed,
+    xmlSent: t.xml,
+    xmlAuthorized: t.xml_authorized,
+    xmlCancellation: t.xml_cancellation,
+    danfePath: t.danfe_path,
+    qrCodeUrl: t.qr_code_url,
     digestValue: null,
-    contingencyJustification: row.contingency_type,
+    contingencyJustification: t.contingency_type,
     cancellationJustification: null,
-    updatedAt: row.updated_at,
-    createdAt: row.created_at
+    updatedAt: t.updated_at,
+    createdAt: t.created_at
   };
 }
-function toQueueStatus(status) {
-  switch (status) {
+function Js(t) {
+  switch (t) {
     case "PENDING":
       return "pending";
     case "PROCESSING":
@@ -3221,38 +2802,36 @@ function toQueueStatus(status) {
       return "failed";
   }
 }
-function toQueueItem(row) {
-  const payload = JSON.parse(row.payload_json);
-  const parsedEntityId = Number(row.entity_id);
+function we(t) {
+  const e = JSON.parse(t.payload_json), a = Number(t.entity_id);
   return {
-    id: String(row.id),
-    saleId: Number((payload == null ? void 0 : payload.saleId) ?? 0),
-    documentId: Number.isNaN(parsedEntityId) ? null : parsedEntityId,
-    operation: row.operation,
-    payload,
-    status: toQueueStatus(row.status),
-    idempotencyKey: row.idempotency_key,
-    attempts: row.attempts,
+    id: String(t.id),
+    saleId: Number((e == null ? void 0 : e.saleId) ?? 0),
+    documentId: Number.isNaN(a) ? null : a,
+    operation: t.operation,
+    payload: e,
+    status: Js(t.status),
+    idempotencyKey: t.idempotency_key,
+    attempts: t.attempts,
     maxAttempts: 5,
-    nextRetryAt: row.next_attempt_at,
-    lastErrorCode: row.last_error ?? null,
-    lastErrorMessage: row.last_error ?? null,
+    nextRetryAt: t.next_attempt_at,
+    lastErrorCode: t.last_error ?? null,
+    lastErrorMessage: t.last_error ?? null,
     lockedAt: null,
     lockedBy: null,
-    processedAt: row.status === "DONE" ? row.updated_at : null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    processedAt: t.status === "DONE" ? t.updated_at : null,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-class SqliteFiscalRepository {
+class Zs {
   ensureSchema() {
   }
-  createPendingDocument(request) {
-    const existing = this.findBySaleId(request.saleId);
-    if (existing) {
-      return existing;
-    }
-    const result = db.prepare(`
+  createPendingDocument(e) {
+    const a = this.findBySaleId(e.saleId);
+    if (a)
+      return a;
+    const s = o.prepare(`
       INSERT INTO fiscal_documents (
         sale_id, store_id, model, series, number, access_key, environment, status,
         issued_datetime, xml, xml_signed, xml_authorized, xml_cancellation, protocol, receipt_number, qr_code_url, authorization_datetime,
@@ -3260,19 +2839,19 @@ class SqliteFiscalRepository {
         provider, created_at, updated_at
       ) VALUES (?, ?, 65, ?, ?, NULL, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ?, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
-      request.saleId,
-      request.companyId,
-      request.series,
-      request.number,
-      request.environment,
-      request.offlineFallbackMode === "queue" ? "QUEUED" : "PENDING",
-      request.issuedAt,
-      request.offlineFallbackMode === "offline-contingency" ? "offline-contingency" : null
+      e.saleId,
+      e.companyId,
+      e.series,
+      e.number,
+      e.environment,
+      e.offlineFallbackMode === "queue" ? "QUEUED" : "PENDING",
+      e.issuedAt,
+      e.offlineFallbackMode === "offline-contingency" ? "offline-contingency" : null
     );
-    return this.findById(Number(result.lastInsertRowid));
+    return this.findById(Number(s.lastInsertRowid));
   }
-  updateTransmissionArtifacts(documentId, input) {
-    db.prepare(`
+  updateTransmissionArtifacts(e, a) {
+    o.prepare(`
       UPDATE fiscal_documents
       SET
         issued_datetime = COALESCE(?, issued_datetime),
@@ -3283,16 +2862,16 @@ class SqliteFiscalRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      input.issuedAt ?? null,
-      input.xmlBuilt ?? null,
-      input.xmlSigned ?? null,
-      input.xmlAuthorized ?? null,
-      input.xmlCancellation ?? null,
-      documentId
+      a.issuedAt ?? null,
+      a.xmlBuilt ?? null,
+      a.xmlSigned ?? null,
+      a.xmlAuthorized ?? null,
+      a.xmlCancellation ?? null,
+      e
     );
   }
-  markAsAuthorized(documentId, response) {
-    db.prepare(`
+  markAsAuthorized(e, a) {
+    return o.prepare(`
       UPDATE fiscal_documents
       SET
         status = 'AUTHORIZED',
@@ -3311,24 +2890,23 @@ class SqliteFiscalRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      response.accessKey ?? null,
-      response.protocol ?? null,
-      response.receiptNumber ?? null,
-      response.qrCodeUrl ?? null,
-      response.authorizedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      response.issuedAt ?? null,
-      response.xmlBuilt ?? response.xmlSent ?? null,
-      response.xmlSigned ?? null,
-      response.xmlAuthorized ?? null,
-      response.statusCode ?? null,
-      response.statusMessage,
-      response.provider ?? null,
-      documentId
-    );
-    return this.findById(documentId);
+      a.accessKey ?? null,
+      a.protocol ?? null,
+      a.receiptNumber ?? null,
+      a.qrCodeUrl ?? null,
+      a.authorizedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      a.issuedAt ?? null,
+      a.xmlBuilt ?? a.xmlSent ?? null,
+      a.xmlSigned ?? null,
+      a.xmlAuthorized ?? null,
+      a.statusCode ?? null,
+      a.statusMessage,
+      a.provider ?? null,
+      e
+    ), this.findById(e);
   }
-  markAsRejected(documentId, response) {
-    db.prepare(`
+  markAsRejected(e, a) {
+    return o.prepare(`
       UPDATE fiscal_documents
       SET
         status = ?,
@@ -3342,20 +2920,19 @@ class SqliteFiscalRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      response.status,
-      response.issuedAt ?? null,
-      response.xmlBuilt ?? response.xmlSent ?? null,
-      response.xmlSigned ?? null,
-      response.xmlAuthorized ?? null,
-      response.statusCode ?? null,
-      response.statusMessage,
-      response.provider ?? null,
-      documentId
-    );
-    return this.findById(documentId);
+      a.status,
+      a.issuedAt ?? null,
+      a.xmlBuilt ?? a.xmlSent ?? null,
+      a.xmlSigned ?? null,
+      a.xmlAuthorized ?? null,
+      a.statusCode ?? null,
+      a.statusMessage,
+      a.provider ?? null,
+      e
+    ), this.findById(e);
   }
-  markAsCancelled(documentId, _request, response) {
-    db.prepare(`
+  markAsCancelled(e, a, s) {
+    return o.prepare(`
       UPDATE fiscal_documents
       SET
         status = 'CANCELLED',
@@ -3368,37 +2945,36 @@ class SqliteFiscalRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      response.cancelledAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      response.cancellationProtocol ?? null,
-      response.xmlAuthorized ?? null,
-      response.xmlCancellation ?? null,
-      response.statusCode ?? null,
-      response.statusMessage,
-      documentId
-    );
-    return this.findById(documentId);
+      s.cancelledAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      s.cancellationProtocol ?? null,
+      s.xmlAuthorized ?? null,
+      s.xmlCancellation ?? null,
+      s.statusCode ?? null,
+      s.statusMessage,
+      e
+    ), this.findById(e);
   }
-  updateDanfePath(documentId, danfePath) {
-    db.prepare(`
+  updateDanfePath(e, a) {
+    o.prepare(`
       UPDATE fiscal_documents
       SET danfe_path = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(danfePath, documentId);
+    `).run(a, e);
   }
-  findById(documentId) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1`).get(documentId);
-    return row ? toPersistedDocument(row) : null;
+  findById(e) {
+    const a = o.prepare("SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1").get(e);
+    return a ? Pe(a) : null;
   }
-  findBySaleId(saleId) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(saleId);
-    return row ? toPersistedDocument(row) : null;
+  findBySaleId(e) {
+    const a = o.prepare("SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1").get(e);
+    return a ? Pe(a) : null;
   }
-  findByAccessKey(accessKey) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1`).get(accessKey);
-    return row ? toPersistedDocument(row) : null;
+  findByAccessKey(e) {
+    const a = o.prepare("SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1").get(e);
+    return a ? Pe(a) : null;
   }
-  updateStatus(documentId, status, statusCode, statusMessage) {
-    db.prepare(`
+  updateStatus(e, a, s, n) {
+    o.prepare(`
       UPDATE fiscal_documents
       SET
         status = ?,
@@ -3406,76 +2982,71 @@ class SqliteFiscalRepository {
         rejection_reason = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(status, statusCode ?? null, statusMessage ?? null, documentId);
+    `).run(a, s ?? null, n ?? null, e);
   }
-  enqueue(request) {
-    const existing = this.findQueueItemByIdempotencyKey(request.idempotencyKey);
-    if (existing) {
-      return existing;
-    }
-    const result = db.prepare(`
+  enqueue(e) {
+    const a = this.findQueueItemByIdempotencyKey(e.idempotencyKey);
+    if (a)
+      return a;
+    const s = o.prepare(`
       INSERT INTO sync_queue (
         entity_type, entity_id, operation, payload_json, status, attempts,
         next_attempt_at, last_error, idempotency_key, created_at, updated_at
       ) VALUES (?, ?, ?, ?, 'PENDING', 0, CURRENT_TIMESTAMP, NULL, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
       "fiscal_document",
-      String(request.documentId ?? request.saleId),
-      request.operation,
-      JSON.stringify(request.payload),
-      request.idempotencyKey
+      String(e.documentId ?? e.saleId),
+      e.operation,
+      JSON.stringify(e.payload),
+      e.idempotencyKey
     );
-    return this.findQueueItemById(String(result.lastInsertRowid));
+    return this.findQueueItemById(String(s.lastInsertRowid));
   }
-  findQueueItemByIdempotencyKey(idempotencyKey) {
-    const row = db.prepare(`
+  findQueueItemByIdempotencyKey(e) {
+    const a = o.prepare(`
       SELECT * FROM sync_queue
       WHERE idempotency_key = ?
       LIMIT 1
-    `).get(idempotencyKey);
-    return row ? toQueueItem(row) : null;
+    `).get(e);
+    return a ? we(a) : null;
   }
-  findQueueItemById(queueId) {
-    const row = db.prepare(`SELECT * FROM sync_queue WHERE id = ? LIMIT 1`).get(Number(queueId));
-    return row ? toQueueItem(row) : null;
+  findQueueItemById(e) {
+    const a = o.prepare("SELECT * FROM sync_queue WHERE id = ? LIMIT 1").get(Number(e));
+    return a ? we(a) : null;
   }
-  claimNextQueueItem(nowIso2, _workerId) {
-    const row = db.prepare(`
+  claimNextQueueItem(e, a) {
+    const s = o.prepare(`
       SELECT * FROM sync_queue
       WHERE status IN ('PENDING', 'FAILED')
         AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
       ORDER BY created_at ASC
       LIMIT 1
-    `).get(nowIso2);
-    if (!row) {
-      return null;
-    }
-    this.markQueueItemProcessing(String(row.id), "main", nowIso2);
-    return this.findQueueItemById(String(row.id));
+    `).get(e);
+    return s ? (this.markQueueItemProcessing(String(s.id), "main", e), this.findQueueItemById(String(s.id))) : null;
   }
-  markQueueItemProcessing(queueId, _workerId, _nowIso) {
-    db.prepare(`
+  markQueueItemProcessing(e, a, s) {
+    o.prepare(`
       UPDATE sync_queue
       SET
         status = 'PROCESSING',
         attempts = attempts + 1,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(Number(queueId));
+    `).run(Number(e));
   }
-  markQueueItemDone(queueId, _processedAtIso) {
-    db.prepare(`
+  markQueueItemDone(e, a) {
+    o.prepare(`
       UPDATE sync_queue
       SET
         status = 'DONE',
         last_error = NULL,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(Number(queueId));
+    `).run(Number(e));
   }
-  markQueueItemFailed(queueId, errorCode, errorMessage, nextRetryAtIso, _failedAtIso) {
-    const message = [errorCode, errorMessage].filter(Boolean).join(": ");
-    db.prepare(`
+  markQueueItemFailed(e, a, s, n, r) {
+    const i = [a, s].filter(Boolean).join(": ");
+    o.prepare(`
       UPDATE sync_queue
       SET
         status = 'FAILED',
@@ -3483,423 +3054,343 @@ class SqliteFiscalRepository {
         next_attempt_at = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(message, nextRetryAtIso ?? null, Number(queueId));
+    `).run(i, n ?? null, Number(e));
   }
-  listQueueItems(limit = 20) {
-    const rows = db.prepare(`
+  listQueueItems(e = 20) {
+    return o.prepare(`
       SELECT * FROM sync_queue
       ORDER BY created_at DESC
       LIMIT ?
-    `).all(limit);
-    return rows.map(toQueueItem);
+    `).all(e).map(we);
   }
   summarizeQueue() {
-    const rows = db.prepare(`
+    const e = o.prepare(`
       SELECT status, COUNT(*) as total
       FROM sync_queue
       GROUP BY status
-    `).all();
-    const summary = {
+    `).all(), a = {
       pending: 0,
       processing: 0,
       failed: 0,
       done: 0,
       nextRetryAt: null
     };
-    for (const row of rows) {
-      if (row.status === "PENDING") summary.pending = row.total;
-      if (row.status === "PROCESSING") summary.processing = row.total;
-      if (row.status === "FAILED") summary.failed = row.total;
-      if (row.status === "DONE") summary.done = row.total;
-    }
-    const nextRetry = db.prepare(`
+    for (const n of e)
+      n.status === "PENDING" && (a.pending = n.total), n.status === "PROCESSING" && (a.processing = n.total), n.status === "FAILED" && (a.failed = n.total), n.status === "DONE" && (a.done = n.total);
+    const s = o.prepare(`
       SELECT next_attempt_at
       FROM sync_queue
       WHERE status = 'FAILED' AND next_attempt_at IS NOT NULL
       ORDER BY next_attempt_at ASC
       LIMIT 1
     `).get();
-    summary.nextRetryAt = (nextRetry == null ? void 0 : nextRetry.next_attempt_at) ?? null;
-    return summary;
+    return a.nextRetryAt = (s == null ? void 0 : s.next_attempt_at) ?? null, a;
   }
 }
-function resolveBaseUrl(config2) {
-  var _a;
-  const baseUrl = (_a = config2.gatewayBaseUrl) == null ? void 0 : _a.trim();
-  if (!baseUrl) {
-    throw new FiscalError({
+function Xe(t) {
+  var a;
+  const e = (a = t.gatewayBaseUrl) == null ? void 0 : a.trim();
+  if (!e)
+    throw new S({
       code: "GATEWAY_BASE_URL_REQUIRED",
       message: "Gateway fiscal não configurado.",
       category: "CONFIGURATION"
     });
-  }
-  return baseUrl.replace(/\/+$/, "");
+  return e.replace(/\/+$/, "");
 }
-function resolveHeaders(config2) {
-  var _a;
-  const apiKey = (_a = config2.gatewayApiKey) == null ? void 0 : _a.trim();
-  if (!apiKey) {
-    throw new FiscalError({
+function $e(t) {
+  var a;
+  const e = (a = t.gatewayApiKey) == null ? void 0 : a.trim();
+  if (!e)
+    throw new S({
       code: "GATEWAY_API_KEY_REQUIRED",
       message: "API key do gateway fiscal não configurada.",
       category: "CONFIGURATION"
     });
-  }
   return {
     "content-type": "application/json",
-    authorization: `Bearer ${apiKey}`
+    authorization: `Bearer ${e}`
   };
 }
-async function parseGatewayResponse(response, fallbackCode) {
-  var _a, _b, _c, _d, _e, _f;
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
-  const envelope = payload;
-  if (!response.ok) {
-    throw new FiscalError({
-      code: ((_a = envelope.error) == null ? void 0 : _a.code) ?? fallbackCode,
-      message: ((_b = envelope.error) == null ? void 0 : _b.message) ?? `Gateway fiscal retornou HTTP ${response.status}.`,
+async function Be(t, e) {
+  var r, i, c, d, l, E;
+  const a = await t.text(), s = a ? JSON.parse(a) : {}, n = s;
+  if (!t.ok)
+    throw new S({
+      code: ((r = n.error) == null ? void 0 : r.code) ?? e,
+      message: ((i = n.error) == null ? void 0 : i.message) ?? `Gateway fiscal retornou HTTP ${t.status}.`,
       category: "PROVIDER",
-      retryable: response.status >= 500 || ((_c = envelope.error) == null ? void 0 : _c.retryable) === true,
-      details: payload
+      retryable: t.status >= 500 || ((c = n.error) == null ? void 0 : c.retryable) === !0,
+      details: s
     });
-  }
-  if ("success" in envelope && envelope.success === false) {
-    throw new FiscalError({
-      code: ((_d = envelope.error) == null ? void 0 : _d.code) ?? fallbackCode,
-      message: ((_e = envelope.error) == null ? void 0 : _e.message) ?? "Gateway fiscal retornou erro de negócio.",
+  if ("success" in n && n.success === !1)
+    throw new S({
+      code: ((d = n.error) == null ? void 0 : d.code) ?? e,
+      message: ((l = n.error) == null ? void 0 : l.message) ?? "Gateway fiscal retornou erro de negócio.",
       category: "PROVIDER",
-      retryable: ((_f = envelope.error) == null ? void 0 : _f.retryable) === true,
-      details: payload
+      retryable: ((E = n.error) == null ? void 0 : E.retryable) === !0,
+      details: s
     });
-  }
-  return "data" in envelope && envelope.data !== void 0 ? envelope.data : payload;
+  return "data" in n && n.data !== void 0 ? n.data : s;
 }
-class GatewayFiscalProvider {
+class en {
   constructor() {
-    __publicField(this, "providerId", "gateway");
+    M(this, "providerId", "gateway");
   }
-  async authorizeNfce(request, config2) {
-    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/authorize`, {
+  async authorizeNfce(e, a) {
+    const s = await fetch(`${Xe(a)}/nfce/authorize`, {
       method: "POST",
-      headers: resolveHeaders(config2),
+      headers: $e(a),
       body: JSON.stringify({
-        request
+        request: e
       })
     });
-    return parseGatewayResponse(response, "GATEWAY_AUTHORIZE_FAILED");
+    return Be(s, "GATEWAY_AUTHORIZE_FAILED");
   }
-  async cancelNfce(request, config2) {
-    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/cancel`, {
+  async cancelNfce(e, a) {
+    const s = await fetch(`${Xe(a)}/nfce/cancel`, {
       method: "POST",
-      headers: resolveHeaders(config2),
+      headers: $e(a),
       body: JSON.stringify({
-        request
+        request: e
       })
     });
-    return parseGatewayResponse(response, "GATEWAY_CANCEL_FAILED");
+    return Be(s, "GATEWAY_CANCEL_FAILED");
   }
-  async consultStatus(request, config2) {
-    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/status/${encodeURIComponent(request.accessKey)}`, {
+  async consultStatus(e, a) {
+    const s = await fetch(`${Xe(a)}/nfce/status/${encodeURIComponent(e.accessKey)}`, {
       method: "GET",
-      headers: resolveHeaders(config2)
+      headers: $e(a)
     });
-    return parseGatewayResponse(response, "GATEWAY_CONSULT_FAILED");
+    return Be(s, "GATEWAY_CONSULT_FAILED");
   }
 }
-function buildAccessKey(request) {
-  const base = `${request.emitter.address.state}${request.saleId}${request.number}${request.series}`.replace(/\D/g, "");
-  return base.padEnd(44, "0").slice(0, 44);
+function tn(t) {
+  return `${t.emitter.address.state}${t.saleId}${t.number}${t.series}`.replace(/\D/g, "").padEnd(44, "0").slice(0, 44);
 }
-class MockFiscalProvider {
+class an {
   constructor() {
-    __publicField(this, "providerId", "mock");
+    M(this, "providerId", "mock");
   }
-  async authorizeNfce(request, _config) {
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const accessKey = buildAccessKey(request);
+  async authorizeNfce(e, a) {
+    const s = (/* @__PURE__ */ new Date()).toISOString(), n = tn(e);
     return {
       status: "AUTHORIZED",
       provider: "mock",
-      accessKey,
-      protocol: `MOCK-PROT-${request.saleId}-${request.number}`,
-      receiptNumber: `MOCK-REC-${request.saleId}`,
+      accessKey: n,
+      protocol: `MOCK-PROT-${e.saleId}-${e.number}`,
+      receiptNumber: `MOCK-REC-${e.saleId}`,
       statusCode: "100",
       statusMessage: "Autorizado em ambiente mock.",
-      authorizedAt: now,
-      xmlSent: `<NFe><infNFe Id="${accessKey}"></infNFe></NFe>`,
-      xmlAuthorized: `<procNFe><protNFe nProt="MOCK-PROT-${request.saleId}-${request.number}"/></procNFe>`,
-      qrCodeUrl: `https://mock.fiscal.local/qrcode/${accessKey}`,
-      rawResponse: { mock: true, environment: request.environment }
+      authorizedAt: s,
+      xmlSent: `<NFe><infNFe Id="${n}"></infNFe></NFe>`,
+      xmlAuthorized: `<procNFe><protNFe nProt="MOCK-PROT-${e.saleId}-${e.number}"/></procNFe>`,
+      qrCodeUrl: `https://mock.fiscal.local/qrcode/${n}`,
+      rawResponse: { mock: !0, environment: e.environment }
     };
   }
-  async cancelNfce(request, _config) {
+  async cancelNfce(e, a) {
     return {
       status: "CANCELLED",
       provider: "mock",
-      cancellationProtocol: `MOCK-CANC-${request.documentId}`,
+      cancellationProtocol: `MOCK-CANC-${e.documentId}`,
       cancelledAt: (/* @__PURE__ */ new Date()).toISOString(),
       statusCode: "135",
       statusMessage: "Cancelamento homologado em provider mock.",
-      xmlCancellation: `<procEventoNFe><descEvento>Cancelamento</descEvento></procEventoNFe>`,
-      rawResponse: { mock: true }
+      xmlCancellation: "<procEventoNFe><descEvento>Cancelamento</descEvento></procEventoNFe>",
+      rawResponse: { mock: !0 }
     };
   }
-  async consultStatus(request, _config) {
+  async consultStatus(e, a) {
     return {
       provider: "mock",
-      accessKey: request.accessKey,
+      accessKey: e.accessKey,
       status: "AUTHORIZED",
       statusCode: "100",
       statusMessage: "Documento autorizado em ambiente mock.",
-      protocol: `MOCK-CONSULT-${request.accessKey.slice(-8)}`,
+      protocol: `MOCK-CONSULT-${e.accessKey.slice(-8)}`,
       authorizedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      rawResponse: { mock: true }
+      rawResponse: { mock: !0 }
     };
   }
 }
-class SefazDirectFiscalProvider {
+class sn {
   constructor() {
-    __publicField(this, "providerId", "sefaz-direct");
+    M(this, "providerId", "sefaz-direct");
   }
-  async authorizeNfce(_request, _config) {
-    throw new FiscalError({
+  async authorizeNfce(e, a) {
+    throw new S({
       code: "SEFAZ_DIRECT_NOT_IMPLEMENTED",
       message: "Provider SEFAZ direto ainda não implementado.",
       category: "PROVIDER"
     });
   }
-  async cancelNfce(_request, _config) {
-    throw new FiscalError({
+  async cancelNfce(e, a) {
+    throw new S({
       code: "SEFAZ_DIRECT_NOT_IMPLEMENTED",
       message: "Provider SEFAZ direto ainda não implementado.",
       category: "PROVIDER"
     });
   }
-  async consultStatus(_request, _config) {
-    throw new FiscalError({
+  async consultStatus(e, a) {
+    throw new S({
       code: "SEFAZ_DIRECT_NOT_IMPLEMENTED",
       message: "Provider SEFAZ direto ainda não implementado.",
       category: "PROVIDER"
     });
   }
 }
-class FiscalProviderFactory {
+class nn {
   constructor() {
-    __publicField(this, "providers");
+    M(this, "providers");
     this.providers = {
-      mock: new MockFiscalProvider(),
-      "sefaz-direct": new SefazDirectFiscalProvider(),
-      gateway: new GatewayFiscalProvider()
+      mock: new an(),
+      "sefaz-direct": new sn(),
+      gateway: new en()
     };
   }
-  resolve(config2) {
-    return this.providers[config2.provider];
+  resolve(e) {
+    return this.providers[e.provider];
   }
 }
-class SqliteFiscalQueueService {
-  constructor(repository2, processor) {
-    __publicField(this, "workerId");
-    this.repository = repository2;
-    this.processor = processor;
-    this.workerId = `main-${process.pid}`;
+class rn {
+  constructor(e, a) {
+    M(this, "workerId");
+    this.repository = e, this.processor = a, this.workerId = `main-${process.pid}`;
   }
-  async enqueue(request) {
-    return this.repository.enqueue(request);
+  async enqueue(e) {
+    return this.repository.enqueue(e);
   }
   async processNext() {
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const item = this.repository.claimNextQueueItem(now, this.workerId);
-    if (!item) {
+    const e = (/* @__PURE__ */ new Date()).toISOString(), a = this.repository.claimNextQueueItem(e, this.workerId);
+    if (!a)
       return null;
-    }
     try {
-      const result = await this.processor(item);
-      if (result.status === "AUTHORIZED" || result.status === "REJECTED" || result.status === "CANCELLED") {
-        this.repository.markQueueItemDone(item.id, (/* @__PURE__ */ new Date()).toISOString());
-      } else if (result.status === "FAILED_RETRYABLE" || result.status === "PENDING_EXTERNAL") {
-        this.repository.markQueueItemFailed(
-          item.id,
-          result.statusCode ?? result.status,
-          result.statusMessage ?? "Aguardando novo processamento fiscal.",
-          result.nextRetryAt ?? new Date(Date.now() + Math.max(item.attempts, 1) * 6e4).toISOString(),
-          (/* @__PURE__ */ new Date()).toISOString()
-        );
-      } else {
-        this.repository.markQueueItemFailed(
-          item.id,
-          result.statusCode ?? result.status,
-          result.statusMessage ?? "Falha fiscal definitiva.",
-          null,
-          (/* @__PURE__ */ new Date()).toISOString()
-        );
-      }
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_QUEUE_PROCESS_FAILED");
-      const nextRetryAt = fiscalError.retryable ? new Date(Date.now() + item.attempts * 6e4).toISOString() : null;
+      const s = await this.processor(a);
+      s.status === "AUTHORIZED" || s.status === "REJECTED" || s.status === "CANCELLED" ? this.repository.markQueueItemDone(a.id, (/* @__PURE__ */ new Date()).toISOString()) : s.status === "FAILED_RETRYABLE" || s.status === "PENDING_EXTERNAL" ? this.repository.markQueueItemFailed(
+        a.id,
+        s.statusCode ?? s.status,
+        s.statusMessage ?? "Aguardando novo processamento fiscal.",
+        s.nextRetryAt ?? new Date(Date.now() + Math.max(a.attempts, 1) * 6e4).toISOString(),
+        (/* @__PURE__ */ new Date()).toISOString()
+      ) : this.repository.markQueueItemFailed(
+        a.id,
+        s.statusCode ?? s.status,
+        s.statusMessage ?? "Falha fiscal definitiva.",
+        null,
+        (/* @__PURE__ */ new Date()).toISOString()
+      );
+    } catch (s) {
+      const n = V(s, "FISCAL_QUEUE_PROCESS_FAILED"), r = n.retryable ? new Date(Date.now() + a.attempts * 6e4).toISOString() : null;
       this.repository.markQueueItemFailed(
-        item.id,
-        fiscalError.code,
-        fiscalError.message,
-        nextRetryAt,
+        a.id,
+        n.code,
+        n.message,
+        r,
         (/* @__PURE__ */ new Date()).toISOString()
       );
     }
-    return this.repository.findQueueItemById(item.id);
+    return this.repository.findQueueItemById(a.id);
   }
-  async retry(queueId) {
-    const item = this.repository.findQueueItemById(queueId);
-    if (!item) {
-      return null;
-    }
-    this.repository.markQueueItemFailed(
-      queueId,
-      item.lastErrorCode ?? "MANUAL_RETRY",
-      item.lastErrorMessage ?? "Reprocessamento manual.",
+  async retry(e) {
+    const a = this.repository.findQueueItemById(e);
+    return a ? (this.repository.markQueueItemFailed(
+      e,
+      a.lastErrorCode ?? "MANUAL_RETRY",
+      a.lastErrorMessage ?? "Reprocessamento manual.",
       (/* @__PURE__ */ new Date()).toISOString(),
       (/* @__PURE__ */ new Date()).toISOString()
-    );
-    return this.processNext();
+    ), this.processNext()) : null;
   }
-  async list(limit = 20) {
-    return this.repository.listQueueItems(limit);
+  async list(e = 20) {
+    return this.repository.listQueueItems(e);
   }
   async getSummary() {
     return this.repository.summarizeQueue();
   }
 }
-function normalizeDigits(value) {
-  return String(value ?? "").replace(/\D/g, "");
+function se(t) {
+  return String(t ?? "").replace(/\D/g, "");
 }
-function normalizeText(value) {
-  return String(value ?? "").trim().toUpperCase();
+function L(t) {
+  return String(t ?? "").trim().toUpperCase();
 }
-function isValidNcm(value) {
-  return /^\d{8}$/.test(value);
+function on(t) {
+  return /^\d{8}$/.test(t);
 }
-function isValidCfop(value) {
-  return /^\d{4}$/.test(value);
+function cn(t) {
+  return /^\d{4}$/.test(t);
 }
-function isValidOrigin(value) {
-  return /^[0-8]$/.test(value);
+function dn(t) {
+  return /^[0-8]$/.test(t);
 }
-function isValidCest(value) {
-  return /^\d{7}$/.test(value);
+function ln(t) {
+  return /^\d{7}$/.test(t);
 }
-function isValidGtin(value) {
-  return /^(SEM GTIN|\d{8}|\d{12,14})$/.test(value);
+function un(t) {
+  return /^(SEM GTIN|\d{8}|\d{12,14})$/.test(t);
 }
-function almostEqual(left, right) {
-  return Math.abs(left - right) < 0.01;
+function Tt(t, e) {
+  return Math.abs(t - e) < 0.01;
 }
-function paymentLabel(method) {
-  const labels = {
+function En(t) {
+  return {
     DINHEIRO: "Dinheiro",
     PIX: "PIX",
     DEBITO: "Cartão de débito",
     CREDITO: "Cartão de crédito",
     VOUCHER: "Voucher",
     OUTROS: "Outros"
-  };
-  return labels[method];
+  }[t];
 }
-class FiscalPreTransmissionValidator {
-  validateAuthorizeRequest(request, config2) {
-    const issues = [];
-    const store = storeRepository.findById(request.companyId);
-    if (!store) {
-      issues.push({
-        code: "STORE_NOT_FOUND",
-        message: `Store fiscal ${request.companyId} não encontrada.`,
-        field: "companyId",
-        severity: "error"
-      });
-    }
-    if (!request.series || request.series <= 0) {
-      issues.push({
-        code: "SERIES_INVALID",
-        message: "Série fiscal inválida.",
-        field: "series",
-        severity: "error"
-      });
-    }
-    if (!request.number || request.number <= 0) {
-      issues.push({
-        code: "NUMBER_INVALID",
-        message: "Número fiscal inválido.",
-        field: "number",
-        severity: "error"
-      });
-    }
-    if (!request.issuedAt) {
-      issues.push({
-        code: "ISSUED_AT_REQUIRED",
-        message: "Data/hora de emissão não informada.",
-        field: "issuedAt",
-        severity: "error"
-      });
-    }
-    this.validateEmitter(request, config2, (store == null ? void 0 : store.environment) ?? null, issues);
-    this.validateCompanyConsistency((store == null ? void 0 : store.environment) ?? null, request.companyId, issues);
-    this.validatePayments(request, issues);
-    this.validateItems(request, issues);
-    this.validateRuntimeConfig(request, config2, issues);
-    if (issues.some((issue) => issue.severity === "error")) {
-      throw new FiscalError({
+class Tn {
+  validateAuthorizeRequest(e, a) {
+    const s = [], n = ee.findById(e.companyId);
+    if (n || s.push({
+      code: "STORE_NOT_FOUND",
+      message: `Store fiscal ${e.companyId} não encontrada.`,
+      field: "companyId",
+      severity: "error"
+    }), (!e.series || e.series <= 0) && s.push({
+      code: "SERIES_INVALID",
+      message: "Série fiscal inválida.",
+      field: "series",
+      severity: "error"
+    }), (!e.number || e.number <= 0) && s.push({
+      code: "NUMBER_INVALID",
+      message: "Número fiscal inválido.",
+      field: "number",
+      severity: "error"
+    }), e.issuedAt || s.push({
+      code: "ISSUED_AT_REQUIRED",
+      message: "Data/hora de emissão não informada.",
+      field: "issuedAt",
+      severity: "error"
+    }), this.validateEmitter(e, a, (n == null ? void 0 : n.environment) ?? null, s), this.validateCompanyConsistency((n == null ? void 0 : n.environment) ?? null, e.companyId, s), this.validatePayments(e, s), this.validateItems(e, s), this.validateRuntimeConfig(e, a, s), s.some((r) => r.severity === "error"))
+      throw new S({
         code: "FISCAL_PREREQUISITES_NOT_MET",
         message: "A venda não está pronta para emissão fiscal.",
         category: "VALIDATION",
-        retryable: false,
-        details: issues
+        retryable: !1,
+        details: s
       });
-    }
   }
-  validateEmitter(request, config2, storeEnvironment, issues) {
-    const emitter = request.emitter;
-    if (normalizeDigits(emitter.cnpj).length !== 14) {
-      issues.push({ code: "EMITTER_CNPJ_INVALID", message: "CNPJ do emitente inválido.", field: "emitter.cnpj", severity: "error" });
-    }
-    if (!normalizeText(emitter.stateRegistration)) {
-      issues.push({ code: "EMITTER_IE_REQUIRED", message: "IE do emitente é obrigatória.", field: "emitter.stateRegistration", severity: "error" });
-    }
-    if (!normalizeText(emitter.taxRegimeCode)) {
-      issues.push({ code: "EMITTER_CRT_REQUIRED", message: "CRT do emitente é obrigatório.", field: "emitter.taxRegimeCode", severity: "error" });
-    }
-    if (!normalizeText(emitter.legalName)) {
-      issues.push({ code: "EMITTER_LEGAL_NAME_REQUIRED", message: "Razão social do emitente é obrigatória.", field: "emitter.legalName", severity: "error" });
-    }
-    if (!normalizeText(emitter.tradeName)) {
-      issues.push({ code: "EMITTER_TRADE_NAME_REQUIRED", message: "Nome fantasia do emitente é obrigatório.", field: "emitter.tradeName", severity: "error" });
-    }
-    if (!normalizeText(emitter.address.street) || !normalizeText(emitter.address.number) || !normalizeText(emitter.address.neighborhood)) {
-      issues.push({ code: "EMITTER_ADDRESS_INCOMPLETE", message: "Endereço do emitente está incompleto.", field: "emitter.address", severity: "error" });
-    }
-    if (!normalizeText(emitter.address.city) || !normalizeText(emitter.address.state)) {
-      issues.push({ code: "EMITTER_CITY_STATE_REQUIRED", message: "Cidade e UF do emitente são obrigatórias.", field: "emitter.address.city", severity: "error" });
-    }
-    if (normalizeDigits(emitter.address.cityIbgeCode).length !== 7) {
-      issues.push({ code: "EMITTER_CITY_IBGE_INVALID", message: "Código IBGE do município do emitente é inválido.", field: "emitter.address.cityIbgeCode", severity: "error" });
-    }
-    if (request.environment !== config2.environment) {
-      issues.push({
-        code: "ENVIRONMENT_MISMATCH",
-        message: "Ambiente do request diverge da configuração fiscal ativa.",
-        field: "environment",
-        severity: "error"
-      });
-    }
-    if (storeEnvironment && request.environment !== storeEnvironment) {
-      issues.push({
-        code: "STORE_ENVIRONMENT_MISMATCH",
-        message: "Ambiente fiscal da store diverge do request de emissão.",
-        field: "environment",
-        severity: "error"
-      });
-    }
+  validateEmitter(e, a, s, n) {
+    const r = e.emitter;
+    se(r.cnpj).length !== 14 && n.push({ code: "EMITTER_CNPJ_INVALID", message: "CNPJ do emitente inválido.", field: "emitter.cnpj", severity: "error" }), L(r.stateRegistration) || n.push({ code: "EMITTER_IE_REQUIRED", message: "IE do emitente é obrigatória.", field: "emitter.stateRegistration", severity: "error" }), L(r.taxRegimeCode) || n.push({ code: "EMITTER_CRT_REQUIRED", message: "CRT do emitente é obrigatório.", field: "emitter.taxRegimeCode", severity: "error" }), L(r.legalName) || n.push({ code: "EMITTER_LEGAL_NAME_REQUIRED", message: "Razão social do emitente é obrigatória.", field: "emitter.legalName", severity: "error" }), L(r.tradeName) || n.push({ code: "EMITTER_TRADE_NAME_REQUIRED", message: "Nome fantasia do emitente é obrigatório.", field: "emitter.tradeName", severity: "error" }), (!L(r.address.street) || !L(r.address.number) || !L(r.address.neighborhood)) && n.push({ code: "EMITTER_ADDRESS_INCOMPLETE", message: "Endereço do emitente está incompleto.", field: "emitter.address", severity: "error" }), (!L(r.address.city) || !L(r.address.state)) && n.push({ code: "EMITTER_CITY_STATE_REQUIRED", message: "Cidade e UF do emitente são obrigatórias.", field: "emitter.address.city", severity: "error" }), se(r.address.cityIbgeCode).length !== 7 && n.push({ code: "EMITTER_CITY_IBGE_INVALID", message: "Código IBGE do município do emitente é inválido.", field: "emitter.address.cityIbgeCode", severity: "error" }), e.environment !== a.environment && n.push({
+      code: "ENVIRONMENT_MISMATCH",
+      message: "Ambiente do request diverge da configuração fiscal ativa.",
+      field: "environment",
+      severity: "error"
+    }), s && e.environment !== s && n.push({
+      code: "STORE_ENVIRONMENT_MISMATCH",
+      message: "Ambiente fiscal da store diverge do request de emissão.",
+      field: "environment",
+      severity: "error"
+    });
   }
-  validateCompanyConsistency(storeEnvironment, storeId, issues) {
-    const store = storeRepository.findById(storeId);
-    const company = db.prepare(`
+  validateCompanyConsistency(e, a, s) {
+    const n = ee.findById(a), r = o.prepare(`
       SELECT
         id,
         nome_fantasia,
@@ -3919,74 +3410,68 @@ class FiscalPreTransmissionValidator {
       ORDER BY id ASC
       LIMIT 1
     `).get();
-    if (!store || !company) {
+    if (!n || !r)
       return;
-    }
-    const comparisons = [
+    const i = [
       {
         code: "STORE_COMPANY_CNPJ_MISMATCH",
-        left: normalizeDigits(store.cnpj),
-        right: normalizeDigits(company.cnpj),
+        left: se(n.cnpj),
+        right: se(r.cnpj),
         message: "CNPJ divergente entre stores e company."
       },
       {
         code: "STORE_COMPANY_IE_MISMATCH",
-        left: normalizeText(store.stateRegistration),
-        right: normalizeText(company.inscricao_estadual),
+        left: L(n.stateRegistration),
+        right: L(r.inscricao_estadual),
         message: "IE divergente entre stores e company."
       },
       {
         code: "STORE_COMPANY_LEGAL_NAME_MISMATCH",
-        left: normalizeText(store.legalName),
-        right: normalizeText(company.razao_social),
+        left: L(n.legalName),
+        right: L(r.razao_social),
         message: "Razão social divergente entre stores e company."
       },
       {
         code: "STORE_COMPANY_TRADE_NAME_MISMATCH",
-        left: normalizeText(store.name),
-        right: normalizeText(company.nome_fantasia),
+        left: L(n.name),
+        right: L(r.nome_fantasia),
         message: "Nome fantasia divergente entre stores e company."
       },
       {
         code: "STORE_COMPANY_CITY_MISMATCH",
-        left: normalizeText(store.addressCity),
-        right: normalizeText(company.cidade),
+        left: L(n.addressCity),
+        right: L(r.cidade),
         message: "Cidade divergente entre stores e company."
       },
       {
         code: "STORE_COMPANY_STATE_MISMATCH",
-        left: normalizeText(store.addressState),
-        right: normalizeText(company.uf),
+        left: L(n.addressState),
+        right: L(r.uf),
         message: "UF divergente entre stores e company."
       },
       {
         code: "STORE_COMPANY_IBGE_MISMATCH",
-        left: normalizeDigits(store.addressCityIbgeCode),
-        right: normalizeDigits(company.cod_municipio_ibge),
+        left: se(n.addressCityIbgeCode),
+        right: se(r.cod_municipio_ibge),
         message: "Código IBGE divergente entre stores e company."
       }
     ];
-    for (const comparison of comparisons) {
-      if (comparison.left !== comparison.right) {
-        issues.push({
-          code: comparison.code,
-          message: comparison.message,
-          severity: "error"
-        });
-      }
-    }
-    const companyEnvironment = company.ambiente_emissao === 1 ? "production" : "homologation";
-    if (storeEnvironment && companyEnvironment !== storeEnvironment) {
-      issues.push({
-        code: "STORE_COMPANY_ENVIRONMENT_MISMATCH",
-        message: "Ambiente divergente entre stores e company.",
+    for (const d of i)
+      d.left !== d.right && s.push({
+        code: d.code,
+        message: d.message,
         severity: "error"
       });
-    }
+    const c = r.ambiente_emissao === 1 ? "production" : "homologation";
+    e && c !== e && s.push({
+      code: "STORE_COMPANY_ENVIRONMENT_MISMATCH",
+      message: "Ambiente divergente entre stores e company.",
+      severity: "error"
+    });
   }
-  validatePayments(request, issues) {
-    if (request.payments.length === 0) {
-      issues.push({
+  validatePayments(e, a) {
+    if (e.payments.length === 0) {
+      a.push({
         code: "PAYMENTS_REQUIRED",
         message: "A venda precisa ter ao menos um pagamento fiscal.",
         field: "payments",
@@ -3994,54 +3479,41 @@ class FiscalPreTransmissionValidator {
       });
       return;
     }
-    const totalPayments = request.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-    if (!almostEqual(totalPayments, request.totals.finalAmount)) {
-      issues.push({
-        code: "PAYMENTS_TOTAL_MISMATCH",
-        message: "A soma dos pagamentos não corresponde ao total da venda.",
-        field: "payments",
+    const s = e.payments.reduce((r, i) => r + Number(i.amount || 0), 0);
+    Tt(s, e.totals.finalAmount) || a.push({
+      code: "PAYMENTS_TOTAL_MISMATCH",
+      message: "A soma dos pagamentos não corresponde ao total da venda.",
+      field: "payments",
+      severity: "error"
+    }), e.payments.forEach((r, i) => {
+      r.amount <= 0 && a.push({
+        code: "PAYMENT_AMOUNT_INVALID",
+        message: `Pagamento ${i + 1} (${En(r.method)}) com valor inválido.`,
+        field: `payments[${i}].amount`,
+        severity: "error"
+      }), (r.changeAmount ?? 0) > 0 && r.method !== "DINHEIRO" && a.push({
+        code: "PAYMENT_CHANGE_REQUIRES_CASH",
+        message: "Troco só pode ser informado em pagamento em dinheiro.",
+        field: `payments[${i}].changeAmount`,
+        severity: "error"
+      }), r.method === "DINHEIRO" && (r.receivedAmount ?? 0) < r.amount && a.push({
+        code: "CASH_RECEIVED_AMOUNT_INVALID",
+        message: `Pagamento ${i + 1} em dinheiro com valor recebido menor que o valor pago.`,
+        field: `payments[${i}].receivedAmount`,
         severity: "error"
       });
-    }
-    request.payments.forEach((payment, index) => {
-      if (payment.amount <= 0) {
-        issues.push({
-          code: "PAYMENT_AMOUNT_INVALID",
-          message: `Pagamento ${index + 1} (${paymentLabel(payment.method)}) com valor inválido.`,
-          field: `payments[${index}].amount`,
-          severity: "error"
-        });
-      }
-      if ((payment.changeAmount ?? 0) > 0 && payment.method !== "DINHEIRO") {
-        issues.push({
-          code: "PAYMENT_CHANGE_REQUIRES_CASH",
-          message: `Troco só pode ser informado em pagamento em dinheiro.`,
-          field: `payments[${index}].changeAmount`,
-          severity: "error"
-        });
-      }
-      if (payment.method === "DINHEIRO" && (payment.receivedAmount ?? 0) < payment.amount) {
-        issues.push({
-          code: "CASH_RECEIVED_AMOUNT_INVALID",
-          message: `Pagamento ${index + 1} em dinheiro com valor recebido menor que o valor pago.`,
-          field: `payments[${index}].receivedAmount`,
-          severity: "error"
-        });
-      }
     });
-    const totalChange = request.payments.reduce((sum, payment) => sum + Number(payment.changeAmount ?? 0), 0);
-    if (!almostEqual(totalChange, request.totals.changeAmount)) {
-      issues.push({
-        code: "PAYMENTS_CHANGE_MISMATCH",
-        message: "O troco dos pagamentos diverge do troco total da venda.",
-        field: "payments",
-        severity: "error"
-      });
-    }
+    const n = e.payments.reduce((r, i) => r + Number(i.changeAmount ?? 0), 0);
+    Tt(n, e.totals.changeAmount) || a.push({
+      code: "PAYMENTS_CHANGE_MISMATCH",
+      message: "O troco dos pagamentos diverge do troco total da venda.",
+      field: "payments",
+      severity: "error"
+    });
   }
-  validateItems(request, issues) {
-    if (request.items.length === 0) {
-      issues.push({
+  validateItems(e, a) {
+    if (e.items.length === 0) {
+      a.push({
         code: "ITEMS_REQUIRED",
         message: "A venda precisa ter itens para emissão NFC-e.",
         field: "items",
@@ -4049,114 +3521,74 @@ class FiscalPreTransmissionValidator {
       });
       return;
     }
-    request.items.forEach((item, index) => {
-      const itemId = item.id ?? null;
-      if (!isValidNcm(item.tax.ncm)) {
-        issues.push({ code: "ITEM_NCM_INVALID", message: "NCM ausente ou inválido.", field: `items[${index}].tax.ncm`, severity: "error", itemIndex: index, itemId });
-      }
-      if (!isValidCfop(item.tax.cfop)) {
-        issues.push({ code: "ITEM_CFOP_INVALID", message: "CFOP ausente ou inválido.", field: `items[${index}].tax.cfop`, severity: "error", itemIndex: index, itemId });
-      }
-      if (!isValidOrigin(item.tax.originCode)) {
-        issues.push({ code: "ITEM_ORIGIN_INVALID", message: "Origem fiscal ausente ou inválida.", field: `items[${index}].tax.originCode`, severity: "error", itemIndex: index, itemId });
-      }
-      if (!item.tax.csosn && !item.tax.icmsCst) {
-        issues.push({ code: "ITEM_ICMS_CLASSIFICATION_REQUIRED", message: "CST/CSOSN de ICMS é obrigatório.", field: `items[${index}].tax`, severity: "error", itemIndex: index, itemId });
-      }
-      if (!normalizeText(item.tax.pisCst)) {
-        issues.push({ code: "ITEM_PIS_CST_REQUIRED", message: "CST de PIS é obrigatório.", field: `items[${index}].tax.pisCst`, severity: "error", itemIndex: index, itemId });
-      }
-      if (!normalizeText(item.tax.cofinsCst)) {
-        issues.push({ code: "ITEM_COFINS_CST_REQUIRED", message: "CST de COFINS é obrigatório.", field: `items[${index}].tax.cofinsCst`, severity: "error", itemIndex: index, itemId });
-      }
-      if (item.tax.cest && !isValidCest(item.tax.cest)) {
-        issues.push({ code: "ITEM_CEST_INVALID", message: "CEST informado é inválido.", field: `items[${index}].tax.cest`, severity: "error", itemIndex: index, itemId });
-      }
-      if (item.gtin && !isValidGtin(item.gtin)) {
-        issues.push({ code: "ITEM_GTIN_INVALID", message: "GTIN informado é inválido.", field: `items[${index}].gtin`, severity: "error", itemIndex: index, itemId });
-      }
+    e.items.forEach((s, n) => {
+      const r = s.id ?? null;
+      on(s.tax.ncm) || a.push({ code: "ITEM_NCM_INVALID", message: "NCM ausente ou inválido.", field: `items[${n}].tax.ncm`, severity: "error", itemIndex: n, itemId: r }), cn(s.tax.cfop) || a.push({ code: "ITEM_CFOP_INVALID", message: "CFOP ausente ou inválido.", field: `items[${n}].tax.cfop`, severity: "error", itemIndex: n, itemId: r }), dn(s.tax.originCode) || a.push({ code: "ITEM_ORIGIN_INVALID", message: "Origem fiscal ausente ou inválida.", field: `items[${n}].tax.originCode`, severity: "error", itemIndex: n, itemId: r }), !s.tax.csosn && !s.tax.icmsCst && a.push({ code: "ITEM_ICMS_CLASSIFICATION_REQUIRED", message: "CST/CSOSN de ICMS é obrigatório.", field: `items[${n}].tax`, severity: "error", itemIndex: n, itemId: r }), L(s.tax.pisCst) || a.push({ code: "ITEM_PIS_CST_REQUIRED", message: "CST de PIS é obrigatório.", field: `items[${n}].tax.pisCst`, severity: "error", itemIndex: n, itemId: r }), L(s.tax.cofinsCst) || a.push({ code: "ITEM_COFINS_CST_REQUIRED", message: "CST de COFINS é obrigatório.", field: `items[${n}].tax.cofinsCst`, severity: "error", itemIndex: n, itemId: r }), s.tax.cest && !ln(s.tax.cest) && a.push({ code: "ITEM_CEST_INVALID", message: "CEST informado é inválido.", field: `items[${n}].tax.cest`, severity: "error", itemIndex: n, itemId: r }), s.gtin && !un(s.gtin) && a.push({ code: "ITEM_GTIN_INVALID", message: "GTIN informado é inválido.", field: `items[${n}].gtin`, severity: "error", itemIndex: n, itemId: r });
     });
   }
-  validateRuntimeConfig(request, config2, issues) {
-    if (config2.provider !== "mock") {
-      if (!normalizeText(config2.cscId)) {
-        issues.push({ code: "CSC_ID_REQUIRED", message: "CSC ID é obrigatório para NFC-e real.", field: "config.cscId", severity: "error" });
-      }
-      if (!normalizeText(config2.cscToken)) {
-        issues.push({ code: "CSC_TOKEN_REQUIRED", message: "CSC Token é obrigatório para NFC-e real.", field: "config.cscToken", severity: "error" });
-      }
-    }
-    if (config2.provider === "gateway") {
-      if (!normalizeText(config2.gatewayBaseUrl)) {
-        issues.push({ code: "GATEWAY_BASE_URL_REQUIRED", message: "URL base do gateway fiscal não configurada.", field: "config.gatewayBaseUrl", severity: "error" });
-      }
-      if (!normalizeText(config2.gatewayApiKey)) {
-        issues.push({ code: "GATEWAY_API_KEY_REQUIRED", message: "API key do gateway fiscal não configurada.", field: "config.gatewayApiKey", severity: "error" });
-      }
-    }
-    if (request.environment === "production" && config2.provider === "mock") {
-      issues.push({
-        code: "MOCK_PROVIDER_NOT_ALLOWED_IN_PRODUCTION",
-        message: "Provider mock não pode ser usado em produção.",
-        field: "config.provider",
-        severity: "error"
-      });
-    }
+  validateRuntimeConfig(e, a, s) {
+    a.provider !== "mock" && (L(a.cscId) || s.push({ code: "CSC_ID_REQUIRED", message: "CSC ID é obrigatório para NFC-e real.", field: "config.cscId", severity: "error" }), L(a.cscToken) || s.push({ code: "CSC_TOKEN_REQUIRED", message: "CSC Token é obrigatório para NFC-e real.", field: "config.cscToken", severity: "error" })), a.provider === "gateway" && (L(a.gatewayBaseUrl) || s.push({ code: "GATEWAY_BASE_URL_REQUIRED", message: "URL base do gateway fiscal não configurada.", field: "config.gatewayBaseUrl", severity: "error" }), L(a.gatewayApiKey) || s.push({ code: "GATEWAY_API_KEY_REQUIRED", message: "API key do gateway fiscal não configurada.", field: "config.gatewayApiKey", severity: "error" })), e.environment === "production" && a.provider === "mock" && s.push({
+      code: "MOCK_PROVIDER_NOT_ALLOWED_IN_PRODUCTION",
+      message: "Provider mock não pode ser usado em produção.",
+      field: "config.provider",
+      severity: "error"
+    });
   }
 }
-const fiscalPreTransmissionValidator = new FiscalPreTransmissionValidator();
-function escapeXml(value) {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+const mn = new Tn();
+function p(t) {
+  return String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
-function money(value) {
-  return Number(value ?? 0).toFixed(2);
+function B(t) {
+  return Number(t ?? 0).toFixed(2);
 }
-class NfceXmlBuilderService {
-  buildAuthorizeXml(request) {
-    var _a;
-    const itemsXml = request.items.map(
-      (item, index) => `    <det nItem="${index + 1}">
+class _n {
+  buildAuthorizeXml(e) {
+    var n;
+    const a = e.items.map(
+      (r, i) => `    <det nItem="${i + 1}">
       <prod>
-        <cProd>${escapeXml(item.id)}</cProd>
-        <xProd>${escapeXml(item.description)}</xProd>
-        <cEAN>${escapeXml(item.gtin ?? "SEM GTIN")}</cEAN>
-        <NCM>${escapeXml(item.tax.ncm)}</NCM>
-        <CFOP>${escapeXml(item.tax.cfop)}</CFOP>
-        ${item.tax.cest ? `<CEST>${escapeXml(item.tax.cest)}</CEST>` : ""}
-        <uCom>${escapeXml(item.unit)}</uCom>
-        <qCom>${escapeXml(item.quantity.toFixed(4))}</qCom>
-        <vUnCom>${money(item.unitPrice)}</vUnCom>
-        <vProd>${money(item.grossAmount)}</vProd>
-        <uTrib>${escapeXml(item.unit)}</uTrib>
-        <qTrib>${escapeXml(item.quantity.toFixed(4))}</qTrib>
-        <vUnTrib>${money(item.unitPrice)}</vUnTrib>
-        <vDesc>${money(item.discountAmount)}</vDesc>
+        <cProd>${p(r.id)}</cProd>
+        <xProd>${p(r.description)}</xProd>
+        <cEAN>${p(r.gtin ?? "SEM GTIN")}</cEAN>
+        <NCM>${p(r.tax.ncm)}</NCM>
+        <CFOP>${p(r.tax.cfop)}</CFOP>
+        ${r.tax.cest ? `<CEST>${p(r.tax.cest)}</CEST>` : ""}
+        <uCom>${p(r.unit)}</uCom>
+        <qCom>${p(r.quantity.toFixed(4))}</qCom>
+        <vUnCom>${B(r.unitPrice)}</vUnCom>
+        <vProd>${B(r.grossAmount)}</vProd>
+        <uTrib>${p(r.unit)}</uTrib>
+        <qTrib>${p(r.quantity.toFixed(4))}</qTrib>
+        <vUnTrib>${B(r.unitPrice)}</vUnTrib>
+        <vDesc>${B(r.discountAmount)}</vDesc>
         <indTot>1</indTot>
       </prod>
       <imposto>
-        <ICMS><orig>${escapeXml(item.tax.originCode)}</orig>${item.tax.csosn ? `<CSOSN>${escapeXml(item.tax.csosn)}</CSOSN>` : ""}${item.tax.icmsCst ? `<CST>${escapeXml(item.tax.icmsCst)}</CST>` : ""}</ICMS>
-        <PIS><CST>${escapeXml(item.tax.pisCst)}</CST></PIS>
-        <COFINS><CST>${escapeXml(item.tax.cofinsCst)}</CST></COFINS>
+        <ICMS><orig>${p(r.tax.originCode)}</orig>${r.tax.csosn ? `<CSOSN>${p(r.tax.csosn)}</CSOSN>` : ""}${r.tax.icmsCst ? `<CST>${p(r.tax.icmsCst)}</CST>` : ""}</ICMS>
+        <PIS><CST>${p(r.tax.pisCst)}</CST></PIS>
+        <COFINS><CST>${p(r.tax.cofinsCst)}</CST></COFINS>
       </imposto>
     </det>`
-    ).join("\n");
-    const paymentsXml = request.payments.map(
-      (payment) => `      <detPag>
+    ).join(`
+`), s = e.payments.map(
+      (r) => `      <detPag>
         <indPag>0</indPag>
-        <tPag>${escapeXml(payment.method)}</tPag>
-        <vPag>${money(payment.amount)}</vPag>
-        ${payment.description ? `<xPag>${escapeXml(payment.description)}</xPag>` : ""}
+        <tPag>${p(r.method)}</tPag>
+        <vPag>${B(r.amount)}</vPag>
+        ${r.description ? `<xPag>${p(r.description)}</xPag>` : ""}
       </detPag>`
-    ).join("\n");
+    ).join(`
+`);
     return `<?xml version="1.0" encoding="UTF-8"?>
 <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
   <infNFe versao="4.00" Id="">
     <ide>
       <mod>65</mod>
-      <serie>${escapeXml(request.series)}</serie>
-      <nNF>${escapeXml(request.number)}</nNF>
-      <dhEmi>${escapeXml(request.issuedAt)}</dhEmi>
-      <tpAmb>${request.environment === "production" ? "1" : "2"}</tpAmb>
+      <serie>${p(e.series)}</serie>
+      <nNF>${p(e.number)}</nNF>
+      <dhEmi>${p(e.issuedAt)}</dhEmi>
+      <tpAmb>${e.environment === "production" ? "1" : "2"}</tpAmb>
       <tpImp>4</tpImp>
       <tpEmis>1</tpEmis>
       <finNFe>1</finNFe>
@@ -4164,290 +3596,237 @@ class NfceXmlBuilderService {
       <indPres>1</indPres>
     </ide>
     <emit>
-      <CNPJ>${escapeXml(request.emitter.cnpj)}</CNPJ>
-      <xNome>${escapeXml(request.emitter.legalName)}</xNome>
-      <xFant>${escapeXml(request.emitter.tradeName)}</xFant>
-      <IE>${escapeXml(request.emitter.stateRegistration)}</IE>
-      <CRT>${escapeXml(request.emitter.taxRegimeCode)}</CRT>
+      <CNPJ>${p(e.emitter.cnpj)}</CNPJ>
+      <xNome>${p(e.emitter.legalName)}</xNome>
+      <xFant>${p(e.emitter.tradeName)}</xFant>
+      <IE>${p(e.emitter.stateRegistration)}</IE>
+      <CRT>${p(e.emitter.taxRegimeCode)}</CRT>
       <enderEmit>
-        <xLgr>${escapeXml(request.emitter.address.street)}</xLgr>
-        <nro>${escapeXml(request.emitter.address.number)}</nro>
-        <xBairro>${escapeXml(request.emitter.address.neighborhood)}</xBairro>
-        <cMun>${escapeXml(request.emitter.address.cityIbgeCode)}</cMun>
-        <xMun>${escapeXml(request.emitter.address.city)}</xMun>
-        <UF>${escapeXml(request.emitter.address.state)}</UF>
-        <CEP>${escapeXml(request.emitter.address.zipCode)}</CEP>
+        <xLgr>${p(e.emitter.address.street)}</xLgr>
+        <nro>${p(e.emitter.address.number)}</nro>
+        <xBairro>${p(e.emitter.address.neighborhood)}</xBairro>
+        <cMun>${p(e.emitter.address.cityIbgeCode)}</cMun>
+        <xMun>${p(e.emitter.address.city)}</xMun>
+        <UF>${p(e.emitter.address.state)}</UF>
+        <CEP>${p(e.emitter.address.zipCode)}</CEP>
       </enderEmit>
     </emit>
-    ${((_a = request.customer) == null ? void 0 : _a.cpfCnpj) ? `<dest>
-      <${request.customer.cpfCnpj.replace(/\D/g, "").length === 11 ? "CPF" : "CNPJ"}>${escapeXml(request.customer.cpfCnpj)}</${request.customer.cpfCnpj.replace(/\D/g, "").length === 11 ? "CPF" : "CNPJ"}>
-      ${request.customer.name ? `<xNome>${escapeXml(request.customer.name)}</xNome>` : ""}
+    ${(n = e.customer) != null && n.cpfCnpj ? `<dest>
+      <${e.customer.cpfCnpj.replace(/\D/g, "").length === 11 ? "CPF" : "CNPJ"}>${p(e.customer.cpfCnpj)}</${e.customer.cpfCnpj.replace(/\D/g, "").length === 11 ? "CPF" : "CNPJ"}>
+      ${e.customer.name ? `<xNome>${p(e.customer.name)}</xNome>` : ""}
     </dest>` : ""}
-${itemsXml}
+${a}
     <total>
       <ICMSTot>
-        <vProd>${money(request.totals.productsAmount)}</vProd>
-        <vDesc>${money(request.totals.discountAmount)}</vDesc>
-        <vNF>${money(request.totals.finalAmount)}</vNF>
+        <vProd>${B(e.totals.productsAmount)}</vProd>
+        <vDesc>${B(e.totals.discountAmount)}</vDesc>
+        <vNF>${B(e.totals.finalAmount)}</vNF>
       </ICMSTot>
     </total>
     <pag>
-${paymentsXml}
-      <vTroco>${money(request.totals.changeAmount)}</vTroco>
+${s}
+      <vTroco>${B(e.totals.changeAmount)}</vTroco>
     </pag>
-    ${request.additionalInfo ? `<infAdic><infCpl>${escapeXml(request.additionalInfo)}</infCpl></infAdic>` : ""}
+    ${e.additionalInfo ? `<infAdic><infCpl>${p(e.additionalInfo)}</infCpl></infAdic>` : ""}
   </infNFe>
 </NFe>`;
   }
 }
-const nfceXmlBuilderService = new NfceXmlBuilderService();
-class DefaultFiscalService {
-  constructor(repository2, queueService2, certificateService2, danfeService2, configService2, resolveProvider) {
-    this.repository = repository2;
-    this.queueService = queueService2;
-    this.certificateService = certificateService2;
-    this.danfeService = danfeService2;
-    this.configService = configService2;
-    this.resolveProvider = resolveProvider;
+const pn = new _n();
+class Nn {
+  constructor(e, a, s, n, r, i) {
+    this.repository = e, this.queueService = a, this.certificateService = s, this.danfeService = n, this.configService = r, this.resolveProvider = i;
   }
   async getConfig() {
     return this.configService.getConfigView();
   }
-  async saveConfig(input) {
-    return this.configService.saveConfig(input);
+  async saveConfig(e) {
+    return this.configService.saveConfig(e);
   }
-  async authorizeNfce(request) {
-    const existing = this.repository.findBySaleId(request.saleId);
-    if ((existing == null ? void 0 : existing.status) === "AUTHORIZED") {
+  async authorizeNfce(e) {
+    const a = this.repository.findBySaleId(e.saleId);
+    if ((a == null ? void 0 : a.status) === "AUTHORIZED")
       return {
         status: "AUTHORIZED",
         provider: this.configService.getConfig().provider,
-        accessKey: existing.accessKey,
-        protocol: existing.authorizationProtocol,
-        statusCode: existing.statusCode,
-        statusMessage: existing.statusMessage ?? "Documento já autorizado.",
-        authorizedAt: existing.authorizedAt,
-        xmlAuthorized: existing.xmlAuthorized,
-        xmlSent: existing.xmlSent,
-        qrCodeUrl: existing.qrCodeUrl
+        accessKey: a.accessKey,
+        protocol: a.authorizationProtocol,
+        statusCode: a.statusCode,
+        statusMessage: a.statusMessage ?? "Documento já autorizado.",
+        authorizedAt: a.authorizedAt,
+        xmlAuthorized: a.xmlAuthorized,
+        xmlSent: a.xmlSent,
+        qrCodeUrl: a.qrCodeUrl
       };
-    }
-    const persisted = existing ?? this.repository.createPendingDocument(request);
-    const config2 = this.configService.getConfig();
-    fiscalPreTransmissionValidator.validateAuthorizeRequest(request, config2);
-    this.repository.updateStatus(persisted.id, "PENDING");
-    const builtXml = nfceXmlBuilderService.buildAuthorizeXml(request);
-    this.repository.updateTransmissionArtifacts(persisted.id, {
-      issuedAt: request.issuedAt,
-      xmlBuilt: builtXml
+    const s = a ?? this.repository.createPendingDocument(e), n = this.configService.getConfig();
+    mn.validateAuthorizeRequest(e, n), this.repository.updateStatus(s.id, "PENDING");
+    const r = pn.buildAuthorizeXml(e);
+    this.repository.updateTransmissionArtifacts(s.id, {
+      issuedAt: e.issuedAt,
+      xmlBuilt: r
     });
     try {
-      await this.certificateService.assertCertificateReady(config2);
-      const provider = this.resolveProvider();
-      const response = await provider.authorizeNfce(request, config2);
-      const enrichedResponse = {
-        ...response,
-        issuedAt: response.issuedAt ?? request.issuedAt,
-        xmlBuilt: response.xmlBuilt ?? builtXml
+      await this.certificateService.assertCertificateReady(n);
+      const c = await this.resolveProvider().authorizeNfce(e, n), d = {
+        ...c,
+        issuedAt: c.issuedAt ?? e.issuedAt,
+        xmlBuilt: c.xmlBuilt ?? r
       };
-      if (enrichedResponse.status === "AUTHORIZED") {
-        const document = this.repository.markAsAuthorized(persisted.id, enrichedResponse);
-        const danfe = await this.danfeService.generate(document);
-        this.repository.updateDanfePath(document.id, danfe.danfePath);
-      } else {
-        this.repository.markAsRejected(persisted.id, enrichedResponse);
-      }
-      return enrichedResponse;
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_AUTHORIZE_FAILED");
-      this.repository.updateStatus(persisted.id, "ERROR", fiscalError.code, fiscalError.message);
-      if (request.offlineFallbackMode === "queue" || fiscalError.retryable) {
-        await this.queueService.enqueue({
-          saleId: request.saleId,
-          documentId: persisted.id,
+      if (d.status === "AUTHORIZED") {
+        const l = this.repository.markAsAuthorized(s.id, d), E = await this.danfeService.generate(l);
+        this.repository.updateDanfePath(l.id, E.danfePath);
+      } else
+        this.repository.markAsRejected(s.id, d);
+      return d;
+    } catch (i) {
+      const c = V(i, "FISCAL_AUTHORIZE_FAILED");
+      if (this.repository.updateStatus(s.id, "ERROR", c.code, c.message), e.offlineFallbackMode === "queue" || c.retryable)
+        return await this.queueService.enqueue({
+          saleId: e.saleId,
+          documentId: s.id,
           operation: "AUTHORIZE_NFCE",
-          idempotencyKey: request.idempotencyKey,
-          payload: request
-        });
-        this.repository.updateStatus(persisted.id, "QUEUED", fiscalError.code, fiscalError.message);
-        return {
+          idempotencyKey: e.idempotencyKey,
+          payload: e
+        }), this.repository.updateStatus(s.id, "QUEUED", c.code, c.message), {
           status: "QUEUED",
-          provider: config2.provider,
-          statusCode: fiscalError.code,
-          statusMessage: fiscalError.message
+          provider: n.provider,
+          statusCode: c.code,
+          statusMessage: c.message
         };
-      }
-      throw fiscalError;
+      throw c;
     }
   }
-  async cancelNfce(request) {
-    const document = this.repository.findById(request.documentId);
-    if (!document) {
-      throw new FiscalError({
+  async cancelNfce(e) {
+    const a = this.repository.findById(e.documentId);
+    if (!a)
+      throw new S({
         code: "FISCAL_DOCUMENT_NOT_FOUND",
-        message: `Documento fiscal ${request.documentId} não encontrado.`,
+        message: `Documento fiscal ${e.documentId} não encontrado.`,
         category: "VALIDATION"
       });
-    }
-    if (document.status === "CANCELLED") {
+    if (a.status === "CANCELLED")
       return {
         status: "CANCELLED",
         provider: this.configService.getConfig().provider,
-        cancellationProtocol: document.cancellationProtocol,
-        cancelledAt: document.cancelledAt,
-        statusCode: document.statusCode,
-        statusMessage: document.statusMessage ?? "Documento já cancelado.",
-        xmlCancellation: document.xmlCancellation
+        cancellationProtocol: a.cancellationProtocol,
+        cancelledAt: a.cancelledAt,
+        statusCode: a.statusCode,
+        statusMessage: a.statusMessage ?? "Documento já cancelado.",
+        xmlCancellation: a.xmlCancellation
       };
-    }
-    const provider = this.resolveProvider();
-    const config2 = this.configService.getConfig();
-    const response = await provider.cancelNfce(request, config2);
-    this.repository.markAsCancelled(document.id, request, response);
-    return response;
+    const s = this.resolveProvider(), n = this.configService.getConfig(), r = await s.cancelNfce(e, n);
+    return this.repository.markAsCancelled(a.id, e, r), r;
   }
-  async consultStatusByAccessKey(accessKey) {
-    const config2 = this.configService.getConfig();
-    const provider = this.resolveProvider();
-    const response = await provider.consultStatus({ accessKey }, config2);
-    const document = this.repository.findByAccessKey(accessKey);
-    if (document) {
-      this.repository.updateStatus(document.id, response.status, response.statusCode, response.statusMessage);
-    }
-    return response;
+  async consultStatusByAccessKey(e) {
+    const a = this.configService.getConfig(), n = await this.resolveProvider().consultStatus({ accessKey: e }, a), r = this.repository.findByAccessKey(e);
+    return r && this.repository.updateStatus(r.id, n.status, n.statusCode, n.statusMessage), n;
   }
-  async getDanfe(documentId) {
-    const document = this.repository.findById(documentId);
-    if (!document) {
-      throw new FiscalError({
+  async getDanfe(e) {
+    const a = this.repository.findById(e);
+    if (!a)
+      throw new S({
         code: "DANFE_DOCUMENT_NOT_FOUND",
-        message: `Documento fiscal ${documentId} não encontrado.`,
+        message: `Documento fiscal ${e} não encontrado.`,
         category: "VALIDATION"
       });
-    }
-    const recovered = await this.danfeService.recover(document);
-    if (recovered) {
-      return recovered;
-    }
-    const generated = await this.danfeService.generate(document);
-    this.repository.updateDanfePath(documentId, generated.danfePath);
-    return generated;
+    const s = await this.danfeService.recover(a);
+    if (s)
+      return s;
+    const n = await this.danfeService.generate(a);
+    return this.repository.updateDanfePath(e, n.danfePath), n;
   }
-  async enqueuePending(request) {
-    return this.queueService.enqueue(request);
+  async enqueuePending(e) {
+    return this.queueService.enqueue(e);
   }
-  async reprocessQueueItem(queueId) {
-    return this.queueService.retry(queueId);
+  async reprocessQueueItem(e) {
+    return this.queueService.retry(e);
   }
-  async listQueue(limit = 20) {
-    return this.queueService.list(limit);
+  async listQueue(e = 20) {
+    return this.queueService.list(e);
   }
   async getQueueSummary() {
     return this.queueService.getSummary();
   }
 }
-const repository = new SqliteFiscalRepository();
-repository.ensureSchema();
-const configService = new IntegrationFiscalSettingsService();
-const providerFactory = new FiscalProviderFactory();
-const certificateService = new FileSystemCertificateService();
-const danfeService = new HtmlDanfeService();
-let fiscalServiceRef;
-function mapAuthorizeQueueResult(response) {
-  if (response.status === "AUTHORIZED") {
-    return {
-      status: "AUTHORIZED",
-      statusCode: response.statusCode ?? null,
-      statusMessage: response.statusMessage
-    };
-  }
-  if (response.status === "REJECTED") {
-    return {
-      status: "REJECTED",
-      statusCode: response.statusCode ?? null,
-      statusMessage: response.statusMessage
-    };
-  }
-  if (response.status === "QUEUED" || response.status === "PENDING" || response.status === "CONTINGENCY") {
-    return {
-      status: "PENDING_EXTERNAL",
-      statusCode: response.statusCode ?? null,
-      statusMessage: response.statusMessage
-    };
-  }
-  return {
+const st = new Zs();
+st.ensureSchema();
+const tt = new Qs(), fn = new nn(), Xt = new qs(), gn = new Ks();
+let ye;
+function In(t) {
+  return t.status === "AUTHORIZED" ? {
+    status: "AUTHORIZED",
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
+  } : t.status === "REJECTED" ? {
+    status: "REJECTED",
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
+  } : t.status === "QUEUED" || t.status === "PENDING" || t.status === "CONTINGENCY" ? {
+    status: "PENDING_EXTERNAL",
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
+  } : {
     status: "FAILED_RETRYABLE",
-    statusCode: response.statusCode ?? null,
-    statusMessage: response.statusMessage
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
   };
 }
-function mapCancelQueueResult(response) {
-  if (response.status === "CANCELLED") {
-    return {
-      status: "CANCELLED",
-      statusCode: response.statusCode ?? null,
-      statusMessage: response.statusMessage
-    };
-  }
-  return {
+function An(t) {
+  return t.status === "CANCELLED" ? {
+    status: "CANCELLED",
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
+  } : {
     status: "FAILED_FINAL",
-    statusCode: response.statusCode ?? null,
-    statusMessage: response.statusMessage
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
   };
 }
-const queueService = new SqliteFiscalQueueService(repository, async (item) => {
-  const payload = item.payload;
-  if (item.operation === "AUTHORIZE_NFCE") {
-    const response = await fiscalServiceRef.authorizeNfce(payload);
-    return mapAuthorizeQueueResult(response);
+const $t = new rn(st, async (t) => {
+  const e = t.payload;
+  if (t.operation === "AUTHORIZE_NFCE") {
+    const a = await ye.authorizeNfce(e);
+    return In(a);
   }
-  if (item.operation === "CANCEL_NFCE") {
-    const response = await fiscalServiceRef.cancelNfce(payload);
-    return mapCancelQueueResult(response);
+  if (t.operation === "CANCEL_NFCE") {
+    const a = await ye.cancelNfce(e);
+    return An(a);
   }
   return {
     status: "FAILED_FINAL",
     statusCode: "QUEUE_OPERATION_NOT_SUPPORTED",
-    statusMessage: `Operação de fila não suportada: ${item.operation}`
+    statusMessage: `Operação de fila não suportada: ${t.operation}`
   };
 });
-fiscalServiceRef = new DefaultFiscalService(
-  repository,
-  queueService,
-  certificateService,
-  danfeService,
-  configService,
-  () => providerFactory.resolve(configService.getConfig())
+ye = new Nn(
+  st,
+  $t,
+  Xt,
+  gn,
+  tt,
+  () => fn.resolve(tt.getConfig())
 );
-const fiscalService = fiscalServiceRef;
-const fiscalConfigService = configService;
-const fiscalQueueService = queueService;
-const fiscalCertificateService = certificateService;
-let fiscalQueueWorkerStarted = false;
-function startFiscalQueueWorker(intervalMs = 15e3) {
-  if (fiscalQueueWorkerStarted) {
-    return;
-  }
-  fiscalQueueWorkerStarted = true;
-  setInterval(() => {
-    void fiscalQueueService.processNext();
-  }, intervalMs);
+const P = ye, Ln = tt, Bt = $t, Rn = Xt;
+let mt = !1;
+function hn(t = 15e3) {
+  mt || (mt = !0, setInterval(() => {
+    Bt.processNext();
+  }, t));
 }
-let currentSessionId = null;
-function setCurrentSession(id) {
-  currentSessionId = id;
+let kt = null;
+function _t(t) {
+  kt = t;
 }
-function getCurrentSession() {
-  return currentSessionId;
+function nt() {
+  return kt;
 }
-const ROLE_ALIASES = {
+const Sn = {
   admin: ["admin", "administrador", "administrator", "dono", "owner"],
   manager: ["gerente", "gestor", "manager", "supervisor"],
   cashier: ["caixa", "operador", "operador de caixa", "atendente", "vendedor"],
   stock: ["estoque", "almoxarife"],
   unknown: []
-};
-const ROLE_PERMISSIONS = {
+}, Cn = {
   admin: [
     "pdv:access",
     "home:access",
@@ -4477,21 +3856,20 @@ const ROLE_PERMISSIONS = {
   stock: ["home:access", "products:view", "products:manage"],
   unknown: []
 };
-function normalizeRole(role) {
-  const normalized = String(role ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  for (const [roleKey, aliases] of Object.entries(ROLE_ALIASES)) {
-    if (aliases.includes(normalized)) return roleKey;
-  }
+function vn(t) {
+  const e = String(t ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  for (const [a, s] of Object.entries(Sn))
+    if (s.includes(e)) return a;
   return "unknown";
 }
-function getPermissionsForRole(role) {
-  return ROLE_PERMISSIONS[normalizeRole(role)];
+function On(t) {
+  return Cn[vn(t)];
 }
-function hasPermission(role, permission) {
-  return getPermissionsForRole(role).includes(permission);
+function Gt(t, e) {
+  return On(t).includes(e);
 }
-function getPermissionDeniedMessage(permission) {
-  const messages = {
+function yn(t) {
+  return {
     "home:access": "Seu perfil não pode acessar a tela inicial.",
     "pdv:access": "Seu perfil não pode acessar o caixa.",
     "sales:view": "Seu perfil não pode consultar vendas.",
@@ -4504,208 +3882,172 @@ function getPermissionDeniedMessage(permission) {
     "printers:manage": "Somente gerente ou administrador pode gerenciar impressoras.",
     "integrations:manage": "Somente gerente ou administrador pode gerenciar integrações.",
     "fiscal:manage": "Somente gerente ou administrador pode gerenciar configurações fiscais."
-  };
-  return messages[permission];
+  }[t];
 }
-function getCurrentUser() {
-  const sessionId = getCurrentSession();
-  if (!sessionId) return null;
-  const user = db.prepare(`
+function Ht() {
+  const t = nt();
+  return t ? o.prepare(`
     SELECT u.id, u.nome, u.funcao, u.ativo
     FROM sessions s
     INNER JOIN usuarios u ON u.id = s.user_id
     WHERE s.id = ?
       AND s.active = 1
     LIMIT 1
-  `).get(sessionId);
-  return user ?? null;
+  `).get(t) ?? null : null;
 }
-function assertCurrentUserPermission(permission) {
-  const user = getCurrentUser();
-  if (!user || !user.ativo) {
+function m(t) {
+  const e = Ht();
+  if (!e || !e.ativo)
     throw new Error("Sessão inválida ou usuário inativo.");
-  }
-  if (!hasPermission(user.funcao, permission)) {
-    throw new Error(getPermissionDeniedMessage(permission));
-  }
-  return user;
+  if (!Gt(e.funcao, t))
+    throw new Error(yn(t));
+  return e;
 }
-function currentUserHasPermission(permission) {
-  const user = getCurrentUser();
-  return Boolean(user && user.ativo && hasPermission(user.funcao, permission));
+function de(t) {
+  const e = Ht();
+  return !!(e && e.ativo && Gt(e.funcao, t));
 }
-function registerFiscalHandlers() {
-  ipcMain.handle("fiscal:get-runtime-config", async () => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalService.getConfig();
-  });
-  ipcMain.handle("fiscal:save-runtime-config", async (_event, input) => {
+function Un() {
+  u.handle("fiscal:get-runtime-config", async () => (m("fiscal:manage"), P.getConfig())), u.handle("fiscal:save-runtime-config", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return await fiscalService.saveConfig(input);
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_CONFIG_SAVE_FAILED");
+      return m("fiscal:manage"), await P.saveConfig(e);
+    } catch (a) {
+      const s = V(a, "FISCAL_CONFIG_SAVE_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: s.code,
+          message: s.message,
+          category: s.category,
+          retryable: s.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:get-certificate-info", async () => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalCertificateService.getCertificateInfo(fiscalConfigService.getConfig());
-  });
-  ipcMain.handle("fiscal:authorize-nfce", async (_event, request) => {
+  }), u.handle("fiscal:get-certificate-info", async () => (m("fiscal:manage"), Rn.getCertificateInfo(Ln.getConfig()))), u.handle("fiscal:authorize-nfce", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: await fiscalService.authorizeNfce(request)
+      return m("fiscal:manage"), {
+        success: !0,
+        data: await P.authorizeNfce(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_AUTHORIZE_FAILED");
+    } catch (a) {
+      const s = V(a, "FISCAL_AUTHORIZE_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: s.code,
+          message: s.message,
+          category: s.category,
+          retryable: s.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:cancel-nfce", async (_event, request) => {
+  }), u.handle("fiscal:cancel-nfce", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: await fiscalService.cancelNfce(request)
+      return m("fiscal:manage"), {
+        success: !0,
+        data: await P.cancelNfce(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_CANCEL_FAILED");
+    } catch (a) {
+      const s = V(a, "FISCAL_CANCEL_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: s.code,
+          message: s.message,
+          category: s.category,
+          retryable: s.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:consult-status", async (_event, accessKey) => {
+  }), u.handle("fiscal:consult-status", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: await fiscalService.consultStatusByAccessKey(accessKey)
+      return m("fiscal:manage"), {
+        success: !0,
+        data: await P.consultStatusByAccessKey(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_CONSULT_FAILED");
+    } catch (a) {
+      const s = V(a, "FISCAL_CONSULT_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: s.code,
+          message: s.message,
+          category: s.category,
+          retryable: s.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:get-danfe", async (_event, documentId) => {
+  }), u.handle("fiscal:get-danfe", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: await fiscalService.getDanfe(documentId)
+      return m("fiscal:manage"), {
+        success: !0,
+        data: await P.getDanfe(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_DANFE_FAILED");
+    } catch (a) {
+      const s = V(a, "FISCAL_DANFE_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: s.code,
+          message: s.message,
+          category: s.category,
+          retryable: s.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:get-queue-summary", async () => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalService.getQueueSummary();
-  });
-  ipcMain.handle("fiscal:list-queue", async (_event, limit = 20) => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalService.listQueue(limit);
-  });
-  ipcMain.handle("fiscal:reprocess-queue-item", async (_event, queueId) => {
+  }), u.handle("fiscal:get-queue-summary", async () => (m("fiscal:manage"), P.getQueueSummary())), u.handle("fiscal:list-queue", async (t, e = 20) => (m("fiscal:manage"), P.listQueue(e))), u.handle("fiscal:reprocess-queue-item", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: await fiscalService.reprocessQueueItem(queueId)
+      return m("fiscal:manage"), {
+        success: !0,
+        data: await P.reprocessQueueItem(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_REPROCESS_FAILED");
+    } catch (a) {
+      const s = V(a, "FISCAL_REPROCESS_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: s.code,
+          message: s.message,
+          category: s.category,
+          retryable: s.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:process-next-queue-item", async () => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalQueueService.processNext();
-  });
+  }), u.handle("fiscal:process-next-queue-item", async () => (m("fiscal:manage"), Bt.processNext()));
 }
-function mapDocument(row) {
+function ke(t) {
   return {
-    id: row.id,
-    saleId: row.sale_id,
-    storeId: row.store_id,
-    model: row.model,
-    series: row.series,
-    number: row.number,
-    accessKey: row.access_key,
-    environment: row.environment,
-    status: row.status,
-    issuedDatetime: row.issued_datetime,
-    xml: row.xml,
-    xmlSigned: row.xml_signed,
-    xmlAuthorized: row.xml_authorized,
-    xmlCancellation: row.xml_cancellation,
-    protocol: row.protocol,
-    receiptNumber: row.receipt_number,
-    qrCodeUrl: row.qr_code_url,
-    authorizationDatetime: row.authorization_datetime,
-    cancelDatetime: row.cancel_datetime,
-    contingencyType: row.contingency_type,
-    rejectionCode: row.rejection_code,
-    rejectionReason: row.rejection_reason,
-    danfePath: row.danfe_path,
-    provider: row.provider,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    saleId: t.sale_id,
+    storeId: t.store_id,
+    model: t.model,
+    series: t.series,
+    number: t.number,
+    accessKey: t.access_key,
+    environment: t.environment,
+    status: t.status,
+    issuedDatetime: t.issued_datetime,
+    xml: t.xml,
+    xmlSigned: t.xml_signed,
+    xmlAuthorized: t.xml_authorized,
+    xmlCancellation: t.xml_cancellation,
+    protocol: t.protocol,
+    receiptNumber: t.receipt_number,
+    qrCodeUrl: t.qr_code_url,
+    authorizationDatetime: t.authorization_datetime,
+    cancelDatetime: t.cancel_datetime,
+    contingencyType: t.contingency_type,
+    rejectionCode: t.rejection_code,
+    rejectionReason: t.rejection_reason,
+    danfePath: t.danfe_path,
+    provider: t.provider,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-class FiscalDocumentRepository {
-  createPending(input) {
-    const result = db.prepare(`
+class Dn {
+  createPending(e) {
+    const a = o.prepare(`
       INSERT INTO fiscal_documents (
         sale_id, store_id, model, series, number, access_key, environment, status,
         issued_datetime, xml, xml_signed, xml_authorized, xml_cancellation, protocol, receipt_number, qr_code_url, authorization_datetime,
@@ -4713,37 +4055,34 @@ class FiscalDocumentRepository {
         provider, created_at, updated_at
       ) VALUES (?, ?, 65, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
-      input.saleId,
-      input.storeId,
-      input.series,
-      input.number,
-      input.accessKey ?? null,
-      input.environment,
-      input.status,
-      input.issuedDatetime ?? null,
-      input.xml ?? null,
-      input.xmlSigned ?? null,
-      input.xmlAuthorized ?? null,
-      input.xmlCancellation ?? null,
-      input.protocol ?? null,
-      input.receiptNumber ?? null,
-      input.qrCodeUrl ?? null,
-      input.authorizationDatetime ?? null,
-      input.cancelDatetime ?? null,
-      input.contingencyType ?? null,
-      input.rejectionCode ?? null,
-      input.rejectionReason ?? null,
-      input.danfePath ?? null,
-      input.provider ?? null
+      e.saleId,
+      e.storeId,
+      e.series,
+      e.number,
+      e.accessKey ?? null,
+      e.environment,
+      e.status,
+      e.issuedDatetime ?? null,
+      e.xml ?? null,
+      e.xmlSigned ?? null,
+      e.xmlAuthorized ?? null,
+      e.xmlCancellation ?? null,
+      e.protocol ?? null,
+      e.receiptNumber ?? null,
+      e.qrCodeUrl ?? null,
+      e.authorizationDatetime ?? null,
+      e.cancelDatetime ?? null,
+      e.contingencyType ?? null,
+      e.rejectionCode ?? null,
+      e.rejectionReason ?? null,
+      e.danfePath ?? null,
+      e.provider ?? null
     );
-    return this.findById(Number(result.lastInsertRowid));
+    return this.findById(Number(a.lastInsertRowid));
   }
-  upsertBySale(input) {
-    const existing = this.findBySaleId(input.saleId);
-    if (!existing) {
-      return this.createPending(input);
-    }
-    db.prepare(`
+  upsertBySale(e) {
+    const a = this.findBySaleId(e.saleId);
+    return a ? (o.prepare(`
       UPDATE fiscal_documents
       SET
         store_id = ?,
@@ -4770,45 +4109,44 @@ class FiscalDocumentRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      input.storeId,
-      input.series,
-      input.number,
-      input.accessKey ?? existing.accessKey ?? null,
-      input.environment,
-      input.status,
-      input.issuedDatetime ?? existing.issuedDatetime ?? null,
-      input.xml ?? existing.xml ?? null,
-      input.xmlSigned ?? existing.xmlSigned ?? null,
-      input.xmlAuthorized ?? existing.xmlAuthorized ?? null,
-      input.xmlCancellation ?? existing.xmlCancellation ?? null,
-      input.protocol ?? existing.protocol ?? null,
-      input.receiptNumber ?? existing.receiptNumber ?? null,
-      input.qrCodeUrl ?? existing.qrCodeUrl ?? null,
-      input.authorizationDatetime ?? existing.authorizationDatetime ?? null,
-      input.cancelDatetime ?? existing.cancelDatetime ?? null,
-      input.contingencyType ?? existing.contingencyType ?? null,
-      input.rejectionCode ?? existing.rejectionCode ?? null,
-      input.rejectionReason ?? existing.rejectionReason ?? null,
-      input.danfePath ?? existing.danfePath ?? null,
-      input.provider ?? existing.provider ?? null,
-      existing.id
-    );
-    return this.findById(existing.id);
+      e.storeId,
+      e.series,
+      e.number,
+      e.accessKey ?? a.accessKey ?? null,
+      e.environment,
+      e.status,
+      e.issuedDatetime ?? a.issuedDatetime ?? null,
+      e.xml ?? a.xml ?? null,
+      e.xmlSigned ?? a.xmlSigned ?? null,
+      e.xmlAuthorized ?? a.xmlAuthorized ?? null,
+      e.xmlCancellation ?? a.xmlCancellation ?? null,
+      e.protocol ?? a.protocol ?? null,
+      e.receiptNumber ?? a.receiptNumber ?? null,
+      e.qrCodeUrl ?? a.qrCodeUrl ?? null,
+      e.authorizationDatetime ?? a.authorizationDatetime ?? null,
+      e.cancelDatetime ?? a.cancelDatetime ?? null,
+      e.contingencyType ?? a.contingencyType ?? null,
+      e.rejectionCode ?? a.rejectionCode ?? null,
+      e.rejectionReason ?? a.rejectionReason ?? null,
+      e.danfePath ?? a.danfePath ?? null,
+      e.provider ?? a.provider ?? null,
+      a.id
+    ), this.findById(a.id)) : this.createPending(e);
   }
-  findById(id) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1`).get(id);
-    return row ? mapDocument(row) : null;
+  findById(e) {
+    const a = o.prepare("SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1").get(e);
+    return a ? ke(a) : null;
   }
-  findBySaleId(saleId) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(saleId);
-    return row ? mapDocument(row) : null;
+  findBySaleId(e) {
+    const a = o.prepare("SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1").get(e);
+    return a ? ke(a) : null;
   }
-  findByAccessKey(accessKey) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1`).get(accessKey);
-    return row ? mapDocument(row) : null;
+  findByAccessKey(e) {
+    const a = o.prepare("SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1").get(e);
+    return a ? ke(a) : null;
   }
-  markCancelled(id, cancelDatetime, protocol) {
-    db.prepare(`
+  markCancelled(e, a, s) {
+    o.prepare(`
       UPDATE fiscal_documents
       SET
         status = 'CANCELLED',
@@ -4816,11 +4154,10 @@ class FiscalDocumentRepository {
         protocol = COALESCE(?, protocol),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(cancelDatetime, protocol ?? null, id);
+    `).run(a, s ?? null, e);
   }
 }
-const fiscalDocumentRepository = new FiscalDocumentRepository();
-const FiscalDocumentStatuses = {
+const Ue = new Dn(), at = {
   DRAFT: "DRAFT",
   QUEUED: "QUEUED",
   SIGNING: "SIGNING",
@@ -4830,8 +4167,7 @@ const FiscalDocumentStatuses = {
   CANCELLED: "CANCELLED",
   CONTINGENCY: "CONTINGENCY",
   ERROR: "ERROR"
-};
-const FiscalEventTypes = {
+}, Ge = {
   AUTHORIZATION_REQUESTED: "AUTHORIZATION_REQUESTED",
   AUTHORIZATION_RESPONSE: "AUTHORIZATION_RESPONSE",
   STATUS_CONSULTED: "STATUS_CONSULTED",
@@ -4841,42 +4177,34 @@ const FiscalEventTypes = {
   CONTINGENCY_ACTIVATED: "CONTINGENCY_ACTIVATED",
   CONTINGENCY_SYNC_REQUESTED: "CONTINGENCY_SYNC_REQUESTED"
 };
-class FiscalNumberingService {
-  getOrReserveForSale(saleId, storeId) {
-    const existing = fiscalDocumentRepository.findBySaleId(saleId);
-    if (existing) {
-      return {
-        series: existing.series,
-        number: existing.number
-      };
-    }
-    return storeRepository.reserveNextNfceNumber(storeId);
+class bn {
+  getOrReserveForSale(e, a) {
+    const s = Ue.findBySaleId(e);
+    return s ? {
+      series: s.series,
+      number: s.number
+    } : ee.reserveNextNfceNumber(a);
   }
 }
-const fiscalNumberingService = new FiscalNumberingService();
-function mapPaymentMethod(tpag) {
-  const map = {
+const Fn = new bn();
+function pt(t) {
+  return {
     "01": "DINHEIRO",
     "03": "CREDITO",
     "04": "DEBITO",
-    "10": "VOUCHER",
-    "17": "PIX"
-  };
-  return map[tpag] ?? "OUTROS";
+    10: "VOUCHER",
+    17: "PIX"
+  }[t] ?? "OUTROS";
 }
-function mapEnvironment(ambiente) {
-  return ambiente === 1 ? "production" : "homologation";
+function Nt(t) {
+  return t === 1 ? "production" : "homologation";
 }
-function resolvePrimaryPaymentMethod(payments) {
-  if (payments.length === 0) {
-    return "OUTROS";
-  }
-  const unique = new Set(payments.map((payment) => payment.method));
-  return unique.size === 1 ? payments[0].method : "OUTROS";
+function Mn(t) {
+  return t.length === 0 ? "OUTROS" : new Set(t.map((a) => a.method)).size === 1 ? t[0].method : "OUTROS";
 }
-class PdvSaleFiscalAdapter {
+class xn {
   loadActiveCompany() {
-    const company = db.prepare(`
+    return o.prepare(`
       SELECT
         nome_fantasia,
         razao_social,
@@ -4898,56 +4226,52 @@ class PdvSaleFiscalAdapter {
       FROM company
       WHERE ativo = 1
       LIMIT 1
-    `).get();
-    return company ?? null;
+    `).get() ?? null;
   }
   resolveActiveStore() {
-    const existingStore = storeRepository.findActive();
-    if (existingStore) {
-      return existingStore;
-    }
-    const company = this.loadActiveCompany();
-    if (!company) {
+    const e = ee.findActive();
+    if (e)
+      return e;
+    const a = this.loadActiveCompany();
+    if (!a)
       throw new Error("Nenhuma store ativa encontrada e não existe company ativa para criar o espelho fiscal.");
-    }
-    return storeRepository.create({
+    return ee.create({
       code: "MAIN",
-      name: company.nome_fantasia,
-      legalName: company.razao_social,
-      cnpj: company.cnpj,
-      stateRegistration: company.inscricao_estadual,
-      taxRegimeCode: String(company.crt),
-      environment: mapEnvironment(company.ambiente_emissao),
-      cscId: company.csc_id,
-      cscToken: company.csc_token,
-      defaultSeries: Number(company.serie_nfce ?? 1),
-      nextNfceNumber: Number(company.proximo_numero_nfce ?? 1),
-      addressStreet: company.rua,
-      addressNumber: company.numero,
-      addressNeighborhood: company.bairro,
-      addressCity: company.cidade,
-      addressState: company.uf,
-      addressZipCode: company.cep,
-      addressCityIbgeCode: company.cod_municipio_ibge,
-      active: true
+      name: a.nome_fantasia,
+      legalName: a.razao_social,
+      cnpj: a.cnpj,
+      stateRegistration: a.inscricao_estadual,
+      taxRegimeCode: String(a.crt),
+      environment: Nt(a.ambiente_emissao),
+      cscId: a.csc_id,
+      cscToken: a.csc_token,
+      defaultSeries: Number(a.serie_nfce ?? 1),
+      nextNfceNumber: Number(a.proximo_numero_nfce ?? 1),
+      addressStreet: a.rua,
+      addressNumber: a.numero,
+      addressNeighborhood: a.bairro,
+      addressCity: a.cidade,
+      addressState: a.uf,
+      addressZipCode: a.cep,
+      addressCityIbgeCode: a.cod_municipio_ibge,
+      active: !0
     });
   }
-  loadLegacySale(legacySaleId) {
-    const sale = db.prepare(`
+  loadLegacySale(e) {
+    const a = o.prepare(`
       SELECT
         id, ambiente, data_emissao, valor_produtos, valor_desconto,
         valor_total, valor_troco, cliente_nome, cpf_cliente, cnpj_cliente
       FROM vendas
       WHERE id = ?
       LIMIT 1
-    `).get(legacySaleId);
-    if (!sale) {
-      throw new Error(`Venda ${legacySaleId} não encontrada para emissão fiscal.`);
-    }
-    return sale;
+    `).get(e);
+    if (!a)
+      throw new Error(`Venda ${e} não encontrada para emissão fiscal.`);
+    return a;
   }
-  loadLegacyItems(legacySaleId) {
-    return db.prepare(`
+  loadLegacyItems(e) {
+    return o.prepare(`
       SELECT
         vi.id,
         vi.produto_id,
@@ -4973,383 +4297,360 @@ class PdvSaleFiscalAdapter {
         ON snapshot.sale_item_id = vi.id
       WHERE vi.venda_id = ?
       ORDER BY vi.id ASC
-    `).all(legacySaleId);
+    `).all(e);
   }
-  loadLegacyPayments(legacySaleId) {
-    return db.prepare(`
+  loadLegacyPayments(e) {
+    return o.prepare(`
       SELECT id, tpag, valor, valor_recebido, troco, descricao_outro
       FROM venda_pagamento
       WHERE venda_id = ?
       ORDER BY id ASC
-    `).all(legacySaleId);
+    `).all(e);
   }
-  buildAuthorizeRequest(legacySaleId, storeId, series, number) {
-    const sale = this.loadLegacySale(legacySaleId);
-    const store = storeRepository.findById(storeId);
-    if (!store) {
-      throw new Error(`Store fiscal ${storeId} não encontrada para emissão.`);
-    }
-    const items = this.loadLegacyItems(legacySaleId);
-    const payments = this.loadLegacyPayments(legacySaleId).map((payment) => ({
-      method: mapPaymentMethod(payment.tpag),
-      amount: Number(payment.valor ?? 0),
-      receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : void 0,
-      changeAmount: payment.troco != null ? Number(payment.troco) : void 0,
-      description: payment.descricao_outro ?? null
+  buildAuthorizeRequest(e, a, s, n) {
+    const r = this.loadLegacySale(e), i = ee.findById(a);
+    if (!i)
+      throw new Error(`Store fiscal ${a} não encontrada para emissão.`);
+    const c = this.loadLegacyItems(e), d = this.loadLegacyPayments(e).map((l) => ({
+      method: pt(l.tpag),
+      amount: Number(l.valor ?? 0),
+      receivedAmount: l.valor_recebido != null ? Number(l.valor_recebido) : void 0,
+      changeAmount: l.troco != null ? Number(l.troco) : void 0,
+      description: l.descricao_outro ?? null
     }));
     return {
-      saleId: sale.id,
-      companyId: store.id,
-      number,
-      series,
-      environment: mapEnvironment(sale.ambiente),
-      paymentMethod: resolvePrimaryPaymentMethod(payments),
-      payments,
-      issuedAt: sale.data_emissao,
+      saleId: r.id,
+      companyId: i.id,
+      number: n,
+      series: s,
+      environment: Nt(r.ambiente),
+      paymentMethod: Mn(d),
+      payments: d,
+      issuedAt: r.data_emissao,
       emitter: {
-        cnpj: store.cnpj,
-        stateRegistration: store.stateRegistration,
-        legalName: store.legalName,
-        tradeName: store.name,
-        taxRegimeCode: String(store.taxRegimeCode),
+        cnpj: i.cnpj,
+        stateRegistration: i.stateRegistration,
+        legalName: i.legalName,
+        tradeName: i.name,
+        taxRegimeCode: String(i.taxRegimeCode),
         address: {
-          street: store.addressStreet,
-          number: store.addressNumber,
-          neighborhood: store.addressNeighborhood,
-          city: store.addressCity,
-          state: store.addressState,
-          zipCode: store.addressZipCode,
-          cityIbgeCode: store.addressCityIbgeCode
+          street: i.addressStreet,
+          number: i.addressNumber,
+          neighborhood: i.addressNeighborhood,
+          city: i.addressCity,
+          state: i.addressState,
+          zipCode: i.addressZipCode,
+          cityIbgeCode: i.addressCityIbgeCode
         }
       },
       customer: {
-        name: sale.cliente_nome ?? void 0,
-        cpfCnpj: sale.cpf_cliente ?? sale.cnpj_cliente ?? null
+        name: r.cliente_nome ?? void 0,
+        cpfCnpj: r.cpf_cliente ?? r.cnpj_cliente ?? null
       },
-      items: items.map((item) => ({
-        id: item.produto_id ?? item.codigo_produto,
-        description: item.nome_produto,
-        unit: item.unidade_comercial,
-        quantity: Number(item.quantidade_comercial ?? 0),
-        unitPrice: Number(item.valor_unitario_comercial ?? 0),
-        grossAmount: Number(item.valor_bruto ?? 0),
-        discountAmount: Number(item.valor_desconto ?? 0),
-        totalAmount: Number(item.subtotal ?? 0),
-        gtin: item.gtin,
+      items: c.map((l) => ({
+        id: l.produto_id ?? l.codigo_produto,
+        description: l.nome_produto,
+        unit: l.unidade_comercial,
+        quantity: Number(l.quantidade_comercial ?? 0),
+        unitPrice: Number(l.valor_unitario_comercial ?? 0),
+        grossAmount: Number(l.valor_bruto ?? 0),
+        discountAmount: Number(l.valor_desconto ?? 0),
+        totalAmount: Number(l.subtotal ?? 0),
+        gtin: l.gtin,
         tax: {
-          ncm: item.ncm ?? "",
-          cfop: item.cfop ?? "",
-          cest: item.cest,
-          originCode: item.origin_code ?? "",
-          csosn: item.csosn,
-          icmsCst: item.icms_cst,
-          pisCst: item.pis_cst ?? "",
-          cofinsCst: item.cofins_cst ?? ""
+          ncm: l.ncm ?? "",
+          cfop: l.cfop ?? "",
+          cest: l.cest,
+          originCode: l.origin_code ?? "",
+          csosn: l.csosn,
+          icmsCst: l.icms_cst,
+          pisCst: l.pis_cst ?? "",
+          cofinsCst: l.cofins_cst ?? ""
         }
       })),
       totals: {
-        productsAmount: Number(sale.valor_produtos ?? 0),
-        discountAmount: Number(sale.valor_desconto ?? 0),
-        finalAmount: Number(sale.valor_total ?? 0),
-        receivedAmount: payments.reduce((sum, payment) => sum + Number(payment.receivedAmount ?? payment.amount ?? 0), 0),
-        changeAmount: payments.reduce((sum, payment) => sum + Number(payment.changeAmount ?? 0), 0) || Number(sale.valor_troco ?? 0)
+        productsAmount: Number(r.valor_produtos ?? 0),
+        discountAmount: Number(r.valor_desconto ?? 0),
+        finalAmount: Number(r.valor_total ?? 0),
+        receivedAmount: d.reduce((l, E) => l + Number(E.receivedAmount ?? E.amount ?? 0), 0),
+        changeAmount: d.reduce((l, E) => l + Number(E.changeAmount ?? 0), 0) || Number(r.valor_troco ?? 0)
       },
-      additionalInfo: `Venda PDV ${sale.id}`,
+      additionalInfo: `Venda PDV ${r.id}`,
       offlineFallbackMode: "queue",
-      idempotencyKey: `nfce-sale-${sale.id}`
+      idempotencyKey: `nfce-sale-${r.id}`
     };
   }
-  mirrorLegacySale(legacySaleId) {
-    const store = this.resolveActiveStore();
-    const sale = this.loadLegacySale(legacySaleId);
-    const items = this.loadLegacyItems(legacySaleId);
-    const payments = this.loadLegacyPayments(legacySaleId);
-    const externalReference = `legacy-sale:${legacySaleId}`;
-    const existing = salesRepository.findByExternalReference(externalReference);
-    const aggregate = existing ?? salesRepository.create({
-      storeId: store.id,
-      customerName: sale.cliente_nome ?? null,
-      customerDocument: sale.cpf_cliente ?? sale.cnpj_cliente ?? null,
+  mirrorLegacySale(e) {
+    const a = this.resolveActiveStore(), s = this.loadLegacySale(e), n = this.loadLegacyItems(e), r = this.loadLegacyPayments(e), i = `legacy-sale:${e}`, d = Ze.findByExternalReference(i) ?? Ze.create({
+      storeId: a.id,
+      customerName: s.cliente_nome ?? null,
+      customerDocument: s.cpf_cliente ?? s.cnpj_cliente ?? null,
       status: "PAID",
-      subtotalAmount: Number(sale.valor_produtos ?? 0),
-      discountAmount: Number(sale.valor_desconto ?? 0),
-      totalAmount: Number(sale.valor_total ?? 0),
-      changeAmount: Number(sale.valor_troco ?? 0),
-      externalReference,
-      items: items.map((item) => ({
-        productId: item.produto_id ?? item.codigo_produto,
-        description: item.nome_produto,
-        unit: item.unidade_comercial,
-        quantity: Number(item.quantidade_comercial ?? 0),
-        unitPrice: Number(item.valor_unitario_comercial ?? 0),
-        grossAmount: Number(item.valor_bruto ?? 0),
-        discountAmount: Number(item.valor_desconto ?? 0),
-        totalAmount: Number(item.subtotal ?? 0),
-        ncm: item.ncm ?? null,
-        cfop: item.cfop ?? null,
-        cest: item.cest,
-        originCode: item.origin_code,
+      subtotalAmount: Number(s.valor_produtos ?? 0),
+      discountAmount: Number(s.valor_desconto ?? 0),
+      totalAmount: Number(s.valor_total ?? 0),
+      changeAmount: Number(s.valor_troco ?? 0),
+      externalReference: i,
+      items: n.map((T) => ({
+        productId: T.produto_id ?? T.codigo_produto,
+        description: T.nome_produto,
+        unit: T.unidade_comercial,
+        quantity: Number(T.quantidade_comercial ?? 0),
+        unitPrice: Number(T.valor_unitario_comercial ?? 0),
+        grossAmount: Number(T.valor_bruto ?? 0),
+        discountAmount: Number(T.valor_desconto ?? 0),
+        totalAmount: Number(T.subtotal ?? 0),
+        ncm: T.ncm ?? null,
+        cfop: T.cfop ?? null,
+        cest: T.cest,
+        originCode: T.origin_code,
         taxSnapshot: {
-          ncm: item.ncm,
-          cfop: item.cfop,
-          cest: item.cest,
-          originCode: item.origin_code,
-          csosn: item.csosn,
-          icmsCst: item.icms_cst,
-          pisCst: item.pis_cst,
-          cofinsCst: item.cofins_cst
+          ncm: T.ncm,
+          cfop: T.cfop,
+          cest: T.cest,
+          originCode: T.origin_code,
+          csosn: T.csosn,
+          icmsCst: T.icms_cst,
+          pisCst: T.pis_cst,
+          cofinsCst: T.cofins_cst
         }
       })),
-      payments: payments.map((payment) => ({
-        method: mapPaymentMethod(payment.tpag),
-        amount: Number(payment.valor ?? 0),
-        receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : Number(payment.valor ?? 0),
-        changeAmount: Number(payment.troco ?? 0),
-        integrationReference: payment.descricao_outro ?? null
+      payments: r.map((T) => ({
+        method: pt(T.tpag),
+        amount: Number(T.valor ?? 0),
+        receivedAmount: T.valor_recebido != null ? Number(T.valor_recebido) : Number(T.valor ?? 0),
+        changeAmount: Number(T.troco ?? 0),
+        integrationReference: T.descricao_outro ?? null
       }))
-    });
-    const numbering = fiscalNumberingService.getOrReserveForSale(aggregate.sale.id, store.id);
-    const request = this.buildAuthorizeRequest(legacySaleId, store.id, numbering.series, numbering.number);
-    const persistedDocument = fiscalDocumentRepository.upsertBySale({
-      saleId: aggregate.sale.id,
-      storeId: store.id,
-      series: numbering.series,
-      number: numbering.number,
-      environment: request.environment,
-      status: FiscalDocumentStatuses.DRAFT,
-      issuedDatetime: request.issuedAt,
-      contingencyType: request.offlineFallbackMode === "queue" ? "queue" : null,
+    }), l = Fn.getOrReserveForSale(d.sale.id, a.id), E = this.buildAuthorizeRequest(e, a.id, l.series, l.number), _ = Ue.upsertBySale({
+      saleId: d.sale.id,
+      storeId: a.id,
+      series: l.series,
+      number: l.number,
+      environment: E.environment,
+      status: at.DRAFT,
+      issuedDatetime: E.issuedAt,
+      contingencyType: E.offlineFallbackMode === "queue" ? "queue" : null,
       provider: null
     });
     return {
-      request,
-      store,
-      mirroredSale: aggregate,
-      mirroredFiscalDocument: persistedDocument
+      request: E,
+      store: a,
+      mirroredSale: d,
+      mirroredFiscalDocument: _
     };
   }
 }
-const pdvSaleFiscalAdapter = new PdvSaleFiscalAdapter();
-function mapEvent(row) {
+const Pn = new xn();
+function ft(t) {
   return {
-    id: row.id,
-    fiscalDocumentId: row.fiscal_document_id,
-    eventType: row.event_type,
-    payloadJson: row.payload_json,
-    responseJson: row.response_json,
-    status: row.status,
-    createdAt: row.created_at
+    id: t.id,
+    fiscalDocumentId: t.fiscal_document_id,
+    eventType: t.event_type,
+    payloadJson: t.payload_json,
+    responseJson: t.response_json,
+    status: t.status,
+    createdAt: t.created_at
   };
 }
-class FiscalEventRepository {
-  create(input) {
-    const result = db.prepare(`
+class wn {
+  create(e) {
+    const a = o.prepare(`
       INSERT INTO fiscal_events (
         fiscal_document_id, event_type, payload_json, response_json, status, created_at
       ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).run(
-      input.fiscalDocumentId,
-      input.eventType,
-      input.payload ? serializeJson(input.payload) : null,
-      input.response ? serializeJson(input.response) : null,
-      input.status
+      e.fiscalDocumentId,
+      e.eventType,
+      e.payload ? Je(e.payload) : null,
+      e.response ? Je(e.response) : null,
+      e.status
     );
-    return this.findById(Number(result.lastInsertRowid));
+    return this.findById(Number(a.lastInsertRowid));
   }
-  findById(id) {
-    const row = db.prepare(`SELECT * FROM fiscal_events WHERE id = ? LIMIT 1`).get(id);
-    return row ? mapEvent(row) : null;
+  findById(e) {
+    const a = o.prepare("SELECT * FROM fiscal_events WHERE id = ? LIMIT 1").get(e);
+    return a ? ft(a) : null;
   }
-  listByFiscalDocument(fiscalDocumentId) {
-    const rows = db.prepare(`
+  listByFiscalDocument(e) {
+    return o.prepare(`
       SELECT * FROM fiscal_events
       WHERE fiscal_document_id = ?
       ORDER BY created_at DESC, id DESC
-    `).all(fiscalDocumentId);
-    return rows.map(mapEvent);
+    `).all(e).map(ft);
   }
 }
-const fiscalEventRepository = new FiscalEventRepository();
-class IssueFiscalDocumentForSaleService {
-  async execute(legacySaleId) {
+const He = new wn();
+class Xn {
+  async execute(e) {
     try {
-      const mirrored = pdvSaleFiscalAdapter.mirrorLegacySale(legacySaleId);
-      const fiscalRequest = {
-        ...mirrored.request,
-        saleId: mirrored.mirroredSale.sale.id,
-        companyId: mirrored.store.id,
-        idempotencyKey: `nfce-sale-${mirrored.mirroredSale.sale.id}`
+      const a = Pn.mirrorLegacySale(e), s = {
+        ...a.request,
+        saleId: a.mirroredSale.sale.id,
+        companyId: a.store.id,
+        idempotencyKey: `nfce-sale-${a.mirroredSale.sale.id}`
       };
-      fiscalEventRepository.create({
-        fiscalDocumentId: mirrored.mirroredFiscalDocument.id,
-        eventType: FiscalEventTypes.AUTHORIZATION_REQUESTED,
-        payload: { legacySaleId, request: fiscalRequest },
-        status: FiscalDocumentStatuses.TRANSMITTING
+      He.create({
+        fiscalDocumentId: a.mirroredFiscalDocument.id,
+        eventType: Ge.AUTHORIZATION_REQUESTED,
+        payload: { legacySaleId: e, request: s },
+        status: at.TRANSMITTING
       });
-      const response = await fiscalService.authorizeNfce(fiscalRequest);
-      const document = fiscalDocumentRepository.findBySaleId(mirrored.mirroredSale.sale.id);
-      if (document) {
-        fiscalEventRepository.create({
-          fiscalDocumentId: document.id,
-          eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
-          payload: { legacySaleId, request: fiscalRequest },
-          response,
-          status: response.status
-        });
-      }
-      return {
-        success: true,
-        saleId: legacySaleId,
+      const n = await P.authorizeNfce(s), r = Ue.findBySaleId(a.mirroredSale.sale.id);
+      return r && He.create({
+        fiscalDocumentId: r.id,
+        eventType: Ge.AUTHORIZATION_RESPONSE,
+        payload: { legacySaleId: e, request: s },
+        response: n,
+        status: n.status
+      }), {
+        success: !0,
+        saleId: e,
         fiscal: {
-          status: response.status,
-          accessKey: response.accessKey,
-          protocol: response.protocol,
-          receiptNumber: response.receiptNumber,
-          qrCodeUrl: response.qrCodeUrl,
-          authorizedAt: response.authorizedAt,
-          statusCode: response.statusCode,
-          statusMessage: response.statusMessage,
-          documentId: (document == null ? void 0 : document.id) ?? null,
-          provider: response.provider
+          status: n.status,
+          accessKey: n.accessKey,
+          protocol: n.protocol,
+          receiptNumber: n.receiptNumber,
+          qrCodeUrl: n.qrCodeUrl,
+          authorizedAt: n.authorizedAt,
+          statusCode: n.statusCode,
+          statusMessage: n.statusMessage,
+          documentId: (r == null ? void 0 : r.id) ?? null,
+          provider: n.provider
         }
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "ISSUE_FISCAL_SALE_FAILED");
-      const document = fiscalDocumentRepository.findBySaleId(legacySaleId);
-      if (document) {
-        fiscalEventRepository.create({
-          fiscalDocumentId: document.id,
-          eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
-          payload: { legacySaleId },
-          response: {
-            status: "ERROR",
-            statusCode: fiscalError.code,
-            statusMessage: fiscalError.message
-          },
-          status: FiscalDocumentStatuses.ERROR
-        });
-      }
-      return {
-        success: false,
-        saleId: legacySaleId,
+    } catch (a) {
+      const s = V(a, "ISSUE_FISCAL_SALE_FAILED"), n = Ue.findBySaleId(e);
+      return n && He.create({
+        fiscalDocumentId: n.id,
+        eventType: Ge.AUTHORIZATION_RESPONSE,
+        payload: { legacySaleId: e },
+        response: {
+          status: "ERROR",
+          statusCode: s.code,
+          statusMessage: s.message
+        },
+        status: at.ERROR
+      }), {
+        success: !1,
+        saleId: e,
         fiscal: {
           status: "ERROR",
-          statusCode: fiscalError.code,
-          statusMessage: fiscalError.message,
-          documentId: (document == null ? void 0 : document.id) ?? null
+          statusCode: s.code,
+          statusMessage: s.message,
+          documentId: (n == null ? void 0 : n.id) ?? null
         }
       };
     }
   }
 }
-const issueFiscalDocumentForSaleService = new IssueFiscalDocumentForSaleService();
-function mapPrintedDocument(row) {
+const $n = new Xn();
+function gt(t) {
   return {
-    id: Number(row.id),
-    documentType: row.document_type,
-    referenceType: row.reference_type,
-    referenceId: Number(row.reference_id),
-    saleId: row.sale_id === null ? null : Number(row.sale_id),
-    cashSessionId: row.cash_session_id === null ? null : Number(row.cash_session_id),
-    printerId: row.printer_id === null ? null : Number(row.printer_id),
-    title: row.title,
-    status: row.status,
-    templateVersion: row.template_version,
-    payloadJson: row.payload_json,
-    contentHtml: row.content_html,
-    printCount: Number(row.print_count ?? 0),
-    lastPrintedAt: row.last_printed_at ?? null,
-    lastError: row.last_error ?? null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: Number(t.id),
+    documentType: t.document_type,
+    referenceType: t.reference_type,
+    referenceId: Number(t.reference_id),
+    saleId: t.sale_id === null ? null : Number(t.sale_id),
+    cashSessionId: t.cash_session_id === null ? null : Number(t.cash_session_id),
+    printerId: t.printer_id === null ? null : Number(t.printer_id),
+    title: t.title,
+    status: t.status,
+    templateVersion: t.template_version,
+    payloadJson: t.payload_json,
+    contentHtml: t.content_html,
+    printCount: Number(t.print_count ?? 0),
+    lastPrintedAt: t.last_printed_at ?? null,
+    lastError: t.last_error ?? null,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-function mapPrintJob(row) {
+function It(t) {
   return {
-    id: Number(row.id),
-    printedDocumentId: Number(row.printed_document_id),
-    printerId: row.printer_id === null ? null : Number(row.printer_id),
-    triggerSource: row.trigger_source,
-    status: row.status,
-    errorMessage: row.error_message ?? null,
-    copies: Number(row.copies ?? 1),
-    attemptedAt: row.attempted_at,
-    completedAt: row.completed_at ?? null
+    id: Number(t.id),
+    printedDocumentId: Number(t.printed_document_id),
+    printerId: t.printer_id === null ? null : Number(t.printer_id),
+    triggerSource: t.trigger_source,
+    status: t.status,
+    errorMessage: t.error_message ?? null,
+    copies: Number(t.copies ?? 1),
+    attemptedAt: t.attempted_at,
+    completedAt: t.completed_at ?? null
   };
 }
-function paymentLabelFromCode(code) {
-  const labels = {
+function Bn(t) {
+  return {
     "01": "Dinheiro",
     "02": "Cheque",
     "03": "Cartao de Credito",
     "04": "Cartao de Debito",
-    "10": "Vale Alimentacao",
-    "11": "Vale Refeicao",
-    "12": "Vale Presente",
-    "13": "Vale Combustivel",
-    "15": "Boleto",
-    "17": "PIX",
-    "99": "Outros"
-  };
-  return labels[code] ?? `Pagamento ${code}`;
+    10: "Vale Alimentacao",
+    11: "Vale Refeicao",
+    12: "Vale Presente",
+    13: "Vale Combustivel",
+    15: "Boleto",
+    17: "PIX",
+    99: "Outros"
+  }[t] ?? `Pagamento ${t}`;
 }
-function buildStoreAddress(row) {
-  const parts = [
-    row.endereco,
-    row.numero,
-    row.bairro,
-    row.cidade,
-    row.uf,
-    row.cep
+function kn(t) {
+  const e = [
+    t.endereco,
+    t.numero,
+    t.bairro,
+    t.cidade,
+    t.uf,
+    t.cep
   ].filter(Boolean);
-  return parts.length > 0 ? parts.join(" - ") : null;
+  return e.length > 0 ? e.join(" - ") : null;
 }
-class PrintDocumentRepository {
-  mapPrinter(row) {
+class Gn {
+  mapPrinter(e) {
     return {
-      id: Number(row.id),
-      name: row.name,
-      display_name: row.display_name ?? null,
-      brand: row.brand ?? null,
-      model: row.model ?? null,
-      connection_type: row.connection_type ?? null,
-      driver_name: row.driver_name ?? null,
-      driver_version: row.driver_version ?? null,
-      photo_path: row.photo_path ?? null,
-      notes: row.notes ?? null,
-      is_default: Number(row.is_default ?? 0),
-      installed_at: row.installed_at ?? null,
-      paper_width_mm: Number(row.paper_width_mm ?? 80),
-      content_width_mm: Number(row.content_width_mm ?? 76),
-      base_font_size_px: Number(row.base_font_size_px ?? 13),
-      line_height: Number(row.line_height ?? 1.5),
-      receipt_settings_json: row.receipt_settings_json ?? null
+      id: Number(e.id),
+      name: e.name,
+      display_name: e.display_name ?? null,
+      brand: e.brand ?? null,
+      model: e.model ?? null,
+      connection_type: e.connection_type ?? null,
+      driver_name: e.driver_name ?? null,
+      driver_version: e.driver_version ?? null,
+      photo_path: e.photo_path ?? null,
+      notes: e.notes ?? null,
+      is_default: Number(e.is_default ?? 0),
+      installed_at: e.installed_at ?? null,
+      paper_width_mm: Number(e.paper_width_mm ?? 80),
+      content_width_mm: Number(e.content_width_mm ?? 76),
+      base_font_size_px: Number(e.base_font_size_px ?? 13),
+      line_height: Number(e.line_height ?? 1.5),
+      receipt_settings_json: e.receipt_settings_json ?? null
     };
   }
-  findByReference(documentType, referenceType, referenceId) {
-    const row = db.prepare(`
+  findByReference(e, a, s) {
+    const n = o.prepare(`
       SELECT *
       FROM printed_documents
       WHERE document_type = ?
         AND reference_type = ?
         AND reference_id = ?
       LIMIT 1
-    `).get(documentType, referenceType, referenceId);
-    return row ? mapPrintedDocument(row) : null;
+    `).get(e, a, s);
+    return n ? gt(n) : null;
   }
-  findById(documentId) {
-    const row = db.prepare(`
+  findById(e) {
+    const a = o.prepare(`
       SELECT *
       FROM printed_documents
       WHERE id = ?
       LIMIT 1
-    `).get(documentId);
-    return row ? mapPrintedDocument(row) : null;
+    `).get(e);
+    return a ? gt(a) : null;
   }
-  upsertDocument(input) {
-    const existing = this.findByReference(input.documentType, input.referenceType, input.referenceId);
-    if (existing) {
-      db.prepare(`
+  upsertDocument(e) {
+    const a = this.findByReference(e.documentType, e.referenceType, e.referenceId);
+    if (a)
+      return o.prepare(`
         UPDATE printed_documents
         SET
           sale_id = ?,
@@ -5364,20 +4665,18 @@ class PrintDocumentRepository {
           updated_at = datetime('now')
         WHERE id = ?
       `).run(
-        input.saleId ?? null,
-        input.cashSessionId ?? null,
-        input.printerId ?? null,
-        input.title,
-        input.status,
-        input.templateVersion,
-        input.payloadJson,
-        input.contentHtml,
-        input.lastError ?? null,
-        existing.id
-      );
-      return this.findById(existing.id);
-    }
-    const result = db.prepare(`
+        e.saleId ?? null,
+        e.cashSessionId ?? null,
+        e.printerId ?? null,
+        e.title,
+        e.status,
+        e.templateVersion,
+        e.payloadJson,
+        e.contentHtml,
+        e.lastError ?? null,
+        a.id
+      ), this.findById(a.id);
+    const s = o.prepare(`
       INSERT INTO printed_documents (
         document_type,
         reference_type,
@@ -5394,23 +4693,23 @@ class PrintDocumentRepository {
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      input.documentType,
-      input.referenceType,
-      input.referenceId,
-      input.saleId ?? null,
-      input.cashSessionId ?? null,
-      input.printerId ?? null,
-      input.title,
-      input.status,
-      input.templateVersion,
-      input.payloadJson,
-      input.contentHtml,
-      input.lastError ?? null
+      e.documentType,
+      e.referenceType,
+      e.referenceId,
+      e.saleId ?? null,
+      e.cashSessionId ?? null,
+      e.printerId ?? null,
+      e.title,
+      e.status,
+      e.templateVersion,
+      e.payloadJson,
+      e.contentHtml,
+      e.lastError ?? null
     );
-    return this.findById(Number(result.lastInsertRowid));
+    return this.findById(Number(s.lastInsertRowid));
   }
-  markDocumentPrinted(documentId, printerId) {
-    db.prepare(`
+  markDocumentPrinted(e, a) {
+    o.prepare(`
       UPDATE printed_documents
       SET
         status = 'PRINTED',
@@ -5420,10 +4719,10 @@ class PrintDocumentRepository {
         last_error = NULL,
         updated_at = datetime('now')
       WHERE id = ?
-    `).run(printerId, documentId);
+    `).run(a, e);
   }
-  markDocumentFailed(documentId, status, errorMessage, printerId) {
-    db.prepare(`
+  markDocumentFailed(e, a, s, n) {
+    o.prepare(`
       UPDATE printed_documents
       SET
         status = ?,
@@ -5431,10 +4730,10 @@ class PrintDocumentRepository {
         last_error = ?,
         updated_at = datetime('now')
       WHERE id = ?
-    `).run(status, printerId, errorMessage, documentId);
+    `).run(a, n, s, e);
   }
-  createPrintJob(input) {
-    const result = db.prepare(`
+  createPrintJob(e) {
+    const a = o.prepare(`
       INSERT INTO print_jobs (
         printed_document_id,
         printer_id,
@@ -5445,60 +4744,57 @@ class PrintDocumentRepository {
       )
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      input.printedDocumentId,
-      input.printerId ?? null,
-      input.triggerSource,
-      input.status,
-      input.errorMessage ?? null,
-      input.copies ?? 1
-    );
-    const row = db.prepare(`
+      e.printedDocumentId,
+      e.printerId ?? null,
+      e.triggerSource,
+      e.status,
+      e.errorMessage ?? null,
+      e.copies ?? 1
+    ), s = o.prepare(`
       SELECT *
       FROM print_jobs
       WHERE id = ?
       LIMIT 1
-    `).get(result.lastInsertRowid);
-    return mapPrintJob(row);
+    `).get(a.lastInsertRowid);
+    return It(s);
   }
-  listDocumentJobs(documentId) {
-    const rows = db.prepare(`
+  listDocumentJobs(e) {
+    return o.prepare(`
       SELECT *
       FROM print_jobs
       WHERE printed_document_id = ?
       ORDER BY id DESC
-    `).all(documentId);
-    return rows.map(mapPrintJob);
+    `).all(e).map(It);
   }
   getDefaultPrinter() {
-    const row = db.prepare(`
+    const e = o.prepare(`
       SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
              notes, is_default, installed_at, paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json
       FROM printers
       WHERE is_default = 1
       LIMIT 1
     `).get();
-    if (!row) return null;
-    return this.mapPrinter(row);
+    return e ? this.mapPrinter(e) : null;
   }
-  findPrinterById(printerId) {
-    const row = db.prepare(`
+  findPrinterById(e) {
+    const a = o.prepare(`
       SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
              notes, is_default, installed_at, paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json
       FROM printers
       WHERE id = ?
       LIMIT 1
-    `).get(printerId);
-    return row ? this.mapPrinter(row) : null;
+    `).get(e);
+    return a ? this.mapPrinter(a) : null;
   }
-  buildTestSaleReceiptData(printer, settings) {
-    var _a;
-    const headerTitle = settings.templateMode === "custom" ? ((_a = settings.headerTitle) == null ? void 0 : _a.trim()) || printer.display_name || "Galberto PDV" : printer.display_name || "Galberto PDV";
+  buildTestSaleReceiptData(e, a) {
+    var n;
+    const s = a.templateMode === "custom" ? ((n = a.headerTitle) == null ? void 0 : n.trim()) || e.display_name || "Galberto PDV" : e.display_name || "Galberto PDV";
     return {
       saleId: 999999,
       emittedAt: (/* @__PURE__ */ new Date()).toISOString(),
       movedAt: (/* @__PURE__ */ new Date()).toISOString(),
       status: "FINALIZADA",
-      storeName: headerTitle,
+      storeName: s,
       storeLegalName: "GALBERTO PDV LTDA",
       storeDocument: "12.345.678/0001-99",
       storeAddress: "Rua Exemplo, 123 - Centro - Cidade/UF - 70000-000",
@@ -5553,14 +4849,14 @@ class PrintDocumentRepository {
       }
     };
   }
-  appendPrinterLog(printerId, message) {
-    db.prepare(`
+  appendPrinterLog(e, a) {
+    o.prepare(`
       INSERT INTO printer_logs (printer_id, message)
       VALUES (?, ?)
-    `).run(printerId, message);
+    `).run(e, a);
   }
-  loadSaleReceiptData(saleId) {
-    const sale = db.prepare(`
+  loadSaleReceiptData(e) {
+    const a = o.prepare(`
       SELECT
         v.id,
         v.data_emissao,
@@ -5593,11 +4889,10 @@ class PrintDocumentRepository {
       LEFT JOIN usuarios u ON CAST(u.id AS TEXT) = CAST(cs.operator_id AS TEXT)
       WHERE v.id = ?
       LIMIT 1
-    `).get(saleId);
-    if (!sale) {
-      throw new Error(`Venda não encontrada para impressão: ${saleId}`);
-    }
-    const items = db.prepare(`
+    `).get(e);
+    if (!a)
+      throw new Error(`Venda não encontrada para impressão: ${e}`);
+    const s = o.prepare(`
       SELECT
         produto_id,
         codigo_produto,
@@ -5610,8 +4905,7 @@ class PrintDocumentRepository {
       FROM venda_itens
       WHERE venda_id = ?
       ORDER BY id
-    `).all(saleId);
-    const payments = db.prepare(`
+    `).all(e), n = o.prepare(`
       SELECT
         tpag,
         valor,
@@ -5620,63 +4914,62 @@ class PrintDocumentRepository {
       FROM venda_pagamento
       WHERE venda_id = ?
       ORDER BY id
-    `).all(saleId);
-    const fiscal = db.prepare(`
+    `).all(e), r = o.prepare(`
       SELECT fd.status, fd.access_key, fd.protocol, fd.authorization_datetime, fd.qr_code_url
       FROM fiscal_documents fd
       INNER JOIN sales s ON s.id = fd.sale_id
       WHERE s.external_reference = ?
       ORDER BY fd.id DESC
       LIMIT 1
-    `).get(`legacy-sale:${saleId}`);
+    `).get(`legacy-sale:${e}`);
     return {
-      saleId: Number(sale.id),
-      emittedAt: sale.data_emissao,
-      movedAt: sale.data_movimento ?? null,
-      status: sale.status,
-      storeName: sale.nome_fantasia ?? sale.razao_social ?? "Galberto PDV",
-      storeLegalName: sale.razao_social ?? null,
-      storeDocument: sale.cnpj ?? null,
-      storeAddress: buildStoreAddress(sale),
-      operatorName: sale.operator_name ?? null,
-      operatorId: sale.operator_id === null ? null : String(sale.operator_id),
-      pdvId: sale.pdv_id ?? null,
-      customerName: sale.cliente_nome ?? null,
-      customerDocument: sale.cpf_cliente ?? null,
-      items: items.map((item) => ({
-        productId: String(item.produto_id),
-        code: item.codigo_produto ?? null,
-        description: item.nome_produto,
-        quantity: Number(item.quantidade_comercial ?? 0),
-        unitPrice: Number(item.valor_unitario_comercial ?? 0),
-        grossAmount: Number(item.valor_bruto ?? 0),
-        discountAmount: Number(item.valor_desconto ?? 0),
-        totalAmount: Number(item.subtotal ?? 0)
+      saleId: Number(a.id),
+      emittedAt: a.data_emissao,
+      movedAt: a.data_movimento ?? null,
+      status: a.status,
+      storeName: a.nome_fantasia ?? a.razao_social ?? "Galberto PDV",
+      storeLegalName: a.razao_social ?? null,
+      storeDocument: a.cnpj ?? null,
+      storeAddress: kn(a),
+      operatorName: a.operator_name ?? null,
+      operatorId: a.operator_id === null ? null : String(a.operator_id),
+      pdvId: a.pdv_id ?? null,
+      customerName: a.cliente_nome ?? null,
+      customerDocument: a.cpf_cliente ?? null,
+      items: s.map((i) => ({
+        productId: String(i.produto_id),
+        code: i.codigo_produto ?? null,
+        description: i.nome_produto,
+        quantity: Number(i.quantidade_comercial ?? 0),
+        unitPrice: Number(i.valor_unitario_comercial ?? 0),
+        grossAmount: Number(i.valor_bruto ?? 0),
+        discountAmount: Number(i.valor_desconto ?? 0),
+        totalAmount: Number(i.subtotal ?? 0)
       })),
-      payments: payments.map((payment) => ({
-        paymentCode: payment.tpag,
-        paymentLabel: paymentLabelFromCode(payment.tpag),
-        amount: Number(payment.valor ?? 0),
-        receivedAmount: Number(payment.valor_recebido ?? payment.valor ?? 0),
-        changeAmount: Number(payment.troco ?? 0)
+      payments: n.map((i) => ({
+        paymentCode: i.tpag,
+        paymentLabel: Bn(i.tpag),
+        amount: Number(i.valor ?? 0),
+        receivedAmount: Number(i.valor_recebido ?? i.valor ?? 0),
+        changeAmount: Number(i.troco ?? 0)
       })),
-      subtotalAmount: Number(sale.valor_produtos ?? 0),
-      discountAmount: Number(sale.valor_desconto ?? 0),
-      totalAmount: Number(sale.valor_total ?? 0),
-      changeAmount: Number(sale.valor_troco ?? 0),
-      notes: sale.observacao ?? null,
-      fiscal: fiscal ? {
-        status: fiscal.status ?? null,
-        accessKey: fiscal.access_key ?? null,
-        protocol: fiscal.protocol ?? null,
-        statusMessage: fiscal.status ?? null,
-        authorizationDatetime: fiscal.authorization_datetime ?? null,
-        qrCodeUrl: fiscal.qr_code_url ?? null
+      subtotalAmount: Number(a.valor_produtos ?? 0),
+      discountAmount: Number(a.valor_desconto ?? 0),
+      totalAmount: Number(a.valor_total ?? 0),
+      changeAmount: Number(a.valor_troco ?? 0),
+      notes: a.observacao ?? null,
+      fiscal: r ? {
+        status: r.status ?? null,
+        accessKey: r.access_key ?? null,
+        protocol: r.protocol ?? null,
+        statusMessage: r.status ?? null,
+        authorizationDatetime: r.authorization_datetime ?? null,
+        qrCodeUrl: r.qr_code_url ?? null
       } : null
     };
   }
-  loadCashReceiptData(sessionId, documentType) {
-    const row = db.prepare(`
+  loadCashReceiptData(e, a) {
+    const s = o.prepare(`
       SELECT
         s.id,
         s.operator_id,
@@ -5706,144 +4999,135 @@ class PrintDocumentRepository {
       LEFT JOIN usuarios u ON CAST(u.id AS TEXT) = CAST(s.operator_id AS TEXT)
       WHERE s.id = ?
       LIMIT 1
-    `).get(sessionId);
-    if (!row) {
-      throw new Error(`Sessão de caixa não encontrada para impressão: ${sessionId}`);
-    }
+    `).get(e);
+    if (!s)
+      throw new Error(`Sessão de caixa não encontrada para impressão: ${e}`);
     return {
-      cashSessionId: Number(row.id),
-      documentType,
-      operatorName: row.operator_name ?? null,
-      operatorId: row.operator_id === null ? null : String(row.operator_id),
-      pdvId: row.pdv_id,
-      openingAmount: Number(row.opening_cash_amount ?? 0),
-      closingAmount: row.closing_cash_amount === null ? null : Number(row.closing_cash_amount),
-      expectedAmount: row.expected_cash_amount === null ? null : Number(row.expected_cash_amount),
-      differenceAmount: row.closing_difference === null ? null : Number(row.closing_difference),
-      totalSalesCash: Number(row.total_vendas_dinheiro ?? 0),
-      totalWithdrawals: Number(row.total_sangrias ?? 0),
-      openedAt: row.opened_at,
-      closedAt: row.closed_at ?? null,
-      openingNotes: row.opening_notes ?? null,
-      closingNotes: row.closing_notes ?? null
+      cashSessionId: Number(s.id),
+      documentType: a,
+      operatorName: s.operator_name ?? null,
+      operatorId: s.operator_id === null ? null : String(s.operator_id),
+      pdvId: s.pdv_id,
+      openingAmount: Number(s.opening_cash_amount ?? 0),
+      closingAmount: s.closing_cash_amount === null ? null : Number(s.closing_cash_amount),
+      expectedAmount: s.expected_cash_amount === null ? null : Number(s.expected_cash_amount),
+      differenceAmount: s.closing_difference === null ? null : Number(s.closing_difference),
+      totalSalesCash: Number(s.total_vendas_dinheiro ?? 0),
+      totalWithdrawals: Number(s.total_sangrias ?? 0),
+      openedAt: s.opened_at,
+      closedAt: s.closed_at ?? null,
+      openingNotes: s.opening_notes ?? null,
+      closingNotes: s.closing_notes ?? null
     };
   }
-  hasPrintedDocumentForSale(saleId) {
-    const row = db.prepare(`
+  hasPrintedDocumentForSale(e) {
+    const a = o.prepare(`
       SELECT COUNT(*) AS total
       FROM printed_documents
       WHERE sale_id = ?
         AND document_type = 'SALE_RECEIPT'
-    `).get(saleId);
-    return Number(row.total ?? 0) > 0;
+    `).get(e);
+    return Number(a.total ?? 0) > 0;
   }
-  logInfo(message) {
-    logger.info(`[printing] ${message}`);
+  logInfo(e) {
+    f.info(`[printing] ${e}`);
   }
 }
-const printDocumentRepository = new PrintDocumentRepository();
-class ElectronReceiptPrinter {
-  async printHtml(params) {
-    const paperWidthMm = Number(params.paperWidthMm ?? 80);
-    const viewportWidthPx = Math.max(360, Math.round(paperWidthMm / 25.4 * 96) + 48);
-    const printWindow = new BrowserWindow({
-      show: false,
-      width: viewportWidthPx,
+const R = new Gn();
+class Hn {
+  async printHtml(e) {
+    const a = Number(e.paperWidthMm ?? 80), s = Math.max(360, Math.round(a / 25.4 * 96) + 48), n = new O({
+      show: !1,
+      width: s,
       height: 1280,
       webPreferences: {
-        sandbox: true
+        sandbox: !0
       }
     });
     try {
-      const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(params.html)}`;
-      await printWindow.loadURL(dataUrl);
-      await new Promise((resolve, reject) => {
-        printWindow.webContents.print(
+      const r = `data:text/html;charset=utf-8,${encodeURIComponent(e.html)}`;
+      await n.loadURL(r), await new Promise((i, c) => {
+        n.webContents.print(
           {
-            silent: true,
-            printBackground: true,
-            deviceName: params.printerName,
+            silent: !0,
+            printBackground: !0,
+            deviceName: e.printerName,
             margins: {
               marginType: "none"
             }
           },
-          (success, failureReason) => {
-            if (!success) {
-              reject(new Error(failureReason || "Falha desconhecida na impressão."));
+          (d, l) => {
+            if (!d) {
+              c(new Error(l || "Falha desconhecida na impressão."));
               return;
             }
-            resolve();
+            i();
           }
         );
       });
-    } catch (error) {
-      logger.error(`[printing] erro ao imprimir "${params.title}": ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+    } catch (r) {
+      throw f.error(`[printing] erro ao imprimir "${e.title}": ${r instanceof Error ? r.message : String(r)}`), r;
     } finally {
-      if (!printWindow.isDestroyed()) {
-        printWindow.destroy();
-      }
+      n.isDestroyed() || n.destroy();
     }
   }
 }
-const electronReceiptPrinter = new ElectronReceiptPrinter();
-function escapeHtml(value) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const At = new Hn();
+function I(t) {
+  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-function formatMoney(value) {
-  return value.toLocaleString("pt-BR", {
+function y(t) {
+  return t.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL"
   });
 }
-function formatDateTime(value) {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString("pt-BR");
+function je(t) {
+  if (!t) return "—";
+  const e = new Date(t);
+  return Number.isNaN(e.getTime()) ? t : e.toLocaleString("pt-BR");
 }
-function getReceiptSettings(printer) {
-  if (!(printer == null ? void 0 : printer.receipt_settings_json)) return {};
+function jn(t) {
+  if (!(t != null && t.receipt_settings_json)) return {};
   try {
-    return JSON.parse(printer.receipt_settings_json);
+    return JSON.parse(t.receipt_settings_json);
   } catch {
     return {};
   }
 }
-function isCustomMode(settings) {
-  return settings.templateMode === "custom";
+function Vn(t) {
+  return t.templateMode === "custom";
 }
-function resolveLayout(printer) {
+function zn(t) {
   return {
-    paperWidthMm: Number((printer == null ? void 0 : printer.paper_width_mm) ?? 80),
-    contentWidthMm: Number((printer == null ? void 0 : printer.content_width_mm) ?? 76),
-    baseFontSizePx: Number((printer == null ? void 0 : printer.base_font_size_px) ?? 14),
-    lineHeight: Number((printer == null ? void 0 : printer.line_height) ?? 1.55)
+    paperWidthMm: Number((t == null ? void 0 : t.paper_width_mm) ?? 80),
+    contentWidthMm: Number((t == null ? void 0 : t.content_width_mm) ?? 76),
+    baseFontSizePx: Number((t == null ? void 0 : t.base_font_size_px) ?? 14),
+    lineHeight: Number((t == null ? void 0 : t.line_height) ?? 1.55)
   };
 }
-function renderDocumentShell(title, body, printer) {
-  const layout = resolveLayout(printer);
-  const sidePadding = Math.max((layout.paperWidthMm - layout.contentWidthMm) / 2, 0);
+function Lt(t, e, a) {
+  const s = zn(a), n = Math.max((s.paperWidthMm - s.contentWidthMm) / 2, 0);
   return `<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <title>${escapeHtml(title)}</title>
+    <title>${I(t)}</title>
     <style>
       @page {
-        size: ${layout.paperWidthMm}mm auto;
+        size: ${s.paperWidthMm}mm auto;
         margin: 0;
       }
 
       html, body {
         margin: 0;
         padding: 0;
-        width: ${layout.paperWidthMm}mm;
+        width: ${s.paperWidthMm}mm;
         font-family: "Courier New", monospace;
         color: #000000;
         background: #ffffff;
-        font-size: ${layout.baseFontSizePx}px;
-        line-height: ${layout.lineHeight};
+        font-size: ${s.baseFontSizePx}px;
+        line-height: ${s.lineHeight};
         font-weight: 600;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -5852,12 +5136,12 @@ function renderDocumentShell(title, body, printer) {
 
       body {
         box-sizing: border-box;
-        padding: 1.2mm ${sidePadding}mm 0.8mm;
+        padding: 1.2mm ${n}mm 0.8mm;
       }
 
       .receipt {
         box-sizing: border-box;
-        width: ${layout.contentWidthMm}mm;
+        width: ${s.contentWidthMm}mm;
         padding-bottom: 0;
       }
 
@@ -5898,118 +5182,112 @@ function renderDocumentShell(title, body, printer) {
       }
       .footer-note {
         margin-top: 6px;
-        font-size: ${Math.max(layout.baseFontSizePx - 2, 10)}px;
+        font-size: ${Math.max(s.baseFontSizePx - 2, 10)}px;
         color: #000000;
       }
     </style>
   </head>
-  <body><div class="receipt">${body}</div></body>
+  <body><div class="receipt">${e}</div></body>
 </html>`;
 }
-class ThermalReceiptRenderer {
-  renderSaleReceipt(data, printer) {
-    var _a, _b;
-    const settings = getReceiptSettings(printer);
-    const useCustomMode = isCustomMode(settings);
-    const itemsHtml = data.items.map((item) => `
+class Yn {
+  renderSaleReceipt(e, a) {
+    var d, l;
+    const s = jn(a), n = Vn(s), r = e.items.map((E) => `
       <div class="item">
-        <div class="item-name">${escapeHtml(item.description)}</div>
+        <div class="item-name">${I(E.description)}</div>
         <div class="item-meta">
-          <span>${item.quantity.toFixed(3).replace(".", ",")} x ${formatMoney(item.unitPrice)}</span>
-          <span class="strong">${formatMoney(item.totalAmount)}</span>
+          <span>${E.quantity.toFixed(3).replace(".", ",")} x ${y(E.unitPrice)}</span>
+          <span class="strong">${y(E.totalAmount)}</span>
         </div>
-        ${item.discountAmount > 0 ? `<div class="muted">Desconto: ${formatMoney(item.discountAmount)}</div>` : ""}
-        ${(useCustomMode ? settings.showItemCodes !== false : true) && item.code ? `<div class="muted">Cod.: ${escapeHtml(item.code)}</div>` : ""}
+        ${E.discountAmount > 0 ? `<div class="muted">Desconto: ${y(E.discountAmount)}</div>` : ""}
+        ${(!n || s.showItemCodes !== !1) && E.code ? `<div class="muted">Cod.: ${I(E.code)}</div>` : ""}
       </div>
-    `).join("");
-    const paymentsHtml = data.payments.map((payment) => `
+    `).join(""), i = e.payments.map((E) => `
       <div class="row">
-        <span class="label">${escapeHtml(payment.paymentLabel)}</span>
-        <span class="value">${formatMoney(payment.amount)}</span>
+        <span class="label">${I(E.paymentLabel)}</span>
+        <span class="value">${y(E.amount)}</span>
       </div>
-    `).join("");
-    const body = `
+    `).join(""), c = `
       <div class="center">
-        ${useCustomMode && settings.showLogo && settings.logoPath ? `<div class="footer-note">LOGO: ${escapeHtml(settings.logoPath)}</div>` : ""}
-        <div class="strong">${escapeHtml(useCustomMode ? ((_a = settings.headerTitle) == null ? void 0 : _a.trim()) || data.storeName : data.storeName)}</div>
-        ${(useCustomMode ? settings.showLegalName !== false : true) && data.storeLegalName && data.storeLegalName !== data.storeName ? `<div>${escapeHtml(data.storeLegalName)}</div>` : ""}
-        ${(useCustomMode ? settings.showDocument !== false : true) && data.storeDocument ? `<div>CNPJ: ${escapeHtml(data.storeDocument)}</div>` : ""}
-        ${(useCustomMode ? settings.showAddress !== false : true) && data.storeAddress ? `<div>${escapeHtml(data.storeAddress)}</div>` : ""}
-        ${useCustomMode && settings.headerMessage ? `<div class="footer-note">${escapeHtml(settings.headerMessage)}</div>` : ""}
+        ${n && s.showLogo && s.logoPath ? `<div class="footer-note">LOGO: ${I(s.logoPath)}</div>` : ""}
+        <div class="strong">${I(n && ((d = s.headerTitle) == null ? void 0 : d.trim()) || e.storeName)}</div>
+        ${(!n || s.showLegalName !== !1) && e.storeLegalName && e.storeLegalName !== e.storeName ? `<div>${I(e.storeLegalName)}</div>` : ""}
+        ${(!n || s.showDocument !== !1) && e.storeDocument ? `<div>CNPJ: ${I(e.storeDocument)}</div>` : ""}
+        ${(!n || s.showAddress !== !1) && e.storeAddress ? `<div>${I(e.storeAddress)}</div>` : ""}
+        ${n && s.headerMessage ? `<div class="footer-note">${I(s.headerMessage)}</div>` : ""}
       </div>
 
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Venda</span><span class="value">#${data.saleId}</span></div>
-      <div class="row"><span class="label">Data/Hora</span><span class="value">${escapeHtml(formatDateTime(data.movedAt ?? data.emittedAt))}</span></div>
-      ${(useCustomMode ? settings.showOperator !== false : true) ? `<div class="row"><span class="label">Operador</span><span class="value">${escapeHtml(data.operatorName ?? "Não informado")}</span></div>` : ""}
-      <div class="row"><span class="label">PDV</span><span class="value">${escapeHtml(data.pdvId ?? "—")}</span></div>
-      ${(useCustomMode ? settings.showCustomer !== false : true) ? `<div class="row"><span class="label">Cliente</span><span class="value">${escapeHtml(data.customerName ?? "Consumidor final")}</span></div>` : ""}
-      ${(useCustomMode ? settings.showCustomer !== false : true) && data.customerDocument ? `<div class="row"><span class="label">Documento</span><span class="value">${escapeHtml(data.customerDocument)}</span></div>` : ""}
+      <div class="row"><span class="label">Venda</span><span class="value">#${e.saleId}</span></div>
+      <div class="row"><span class="label">Data/Hora</span><span class="value">${I(je(e.movedAt ?? e.emittedAt))}</span></div>
+      ${!n || s.showOperator !== !1 ? `<div class="row"><span class="label">Operador</span><span class="value">${I(e.operatorName ?? "Não informado")}</span></div>` : ""}
+      <div class="row"><span class="label">PDV</span><span class="value">${I(e.pdvId ?? "—")}</span></div>
+      ${!n || s.showCustomer !== !1 ? `<div class="row"><span class="label">Cliente</span><span class="value">${I(e.customerName ?? "Consumidor final")}</span></div>` : ""}
+      ${(!n || s.showCustomer !== !1) && e.customerDocument ? `<div class="row"><span class="label">Documento</span><span class="value">${I(e.customerDocument)}</span></div>` : ""}
 
       <div class="separator"></div>
-      ${itemsHtml}
+      ${r}
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Subtotal</span><span class="value">${formatMoney(data.subtotalAmount)}</span></div>
-      ${data.discountAmount > 0 ? `<div class="row"><span class="label">Descontos</span><span class="value">${formatMoney(data.discountAmount)}</span></div>` : ""}
-      <div class="row"><span class="label strong">TOTAL</span><span class="value">${formatMoney(data.totalAmount)}</span></div>
-      ${data.changeAmount > 0 ? `<div class="row"><span class="label">Troco</span><span class="value">${formatMoney(data.changeAmount)}</span></div>` : ""}
+      <div class="row"><span class="label">Subtotal</span><span class="value">${y(e.subtotalAmount)}</span></div>
+      ${e.discountAmount > 0 ? `<div class="row"><span class="label">Descontos</span><span class="value">${y(e.discountAmount)}</span></div>` : ""}
+      <div class="row"><span class="label strong">TOTAL</span><span class="value">${y(e.totalAmount)}</span></div>
+      ${e.changeAmount > 0 ? `<div class="row"><span class="label">Troco</span><span class="value">${y(e.changeAmount)}</span></div>` : ""}
 
-      ${(useCustomMode ? settings.showPaymentBreakdown !== false : true) ? `
+      ${!n || s.showPaymentBreakdown !== !1 ? `
         <div class="separator"></div>
         <div class="strong">Pagamentos</div>
-        ${paymentsHtml}
+        ${i}
       ` : ""}
 
-      ${(useCustomMode ? settings.showFiscalSection !== false : true) && data.fiscal ? `
+      ${(!n || s.showFiscalSection !== !1) && e.fiscal ? `
         <div class="separator"></div>
         <div class="strong">Situação fiscal</div>
-        <div class="row"><span class="label">Status</span><span class="value">${escapeHtml(data.fiscal.status ?? "—")}</span></div>
-        ${data.fiscal.protocol ? `<div class="row"><span class="label">Protocolo</span><span class="value">${escapeHtml(data.fiscal.protocol)}</span></div>` : ""}
-        ${data.fiscal.accessKey ? `<div class="footer-note mono">Chave: ${escapeHtml(data.fiscal.accessKey)}</div>` : ""}
+        <div class="row"><span class="label">Status</span><span class="value">${I(e.fiscal.status ?? "—")}</span></div>
+        ${e.fiscal.protocol ? `<div class="row"><span class="label">Protocolo</span><span class="value">${I(e.fiscal.protocol)}</span></div>` : ""}
+        ${e.fiscal.accessKey ? `<div class="footer-note mono">Chave: ${I(e.fiscal.accessKey)}</div>` : ""}
       ` : ""}
 
-      ${data.notes ? `<div class="footer-note">Obs.: ${escapeHtml(data.notes)}</div>` : ""}
-      ${useCustomMode && settings.footerMessage ? `<div class="footer-note">${escapeHtml(settings.footerMessage)}</div>` : ""}
+      ${e.notes ? `<div class="footer-note">Obs.: ${I(e.notes)}</div>` : ""}
+      ${n && s.footerMessage ? `<div class="footer-note">${I(s.footerMessage)}</div>` : ""}
 
       <div class="separator"></div>
       <div class="center footer-note">
-        ${escapeHtml(useCustomMode ? ((_b = settings.thankYouMessage) == null ? void 0 : _b.trim()) || "Documento impresso pelo Galberto PDV" : "Documento impresso pelo Galberto PDV")}<br />
+        ${I(n && ((l = s.thankYouMessage) == null ? void 0 : l.trim()) || "Documento impresso pelo Galberto PDV")}<br />
         Guarde este comprovante para conferência.
       </div>
     `;
-    return renderDocumentShell(`Cupom de venda #${data.saleId}`, body, printer);
+    return Lt(`Cupom de venda #${e.saleId}`, c, a);
   }
-  renderCashReceipt(data, printer) {
-    const isClosing = data.documentType === "CASH_CLOSING_RECEIPT";
-    const title = isClosing ? "Comprovante de Fechamento de Caixa" : "Comprovante de Abertura de Caixa";
-    const body = `
+  renderCashReceipt(e, a) {
+    const s = e.documentType === "CASH_CLOSING_RECEIPT", n = s ? "Comprovante de Fechamento de Caixa" : "Comprovante de Abertura de Caixa", r = `
       <div class="center">
-        <div class="strong">${escapeHtml(title)}</div>
+        <div class="strong">${I(n)}</div>
       </div>
 
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Sessão</span><span class="value">#${data.cashSessionId}</span></div>
-      <div class="row"><span class="label">Operador</span><span class="value">${escapeHtml(data.operatorName ?? "Não informado")}</span></div>
-      <div class="row"><span class="label">PDV</span><span class="value">${escapeHtml(data.pdvId)}</span></div>
-      <div class="row"><span class="label">Aberto em</span><span class="value">${escapeHtml(formatDateTime(data.openedAt))}</span></div>
-      ${isClosing ? `<div class="row"><span class="label">Fechado em</span><span class="value">${escapeHtml(formatDateTime(data.closedAt))}</span></div>` : ""}
+      <div class="row"><span class="label">Sessão</span><span class="value">#${e.cashSessionId}</span></div>
+      <div class="row"><span class="label">Operador</span><span class="value">${I(e.operatorName ?? "Não informado")}</span></div>
+      <div class="row"><span class="label">PDV</span><span class="value">${I(e.pdvId)}</span></div>
+      <div class="row"><span class="label">Aberto em</span><span class="value">${I(je(e.openedAt))}</span></div>
+      ${s ? `<div class="row"><span class="label">Fechado em</span><span class="value">${I(je(e.closedAt))}</span></div>` : ""}
 
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Fundo inicial</span><span class="value">${formatMoney(data.openingAmount)}</span></div>
-      ${isClosing ? `
-        <div class="row"><span class="label">Vendas em dinheiro</span><span class="value">${formatMoney(data.totalSalesCash)}</span></div>
-        <div class="row"><span class="label">Sangrias</span><span class="value">${formatMoney(data.totalWithdrawals)}</span></div>
-        <div class="row"><span class="label">Valor esperado</span><span class="value">${formatMoney(data.expectedAmount ?? 0)}</span></div>
-        <div class="row"><span class="label">Valor contado</span><span class="value">${formatMoney(data.closingAmount ?? 0)}</span></div>
-        <div class="row"><span class="label">Diferença</span><span class="value">${formatMoney(data.differenceAmount ?? 0)}</span></div>
+      <div class="row"><span class="label">Fundo inicial</span><span class="value">${y(e.openingAmount)}</span></div>
+      ${s ? `
+        <div class="row"><span class="label">Vendas em dinheiro</span><span class="value">${y(e.totalSalesCash)}</span></div>
+        <div class="row"><span class="label">Sangrias</span><span class="value">${y(e.totalWithdrawals)}</span></div>
+        <div class="row"><span class="label">Valor esperado</span><span class="value">${y(e.expectedAmount ?? 0)}</span></div>
+        <div class="row"><span class="label">Valor contado</span><span class="value">${y(e.closingAmount ?? 0)}</span></div>
+        <div class="row"><span class="label">Diferença</span><span class="value">${y(e.differenceAmount ?? 0)}</span></div>
       ` : ""}
 
-      ${data.openingNotes ? `<div class="footer-note">Obs. abertura: ${escapeHtml(data.openingNotes)}</div>` : ""}
-      ${isClosing && data.closingNotes ? `<div class="footer-note">Obs. fechamento: ${escapeHtml(data.closingNotes)}</div>` : ""}
+      ${e.openingNotes ? `<div class="footer-note">Obs. abertura: ${I(e.openingNotes)}</div>` : ""}
+      ${s && e.closingNotes ? `<div class="footer-note">Obs. fechamento: ${I(e.closingNotes)}</div>` : ""}
 
       <div class="separator"></div>
       <div class="center footer-note">
@@ -6017,751 +5295,543 @@ class ThermalReceiptRenderer {
         Conferência operacional de caixa.
       </div>
     `;
-    return renderDocumentShell(title, body, printer);
+    return Lt(n, r, a);
   }
-  renderFromStoredDocument(document) {
-    return document.contentHtml;
+  renderFromStoredDocument(e) {
+    return e.contentHtml;
   }
 }
-const thermalReceiptRenderer = new ThermalReceiptRenderer();
-function createMessage(documentType, action, printerName) {
-  const labels = {
+const _e = new Yn();
+function Ve(t, e, a) {
+  const n = {
     SALE_RECEIPT: "cupom da venda",
     CASH_OPENING_RECEIPT: "comprovante de abertura de caixa",
     CASH_CLOSING_RECEIPT: "comprovante de fechamento de caixa"
-  };
-  const label = labels[documentType];
-  if (action === "printed") {
-    return `${label} impresso${printerName ? ` em ${printerName}` : ""}.`;
-  }
-  if (action === "skipped") {
-    return `Nenhuma impressora padrão configurada para imprimir o ${label}.`;
-  }
-  return `Falha ao imprimir o ${label}.`;
+  }[t];
+  return e === "printed" ? `${n} impresso${a ? ` em ${a}` : ""}.` : e === "skipped" ? `Nenhuma impressora padrão configurada para imprimir o ${n}.` : `Falha ao imprimir o ${n}.`;
 }
-class PrintDocumentService {
-  async printTestReceipt(printerId) {
-    const printer = printDocumentRepository.findPrinterById(printerId);
-    if (!printer) {
+class Wn {
+  async printTestReceipt(e) {
+    const a = R.findPrinterById(e);
+    if (!a)
       return {
-        success: false,
+        success: !1,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
         message: "Impressora não encontrada para teste.",
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
-    }
-    const sample = printDocumentRepository.buildTestSaleReceiptData(printer, {});
-    const html = thermalReceiptRenderer.renderSaleReceipt(sample, printer);
+    const s = R.buildTestSaleReceiptData(a, {}), n = _e.renderSaleReceipt(s, a);
     try {
-      await electronReceiptPrinter.printHtml({
-        html,
-        printerName: printer.name,
-        title: `Teste ${printer.display_name ?? printer.name}`,
-        paperWidthMm: printer.paper_width_mm
-      });
-      printDocumentRepository.appendPrinterLog(printer.id, "Impressão de teste enviada.");
-      return {
-        success: true,
+      return await At.printHtml({
+        html: n,
+        printerName: a.name,
+        title: `Teste ${a.display_name ?? a.name}`,
+        paperWidthMm: a.paper_width_mm
+      }), R.appendPrinterLog(a.id, "Impressão de teste enviada."), {
+        success: !0,
         status: "SUCCESS",
         documentId: 0,
-        printerId: printer.id,
-        printerName: printer.display_name ?? printer.name,
-        message: `Teste de impressão enviado para ${printer.display_name ?? printer.name}.`,
+        printerId: a.id,
+        printerName: a.display_name ?? a.name,
+        message: `Teste de impressão enviado para ${a.display_name ?? a.name}.`,
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Falha desconhecida na impressão de teste.";
-      printDocumentRepository.appendPrinterLog(printer.id, `Teste de impressão falhou: ${errorMessage}`);
-      return {
-        success: false,
+    } catch (r) {
+      const i = r instanceof Error ? r.message : "Falha desconhecida na impressão de teste.";
+      return R.appendPrinterLog(a.id, `Teste de impressão falhou: ${i}`), {
+        success: !1,
         status: "FAILED",
         documentId: 0,
-        printerId: printer.id,
-        printerName: printer.display_name ?? printer.name,
-        message: errorMessage,
+        printerId: a.id,
+        printerName: a.display_name ?? a.name,
+        message: i,
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
     }
   }
-  async printSaleReceipt(saleId, options2) {
-    const saleData = printDocumentRepository.loadSaleReceiptData(saleId);
-    const printer = printDocumentRepository.getDefaultPrinter();
-    const mergedData = {
-      ...saleData,
-      fiscal: options2.fiscal ?? saleData.fiscal
-    };
-    const title = `Cupom de venda #${saleId}`;
-    const html = thermalReceiptRenderer.renderSaleReceipt(mergedData, printer);
-    const document = printDocumentRepository.upsertDocument({
+  async printSaleReceipt(e, a) {
+    const s = R.loadSaleReceiptData(e), n = R.getDefaultPrinter(), r = {
+      ...s,
+      fiscal: a.fiscal ?? s.fiscal
+    }, i = `Cupom de venda #${e}`, c = _e.renderSaleReceipt(r, n), d = R.upsertDocument({
       documentType: "SALE_RECEIPT",
       referenceType: "SALE",
-      referenceId: saleId,
-      saleId,
-      title,
+      referenceId: e,
+      saleId: e,
+      title: i,
       status: "PENDING",
       templateVersion: "thermal-v1",
-      payloadJson: JSON.stringify(mergedData),
-      contentHtml: html,
+      payloadJson: JSON.stringify(r),
+      contentHtml: c,
       lastError: null
     });
-    return this.dispatchToPrinter(document, options2.triggerSource, false);
+    return this.dispatchToPrinter(d, a.triggerSource, !1);
   }
-  async printCashOpeningReceipt(sessionId, triggerSource) {
-    const data = printDocumentRepository.loadCashReceiptData(sessionId, "CASH_OPENING_RECEIPT");
-    return this.printCashReceipt(data, triggerSource, false);
+  async printCashOpeningReceipt(e, a) {
+    const s = R.loadCashReceiptData(e, "CASH_OPENING_RECEIPT");
+    return this.printCashReceipt(s, a, !1);
   }
-  async printCashClosingReceipt(sessionId, triggerSource) {
-    const data = printDocumentRepository.loadCashReceiptData(sessionId, "CASH_CLOSING_RECEIPT");
-    return this.printCashReceipt(data, triggerSource, false);
+  async printCashClosingReceipt(e, a) {
+    const s = R.loadCashReceiptData(e, "CASH_CLOSING_RECEIPT");
+    return this.printCashReceipt(s, a, !1);
   }
-  async reprintSaleReceipt(saleId) {
-    let document = printDocumentRepository.findByReference("SALE_RECEIPT", "SALE", saleId);
-    if (!document) {
-      return this.printSaleReceipt(saleId, { triggerSource: "MANUAL" });
-    }
-    const printer = printDocumentRepository.getDefaultPrinter();
+  async reprintSaleReceipt(e) {
+    let a = R.findByReference("SALE_RECEIPT", "SALE", e);
+    if (!a)
+      return this.printSaleReceipt(e, { triggerSource: "MANUAL" });
+    const s = R.getDefaultPrinter();
     try {
-      const payload = JSON.parse(document.payloadJson);
-      document = printDocumentRepository.upsertDocument({
-        documentType: document.documentType,
-        referenceType: document.referenceType,
-        referenceId: document.referenceId,
-        saleId: document.saleId,
-        cashSessionId: document.cashSessionId,
-        printerId: (printer == null ? void 0 : printer.id) ?? document.printerId,
-        title: document.title,
-        status: document.status,
-        templateVersion: document.templateVersion,
-        payloadJson: document.payloadJson,
-        contentHtml: thermalReceiptRenderer.renderSaleReceipt(payload, printer),
-        lastError: document.lastError
+      const n = JSON.parse(a.payloadJson);
+      a = R.upsertDocument({
+        documentType: a.documentType,
+        referenceType: a.referenceType,
+        referenceId: a.referenceId,
+        saleId: a.saleId,
+        cashSessionId: a.cashSessionId,
+        printerId: (s == null ? void 0 : s.id) ?? a.printerId,
+        title: a.title,
+        status: a.status,
+        templateVersion: a.templateVersion,
+        payloadJson: a.payloadJson,
+        contentHtml: _e.renderSaleReceipt(n, s),
+        lastError: a.lastError
       });
     } catch {
-      document = printDocumentRepository.upsertDocument({
-        documentType: document.documentType,
-        referenceType: document.referenceType,
-        referenceId: document.referenceId,
-        saleId: document.saleId,
-        cashSessionId: document.cashSessionId,
-        printerId: (printer == null ? void 0 : printer.id) ?? document.printerId,
-        title: document.title,
-        status: document.status,
-        templateVersion: document.templateVersion,
-        payloadJson: document.payloadJson,
-        contentHtml: document.contentHtml,
-        lastError: document.lastError
+      a = R.upsertDocument({
+        documentType: a.documentType,
+        referenceType: a.referenceType,
+        referenceId: a.referenceId,
+        saleId: a.saleId,
+        cashSessionId: a.cashSessionId,
+        printerId: (s == null ? void 0 : s.id) ?? a.printerId,
+        title: a.title,
+        status: a.status,
+        templateVersion: a.templateVersion,
+        payloadJson: a.payloadJson,
+        contentHtml: a.contentHtml,
+        lastError: a.lastError
       });
     }
-    return this.dispatchToPrinter(document, "MANUAL", true);
+    return this.dispatchToPrinter(a, "MANUAL", !0);
   }
-  async printCashReceipt(data, triggerSource, reprint) {
-    const printer = printDocumentRepository.getDefaultPrinter();
-    const title = data.documentType === "CASH_OPENING_RECEIPT" ? `Abertura de caixa #${data.cashSessionId}` : `Fechamento de caixa #${data.cashSessionId}`;
-    const html = thermalReceiptRenderer.renderCashReceipt(data, printer);
-    const document = printDocumentRepository.upsertDocument({
-      documentType: data.documentType,
+  async printCashReceipt(e, a, s) {
+    const n = R.getDefaultPrinter(), r = e.documentType === "CASH_OPENING_RECEIPT" ? `Abertura de caixa #${e.cashSessionId}` : `Fechamento de caixa #${e.cashSessionId}`, i = _e.renderCashReceipt(e, n), c = R.upsertDocument({
+      documentType: e.documentType,
       referenceType: "CASH_SESSION",
-      referenceId: data.cashSessionId,
-      cashSessionId: data.cashSessionId,
-      title,
+      referenceId: e.cashSessionId,
+      cashSessionId: e.cashSessionId,
+      title: r,
       status: "PENDING",
       templateVersion: "thermal-v1",
-      payloadJson: JSON.stringify(data),
-      contentHtml: html,
+      payloadJson: JSON.stringify(e),
+      contentHtml: i,
       lastError: null
     });
-    return this.dispatchToPrinter(document, triggerSource, reprint);
+    return this.dispatchToPrinter(c, a, s);
   }
-  async dispatchToPrinter(document, triggerSource, reprint) {
-    const printer = printDocumentRepository.getDefaultPrinter();
-    if (!printer) {
-      printDocumentRepository.markDocumentFailed(document.id, "PENDING", "Nenhuma impressora padrão configurada.", null);
-      const job = printDocumentRepository.createPrintJob({
-        printedDocumentId: document.id,
+  async dispatchToPrinter(e, a, s) {
+    const n = R.getDefaultPrinter();
+    if (!n) {
+      R.markDocumentFailed(e.id, "PENDING", "Nenhuma impressora padrão configurada.", null);
+      const r = R.createPrintJob({
+        printedDocumentId: e.id,
         printerId: null,
-        triggerSource,
+        triggerSource: a,
         status: "SKIPPED",
         errorMessage: "Nenhuma impressora padrão configurada."
       });
       return {
-        success: false,
+        success: !1,
         status: "SKIPPED",
-        documentId: document.id,
+        documentId: e.id,
         printerId: null,
         printerName: null,
-        message: createMessage(document.documentType, "skipped"),
-        jobId: job.id,
-        reprint
+        message: Ve(e.documentType, "skipped"),
+        jobId: r.id,
+        reprint: s
       };
     }
     try {
-      await electronReceiptPrinter.printHtml({
-        html: thermalReceiptRenderer.renderFromStoredDocument(document),
-        printerName: printer.name,
-        title: document.title,
-        paperWidthMm: printer.paper_width_mm
-      });
-      printDocumentRepository.markDocumentPrinted(document.id, printer.id);
-      printDocumentRepository.appendPrinterLog(printer.id, `${document.title} enviado para impressão.`);
-      const job = printDocumentRepository.createPrintJob({
-        printedDocumentId: document.id,
-        printerId: printer.id,
-        triggerSource,
+      await At.printHtml({
+        html: _e.renderFromStoredDocument(e),
+        printerName: n.name,
+        title: e.title,
+        paperWidthMm: n.paper_width_mm
+      }), R.markDocumentPrinted(e.id, n.id), R.appendPrinterLog(n.id, `${e.title} enviado para impressão.`);
+      const r = R.createPrintJob({
+        printedDocumentId: e.id,
+        printerId: n.id,
+        triggerSource: a,
         status: "SUCCESS"
       });
       return {
-        success: true,
+        success: !0,
         status: "SUCCESS",
-        documentId: document.id,
-        printerId: printer.id,
-        printerName: printer.display_name ?? printer.name,
-        message: createMessage(document.documentType, "printed", printer.display_name ?? printer.name),
-        jobId: job.id,
-        reprint
+        documentId: e.id,
+        printerId: n.id,
+        printerName: n.display_name ?? n.name,
+        message: Ve(e.documentType, "printed", n.display_name ?? n.name),
+        jobId: r.id,
+        reprint: s
       };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Falha desconhecida na impressão.";
-      printDocumentRepository.markDocumentFailed(document.id, "FAILED", errorMessage, printer.id);
-      printDocumentRepository.appendPrinterLog(printer.id, `${document.title} falhou: ${errorMessage}`);
-      const job = printDocumentRepository.createPrintJob({
-        printedDocumentId: document.id,
-        printerId: printer.id,
-        triggerSource,
+    } catch (r) {
+      const i = r instanceof Error ? r.message : "Falha desconhecida na impressão.";
+      R.markDocumentFailed(e.id, "FAILED", i, n.id), R.appendPrinterLog(n.id, `${e.title} falhou: ${i}`);
+      const c = R.createPrintJob({
+        printedDocumentId: e.id,
+        printerId: n.id,
+        triggerSource: a,
         status: "FAILED",
-        errorMessage
+        errorMessage: i
       });
       return {
-        success: false,
+        success: !1,
         status: "FAILED",
-        documentId: document.id,
-        printerId: printer.id,
-        printerName: printer.display_name ?? printer.name,
-        message: `${createMessage(document.documentType, "failed")} ${errorMessage}`,
-        jobId: job.id,
-        reprint
+        documentId: e.id,
+        printerId: n.id,
+        printerName: n.display_name ?? n.name,
+        message: `${Ve(e.documentType, "failed")} ${i}`,
+        jobId: c.id,
+        reprint: s
       };
     }
   }
 }
-const printDocumentService = new PrintDocumentService();
-function payloadHasDiscount(vendaPayload) {
-  const totalDiscount = Number((vendaPayload == null ? void 0 : vendaPayload.valorDesconto) ?? (vendaPayload == null ? void 0 : vendaPayload.valor_desconto) ?? 0);
-  const itemDiscount = Array.isArray(vendaPayload == null ? void 0 : vendaPayload.itens) ? vendaPayload.itens.some((item) => Number((item == null ? void 0 : item.valor_desconto) ?? (item == null ? void 0 : item.valorDesconto) ?? 0) > 0) : false;
-  return totalDiscount > 0 || itemDiscount;
+const he = new Wn();
+function Kn(t) {
+  const e = Number((t == null ? void 0 : t.valorDesconto) ?? (t == null ? void 0 : t.valor_desconto) ?? 0), a = Array.isArray(t == null ? void 0 : t.itens) ? t.itens.some((s) => Number((s == null ? void 0 : s.valor_desconto) ?? (s == null ? void 0 : s.valorDesconto) ?? 0) > 0) : !1;
+  return e > 0 || a;
 }
-function assertDiscountPermission(vendaPayload) {
-  if (payloadHasDiscount(vendaPayload) && !currentUserHasPermission("discounts:apply")) {
+function ze(t) {
+  if (Kn(t) && !de("discounts:apply"))
     throw new Error("Somente gerente ou administrador pode conceder descontos.");
-  }
 }
-function registerSalesHandlers() {
-  ipcMain.handle("vendas:finalizar-com-baixa-estoque", async (_, vendaPayload) => {
-    assertDiscountPermission(vendaPayload);
-    finalizarVendaComBaixaEstoque(vendaPayload);
-    const vendaId = typeof vendaPayload === "number" ? vendaPayload : vendaPayload.vendaId;
-    const fiscalResult = await issueFiscalDocumentForSaleService.execute(vendaId);
-    let printResult;
+function qn() {
+  u.handle("vendas:finalizar-com-baixa-estoque", async (t, e) => {
+    ze(e), _s(e);
+    const a = typeof e == "number" ? e : e.vendaId, s = await $n.execute(a);
+    let n;
     try {
-      printResult = await printDocumentService.printSaleReceipt(vendaId, {
+      n = await he.printSaleReceipt(a, {
         triggerSource: "AUTO",
-        fiscal: fiscalResult.fiscal ?? null
+        fiscal: s.fiscal ?? null
       });
-    } catch (error) {
-      printResult = {
-        success: false,
+    } catch (r) {
+      n = {
+        success: !1,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
-        message: error instanceof Error ? error.message : "Falha ao imprimir o cupom da venda.",
+        message: r instanceof Error ? r.message : "Falha ao imprimir o cupom da venda.",
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
     }
     return {
-      success: true,
-      vendaId,
-      fiscal: fiscalResult.fiscal,
-      print: printResult
+      success: !0,
+      vendaId: a,
+      fiscal: s.fiscal,
+      print: n
     };
-  });
-  ipcMain.handle("vendas:get", (_, params) => {
-    return listarVendas(params);
-  });
-  ipcMain.handle("vendas:cancelar", (_, venda) => {
-    return cancelarVenda(venda);
-  });
-  ipcMain.handle("vendas:buscarPorId", (_, vendaId) => {
-    return buscarVendaPorId(vendaId);
-  });
-  ipcMain.handle("vendas:finalizada-pendente-pagamento", (_, venda) => {
-    assertDiscountPermission(venda);
-    const vendaId = salvarVendaPendente(venda, "ABERTA_PAGAMENTO", (venda == null ? void 0 : venda.id) ?? null);
-    return vendaId;
-  });
-  ipcMain.handle("vendas:pausar", (_, venda) => {
-    assertDiscountPermission(venda);
-    const vendaId = salvarVendaPendente(venda, "PAUSADA", (venda == null ? void 0 : venda.id) ?? null);
-    return vendaId;
-  });
+  }), u.handle("vendas:get", (t, e) => gs(e)), u.handle("vendas:cancelar", (t, e) => ms(e)), u.handle("vendas:buscarPorId", (t, e) => Is(e)), u.handle("vendas:finalizada-pendente-pagamento", (t, e) => (ze(e), ct(e, "ABERTA_PAGAMENTO", (e == null ? void 0 : e.id) ?? null))), u.handle("vendas:pausar", (t, e) => (ze(e), ct(e, "PAUSADA", (e == null ? void 0 : e.id) ?? null)));
 }
-let viewVendaWindow = null;
-let viewUsuarioWindow = null;
-let cadastrarUsuarioWindow = null;
-let editUserWindow = null;
-let searchProductWindow = null;
-let configAppWindow = null;
-let searchSalesWindow = null;
-let pdvWindow = null;
-const __dirname$2 = import.meta.dirname;
-process.env.APP_ROOT = path__default.join(__dirname$2, "..");
-function registerWindowHandlers() {
-  ipcMain.handle("app:open-external-url", async (_event, url) => {
-    await shell.openExternal(url);
-    return true;
-  });
-  ipcMain.on("window:open:sales-search", () => {
-    if (searchSalesWindow && !searchSalesWindow.isDestroyed()) {
-      searchSalesWindow.focus();
+let ne = null, re = null, oe = null, ie = null, k = null, ce = null, Q = null, J = null;
+const H = import.meta.dirname;
+process.env.APP_ROOT = g.join(H, "..");
+function Qn() {
+  u.handle("app:open-external-url", async (d, l) => (await vt.openExternal(l), !0)), u.on("window:open:sales-search", () => {
+    if (Q && !Q.isDestroyed()) {
+      Q.focus();
       return;
     }
-    createSearchSalesWindow();
+    t();
   });
-  function createSearchSalesWindow() {
-    searchSalesWindow = new BrowserWindow({
+  function t() {
+    Q = new O({
       title: "Vendas",
       width: 600,
       height: 530,
-      center: true,
-      maximizable: false,
+      center: !0,
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: g.join(H, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    searchSalesWindow.maximize();
-    if (VITE_DEV_SERVER_URL) {
-      searchSalesWindow.loadURL(`${VITE_DEV_SERVER_URL}#/sales/search`);
-    } else {
-      searchSalesWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), Q.maximize(), h ? Q.loadURL(`${h}#/sales/search`) : Q.loadFile(g.join("dist/index.html"));
   }
-  function createPdvWindow() {
-    pdvWindow = new BrowserWindow({
+  function e() {
+    J = new O({
       title: "Galberto PDV",
       width: 1280,
       height: 820,
-      center: true,
-      maximizable: true,
+      center: !0,
+      maximizable: !0,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: g.join(H, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    pdvWindow.maximize();
-    if (VITE_DEV_SERVER_URL) {
-      pdvWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv`);
-    } else {
-      pdvWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), J.maximize(), h ? J.loadURL(`${h}#/pdv`) : J.loadFile(g.join("dist/index.html"));
   }
-  function createViewVendaWindow(id) {
-    viewVendaWindow = new BrowserWindow({
+  function a(d) {
+    ne = new O({
       width: 764,
       height: 717,
-      title: `Venda #${id}`,
-      maximizable: false,
+      title: `Venda #${d}`,
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: g.join(H, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    if (VITE_DEV_SERVER_URL) {
-      viewVendaWindow.loadURL(`${VITE_DEV_SERVER_URL}#/vendas/${id}`);
-    } else {
-      viewVendaWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), h ? ne.loadURL(`${h}#/vendas/${d}`) : ne.loadFile(g.join("dist/index.html"));
   }
-  function createSearchProductWindow() {
-    searchProductWindow = new BrowserWindow({
+  function s() {
+    k = new O({
       title: "Search Product",
-      maximizable: true,
+      maximizable: !0,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: g.join(H, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
+    }), h ? k.loadURL(`${h}#/pdv/products/search`) : k.loadFile(g.join("dist/index.html"), {
+      hash: "/pdv/products/search"
     });
-    if (VITE_DEV_SERVER_URL) {
-      searchProductWindow.loadURL(`${VITE_DEV_SERVER_URL}#/products/search`);
-    } else {
-      searchProductWindow.loadFile(path__default.join("dist/index.html"));
-    }
   }
-  function createViewUsuarioWindow(id) {
-    viewUsuarioWindow = new BrowserWindow({
+  function n(d) {
+    re = new O({
       width: 764,
       height: 717,
-      title: `Usuario #${id}`,
-      maximizable: false,
+      title: `Usuario #${d}`,
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: g.join(H, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    if (VITE_DEV_SERVER_URL) {
-      viewUsuarioWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/usuarios/${id}`);
-    } else {
-      viewUsuarioWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), h ? re.loadURL(`${h}#/config/usuarios/${d}`) : re.loadFile(g.join("dist/index.html"));
   }
-  function createConfigWindow() {
-    configAppWindow = new BrowserWindow({
+  function r() {
+    ce = new O({
       width: 764,
       height: 717,
-      title: `Config PDV`,
-      maximizable: false,
+      title: "Config PDV",
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: g.join(H, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
+    }), h ? ce.loadURL(`${h}#/pdv/config/app`) : ce.loadFile(g.join("dist/index.html"), {
+      hash: "/pdv/config/app"
     });
-    if (VITE_DEV_SERVER_URL) {
-      configAppWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/app`);
-    } else {
-      configAppWindow.loadFile(path__default.join("dist/index.html"));
-    }
   }
-  ipcMain.on("open-search-sales-window", () => {
-    if (searchProductWindow && !searchProductWindow.isDestroyed()) {
-      searchProductWindow.focus();
+  u.on("open-search-sales-window", () => {
+    if (k && !k.isDestroyed()) {
+      k.focus();
       return;
     }
-    createSearchSalesWindow();
+    t();
+  }), u.on("window:open:config", () => {
+    if (de("config:access")) {
+      if (ce && !ce.isDestroyed()) {
+        ce.focus();
+        return;
+      }
+      r();
+    }
+  }), u.on("window:open:pdv", () => {
+    if (de("pdv:access")) {
+      if (J && !J.isDestroyed()) {
+        J.focus();
+        return;
+      }
+      e();
+    }
+  }), u.on("window:open:products-search", () => {
+    if (k && !k.isDestroyed()) {
+      k.focus();
+      return;
+    }
+    s();
+  }), u.on("vendas:criar-janela-ver-vendas", (d, l) => {
+    if (ne && !ne.isDestroyed()) {
+      ne.focus();
+      return;
+    }
+    a(l);
+  }), u.on("usuarios:criar-janela-ver-usuario", (d, l) => {
+    if (de("users:manage")) {
+      if (re && !re.isDestroyed()) {
+        re.focus();
+        return;
+      }
+      n(l);
+    }
+  }), u.on("window:open:create-user", () => {
+    if (de("users:manage")) {
+      if (oe && !oe.isDestroyed()) {
+        oe.focus();
+        return;
+      }
+      i();
+    }
+  }), u.on("window:open:edit-user", (d, l) => {
+    if (de("users:manage")) {
+      if (ie && !ie.isDestroyed()) {
+        ie.focus();
+        return;
+      }
+      c(l);
+    }
   });
-  ipcMain.on("window:open:config", () => {
-    if (!currentUserHasPermission("config:access")) {
-      return;
-    }
-    if (configAppWindow && !configAppWindow.isDestroyed()) {
-      configAppWindow.focus();
-      return;
-    }
-    createConfigWindow();
-  });
-  ipcMain.on("window:open:pdv", () => {
-    if (!currentUserHasPermission("pdv:access")) {
-      return;
-    }
-    if (pdvWindow && !pdvWindow.isDestroyed()) {
-      pdvWindow.focus();
-      return;
-    }
-    createPdvWindow();
-  });
-  ipcMain.on("window:open:products-search", () => {
-    if (searchProductWindow && !searchProductWindow.isDestroyed()) {
-      searchProductWindow.focus();
-      return;
-    }
-    createSearchProductWindow();
-  });
-  ipcMain.on("vendas:criar-janela-ver-vendas", (_, id) => {
-    if (viewVendaWindow && !viewVendaWindow.isDestroyed()) {
-      viewVendaWindow.focus();
-      return;
-    }
-    createViewVendaWindow(id);
-  });
-  ipcMain.on("usuarios:criar-janela-ver-usuario", (_, id) => {
-    if (!currentUserHasPermission("users:manage")) {
-      return;
-    }
-    if (viewUsuarioWindow && !viewUsuarioWindow.isDestroyed()) {
-      viewUsuarioWindow.focus();
-      return;
-    }
-    createViewUsuarioWindow(id);
-  });
-  ipcMain.on("window:open:create-user", () => {
-    if (!currentUserHasPermission("users:manage")) {
-      return;
-    }
-    if (cadastrarUsuarioWindow && !cadastrarUsuarioWindow.isDestroyed()) {
-      cadastrarUsuarioWindow.focus();
-      return;
-    }
-    createCadastroUsuarioWindow();
-  });
-  ipcMain.on("window:open:edit-user", (_, id) => {
-    if (!currentUserHasPermission("users:manage")) {
-      return;
-    }
-    if (editUserWindow && !editUserWindow.isDestroyed()) {
-      editUserWindow.focus();
-      return;
-    }
-    createEditUserWindow(id);
-  });
-  function createCadastroUsuarioWindow() {
-    cadastrarUsuarioWindow = new BrowserWindow({
+  function i() {
+    oe = new O({
       width: 764,
       height: 717,
-      title: `Cadastrar Usuario`,
-      maximizable: false,
+      title: "Cadastrar Usuario",
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: g.join(H, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    if (VITE_DEV_SERVER_URL) {
-      cadastrarUsuarioWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/usuarios/cadastrar_usuario`);
-    } else {
-      cadastrarUsuarioWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), h ? oe.loadURL(`${h}#/config/usuarios/cadastrar_usuario`) : oe.loadFile(g.join("dist/index.html"));
   }
-  function createEditUserWindow(id) {
-    editUserWindow = new BrowserWindow({
+  function c(d) {
+    ie = new O({
       width: 764,
       height: 717,
-      title: `Editar Usuario`,
-      maximizable: false,
+      title: "Editar Usuario",
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: g.join(H, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    if (VITE_DEV_SERVER_URL) {
-      editUserWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/users/edit_user/${id}`);
-    } else {
-      editUserWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), h ? ie.loadURL(`${h}#/config/users/edit_user/${d}`) : ie.loadFile(g.join("dist/index.html"));
   }
 }
-function registerProductHandlers() {
-  ipcMain.handle("produtos:get", (_, params) => {
-    return listarProdutos(params);
-  });
-  ipcMain.handle("get-products-by-id", (_, id) => {
-    if (!id) throw new Error("ID inválido");
-    return select_product_by_id(id);
-  });
-  ipcMain.handle("produtos:buscar-por-nome", (_, termo) => {
-    if (!termo) throw new Error("Nome Invalido");
-    return buscarProdutosPorNome(termo);
-  });
-  ipcMain.handle("produtos:buscar-por-codigo-de-barras", (_, codigo) => {
-    if (!codigo) throw new Error("Codigo de Barras invalido");
-    return buscarProdutoPorCodigoBarras(codigo);
-  });
-  ipcMain.handle("suggest-product-by-term", (_, term) => {
-    return selectSuggestionProduct(term);
-  });
+function Jn() {
+  u.handle("produtos:get", (t, e) => As(e)), u.handle("get-products-by-id", (t, e) => {
+    if (!e) throw new Error("ID inválido");
+    return Ls(e);
+  }), u.handle("produtos:buscar-por-nome", (t, e) => {
+    if (!e) throw new Error("Nome Invalido");
+    return Rs(e);
+  }), u.handle("produtos:buscar-por-codigo-de-barras", (t, e) => {
+    if (!e) throw new Error("Codigo de Barras invalido");
+    return hs(e);
+  }), u.handle("suggest-product-by-term", (t, e) => Ss(e));
 }
-function registerPrinterhandlers() {
-  ipcMain.handle("printer:buscar-impressoras", async () => {
-    assertCurrentUserPermission("printers:manage");
-    const win2 = BrowserWindow.getAllWindows()[0];
-    return win2.webContents.getPrintersAsync();
-  });
-  ipcMain.handle("printer:add-impressora", (_event, dados) => {
-    assertCurrentUserPermission("printers:manage");
-    return addPrinter(dados);
-  });
-  ipcMain.handle("printer:listar-cadastradas", () => {
-    assertCurrentUserPermission("printers:manage");
-    return listarPrinters();
-  });
-  ipcMain.handle("printer:get-padrao", () => {
-    return getPrinterPadrao();
-  });
-  ipcMain.handle("printer:remover", (_event, id) => {
-    assertCurrentUserPermission("printers:manage");
-    return removerPrinter(id);
-  });
-  ipcMain.handle("printer:definir-padrao", (_event, id) => {
-    assertCurrentUserPermission("printers:manage");
-    return definirPrinterPadrao(id);
-  });
-  ipcMain.handle("printer:atualizar-layout", (_event, id, dados) => {
-    assertCurrentUserPermission("printers:manage");
-    return atualizarLayoutPrinter(id, dados);
-  });
-  ipcMain.handle("printer:atualizar-personalizacao", (_event, id, receiptSettingsJson) => {
-    assertCurrentUserPermission("printers:manage");
-    return atualizarPersonalizacaoCupomPrinter(id, receiptSettingsJson);
-  });
-  ipcMain.handle("printer:test-print", (_event, printerId) => {
-    assertCurrentUserPermission("printers:manage");
-    return printDocumentService.printTestReceipt(printerId);
-  });
-  ipcMain.handle("printer:reprint-sale-receipt", (_event, saleId) => {
-    assertCurrentUserPermission("sales:view");
-    return printDocumentService.reprintSaleReceipt(saleId);
-  });
+function Zn() {
+  u.handle("printer:buscar-impressoras", async () => (m("printers:manage"), O.getAllWindows()[0].webContents.getPrintersAsync())), u.handle("printer:add-impressora", (t, e) => (m("printers:manage"), Cs(e))), u.handle("printer:listar-cadastradas", () => (m("printers:manage"), vs())), u.handle("printer:get-padrao", () => Os()), u.handle("printer:remover", (t, e) => (m("printers:manage"), Ds(e))), u.handle("printer:definir-padrao", (t, e) => (m("printers:manage"), bs(e))), u.handle("printer:atualizar-layout", (t, e, a) => (m("printers:manage"), ys(e, a))), u.handle("printer:atualizar-personalizacao", (t, e, a) => (m("printers:manage"), Us(e, a))), u.handle("printer:test-print", (t, e) => (m("printers:manage"), he.printTestReceipt(e))), u.handle("printer:reprint-sale-receipt", (t, e) => (m("sales:view"), he.reprintSaleReceipt(e)));
 }
-function encerrarSessao(sessionId) {
-  db.prepare(`
+function jt(t) {
+  o.prepare(`
     UPDATE sessions
     SET active = 0,
         logout_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).run(sessionId);
+  `).run(t);
 }
-function registerAuthHandlers() {
-  ipcMain.handle("auth:login", (_event, username, password) => {
-    const user = autenticarUsuario(username, password);
-    setCurrentSession(user.sessionId);
-    return user;
-  });
-  ipcMain.handle("auth:buscar-usuario", (_, id) => {
-    if (!id) throw new Error("ID inválido");
-    assertCurrentUserPermission("users:manage");
-    return buscarUsuario(id);
-  });
-  ipcMain.handle("app:logoff-with-confirm", async () => {
-    logger.info("Logoff solicitado pelo usuario");
-    const { response } = await dialog.showMessageBox({
+function er() {
+  u.handle("auth:login", (t, e, a) => {
+    const s = Ca(e, a);
+    return _t(s.sessionId), s;
+  }), u.handle("auth:buscar-usuario", (t, e) => {
+    if (!e) throw new Error("ID inválido");
+    return m("users:manage"), Ms(e);
+  }), u.handle("app:logoff-with-confirm", async () => {
+    f.info("Logoff solicitado pelo usuario");
+    const { response: t } = await Ot.showMessageBox({
       type: "question",
       buttons: ["cancelar", "sair"],
       defaultId: 1,
       cancelId: 0,
       message: "Tem certeza que deseja encerrar sessao?"
     });
-    if (response === 1) {
-      const sessionId = getCurrentSession();
-      if (sessionId) {
-        encerrarSessao(sessionId);
-        setCurrentSession(null);
-      }
-      logger.info("logoff aprovado pelo usuario");
-      return true;
+    if (t === 1) {
+      const e = nt();
+      return e && (jt(e), _t(null)), f.info("logoff aprovado pelo usuario"), !0;
     }
-    return false;
+    return !1;
   });
 }
-function registerUserHandlers() {
-  ipcMain.handle("salvar-foto-usuario", async (_, dados) => {
-    assertCurrentUserPermission("users:manage");
-    const userData = app.getPath("userData");
-    const pasta = path__default.join(userData, "fotos");
-    if (!fs$2.existsSync(pasta)) fs$2.mkdirSync(pasta);
-    const extensao = path__default.extname(dados.nomeArquivo || "");
-    const baseName = path__default.basename(dados.nomeArquivo || "foto", extensao).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
-    const caminho = path__default.join(pasta, `${Date.now()}-${baseName}${extensao}`);
-    fs$2.writeFileSync(caminho, Buffer.from(dados.buffer));
-    return caminho;
-  });
-  ipcMain.handle("update-user", (_, data) => {
-    assertCurrentUserPermission("users:manage");
-    return updateUser(data);
-  });
-  ipcMain.handle("disable-user", (_, id) => {
-    assertCurrentUserPermission("users:manage");
-    return disableUser(id);
-  });
-  ipcMain.handle("enable-user", (_, id) => {
-    assertCurrentUserPermission("users:manage");
-    return enableUser(id);
-  });
-  ipcMain.handle("user:update-password", (_event, id, newPassword) => {
-    assertCurrentUserPermission("users:manage");
-    return alterarSenhaUsuario(id, newPassword);
-  });
-  ipcMain.handle("get-users", (_, params) => {
-    assertCurrentUserPermission("users:manage");
-    return selectUsers(params);
-  });
-  ipcMain.handle("usuarios:add", (_event, dados) => {
-    assertCurrentUserPermission("users:manage");
-    return addUsuario(dados);
-  });
-  ipcMain.handle("delete-user", (_event, id) => {
-    assertCurrentUserPermission("users:manage");
-    return removerUsuario(id);
-  });
+function tr() {
+  u.handle("salvar-foto-usuario", async (t, e) => {
+    m("users:manage");
+    const a = X.getPath("userData"), s = g.join(a, "fotos");
+    Fe.existsSync(s) || Fe.mkdirSync(s);
+    const n = g.extname(e.nomeArquivo || ""), r = g.basename(e.nomeArquivo || "foto", n).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40), i = g.join(s, `${Date.now()}-${r}${n}`);
+    return Fe.writeFileSync(i, Buffer.from(e.buffer)), i;
+  }), u.handle("update-user", (t, e) => (m("users:manage"), $s(e))), u.handle("disable-user", (t, e) => (m("users:manage"), Bs(e))), u.handle("enable-user", (t, e) => (m("users:manage"), ks(e))), u.handle("user:update-password", (t, e, a) => (m("users:manage"), ws(e, a))), u.handle("get-users", (t, e) => (m("users:manage"), xs(e))), u.handle("usuarios:add", (t, e) => (m("users:manage"), Ps(e))), u.handle("delete-user", (t, e) => (m("users:manage"), Xs(e)));
 }
-function registerPosHandlers() {
-  ipcMain.handle("open-cash-session", async (_event, data) => {
-    console.log("Abrindo caixa com dados: ", data);
-    const session = insertCashSession(data);
-    let print;
+function ar() {
+  u.handle("open-cash-session", async (t, e) => {
+    console.log("Abrindo caixa com dados: ", e);
+    const a = ps(e);
+    let s;
     try {
-      print = await printDocumentService.printCashOpeningReceipt(session.id, "AUTO");
-    } catch (error) {
-      print = {
-        success: false,
+      s = await he.printCashOpeningReceipt(a.id, "AUTO");
+    } catch (n) {
+      s = {
+        success: !1,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
-        message: error instanceof Error ? error.message : "Falha ao imprimir comprovante de abertura de caixa.",
+        message: n instanceof Error ? n.message : "Falha ao imprimir comprovante de abertura de caixa.",
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
     }
-    return { session, print };
-  });
-  ipcMain.handle("close-cash-session", async (_event, data) => {
-    console.log("Fechando caixa com dados: ", data);
-    const session = closeCashSession(data);
-    let print;
+    return { session: a, print: s };
+  }), u.handle("close-cash-session", async (t, e) => {
+    console.log("Fechando caixa com dados: ", e);
+    const a = fs(e);
+    let s;
     try {
-      print = await printDocumentService.printCashClosingReceipt(session.id, "AUTO");
-    } catch (error) {
-      print = {
-        success: false,
+      s = await he.printCashClosingReceipt(a.id, "AUTO");
+    } catch (n) {
+      s = {
+        success: !1,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
-        message: error instanceof Error ? error.message : "Falha ao imprimir comprovante de fechamento de caixa.",
+        message: n instanceof Error ? n.message : "Falha ao imprimir comprovante de fechamento de caixa.",
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
     }
-    return { session, print };
-  });
-  ipcMain.handle("get-open-cash-session", async (_event, data) => {
-    return getOpenCashSession(data);
-  });
-  ipcMain.handle("register-cash-withdrawal", async (_event, data) => {
-    assertCurrentUserPermission("cash:withdraw");
-    return registerCashWithdrawal(data);
-  });
-  ipcMain.on("pdv:selecionar-produto", (_event, produto) => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send("pdv:produto-selecionado", produto);
-    }
-  });
-  ipcMain.on("pdv:retomar-venda", (_event, venda) => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send("pdv:venda-retomada", venda);
-    }
+    return { session: a, print: s };
+  }), u.handle("get-open-cash-session", async (t, e) => Gs(e)), u.handle("register-cash-withdrawal", async (t, e) => (m("cash:withdraw"), Ns(e))), u.on("pdv:selecionar-produto", (t, e) => {
+    for (const a of O.getAllWindows())
+      a.webContents.send("pdv:produto-selecionado", e);
+  }), u.on("pdv:retomar-venda", (t, e) => {
+    for (const a of O.getAllWindows())
+      a.webContents.send("pdv:venda-retomada", e);
   });
 }
-function generateRandomState(size = 32) {
-  return crypto$1.randomBytes(size).toString("hex");
+function sr(t = 32) {
+  return Ut.randomBytes(t).toString("hex");
 }
-function toBasicAuth(clientId, clientSecret) {
-  return Buffer.from(`${clientId}:${clientSecret}`, "utf8").toString("base64");
+function Ye(t, e) {
+  return Buffer.from(`${t}:${e}`, "utf8").toString("base64");
 }
-class IntegrationRepository {
-  getByIntegrationId(integrationId) {
-    const stmt = db.prepare(`
+class nr {
+  getByIntegrationId(e) {
+    const s = o.prepare(`
       SELECT
         integration_id,
         access_token,
@@ -6773,24 +5843,20 @@ class IntegrationRepository {
         updated_at
       FROM integrations
       WHERE integration_id = ?
-    `);
-    const row = stmt.get(integrationId);
-    if (!row) {
-      return null;
-    }
-    return {
-      integrationId: row.integration_id,
-      accessToken: row.access_token,
-      refreshToken: row.refresh_token,
-      tokenType: row.token_type ?? "Bearer",
-      expiresAt: row.expires_at,
-      scope: row.scope,
-      raw: row.raw_json ? JSON.parse(row.raw_json) : null,
-      updatedAt: row.updated_at
-    };
+    `).get(e);
+    return s ? {
+      integrationId: s.integration_id,
+      accessToken: s.access_token,
+      refreshToken: s.refresh_token,
+      tokenType: s.token_type ?? "Bearer",
+      expiresAt: s.expires_at,
+      scope: s.scope,
+      raw: s.raw_json ? JSON.parse(s.raw_json) : null,
+      updatedAt: s.updated_at
+    } : null;
   }
-  save(token) {
-    const stmt = db.prepare(`
+  save(e) {
+    o.prepare(`
       INSERT INTO integrations (
         integration_id,
         access_token,
@@ -6810,353 +5876,255 @@ class IntegrationRepository {
         scope = excluded.scope,
         raw_json = excluded.raw_json,
         updated_at = excluded.updated_at
-    `);
-    stmt.run(
-      token.integrationId,
-      token.accessToken,
-      token.refreshToken,
-      token.tokenType,
-      token.expiresAt,
-      token.scope ?? null,
-      token.raw ? JSON.stringify(token.raw) : null,
-      token.updatedAt
+    `).run(
+      e.integrationId,
+      e.accessToken,
+      e.refreshToken,
+      e.tokenType,
+      e.expiresAt,
+      e.scope ?? null,
+      e.raw ? JSON.stringify(e.raw) : null,
+      e.updatedAt
     );
   }
-  delete(integrationId) {
-    const stmt = db.prepare(`
+  delete(e) {
+    o.prepare(`
       DELETE FROM integrations
       WHERE integration_id = ?
-    `);
-    stmt.run(integrationId);
+    `).run(e);
   }
-  isConnected(integrationId) {
-    const stmt = db.prepare(`
+  isConnected(e) {
+    return !!o.prepare(`
       SELECT 1
       FROM integrations
       WHERE integration_id = ?
       LIMIT 1
-    `);
-    const row = stmt.get(integrationId);
-    return !!row;
+    `).get(e);
   }
 }
-const integrationRepository = new IntegrationRepository();
-const BLING_AUTHORIZE_URL = "https://www.bling.com.br/Api/v3/oauth/authorize";
-const BLING_TOKEN_URL = "https://api.bling.com.br/Api/v3/oauth/token";
-const BLING_REVOKE_URL = "https://api.bling.com.br/oauth/revoke";
-function getRequiredEnv(name) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Variável de ambiente ausente: ${name}`);
-  }
-  return value;
+const Z = new nr(), rr = "https://www.bling.com.br/Api/v3/oauth/authorize", Rt = "https://api.bling.com.br/Api/v3/oauth/token", or = "https://api.bling.com.br/oauth/revoke";
+function G(t) {
+  const e = process.env[t];
+  if (!e)
+    throw new Error(`Variável de ambiente ausente: ${t}`);
+  return e;
 }
-function parseRedirectUri(redirectUri) {
-  const url = new URL$1(redirectUri);
-  if (url.protocol !== "http:") {
+function ir(t) {
+  const e = new Ke(t);
+  if (e.protocol !== "http:")
     throw new Error(
       "Para callback local no Electron, use redirect URI no formato http://127.0.0.1:PORT/callback/bling"
     );
-  }
   return {
-    hostname: url.hostname,
-    port: Number(url.port),
-    pathname: url.pathname
+    hostname: e.hostname,
+    port: Number(e.port),
+    pathname: e.pathname
   };
 }
-class BlingOAuthService {
+class cr {
   async getStatus() {
-    const saved = integrationRepository.getByIntegrationId("bling");
-    if (!saved) {
+    const e = Z.getByIntegrationId("bling");
+    if (!e)
       return {
-        connected: false,
+        connected: !1,
         expiresAt: null
       };
-    }
     try {
       await this.getValidAccessToken();
-      const refreshed = integrationRepository.getByIntegrationId("bling");
+      const a = Z.getByIntegrationId("bling");
       return {
-        connected: true,
-        expiresAt: (refreshed == null ? void 0 : refreshed.expiresAt) ?? null
+        connected: !0,
+        expiresAt: (a == null ? void 0 : a.expiresAt) ?? null
       };
-    } catch (error) {
-      console.error("[BlingOAuthService.getStatus]", error);
-      return {
-        connected: false,
-        expiresAt: saved.expiresAt
+    } catch (a) {
+      return console.error("[BlingOAuthService.getStatus]", a), {
+        connected: !1,
+        expiresAt: e.expiresAt
       };
     }
   }
   async connect() {
-    const clientId = getRequiredEnv("BLING_CLIENT_ID");
-    const redirectUri = getRequiredEnv("BLING_REDIRECT_URI");
-    const state = generateRandomState(24);
-    const code = await this.requestAuthorizationCode({
-      clientId,
-      redirectUri,
-      state
+    const e = G("BLING_CLIENT_ID"), a = G("BLING_REDIRECT_URI"), s = sr(24), n = await this.requestAuthorizationCode({
+      clientId: e,
+      redirectUri: a,
+      state: s
     });
-    await this.exchangeCodeForToken(code);
-    return {
-      success: true,
+    return await this.exchangeCodeForToken(n), {
+      success: !0,
       message: "Bling conectado com sucesso."
     };
   }
   async disconnect() {
-    const clientId = getRequiredEnv("BLING_CLIENT_ID");
-    const clientSecret = getRequiredEnv("BLING_CLIENT_SECRET");
-    const saved = integrationRepository.getByIntegrationId("bling");
-    if (!saved) {
+    const e = G("BLING_CLIENT_ID"), a = G("BLING_CLIENT_SECRET"), s = Z.getByIntegrationId("bling");
+    if (!s)
       return {
-        success: true,
+        success: !0,
         message: "Bling já estava desconectado."
       };
-    }
     try {
-      const body = new URLSearchParams({
-        token: saved.refreshToken
+      const n = new URLSearchParams({
+        token: s.refreshToken
       });
-      await fetch(BLING_REVOKE_URL, {
+      await fetch(or, {
         method: "POST",
         headers: {
-          Authorization: `Basic ${toBasicAuth(clientId, clientSecret)}`,
+          Authorization: `Basic ${Ye(e, a)}`,
           "Content-Type": "application/x-www-form-urlencoded",
           Accept: "application/json"
         },
-        body: body.toString()
+        body: n.toString()
       });
-    } catch (error) {
-      console.warn("[BlingOAuthService.disconnect] falha ao revogar remotamente:", error);
+    } catch (n) {
+      console.warn("[BlingOAuthService.disconnect] falha ao revogar remotamente:", n);
     }
-    integrationRepository.delete("bling");
-    return {
-      success: true,
+    return Z.delete("bling"), {
+      success: !0,
       message: "Bling desconectado com sucesso."
     };
   }
   async getValidAccessToken() {
-    const saved = integrationRepository.getByIntegrationId("bling");
-    if (!saved) {
+    const e = Z.getByIntegrationId("bling");
+    if (!e)
       throw new Error("Bling não está conectado.");
-    }
-    const expiresAtMs = new Date(saved.expiresAt).getTime();
-    const expired = expiresAtMs <= Date.now() + 6e4;
-    if (!expired) {
-      return saved.accessToken;
-    }
-    await this.refreshAccessToken(saved.refreshToken);
-    const refreshed = integrationRepository.getByIntegrationId("bling");
-    if (!refreshed) {
+    if (!(new Date(e.expiresAt).getTime() <= Date.now() + 6e4))
+      return e.accessToken;
+    await this.refreshAccessToken(e.refreshToken);
+    const n = Z.getByIntegrationId("bling");
+    if (!n)
       throw new Error("Falha ao renovar token do Bling.");
-    }
-    return refreshed.accessToken;
+    return n.accessToken;
   }
-  async requestAuthorizationCode(params) {
-    const { hostname, port, pathname } = parseRedirectUri(params.redirectUri);
-    const authorizeUrl = new URL$1(BLING_AUTHORIZE_URL);
-    authorizeUrl.searchParams.set("response_type", "code");
-    authorizeUrl.searchParams.set("client_id", params.clientId);
-    authorizeUrl.searchParams.set("state", params.state);
-    authorizeUrl.searchParams.set("redirect_uri", params.redirectUri);
-    return await new Promise((resolve, reject) => {
-      let finished = false;
-      const cleanup = (server2, timeout2) => {
-        clearTimeout(timeout2);
-        server2.close();
-      };
-      const server = http.createServer((req, res) => {
+  async requestAuthorizationCode(e) {
+    const { hostname: a, port: s, pathname: n } = ir(e.redirectUri), r = new Ke(rr);
+    return r.searchParams.set("response_type", "code"), r.searchParams.set("client_id", e.clientId), r.searchParams.set("state", e.state), r.searchParams.set("redirect_uri", e.redirectUri), await new Promise((i, c) => {
+      let d = !1;
+      const l = (T, N) => {
+        clearTimeout(N), T.close();
+      }, E = ra.createServer((T, N) => {
         try {
-          if (!req.url) {
+          if (!T.url)
             throw new Error("Callback sem URL.");
-          }
-          const callbackUrl = new URL$1(req.url, `http://${hostname}:${port}`);
-          if (callbackUrl.pathname !== pathname) {
-            res.statusCode = 404;
-            res.end("Not found");
+          const v = new Ke(T.url, `http://${a}:${s}`);
+          if (v.pathname !== n) {
+            N.statusCode = 404, N.end("Not found");
             return;
           }
-          const error = callbackUrl.searchParams.get("error");
-          const code = callbackUrl.searchParams.get("code");
-          const state = callbackUrl.searchParams.get("state");
-          if (error) {
-            res.statusCode = 400;
-            res.end("Autorização recusada ou inválida.");
-            if (!finished) {
-              finished = true;
-              cleanup(server, timeout);
-              reject(new Error(`Bling retornou erro no callback: ${error}`));
-            }
+          const A = v.searchParams.get("error"), D = v.searchParams.get("code"), ae = v.searchParams.get("state");
+          if (A) {
+            N.statusCode = 400, N.end("Autorização recusada ou inválida."), d || (d = !0, l(E, _), c(new Error(`Bling retornou erro no callback: ${A}`)));
             return;
           }
-          if (!code) {
-            res.statusCode = 400;
-            res.end("Authorization code não recebido.");
-            if (!finished) {
-              finished = true;
-              cleanup(server, timeout);
-              reject(new Error("Authorization code não recebido."));
-            }
+          if (!D) {
+            N.statusCode = 400, N.end("Authorization code não recebido."), d || (d = !0, l(E, _), c(new Error("Authorization code não recebido.")));
             return;
           }
-          if (state !== params.state) {
-            res.statusCode = 400;
-            res.end("State inválido.");
-            if (!finished) {
-              finished = true;
-              cleanup(server, timeout);
-              reject(new Error("State inválido no callback do Bling."));
-            }
+          if (ae !== e.state) {
+            N.statusCode = 400, N.end("State inválido."), d || (d = !0, l(E, _), c(new Error("State inválido no callback do Bling.")));
             return;
           }
-          res.statusCode = 200;
-          res.setHeader("Content-Type", "text/html; charset=utf-8");
-          res.end(`
+          N.statusCode = 200, N.setHeader("Content-Type", "text/html; charset=utf-8"), N.end(`
             <html>
               <body style="font-family: Arial, sans-serif; padding: 24px;">
                 <h2>Integração concluída</h2>
                 <p>Você já pode fechar esta janela e voltar ao sistema.</p>
               </body>
             </html>
-          `);
-          if (!finished) {
-            finished = true;
-            cleanup(server, timeout);
-            resolve(code);
-          }
-        } catch (error) {
-          if (!finished) {
-            finished = true;
-            cleanup(server, timeout);
-            reject(error instanceof Error ? error : new Error("Erro desconhecido no callback."));
-          }
+          `), d || (d = !0, l(E, _), i(D));
+        } catch (v) {
+          d || (d = !0, l(E, _), c(v instanceof Error ? v : new Error("Erro desconhecido no callback.")));
         }
-      });
-      const timeout = setTimeout(() => {
-        if (!finished) {
-          finished = true;
-          cleanup(server, timeout);
-          reject(new Error("Tempo esgotado aguardando autorização do Bling."));
-        }
+      }), _ = setTimeout(() => {
+        d || (d = !0, l(E, _), c(new Error("Tempo esgotado aguardando autorização do Bling.")));
       }, 12e4);
-      server.listen(port, hostname, async () => {
+      E.listen(s, a, async () => {
         try {
-          await shell.openExternal(authorizeUrl.toString());
-        } catch (error) {
-          if (!finished) {
-            finished = true;
-            cleanup(server, timeout);
-            reject(
-              error instanceof Error ? error : new Error("Falha ao abrir navegador para autorização.")
-            );
-          }
+          await vt.openExternal(r.toString());
+        } catch (T) {
+          d || (d = !0, l(E, _), c(
+            T instanceof Error ? T : new Error("Falha ao abrir navegador para autorização.")
+          ));
         }
-      });
-      server.on("error", (error) => {
-        if (!finished) {
-          finished = true;
-          cleanup(server, timeout);
-          reject(error instanceof Error ? error : new Error("Erro ao iniciar servidor local."));
-        }
+      }), E.on("error", (T) => {
+        d || (d = !0, l(E, _), c(T instanceof Error ? T : new Error("Erro ao iniciar servidor local.")));
       });
     });
   }
-  async exchangeCodeForToken(code) {
-    const clientId = getRequiredEnv("BLING_CLIENT_ID");
-    const clientSecret = getRequiredEnv("BLING_CLIENT_SECRET");
-    const redirectUri = getRequiredEnv("BLING_REDIRECT_URI");
-    const body = new URLSearchParams({
+  async exchangeCodeForToken(e) {
+    const a = G("BLING_CLIENT_ID"), s = G("BLING_CLIENT_SECRET"), n = G("BLING_REDIRECT_URI"), r = new URLSearchParams({
       grant_type: "authorization_code",
-      code,
-      redirect_uri: redirectUri
-    });
-    const response = await fetch(BLING_TOKEN_URL, {
+      code: e,
+      redirect_uri: n
+    }), i = await fetch(Rt, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${toBasicAuth(clientId, clientSecret)}`,
+        Authorization: `Basic ${Ye(a, s)}`,
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
         "enable-jwt": "1"
       },
-      body: body.toString()
-    });
-    const text = await response.text();
-    if (!response.ok) {
-      throw new Error(`Falha ao trocar code por token no Bling: ${response.status} - ${text}`);
-    }
-    const data = JSON.parse(text);
-    this.persistToken(data);
+      body: r.toString()
+    }), c = await i.text();
+    if (!i.ok)
+      throw new Error(`Falha ao trocar code por token no Bling: ${i.status} - ${c}`);
+    const d = JSON.parse(c);
+    this.persistToken(d);
   }
-  async refreshAccessToken(refreshToken) {
-    const clientId = getRequiredEnv("BLING_CLIENT_ID");
-    const clientSecret = getRequiredEnv("BLING_CLIENT_SECRET");
-    const body = new URLSearchParams({
+  async refreshAccessToken(e) {
+    const a = G("BLING_CLIENT_ID"), s = G("BLING_CLIENT_SECRET"), n = new URLSearchParams({
       grant_type: "refresh_token",
-      refresh_token: refreshToken
-    });
-    const response = await fetch(BLING_TOKEN_URL, {
+      refresh_token: e
+    }), r = await fetch(Rt, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${toBasicAuth(clientId, clientSecret)}`,
+        Authorization: `Basic ${Ye(a, s)}`,
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
         "enable-jwt": "1"
       },
-      body: body.toString()
-    });
-    const text = await response.text();
-    if (!response.ok) {
-      throw new Error(`Falha ao renovar token do Bling: ${response.status} - ${text}`);
-    }
-    const data = JSON.parse(text);
-    this.persistToken(data);
+      body: n.toString()
+    }), i = await r.text();
+    if (!r.ok)
+      throw new Error(`Falha ao renovar token do Bling: ${r.status} - ${i}`);
+    const c = JSON.parse(i);
+    this.persistToken(c);
   }
-  persistToken(data) {
-    const expiresAt = new Date(Date.now() + data.expires_in * 1e3).toISOString();
-    const payload = {
+  persistToken(e) {
+    const a = new Date(Date.now() + e.expires_in * 1e3).toISOString(), s = {
       integrationId: "bling",
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      tokenType: data.token_type,
-      expiresAt,
-      scope: data.scope ?? null,
-      raw: data,
+      accessToken: e.access_token,
+      refreshToken: e.refresh_token,
+      tokenType: e.token_type,
+      expiresAt: a,
+      scope: e.scope ?? null,
+      raw: e,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    integrationRepository.save(payload);
+    Z.save(s);
   }
 }
-const blingOAuthService = new BlingOAuthService();
-const BLING_API_BASE_URL = "https://api.bling.com.br/Api/v3";
-class BlingApiService {
+const Ce = new cr(), dr = "https://api.bling.com.br/Api/v3";
+class lr {
   /**
    * Método genérico GET para a API da Bling.
    *
    * Permite passar query params dinamicamente.
    */
-  async get(path2, params) {
-    const accessToken = await blingOAuthService.getValidAccessToken();
-    const url = new URL(`${BLING_API_BASE_URL}${path2}`);
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== void 0 && value !== null) {
-          url.searchParams.append(key, String(value));
-        }
-      });
-    }
-    const response = await fetch(url.toString(), {
+  async get(e, a) {
+    const s = await Ce.getValidAccessToken(), n = new URL(`${dr}${e}`);
+    a && Object.entries(a).forEach(([c, d]) => {
+      d != null && n.searchParams.append(c, String(d));
+    });
+    const r = await fetch(n.toString(), {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${s}`,
         Accept: "application/json",
         "enable-jwt": "1"
       }
-    });
-    const text = await response.text();
-    if (!response.ok) {
-      throw new Error(`Erro na API do Bling: ${response.status} - ${text}`);
-    }
-    return JSON.parse(text);
+    }), i = await r.text();
+    if (!r.ok)
+      throw new Error(`Erro na API do Bling: ${r.status} - ${i}`);
+    return JSON.parse(i);
   }
   /**
    * Endpoint simples de teste da API.
@@ -7181,48 +6149,46 @@ class BlingApiService {
    * - page: número da página
    * - limit: quantidade de registros por página
    */
-  async getProducts(params) {
+  async getProducts(e) {
     return this.get("/produtos", {
-      pagina: (params == null ? void 0 : params.page) ?? 1,
-      limite: (params == null ? void 0 : params.limit) ?? 100,
-      criterio: params == null ? void 0 : params.criterio,
-      dataAlteracaoInicial: params == null ? void 0 : params.dataAlteracaoInicial
+      pagina: (e == null ? void 0 : e.page) ?? 1,
+      limite: (e == null ? void 0 : e.limit) ?? 100,
+      criterio: e == null ? void 0 : e.criterio,
+      dataAlteracaoInicial: e == null ? void 0 : e.dataAlteracaoInicial
     });
   }
-  async getCategories(params) {
+  async getCategories(e) {
     return this.get("/categorias/produtos", {
-      pagina: (params == null ? void 0 : params.page) ?? 1,
-      limite: (params == null ? void 0 : params.limit) ?? 100
+      pagina: (e == null ? void 0 : e.page) ?? 1,
+      limite: (e == null ? void 0 : e.limit) ?? 100
     });
   }
 }
-const blingApiService = new BlingApiService();
-function randomId() {
-  return crypto$1.randomUUID();
+const Ae = new lr();
+function be() {
+  return Ut.randomUUID();
 }
-function nowIso() {
+function U() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
-function subtractMinutes(isoDate, minutes) {
-  const dt = new Date(isoDate);
-  dt.setMinutes(dt.getMinutes() - minutes);
-  return dt.toISOString();
+function ht(t, e) {
+  const a = new Date(t);
+  return a.setMinutes(a.getMinutes() - e), a.toISOString();
 }
-class CategoryRepository {
-  countByIntegrationSource(integrationSource) {
-    const row = db.prepare(`
+class ur {
+  countByIntegrationSource(e) {
+    return o.prepare(`
       SELECT COUNT(*) as count FROM categories
       WHERE integration_source = ? AND deleted_at IS NULL
-    `).get(integrationSource);
-    return row.count;
+    `).get(e).count;
   }
-  upsert(category) {
-    if (!(category == null ? void 0 : category.externalId) || !(category == null ? void 0 : category.name)) {
-      console.warn("[CategoryRepository] Pulando categoria inválida:", category);
+  upsert(e) {
+    if (!(e != null && e.externalId) || !(e != null && e.name)) {
+      console.warn("[CategoryRepository] Pulando categoria inválida:", e);
       return;
     }
-    const now = nowIso();
-    db.prepare(`
+    const a = U();
+    o.prepare(`
       INSERT INTO categories (
         id, external_id, integration_source, name, active,
         remote_updated_at, last_synced_at, sync_status,
@@ -7238,92 +6204,88 @@ class CategoryRepository {
         raw_json          = excluded.raw_json,
         updated_at        = excluded.updated_at
     `).run(
-      category.id ?? randomId(),
-      category.externalId,
-      category.integrationSource,
-      category.name,
-      category.active ?? 1,
-      category.remoteUpdatedAt ?? null,
-      category.lastSyncedAt,
-      category.syncStatus ?? "synced",
-      category.raw ? JSON.stringify(category.raw) : null,
-      category.createdAt ?? now,
-      category.updatedAt ?? now
+      e.id ?? be(),
+      e.externalId,
+      e.integrationSource,
+      e.name,
+      e.active ?? 1,
+      e.remoteUpdatedAt ?? null,
+      e.lastSyncedAt,
+      e.syncStatus ?? "synced",
+      e.raw ? JSON.stringify(e.raw) : null,
+      e.createdAt ?? a,
+      e.updatedAt ?? a
     );
   }
-  upsertMany(categories) {
-    const run = db.transaction((items) => {
-      for (const item of items) this.upsert(item);
-    });
-    run(categories);
+  upsertMany(e) {
+    o.transaction((s) => {
+      for (const n of s) this.upsert(n);
+    })(e);
   }
-  getExternalIdsBySource(integrationSource, externalIds) {
-    if (externalIds.length === 0) return [];
-    const placeholders = externalIds.map(() => "?").join(",");
-    const rows = db.prepare(`
+  getExternalIdsBySource(e, a) {
+    if (a.length === 0) return [];
+    const s = a.map(() => "?").join(",");
+    return o.prepare(`
       SELECT external_id FROM categories
-      WHERE integration_source = ? AND external_id IN (${placeholders})
-    `).all(integrationSource, ...externalIds);
-    return rows.map((r) => r.external_id);
+      WHERE integration_source = ? AND external_id IN (${s})
+    `).all(e, ...a).map((r) => r.external_id);
   }
   /**
    * Retorna um Map de externalId -> localId para todas as categorias de uma fonte.
    * Usado pelo sync de produtos para linkar category_id sem fazer N queries.
    */
-  getAllExternalIdMap(integrationSource) {
-    const rows = db.prepare(`
+  getAllExternalIdMap(e) {
+    const a = o.prepare(`
       SELECT id, external_id FROM categories
       WHERE integration_source = ? AND deleted_at IS NULL
-    `).all(integrationSource);
-    return new Map(rows.map((r) => [r.external_id, r.id]));
+    `).all(e);
+    return new Map(a.map((s) => [s.external_id, s.id]));
   }
-  mapRow(row) {
-    let raw = null;
-    if (row.raw_json) {
+  mapRow(e) {
+    let a = null;
+    if (e.raw_json)
       try {
-        raw = JSON.parse(row.raw_json);
+        a = JSON.parse(e.raw_json);
       } catch {
-        raw = row.raw_json;
+        a = e.raw_json;
       }
-    }
     return {
-      id: row.id,
-      externalId: row.external_id,
-      integrationSource: row.integration_source,
-      name: row.name,
-      active: row.active,
-      remoteUpdatedAt: row.remote_updated_at,
-      lastSyncedAt: row.last_synced_at ?? "",
-      syncStatus: row.sync_status,
-      raw,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      id: e.id,
+      externalId: e.external_id,
+      integrationSource: e.integration_source,
+      name: e.name,
+      active: e.active,
+      remoteUpdatedAt: e.remote_updated_at,
+      lastSyncedAt: e.last_synced_at ?? "",
+      syncStatus: e.sync_status,
+      raw: a,
+      createdAt: e.created_at,
+      updatedAt: e.updated_at
     };
   }
 }
-const categoryRepository = new CategoryRepository();
-class SyncStateRepository {
-  get(integrationId, resource) {
-    const row = db.prepare(`
+const ve = new ur();
+class Er {
+  get(e, a) {
+    const s = o.prepare(`
       SELECT * FROM sync_states
       WHERE integration_id = ? AND resource = ?
       LIMIT 1
-    `).get(integrationId, resource);
-    if (!row) return null;
-    return {
-      integrationId: row.integration_id,
-      resource: row.resource,
-      lastSyncAt: row.last_sync_at,
-      lastSuccessAt: row.last_success_at,
-      checkpointCursor: row.checkpoint_cursor,
-      status: row.status,
-      errorMessage: row.error_message,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
+    `).get(e, a);
+    return s ? {
+      integrationId: s.integration_id,
+      resource: s.resource,
+      lastSyncAt: s.last_sync_at,
+      lastSuccessAt: s.last_success_at,
+      checkpointCursor: s.checkpoint_cursor,
+      status: s.status,
+      errorMessage: s.error_message,
+      createdAt: s.created_at,
+      updatedAt: s.updated_at
+    } : null;
   }
-  save(state) {
-    db.prepare(`
+  save(e) {
+    o.prepare(`
       INSERT INTO sync_states (
         id, integration_id, resource, last_sync_at, last_success_at,
         checkpoint_cursor, status, error_message, created_at, updated_at
@@ -7337,78 +6299,74 @@ class SyncStateRepository {
         error_message     = excluded.error_message,
         updated_at        = excluded.updated_at
     `).run(
-      randomId(),
-      state.integrationId,
-      state.resource,
-      state.lastSyncAt ?? null,
-      state.lastSuccessAt ?? null,
-      state.checkpointCursor ?? null,
-      state.status,
-      state.errorMessage ?? null,
-      state.createdAt,
-      state.updatedAt
+      be(),
+      e.integrationId,
+      e.resource,
+      e.lastSyncAt ?? null,
+      e.lastSuccessAt ?? null,
+      e.checkpointCursor ?? null,
+      e.status,
+      e.errorMessage ?? null,
+      e.createdAt,
+      e.updatedAt
     );
   }
-  markRunning(integrationId, resource) {
-    const now = nowIso();
-    const current = this.get(integrationId, resource);
+  markRunning(e, a) {
+    const s = U(), n = this.get(e, a);
     this.save({
-      integrationId,
-      resource,
-      lastSyncAt: now,
-      lastSuccessAt: (current == null ? void 0 : current.lastSuccessAt) ?? null,
-      checkpointCursor: (current == null ? void 0 : current.checkpointCursor) ?? null,
+      integrationId: e,
+      resource: a,
+      lastSyncAt: s,
+      lastSuccessAt: (n == null ? void 0 : n.lastSuccessAt) ?? null,
+      checkpointCursor: (n == null ? void 0 : n.checkpointCursor) ?? null,
       status: "running",
       errorMessage: null,
-      createdAt: (current == null ? void 0 : current.createdAt) ?? now,
-      updatedAt: now
+      createdAt: (n == null ? void 0 : n.createdAt) ?? s,
+      updatedAt: s
     });
   }
-  markSuccess(integrationId, resource, checkpointCursor) {
-    const now = nowIso();
-    const current = this.get(integrationId, resource);
+  markSuccess(e, a, s) {
+    const n = U(), r = this.get(e, a);
     this.save({
-      integrationId,
-      resource,
-      lastSyncAt: now,
-      lastSuccessAt: now,
-      checkpointCursor: checkpointCursor ?? (current == null ? void 0 : current.checkpointCursor) ?? null,
+      integrationId: e,
+      resource: a,
+      lastSyncAt: n,
+      lastSuccessAt: n,
+      checkpointCursor: s ?? (r == null ? void 0 : r.checkpointCursor) ?? null,
       status: "success",
       errorMessage: null,
-      createdAt: (current == null ? void 0 : current.createdAt) ?? now,
-      updatedAt: now
+      createdAt: (r == null ? void 0 : r.createdAt) ?? n,
+      updatedAt: n
     });
   }
-  markError(integrationId, resource, errorMessage) {
-    const now = nowIso();
-    const current = this.get(integrationId, resource);
+  markError(e, a, s) {
+    const n = U(), r = this.get(e, a);
     this.save({
-      integrationId,
-      resource,
-      lastSyncAt: (current == null ? void 0 : current.lastSyncAt) ?? null,
-      lastSuccessAt: (current == null ? void 0 : current.lastSuccessAt) ?? null,
-      checkpointCursor: (current == null ? void 0 : current.checkpointCursor) ?? null,
+      integrationId: e,
+      resource: a,
+      lastSyncAt: (r == null ? void 0 : r.lastSyncAt) ?? null,
+      lastSuccessAt: (r == null ? void 0 : r.lastSuccessAt) ?? null,
+      checkpointCursor: (r == null ? void 0 : r.checkpointCursor) ?? null,
       status: "error",
-      errorMessage,
-      createdAt: (current == null ? void 0 : current.createdAt) ?? now,
-      updatedAt: now
+      errorMessage: s,
+      createdAt: (r == null ? void 0 : r.createdAt) ?? n,
+      updatedAt: n
     });
   }
 }
-const syncStateRepository = new SyncStateRepository();
-class SyncLogRepository {
-  start(params) {
-    const id = randomId();
-    db.prepare(`
+const w = new Er();
+class Tr {
+  start(e) {
+    const a = be();
+    return o.prepare(`
       INSERT INTO sync_logs (
         id, integration_id, resource, mode, status,
         started_at, items_processed, items_created, items_updated, items_failed
       ) VALUES (?, ?, ?, ?, 'running', ?, 0, 0, 0, 0)
-    `).run(id, params.integrationId, params.resource, params.mode, params.startedAt);
-    return id;
+    `).run(a, e.integrationId, e.resource, e.mode, e.startedAt), a;
   }
-  finish(params) {
-    db.prepare(`
+  finish(e) {
+    o.prepare(`
       UPDATE sync_logs SET
         status          = ?,
         finished_at     = ?,
@@ -7419,178 +6377,134 @@ class SyncLogRepository {
         error_message   = ?
       WHERE id = ?
     `).run(
-      params.status,
-      params.finishedAt,
-      params.itemsProcessed,
-      params.itemsCreated,
-      params.itemsUpdated,
-      params.itemsFailed,
-      params.errorMessage ?? null,
-      params.id
+      e.status,
+      e.finishedAt,
+      e.itemsProcessed,
+      e.itemsCreated,
+      e.itemsUpdated,
+      e.itemsFailed,
+      e.errorMessage ?? null,
+      e.id
     );
   }
-  listByIntegration(integrationId, resource, limit = 20) {
-    const rows = db.prepare(`
+  listByIntegration(e, a, s = 20) {
+    return o.prepare(`
       SELECT * FROM sync_logs
       WHERE integration_id = ? AND resource = ?
       ORDER BY started_at DESC
       LIMIT ?
-    `).all(integrationId, resource, limit);
-    return rows.map((row) => ({
-      id: row.id,
-      integrationId: row.integration_id,
-      resource: row.resource,
-      mode: row.mode,
-      status: row.status,
-      startedAt: row.started_at,
-      finishedAt: row.finished_at,
-      itemsProcessed: row.items_processed,
-      itemsCreated: row.items_created,
-      itemsUpdated: row.items_updated,
-      itemsFailed: row.items_failed,
-      errorMessage: row.error_message
+    `).all(e, a, s).map((r) => ({
+      id: r.id,
+      integrationId: r.integration_id,
+      resource: r.resource,
+      mode: r.mode,
+      status: r.status,
+      startedAt: r.started_at,
+      finishedAt: r.finished_at,
+      itemsProcessed: r.items_processed,
+      itemsCreated: r.items_created,
+      itemsUpdated: r.items_updated,
+      itemsFailed: r.items_failed,
+      errorMessage: r.error_message
     }));
   }
 }
-const syncLogRepository = new SyncLogRepository();
-async function sleep(ms) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
+const W = new Tr();
+async function Vt(t) {
+  await new Promise((e) => setTimeout(e, t));
 }
-const INTEGRATION_ID$1 = "bling";
-const RESOURCE$1 = "categories";
-const PAGE_LIMIT$1 = 100;
-function getCategoryName(category) {
-  const candidates = [
-    category.nome,
-    category.descricao,
-    category.description
+const Y = "bling", pe = "categories", St = 100;
+function mr(t) {
+  const e = [
+    t.nome,
+    t.descricao,
+    t.description
   ];
-  for (const value of candidates) {
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
+  for (const a of e)
+    if (typeof a == "string" && a.trim())
+      return a.trim();
   return null;
 }
-function mapBlingCategory(category, now) {
-  if (category == null) return null;
-  if (!category.id) return null;
-  const name = getCategoryName(category);
-  if (!name) return null;
-  return {
-    externalId: String(category.id),
-    integrationSource: INTEGRATION_ID$1,
-    name,
+function _r(t, e) {
+  if (t == null || !t.id) return null;
+  const a = mr(t);
+  return a ? {
+    externalId: String(t.id),
+    integrationSource: Y,
+    name: a,
     active: 1,
-    lastSyncedAt: now,
+    lastSyncedAt: e,
     syncStatus: "synced",
-    raw: category,
-    updatedAt: now
-  };
+    raw: t,
+    updatedAt: e
+  } : null;
 }
-class SyncCategoriesFromBlingService {
+class pr {
   async execute() {
-    const state = syncStateRepository.get(INTEGRATION_ID$1, RESOURCE$1);
-    const localCount = categoryRepository.countByIntegrationSource(INTEGRATION_ID$1);
-    const isInitial = !state || !state.lastSuccessAt || localCount === 0;
-    const mode = isInitial ? "initial" : "incremental";
-    syncStateRepository.markRunning(INTEGRATION_ID$1, RESOURCE$1);
-    const startedAt = nowIso();
-    const logId = syncLogRepository.start({
-      integrationId: INTEGRATION_ID$1,
-      resource: RESOURCE$1,
-      mode,
-      startedAt
+    const e = w.get(Y, pe), a = ve.countByIntegrationSource(Y), n = !e || !e.lastSuccessAt || a === 0 ? "initial" : "incremental";
+    w.markRunning(Y, pe);
+    const r = U(), i = W.start({
+      integrationId: Y,
+      resource: pe,
+      mode: n,
+      startedAt: r
     });
-    let totalProcessed = 0;
-    let totalCreated = 0;
-    let totalUpdated = 0;
-    let totalFailed = 0;
+    let c = 0, d = 0, l = 0, E = 0;
     try {
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const response = await blingApiService.getCategories({ page, limit: PAGE_LIMIT$1 });
-        const rawItems = Array.isArray(response.data) ? response.data : [];
-        const validRaw = rawItems.filter((c) => c != null);
-        const nullsInResponse = rawItems.length - validRaw.length;
-        totalFailed += nullsInResponse;
-        if (validRaw.length === 0 && page === 1) {
-          hasMore = false;
+      let _ = 1, T = !0;
+      for (; T; ) {
+        const v = await Ae.getCategories({ page: _, limit: St }), A = Array.isArray(v.data) ? v.data : [], D = A.filter(($) => $ != null), ae = A.length - D.length;
+        if (E += ae, D.length === 0 && _ === 1) {
+          T = !1;
           break;
         }
-        const now = nowIso();
-        const allMapped = validRaw.map((c) => mapBlingCategory(c, now));
-        const mapped = allMapped.filter((c) => c != null);
-        totalFailed += allMapped.length - mapped.length;
-        totalProcessed += rawItems.length;
-        if (rawItems.length > 0 && mapped.length === 0) {
-          console.warn("[SyncCategoriesFromBlingService] Nenhuma categoria válida mapeada. Exemplo de payload:", rawItems[0]);
-        }
-        if (mapped.length > 0) {
-          const externalIds = mapped.map((c) => c.externalId);
-          const existingIds = new Set(
-            categoryRepository.getExternalIdsBySource(INTEGRATION_ID$1, externalIds)
+        const K = U(), Ee = D.map(($) => _r($, K)), x = Ee.filter(($) => $ != null);
+        if (E += Ee.length - x.length, c += A.length, A.length > 0 && x.length === 0 && console.warn("[SyncCategoriesFromBlingService] Nenhuma categoria válida mapeada. Exemplo de payload:", A[0]), x.length > 0) {
+          const $ = x.map((Te) => Te.externalId), q = new Set(
+            ve.getExternalIdsBySource(Y, $)
           );
-          for (const c of mapped) {
-            if (existingIds.has(c.externalId)) {
-              totalUpdated++;
-            } else {
-              totalCreated++;
-            }
-          }
-          categoryRepository.upsertMany(mapped);
+          for (const Te of x)
+            q.has(Te.externalId) ? l++ : d++;
+          ve.upsertMany(x);
         }
-        if (rawItems.length < PAGE_LIMIT$1) {
-          hasMore = false;
-        } else {
-          page++;
-          await sleep(350);
-        }
+        A.length < St ? T = !1 : (_++, await Vt(350));
       }
-      const finishedAt = nowIso();
-      syncStateRepository.markSuccess(INTEGRATION_ID$1, RESOURCE$1);
-      syncLogRepository.finish({
-        id: logId,
+      const N = U();
+      return w.markSuccess(Y, pe), W.finish({
+        id: i,
         status: "success",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed
-      });
-      return { mode, processed: totalProcessed, created: totalCreated, updated: totalUpdated, failed: totalFailed };
-    } catch (error) {
-      const finishedAt = nowIso();
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      syncStateRepository.markError(INTEGRATION_ID$1, RESOURCE$1, errorMessage);
-      syncLogRepository.finish({
-        id: logId,
+        finishedAt: N,
+        itemsProcessed: c,
+        itemsCreated: d,
+        itemsUpdated: l,
+        itemsFailed: E
+      }), { mode: n, processed: c, created: d, updated: l, failed: E };
+    } catch (_) {
+      const T = U(), N = _ instanceof Error ? _.message : String(_);
+      throw w.markError(Y, pe, N), W.finish({
+        id: i,
         status: "failed",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed,
-        errorMessage
-      });
-      throw error;
+        finishedAt: T,
+        itemsProcessed: c,
+        itemsCreated: d,
+        itemsUpdated: l,
+        itemsFailed: E,
+        errorMessage: N
+      }), _;
     }
   }
 }
-const syncCategoriesFromBlingService = new SyncCategoriesFromBlingService();
-class ProductRepository {
-  countByIntegrationSource(integrationSource) {
-    const row = db.prepare(`
+const zt = new pr();
+class Nr {
+  countByIntegrationSource(e) {
+    return o.prepare(`
       SELECT COUNT(*) as count FROM products
       WHERE integration_source = ? AND deleted_at IS NULL
-    `).get(integrationSource);
-    return row.count;
+    `).get(e).count;
   }
-  upsert(product) {
-    const now = nowIso();
-    const localId = product.id ?? randomId();
-    db.prepare(`
+  upsert(e) {
+    const a = U(), s = e.id ?? be();
+    o.prepare(`
       INSERT INTO products (
         id, external_id, integration_source, sku, barcode, category_id,
         name, unit, sale_price_cents, cost_price_cents, current_stock, minimum_stock, active,
@@ -7616,28 +6530,27 @@ class ProductRepository {
         raw_json          = excluded.raw_json,
         updated_at        = excluded.updated_at
     `).run(
-      localId,
-      product.externalId,
-      product.integrationSource,
-      product.sku ?? null,
-      product.barcode ?? null,
-      product.categoryId ?? null,
-      product.name,
-      product.unit ?? null,
-      product.salePriceCents,
-      product.costPriceCents,
-      product.currentStock ?? 0,
-      product.minimumStock ?? 0,
-      product.active,
-      product.remoteCreatedAt ?? null,
-      product.remoteUpdatedAt ?? null,
-      product.lastSyncedAt,
-      product.syncStatus ?? "synced",
-      product.raw ? JSON.stringify(product.raw) : null,
-      product.createdAt ?? now,
-      product.updatedAt ?? now
-    );
-    db.prepare(`
+      s,
+      e.externalId,
+      e.integrationSource,
+      e.sku ?? null,
+      e.barcode ?? null,
+      e.categoryId ?? null,
+      e.name,
+      e.unit ?? null,
+      e.salePriceCents,
+      e.costPriceCents,
+      e.currentStock ?? 0,
+      e.minimumStock ?? 0,
+      e.active,
+      e.remoteCreatedAt ?? null,
+      e.remoteUpdatedAt ?? null,
+      e.lastSyncedAt,
+      e.syncStatus ?? "synced",
+      e.raw ? JSON.stringify(e.raw) : null,
+      e.createdAt ?? a,
+      e.updatedAt ?? a
+    ), o.prepare(`
       INSERT INTO produtos (
         id, internal_code, gtin, nome, preco_custo, preco_venda,
         estoque_atual, estoque_minimo, unidade_medida, ativo, created_at, updated_at
@@ -7655,139 +6568,128 @@ class ProductRepository {
         ativo = excluded.ativo,
         updated_at = excluded.updated_at
     `).run(
-      localId,
-      product.sku ?? null,
-      product.barcode ?? null,
-      product.name,
-      product.costPriceCents / 100,
-      product.salePriceCents / 100,
-      product.currentStock ?? 0,
-      product.minimumStock ?? 0,
-      product.unit ?? null,
-      product.active,
-      product.createdAt ?? now,
-      product.updatedAt ?? now
+      s,
+      e.sku ?? null,
+      e.barcode ?? null,
+      e.name,
+      e.costPriceCents / 100,
+      e.salePriceCents / 100,
+      e.currentStock ?? 0,
+      e.minimumStock ?? 0,
+      e.unit ?? null,
+      e.active,
+      e.createdAt ?? a,
+      e.updatedAt ?? a
     );
   }
-  upsertMany(products) {
-    const run = db.transaction((items) => {
-      for (const item of items) this.upsert(item);
-    });
-    run(products);
+  upsertMany(e) {
+    o.transaction((s) => {
+      for (const n of s) this.upsert(n);
+    })(e);
   }
-  getExternalIdsBySource(integrationSource, externalIds) {
-    if (externalIds.length === 0) return [];
-    const placeholders = externalIds.map(() => "?").join(",");
-    const rows = db.prepare(`
+  getExternalIdsBySource(e, a) {
+    if (a.length === 0) return [];
+    const s = a.map(() => "?").join(",");
+    return o.prepare(`
       SELECT external_id FROM products
-      WHERE integration_source = ? AND external_id IN (${placeholders})
-    `).all(integrationSource, ...externalIds);
-    return rows.map((r) => r.external_id);
+      WHERE integration_source = ? AND external_id IN (${s})
+    `).all(e, ...a).map((r) => r.external_id);
   }
-  getByExternalId(integrationSource, externalId) {
-    const row = db.prepare(`
+  getByExternalId(e, a) {
+    const s = o.prepare(`
       SELECT * FROM products
       WHERE integration_source = ? AND external_id = ?
       LIMIT 1
-    `).get(integrationSource, externalId);
-    return row ? this.mapRow(row) : null;
+    `).get(e, a);
+    return s ? this.mapRow(s) : null;
   }
-  listByIntegrationSource(integrationSource) {
-    const rows = db.prepare(`
+  listByIntegrationSource(e) {
+    return o.prepare(`
       SELECT * FROM products
       WHERE integration_source = ? AND deleted_at IS NULL
       ORDER BY name ASC
-    `).all(integrationSource);
-    return rows.map((row) => this.mapRow(row));
+    `).all(e).map((s) => this.mapRow(s));
   }
-  mapRow(row) {
-    let raw = null;
-    if (row.raw_json) {
+  mapRow(e) {
+    let a = null;
+    if (e.raw_json)
       try {
-        raw = JSON.parse(row.raw_json);
+        a = JSON.parse(e.raw_json);
       } catch {
-        raw = row.raw_json;
+        a = e.raw_json;
       }
-    }
     return {
-      id: row.id,
-      externalId: row.external_id,
-      integrationSource: row.integration_source,
-      sku: row.sku,
-      barcode: row.barcode,
-      categoryId: row.category_id,
-      name: row.name,
-      unit: row.unit,
-      salePriceCents: row.sale_price_cents,
-      costPriceCents: row.cost_price_cents,
-      currentStock: row.current_stock,
-      minimumStock: row.minimum_stock,
-      active: row.active,
-      remoteCreatedAt: row.remote_created_at,
-      remoteUpdatedAt: row.remote_updated_at,
-      lastSyncedAt: row.last_synced_at ?? "",
-      syncStatus: row.sync_status,
-      raw,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      id: e.id,
+      externalId: e.external_id,
+      integrationSource: e.integration_source,
+      sku: e.sku,
+      barcode: e.barcode,
+      categoryId: e.category_id,
+      name: e.name,
+      unit: e.unit,
+      salePriceCents: e.sale_price_cents,
+      costPriceCents: e.cost_price_cents,
+      currentStock: e.current_stock,
+      minimumStock: e.minimum_stock,
+      active: e.active,
+      remoteCreatedAt: e.remote_created_at,
+      remoteUpdatedAt: e.remote_updated_at,
+      lastSyncedAt: e.last_synced_at ?? "",
+      syncStatus: e.sync_status,
+      raw: a,
+      createdAt: e.created_at,
+      updatedAt: e.updated_at
     };
   }
 }
-const productRepository = new ProductRepository();
-const INTEGRATION_ID = "bling";
-const RESOURCE = "products";
-const PAGE_LIMIT = 100;
-const PRODUCT_LIST_CRITERION = "5";
-function toBlingDateTime(value) {
-  return value.replace("T", " ").slice(0, 19);
+const We = new Nr(), j = "bling", Ne = "products", Ct = 100, fr = "5";
+function Yt(t) {
+  return t.replace("T", " ").slice(0, 19);
 }
-function getIncrementalCursor(state) {
-  const baseCursor = (state == null ? void 0 : state.checkpointCursor) ?? (state == null ? void 0 : state.lastSuccessAt);
-  if (!baseCursor) return void 0;
-  const cursorDate = baseCursor.includes("T") ? subtractMinutes(baseCursor, 2) : subtractMinutes(baseCursor.replace(" ", "T") + "Z", 2);
-  return toBlingDateTime(cursorDate);
+function gr(t) {
+  const e = (t == null ? void 0 : t.checkpointCursor) ?? (t == null ? void 0 : t.lastSuccessAt);
+  if (!e) return;
+  const a = e.includes("T") ? ht(e, 2) : ht(e.replace(" ", "T") + "Z", 2);
+  return Yt(a);
 }
-function mapBlingProduct(product, now, categoryIdMap) {
-  var _a, _b;
-  const categoryExternalId = ((_a = product.categoria) == null ? void 0 : _a.id) ? String(product.categoria.id) : null;
+function Ir(t, e, a) {
+  var n, r;
+  const s = (n = t.categoria) != null && n.id ? String(t.categoria.id) : null;
   return {
     // Identificação do produto no Bling e origem da integração.
-    externalId: String(product.id),
-    integrationSource: INTEGRATION_ID,
+    externalId: String(t.id),
+    integrationSource: j,
     // Dados comerciais e de identificação. Campos ausentes viram null para manter padrão local.
-    sku: product.codigo || null,
-    barcode: product.codigo || null,
-    categoryId: categoryExternalId ? categoryIdMap.get(categoryExternalId) ?? null : null,
-    name: product.nome,
+    sku: t.codigo || null,
+    barcode: t.codigo || null,
+    categoryId: s ? a.get(s) ?? null : null,
+    name: t.nome,
     unit: null,
     // Valores monetários são armazenados em centavos para evitar problemas com ponto flutuante.
-    salePriceCents: Math.round((product.preco ?? 0) * 100),
-    costPriceCents: Math.round((product.precoCusto ?? 0) * 100),
+    salePriceCents: Math.round((t.preco ?? 0) * 100),
+    costPriceCents: Math.round((t.precoCusto ?? 0) * 100),
     // Estoque e limites locais.
-    currentStock: Number(((_b = product.estoque) == null ? void 0 : _b.saldoVirtualTotal) ?? 0),
+    currentStock: Number(((r = t.estoque) == null ? void 0 : r.saldoVirtualTotal) ?? 0),
     minimumStock: 0,
     // No Bling, "A" representa produto ativo.
-    active: product.situacao === "A" ? 1 : 0,
+    active: t.situacao === "A" ? 1 : 0,
     // Datas e metadados de sincronização.
-    remoteUpdatedAt: product.dataAlteracao ?? null,
-    lastSyncedAt: now,
+    remoteUpdatedAt: t.dataAlteracao ?? null,
+    lastSyncedAt: e,
     syncStatus: "synced",
     // Guarda o payload original para auditoria/debug e futuras evoluções do mapeamento.
-    raw: product,
-    updatedAt: now
+    raw: t,
+    updatedAt: e
   };
 }
-function normalizeBlingProduct(item) {
-  if (!item || typeof item !== "object") return null;
-  const candidate = "produto" in item && item.produto && typeof item.produto === "object" ? item.produto : item;
-  if (!candidate || typeof candidate !== "object") return null;
-  const product = candidate;
-  if (!product.id || typeof product.nome !== "string" || !product.nome.trim()) {
-    return null;
-  }
-  return product;
+function Ar(t) {
+  if (!t || typeof t != "object") return null;
+  const e = "produto" in t && t.produto && typeof t.produto == "object" ? t.produto : t;
+  if (!e || typeof e != "object") return null;
+  const a = e;
+  return !a.id || typeof a.nome != "string" || !a.nome.trim() ? null : a;
 }
-class SyncProductsFromBlingService {
+class Lr {
   /**
    * Executa a sincronização de produtos do Bling para o banco local.
    *
@@ -7799,310 +6701,180 @@ class SyncProductsFromBlingService {
    * 5. Atualiza estado e log de sincronização.
    */
   async execute() {
-    const state = syncStateRepository.get(INTEGRATION_ID, RESOURCE);
-    const localCount = productRepository.countByIntegrationSource(INTEGRATION_ID);
-    const isInitial = !state || !state.lastSuccessAt || localCount === 0;
-    const mode = isInitial ? "initial" : "incremental";
-    const dataAlteracaoInicial = isInitial ? void 0 : getIncrementalCursor(state);
-    syncStateRepository.markRunning(INTEGRATION_ID, RESOURCE);
-    const startedAt = nowIso();
-    const logId = syncLogRepository.start({
-      integrationId: INTEGRATION_ID,
-      resource: RESOURCE,
-      mode,
-      startedAt
+    const e = w.get(j, Ne), a = We.countByIntegrationSource(j), s = !e || !e.lastSuccessAt || a === 0, n = s ? "initial" : "incremental", r = s ? void 0 : gr(e);
+    w.markRunning(j, Ne);
+    const i = U(), c = W.start({
+      integrationId: j,
+      resource: Ne,
+      mode: n,
+      startedAt: i
     });
-    let totalProcessed = 0;
-    let totalCreated = 0;
-    let totalUpdated = 0;
-    let totalFailed = 0;
-    let checkpointCursor = (state == null ? void 0 : state.checkpointCursor) ?? null;
+    let d = 0, l = 0, E = 0, _ = 0, T = (e == null ? void 0 : e.checkpointCursor) ?? null;
     try {
-      const categoryIdMap = categoryRepository.getAllExternalIdMap(INTEGRATION_ID);
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const response = await blingApiService.getProducts({
-          page,
-          limit: PAGE_LIMIT,
-          criterio: PRODUCT_LIST_CRITERION,
-          dataAlteracaoInicial
-        });
-        const rawItems = Array.isArray(response.data) ? response.data : [];
-        const normalizedProducts = rawItems.map(normalizeBlingProduct);
-        const validRaw = normalizedProducts.filter((item) => item != null);
-        totalFailed += normalizedProducts.length - validRaw.length;
-        if (validRaw.length === 0) {
-          if (rawItems.length > 0) {
-            console.warn("[SyncProductsFromBlingService] Nenhum produto válido encontrado na página. Exemplo de payload:", rawItems[0]);
-          }
-          hasMore = false;
+      const N = ve.getAllExternalIdMap(j);
+      let v = 1, A = !0;
+      for (; A; ) {
+        const ae = await Ae.getProducts({
+          page: v,
+          limit: Ct,
+          criterio: fr,
+          dataAlteracaoInicial: r
+        }), K = Array.isArray(ae.data) ? ae.data : [], Ee = K.map(Ar), x = Ee.filter((F) => F != null);
+        if (_ += Ee.length - x.length, x.length === 0) {
+          K.length > 0 && console.warn("[SyncProductsFromBlingService] Nenhum produto válido encontrado na página. Exemplo de payload:", K[0]), A = !1;
           break;
         }
-        const now = nowIso();
-        const mapped = validRaw.map((product) => mapBlingProduct(product, now, categoryIdMap));
-        for (const product of mapped) {
-          if (product.remoteUpdatedAt && (!checkpointCursor || product.remoteUpdatedAt > checkpointCursor)) {
-            checkpointCursor = product.remoteUpdatedAt;
-          }
-        }
-        const externalIds = mapped.map((p) => p.externalId);
-        const existingIds = new Set(
-          productRepository.getExternalIdsBySource(INTEGRATION_ID, externalIds)
+        const $ = U(), q = x.map((F) => Ir(F, $, N));
+        for (const F of q)
+          F.remoteUpdatedAt && (!T || F.remoteUpdatedAt > T) && (T = F.remoteUpdatedAt);
+        const Te = q.map((F) => F.externalId), Jt = new Set(
+          We.getExternalIdsBySource(j, Te)
         );
-        for (const p of mapped) {
-          if (existingIds.has(p.externalId)) {
-            totalUpdated++;
-          } else {
-            totalCreated++;
-          }
-        }
-        if (mapped.length > 0) {
-          productRepository.upsertMany(mapped);
-        }
-        totalProcessed += rawItems.length;
-        if (rawItems.length < PAGE_LIMIT) {
-          hasMore = false;
-        } else {
-          page++;
-          await sleep(350);
-        }
+        for (const F of q)
+          Jt.has(F.externalId) ? E++ : l++;
+        q.length > 0 && We.upsertMany(q), d += K.length, K.length < Ct ? A = !1 : (v++, await Vt(350));
       }
-      const finishedAt = nowIso();
-      syncStateRepository.markSuccess(
-        INTEGRATION_ID,
-        RESOURCE,
-        checkpointCursor ?? toBlingDateTime(finishedAt)
-      );
-      syncLogRepository.finish({
-        id: logId,
+      const D = U();
+      return w.markSuccess(
+        j,
+        Ne,
+        T ?? Yt(D)
+      ), W.finish({
+        id: c,
         status: "success",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed
-      });
-      return { mode, processed: totalProcessed, created: totalCreated, updated: totalUpdated, failed: totalFailed };
-    } catch (error) {
-      const finishedAt = nowIso();
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      syncStateRepository.markError(INTEGRATION_ID, RESOURCE, errorMessage);
-      syncLogRepository.finish({
-        id: logId,
+        finishedAt: D,
+        itemsProcessed: d,
+        itemsCreated: l,
+        itemsUpdated: E,
+        itemsFailed: _
+      }), { mode: n, processed: d, created: l, updated: E, failed: _ };
+    } catch (N) {
+      const v = U(), A = N instanceof Error ? N.message : String(N);
+      throw w.markError(j, Ne, A), W.finish({
+        id: c,
         status: "failed",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed,
-        errorMessage
-      });
-      throw error;
+        finishedAt: v,
+        itemsProcessed: d,
+        itemsCreated: l,
+        itemsUpdated: E,
+        itemsFailed: _,
+        errorMessage: A
+      }), N;
     }
   }
 }
-const syncProductsFromBlingService = new SyncProductsFromBlingService();
-class SyncAllFromBlingService {
+const Wt = new Lr();
+class Rr {
   async execute() {
-    const categories = await syncCategoriesFromBlingService.execute();
-    const products = await syncProductsFromBlingService.execute();
-    return { categories, products };
+    const e = await zt.execute(), a = await Wt.execute();
+    return { categories: e, products: a };
   }
 }
-const syncAllFromBlingService = new SyncAllFromBlingService();
-function registerIntegrationHandlers() {
-  ipcMain.handle("integrations:status", async (_event, integrationId) => {
-    assertCurrentUserPermission("integrations:manage");
-    if (integrationId !== "bling") {
-      return { connected: false };
-    }
-    return await blingOAuthService.getStatus();
-  });
-  ipcMain.handle("integrations:connect", async (_event, integrationId) => {
-    assertCurrentUserPermission("integrations:manage");
-    if (integrationId !== "bling") {
-      return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
-    }
+const hr = new Rr();
+function Sr() {
+  u.handle("integrations:status", async (t, e) => (m("integrations:manage"), e !== "bling" ? { connected: !1 } : await Ce.getStatus())), u.handle("integrations:connect", async (t, e) => {
+    if (m("integrations:manage"), e !== "bling")
+      return { success: !1, message: `Integração ${e} ainda não implementada.` };
     try {
-      return await blingOAuthService.connect();
-    } catch (error) {
-      console.error("[integrations:connect]", error);
-      return { success: false, message: error instanceof Error ? error.message : "Erro ao conectar com o Bling." };
+      return await Ce.connect();
+    } catch (a) {
+      return console.error("[integrations:connect]", a), { success: !1, message: a instanceof Error ? a.message : "Erro ao conectar com o Bling." };
     }
-  });
-  ipcMain.handle("integrations:disconnect", async (_event, integrationId) => {
-    assertCurrentUserPermission("integrations:manage");
-    if (integrationId !== "bling") {
-      return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
-    }
+  }), u.handle("integrations:disconnect", async (t, e) => {
+    if (m("integrations:manage"), e !== "bling")
+      return { success: !1, message: `Integração ${e} ainda não implementada.` };
     try {
-      return await blingOAuthService.disconnect();
-    } catch (error) {
-      console.error("[integrations:disconnect]", error);
-      return { success: false, message: error instanceof Error ? error.message : "Erro ao desconectar Bling." };
+      return await Ce.disconnect();
+    } catch (a) {
+      return console.error("[integrations:disconnect]", a), { success: !1, message: a instanceof Error ? a.message : "Erro ao desconectar Bling." };
     }
-  });
-  ipcMain.handle("integrations:bling:sync-all", async () => {
-    assertCurrentUserPermission("integrations:manage");
+  }), u.handle("integrations:bling:sync-all", async () => {
+    m("integrations:manage");
     try {
-      const result = await syncAllFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error("[integrations:bling:sync-all]", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Erro ao sincronizar."
+      return { success: !0, ...await hr.execute() };
+    } catch (t) {
+      return console.error("[integrations:bling:sync-all]", t), {
+        success: !1,
+        message: t instanceof Error ? t.message : "Erro ao sincronizar."
       };
     }
-  });
-  ipcMain.handle("integrations:bling:sync", async () => {
-    assertCurrentUserPermission("integrations:manage");
+  }), u.handle("integrations:bling:sync", async () => {
+    m("integrations:manage");
     try {
-      const result = await syncProductsFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error("[integrations:bling:sync]", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Erro ao sincronizar produtos."
+      return { success: !0, ...await Wt.execute() };
+    } catch (t) {
+      return console.error("[integrations:bling:sync]", t), {
+        success: !1,
+        message: t instanceof Error ? t.message : "Erro ao sincronizar produtos."
       };
     }
-  });
-  ipcMain.handle("integrations:bling:sync-categories", async () => {
-    assertCurrentUserPermission("integrations:manage");
+  }), u.handle("integrations:bling:sync-categories", async () => {
+    m("integrations:manage");
     try {
-      const result = await syncCategoriesFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error("[integrations:bling:sync-categories]", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Erro ao sincronizar categorias."
+      return { success: !0, ...await zt.execute() };
+    } catch (t) {
+      return console.error("[integrations:bling:sync-categories]", t), {
+        success: !1,
+        message: t instanceof Error ? t.message : "Erro ao sincronizar categorias."
       };
     }
-  });
-  ipcMain.handle("integrations:bling:sync-status", () => {
-    assertCurrentUserPermission("integrations:manage");
-    return syncStateRepository.get("bling", "products");
-  });
-  ipcMain.handle("integrations:bling:sync-status-categories", () => {
-    assertCurrentUserPermission("integrations:manage");
-    return syncStateRepository.get("bling", "categories");
-  });
-  ipcMain.handle("integrations:bling:sync-logs", () => {
-    assertCurrentUserPermission("integrations:manage");
-    return syncLogRepository.listByIntegration("bling", "products", 10);
-  });
-  ipcMain.handle("integrations:bling:sync-logs-categories", () => {
-    assertCurrentUserPermission("integrations:manage");
-    return syncLogRepository.listByIntegration("bling", "categories", 10);
-  });
-  ipcMain.handle("integrations:bling:test", async () => {
-    assertCurrentUserPermission("integrations:manage");
-    return await blingApiService.getProducts({ page: 1, limit: 5 });
-  });
-  ipcMain.handle("integrations:bling:test-categories", async () => {
-    assertCurrentUserPermission("integrations:manage");
-    return await blingApiService.getCategories({ page: 1, limit: 5 });
-  });
-  ipcMain.handle("integrations:bling:test-icmp", async () => {
-    assertCurrentUserPermission("integrations:manage");
-    return await blingApiService.ping();
-  });
+  }), u.handle("integrations:bling:sync-status", () => (m("integrations:manage"), w.get("bling", "products"))), u.handle("integrations:bling:sync-status-categories", () => (m("integrations:manage"), w.get("bling", "categories"))), u.handle("integrations:bling:sync-logs", () => (m("integrations:manage"), W.listByIntegration("bling", "products", 10))), u.handle("integrations:bling:sync-logs-categories", () => (m("integrations:manage"), W.listByIntegration("bling", "categories", 10))), u.handle("integrations:bling:test", async () => (m("integrations:manage"), await Ae.getProducts({ page: 1, limit: 5 }))), u.handle("integrations:bling:test-categories", async () => (m("integrations:manage"), await Ae.getCategories({ page: 1, limit: 5 }))), u.handle("integrations:bling:test-icmp", async () => (m("integrations:manage"), await Ae.ping()));
 }
-const __dirname$1 = import.meta.dirname;
-process.env.APP_ROOT = path__default.join(__dirname$1, "..");
-const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path__default.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path__default.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path__default.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-let win = null;
-function createWindow() {
-  win = new BrowserWindow({
-    icon: path__default.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+const Kt = import.meta.dirname;
+process.env.APP_ROOT = g.join(Kt, "..");
+const h = process.env.VITE_DEV_SERVER_URL, $r = g.join(process.env.APP_ROOT, "dist-electron"), qt = g.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = h ? g.join(process.env.APP_ROOT, "public") : qt;
+let b = null;
+function Qt() {
+  b = new O({
+    icon: g.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: path__default.join(__dirname$1, "preload.mjs"),
-      contextIsolation: true,
-      nodeIntegration: false
+      preload: g.join(Kt, "preload.mjs"),
+      contextIsolation: !0,
+      nodeIntegration: !1
     }
-  });
-  win.webContents.on("did-finish-load", () => {
-    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  });
-  win.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
-    logger.error(`Renderer falhou ao carregar: [${errorCode}] ${errorDescription}`);
-  });
-  win.webContents.on("render-process-gone", (_event, details) => {
-    logger.error(`Renderer process encerrado: ${details.reason}`);
-  });
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
-    win.loadFile(path__default.join(RENDERER_DIST, "index.html"));
-  }
-  win.maximize();
-  win.on(
+  }), b.webContents.on("did-finish-load", () => {
+    b == null || b.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  }), b.webContents.on("did-fail-load", (t, e, a) => {
+    f.error(`Renderer falhou ao carregar: [${e}] ${a}`);
+  }), b.webContents.on("render-process-gone", (t, e) => {
+    f.error(`Renderer process encerrado: ${e.reason}`);
+  }), h ? b.loadURL(h) : b.loadFile(g.join(qt, "index.html")), b.maximize(), b.on(
     "close",
     () => {
     }
   );
 }
-app.on("before-quit", () => {
-  const sessionId = getCurrentSession();
-  if (sessionId) {
-    encerrarSessao(sessionId);
-  }
+X.on("before-quit", () => {
+  const t = nt();
+  t && jt(t);
 });
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-    win = null;
-  }
+X.on("window-all-closed", () => {
+  process.platform !== "darwin" && (X.quit(), b = null);
 });
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+X.on("activate", () => {
+  O.getAllWindows().length === 0 && Qt();
 });
-ipcMain.on("app:fechar-janela", () => {
-  const win2 = BrowserWindow.getFocusedWindow();
-  if (win2) {
-    win2.close();
-  }
+u.on("app:fechar-janela", () => {
+  const t = O.getFocusedWindow();
+  t && t.close();
 });
-ipcMain.handle("app:quit-with-confirm", async () => {
-  logger.info("Encerramento solicitado pelo usuário");
-  const { response } = await dialog.showMessageBox({
+u.handle("app:quit-with-confirm", async () => {
+  f.info("Encerramento solicitado pelo usuário");
+  const { response: t } = await Ot.showMessageBox({
     type: "question",
     buttons: ["Cancelar", "Sair"],
     defaultId: 1,
     cancelId: 0,
     message: "Tem certeza que deseja sair do sistema?"
   });
-  if (response === 1) {
-    app.quit();
-    return true;
-  }
-  return false;
+  return t === 1 ? (X.quit(), !0) : !1;
 });
-app.whenReady().then(() => {
-  enableForeignKeys();
-  startFiscalQueueWorker();
-  registerWindowHandlers();
-  registerFiscalHandlers();
-  registerSalesHandlers();
-  registerProductHandlers();
-  registerPrinterhandlers();
-  registerAuthHandlers();
-  registerUserHandlers();
-  registerPosHandlers();
-  registerIntegrationHandlers();
-  createWindow();
-  logger.info("Criado janela principal do App");
+X.whenReady().then(() => {
+  xa(), hn(), Qn(), Un(), qn(), Jn(), Zn(), er(), tr(), ar(), Sr(), Qt(), f.info("Criado janela principal do App");
 });
 export {
-  MAIN_DIST,
-  RENDERER_DIST,
-  VITE_DEV_SERVER_URL
+  $r as MAIN_DIST,
+  qt as RENDERER_DIST,
+  h as VITE_DEV_SERVER_URL
 };

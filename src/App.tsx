@@ -33,6 +33,10 @@ export default function App() {
           <Route path="/vendas" element={<RequirePermission anyOf={["sales:view"]}><Vendas /></RequirePermission>} />
         </Route>
 
+        {/* ROTAS STANDALONE USADAS PELO PDV RAPIDO */}
+        <Route path="/pdv/config/app" element={<RequirePermission anyOf={["config:access"]}><Config /></RequirePermission>} />
+        <Route path="/pdv/products/search" element={<RequirePermission anyOf={["products:view"]}><SearchProduct /></RequirePermission>} />
+
         {/* ROTAS DA PAGINA PRODUTOS */}
         <Route path="/products/search" element={<RequirePermission anyOf={["products:view"]}><SearchProduct /></RequirePermission>} />
 

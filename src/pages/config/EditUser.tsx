@@ -64,7 +64,7 @@ export default function EditUser() {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center h-full min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-500 animate-pulse">
+            <div className="flex flex-col items-center justify-center h-full min-h-screen bg-blue-50 text-blue-600 animate-pulse">
                 <User size={48} className="mb-2 opacity-20" />
                 <p className="font-medium">Carregando dados para edição...</p>
             </div>
@@ -111,7 +111,7 @@ export default function EditUser() {
     }
 
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 md:p-8">
+        <div className="min-h-screen bg-blue-50 p-6 md:p-8">
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto">
 
 
@@ -119,16 +119,16 @@ export default function EditUser() {
                 <div className="flex items-center justify-between mb-8">
                     <button
                         onClick={() => window.close()}
-                        className="group flex items-center gap-2 text-zinc-500 hover:text-red-500 transition-colors font-semibold"
+                        className="group flex items-center gap-2 text-blue-700 hover:text-rose-600 transition-colors font-semibold"
                     >
-                        <div className="p-2 rounded-xl group-hover:bg-red-50 dark:group-hover:bg-red-900/20 transition-all">
+                        <div className="p-2 rounded-xl group-hover:bg-rose-50 transition-all">
                             <XCircle size={20} />
                         </div>
-                        <span className="dark:text-zinc-300 group-hover:text-red-500">Cancelar Edição</span>
+                        <span className="group-hover:text-rose-600">Cancelar Edição</span>
                     </button>
                     <button
                         onClick={handleSave}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
                     >
                         <Save size={18} />
                         Salvar Alterações
@@ -139,7 +139,7 @@ export default function EditUser() {
 
                     <DetailCard title="Acesso ao App" icon={FileText}>
                         {/* INDICADOR DE STATUS (SOMENTE LEITURA) */}
-                        <div className="mb-6 p-5 bg-zinc-950/40 rounded-2xl border border-zinc-800/60 flex items-center justify-between group overflow-hidden relative">
+                        <div className="mb-6 p-5 bg-blue-50 rounded-2xl border border-blue-200 flex items-center justify-between group overflow-hidden relative">
                             {/* Efeito de luz de fundo sutil */}
                             <div className={`absolute -right-4 -top-4 w-24 h-24 blur-3xl opacity-10 rounded-full ${user.ativo ? 'bg-emerald-500' : 'bg-rose-500'}`} />
 
@@ -148,14 +148,14 @@ export default function EditUser() {
                                 <div className={`p-3 rounded-xl border transition-all duration-500
                                     ${user.ativo
                                         ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
-                                        : 'bg-zinc-800/50 border-zinc-700 text-zinc-500'}
+                                        : 'bg-rose-50 border-rose-200 text-rose-600'}
             `}>
                                     {user.ativo ? <CheckCircle2 size={22} /> : <XCircle size={22} />}
                                 </div>
 
                                 <div>
-                                    <p className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] leading-none mb-1.5">Estado da Conta</p>
-                                    <h4 className={`text-base font-black uppercase tracking-tight ${user.ativo ? 'text-zinc-100' : 'text-zinc-400'}`}>
+                                    <p className="text-[10px] font-black uppercase text-blue-500 tracking-[0.2em] leading-none mb-1.5">Estado da Conta</p>
+                                    <h4 className={`text-base font-black uppercase tracking-tight ${user.ativo ? 'text-blue-950' : 'text-rose-700'}`}>
                                         {user.ativo ? 'Acesso Autorizado' : 'Acesso Revogado'}
                                     </h4>
                                 </div>
@@ -163,10 +163,10 @@ export default function EditUser() {
 
                             {/* Badge Lateral de Confirmação */}
                             <div className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all 
-                            ${user.ativo ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
-                                    : 'bg-zinc-900 border-zinc-800 text-zinc-600'}
+                            ${user.ativo ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                    : 'bg-rose-50 border-rose-200 text-rose-700'}
         `}>
-                                <div className={`w-2 h-2 rounded-full ${user.ativo ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse' : 'bg-zinc-700'}`} />
+                                <div className={`w-2 h-2 rounded-full ${user.ativo ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse' : 'bg-rose-500'}`} />
                                 {user.ativo ? 'User Ativo' : 'User Bloqueado'}
                             </div>
 
@@ -194,36 +194,36 @@ export default function EditUser() {
 
                             {/* EXIBIÇÃO DE ID (IMUTÁVEL) */}
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-2">
+                                <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-2">
                                     Identificador Único
                                 </label>
-                                <div className="bg-zinc-950 border border-zinc-800/50 rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-inner group h-[52px]">
+                                <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-inner group h-[52px]">
                                     <div className="flex items-center gap-3">
-                                        <Hash size={16} className="text-zinc-600 group-hover:text-emerald-500 transition-colors" />
-                                        <span className="text-sm font-black text-zinc-400 font-mono tracking-wider">
+                                        <Hash size={16} className="text-blue-400 group-hover:text-blue-600 transition-colors" />
+                                        <span className="text-sm font-black text-blue-700 font-mono tracking-wider">
                                             {String(user.id).padStart(6, '0')}
                                         </span>
                                     </div>
-                                    <div className="p-1 bg-zinc-900 rounded-md border border-zinc-800">
-                                        <Lock size={10} className="text-zinc-700" />
+                                    <div className="p-1 bg-white rounded-md border border-blue-100">
+                                        <Lock size={10} className="text-blue-400" />
                                     </div>
                                 </div>
                             </div>
 
                             {/* FUNÇÃO (SELETOR OBSIDIAN) */}
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-2">
+                                <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-2">
                                     Nível de Acesso / Função
                                 </label>
                                 <div className="relative group">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-emerald-500 pointer-events-none transition-colors">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-400 group-focus-within:text-blue-600 pointer-events-none transition-colors">
                                         <Building2 size={16} />
                                     </div>
 
                                     <select
                                         value={user.funcao}
                                         onChange={(e) => setUser({ ...user, funcao: e.target.value })}
-                                        className="w-full bg-zinc-950 border-2 border-zinc-800 rounded-2xl pl-12 pr-10 py-3.5 text-sm font-bold text-zinc-200 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all appearance-none cursor-pointer"
+                                        className="w-full bg-blue-50 border-2 border-blue-200 rounded-2xl pl-12 pr-10 py-3.5 text-sm font-bold text-blue-950 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer"
                                     >
                                         {ROLE_OPTIONS.map((role) => (
                                             <option key={role.value} value={role.value}>
@@ -233,7 +233,7 @@ export default function EditUser() {
                                     </select>
 
                                     {/* Ícone customizado de seta para matar o visual padrão do navegador */}
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none">
                                         <ChevronDown size={16} />
                                     </div>
                                 </div>
@@ -248,7 +248,7 @@ export default function EditUser() {
                             rows={5}
                             value={user.observacao}
                             onChange={(e) => setUser({ ...user, observacao: e.target.value })}
-                            className="w-full p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl text-sm text-zinc-600 dark:text-zinc-300 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"
+                            className="w-full p-4 bg-blue-50/60 border border-blue-200 rounded-2xl text-sm text-blue-950 placeholder:text-blue-300 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white transition-all resize-none"
                             placeholder="Adicione informaçoes complementares desse usuario..."
                         />
                     </DetailCard>
@@ -268,7 +268,7 @@ export default function EditUser() {
 
                                     <button
                                         onClick={() => isAtivo ? handleDisable(user.id) : handleEnable(user.id)}
-                                        className="flex items-center gap-2 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold rounded-xl transition-all active:scale-95"
+                                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold rounded-xl transition-all active:scale-95"
                                     >
                                         {isAtivo ? "Desabilitar" : "Habilitar"}
                                     </button>
@@ -284,7 +284,7 @@ export default function EditUser() {
                             </div>
                         ) : (
                             /* PAINEL DE RESET DE SENHA EXPANDIDO */
-                            <div className="animate-in zoom-in-95 fade-in duration-300 p-6 bg-zinc-950 border border-amber-500/30 rounded-3xl shadow-2xl shadow-amber-900/10 relative overflow-hidden">
+                            <div className="animate-in zoom-in-95 fade-in duration-300 p-6 bg-white border border-amber-200 rounded-3xl shadow-xl shadow-amber-900/10 relative overflow-hidden">
                                 {/* Linha decorativa lateral */}
                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />
 
@@ -296,7 +296,7 @@ export default function EditUser() {
                                         </div>
 
                                         <div className="relative group">
-                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-500 transition-colors">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500 transition-colors">
                                                 <Lock size={16} />
                                             </div>
 
@@ -305,14 +305,14 @@ export default function EditUser() {
                                                 value={newPassword}
                                                 onChange={(e) => setNewPassword(e.target.value)}
                                                 placeholder="Digite a nova senha"
-                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl pl-12 pr-12 py-4 text-sm font-bold text-zinc-100 outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                                                className="w-full bg-amber-50 border border-amber-200 rounded-2xl pl-12 pr-12 py-4 text-sm font-bold text-blue-950 placeholder:text-amber-300 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all"
                                             />
 
                                             {/* Botão de Ver Senha */}
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors"
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-600 hover:text-amber-800 transition-colors"
                                             >
                                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                             </button>
@@ -325,7 +325,7 @@ export default function EditUser() {
                                                 setIsResetting(false);
                                                 setNewPassword('');
                                             }}
-                                            className="flex items-center gap-2 px-6 py-3.5 text-zinc-500 hover:text-zinc-300 font-bold text-xs uppercase tracking-widest transition-all"
+                                            className="flex items-center gap-2 px-6 py-3.5 text-blue-600 hover:text-blue-900 font-bold text-xs uppercase tracking-widest transition-all"
                                         >
                                             Cancelar
                                         </button>
@@ -344,7 +344,7 @@ export default function EditUser() {
                                     </div>
                                 </div>
 
-                                <p className="mt-4 text-[10px] text-zinc-500 italic">
+                                <p className="mt-4 text-[10px] text-blue-600 italic">
                                     Atenção: Esta ação alterará imediatamente o acesso do usuário. Certifique-se de comunicar a nova senha.
                                 </p>
                             </div>
@@ -360,12 +360,12 @@ export default function EditUser() {
 
 function DetailCard({ title, icon: Icon, children }: any) {
     return (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-6 border-b border-zinc-50 dark:border-zinc-800 pb-4">
-                <div className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-emerald-500">
+        <div className="bg-white border border-blue-200 rounded-3xl p-6 shadow-md shadow-blue-900/5">
+            <div className="flex items-center gap-2 mb-6 border-b border-blue-100 pb-4">
+                <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
                     <Icon size={18} />
                 </div>
-                <h3 className="font-bold text-zinc-800 dark:text-zinc-200">{title}</h3>
+                <h3 className="font-black text-blue-950">{title}</h3>
             </div>
             <div className="space-y-4">
                 {children}
@@ -377,10 +377,10 @@ function DetailCard({ title, icon: Icon, children }: any) {
 function InputGroup({ label, value, onChange, icon: Icon }: any) {
     return (
         <div className="space-y-1 group">
-            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">{label}</label>
+            <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-1">{label}</label>
             <div className="relative">
                 {Icon && (
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-emerald-500 transition-colors">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 group-focus-within:text-blue-600 transition-colors">
                         <Icon size={14} />
                     </div>
                 )}
@@ -388,7 +388,7 @@ function InputGroup({ label, value, onChange, icon: Icon }: any) {
                     type="text"
                     value={value || ''}
                     onChange={(e) => onChange(e.target.value)}
-                    className={`w-full ${Icon ? 'pl-10' : 'px-4'} py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl text-sm dark:text-zinc-100 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all`}
+                    className={`w-full ${Icon ? 'pl-10' : 'px-4'} py-2.5 bg-blue-50/60 border border-blue-200 rounded-xl text-sm text-blue-950 outline-none focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all`}
                 />
             </div>
         </div>
