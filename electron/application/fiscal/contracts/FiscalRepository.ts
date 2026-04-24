@@ -35,14 +35,16 @@ export interface FiscalRepository {
   findQueueItemByIdempotencyKey(idempotencyKey: string): FiscalQueueItem | null;
   findQueueItemById(queueId: string): FiscalQueueItem | null;
   claimNextQueueItem(nowIso: string, workerId: string): FiscalQueueItem | null;
+  claimQueueItemById(queueId: string, nowIso: string, workerId: string): FiscalQueueItem | null;
   markQueueItemProcessing(queueId: string, workerId: string, nowIso: string): void;
-  markQueueItemDone(queueId: string, processedAtIso: string): void;
+  markQueueItemDone(queueId: string, processedAtIso: string, result?: unknown): void;
   markQueueItemFailed(
     queueId: string,
     errorCode: string,
     errorMessage: string,
     nextRetryAtIso: string | null,
-    failedAtIso: string
+    failedAtIso: string,
+    result?: unknown
   ): void;
   listQueueItems(limit?: number): FiscalQueueItem[];
   summarizeQueue(): FiscalQueueSummary;

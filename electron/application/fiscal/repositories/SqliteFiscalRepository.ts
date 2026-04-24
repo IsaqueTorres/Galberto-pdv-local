@@ -51,6 +51,10 @@ type SyncQueueRow = {
   attempts: number;
   next_attempt_at: string | null;
   last_error: string | null;
+  result_json: string | null;
+  locked_at: string | null;
+  locked_by: string | null;
+  processed_at: string | null;
   idempotency_key: string;
   created_at: string;
   updated_at: string;
@@ -121,6 +125,7 @@ function toSyncStatus(status: FiscalQueueItem['status']): SyncQueueRow['status']
 
 function toQueueItem(row: SyncQueueRow): FiscalQueueItem {
   const payload = JSON.parse(row.payload_json);
+  const result = row.result_json ? JSON.parse(row.result_json) : null;
   const parsedEntityId = Number(row.entity_id);
 
   return {
@@ -129,6 +134,7 @@ function toQueueItem(row: SyncQueueRow): FiscalQueueItem {
     documentId: Number.isNaN(parsedEntityId) ? null : parsedEntityId,
     operation: row.operation as FiscalQueueItem['operation'],
     payload,
+    result,
     status: toQueueStatus(row.status),
     idempotencyKey: row.idempotency_key,
     attempts: row.attempts,
@@ -136,9 +142,9 @@ function toQueueItem(row: SyncQueueRow): FiscalQueueItem {
     nextRetryAt: row.next_attempt_at,
     lastErrorCode: row.last_error ?? null,
     lastErrorMessage: row.last_error ?? null,
-    lockedAt: null,
-    lockedBy: null,
-    processedAt: row.status === 'DONE' ? row.updated_at : null,
+    lockedAt: row.locked_at,
+    lockedBy: row.locked_by,
+    processedAt: row.processed_at ?? (row.status === 'DONE' ? row.updated_at : null),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -389,26 +395,48 @@ export class SqliteFiscalRepository implements FiscalRepository {
     return this.findQueueItemById(String(row.id));
   }
 
-  markQueueItemProcessing(queueId: string, _workerId: string, _nowIso: string): void {
+  claimQueueItemById(queueId: string, nowIso: string, workerId: string): FiscalQueueItem | null {
+    const row = db.prepare(`
+      SELECT * FROM sync_queue
+      WHERE id = ?
+        AND status IN ('PENDING', 'FAILED')
+      LIMIT 1
+    `).get(Number(queueId)) as SyncQueueRow | undefined;
+
+    if (!row) {
+      return null;
+    }
+
+    this.markQueueItemProcessing(String(row.id), workerId, nowIso);
+    return this.findQueueItemById(String(row.id));
+  }
+
+  markQueueItemProcessing(queueId: string, workerId: string, nowIso: string): void {
     db.prepare(`
       UPDATE sync_queue
       SET
         status = 'PROCESSING',
         attempts = attempts + 1,
+        locked_at = ?,
+        locked_by = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(Number(queueId));
+    `).run(nowIso, workerId, Number(queueId));
   }
 
-  markQueueItemDone(queueId: string, _processedAtIso: string): void {
+  markQueueItemDone(queueId: string, processedAtIso: string, result?: unknown): void {
     db.prepare(`
       UPDATE sync_queue
       SET
         status = 'DONE',
         last_error = NULL,
+        result_json = ?,
+        processed_at = ?,
+        locked_at = NULL,
+        locked_by = NULL,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(Number(queueId));
+    `).run(result === undefined ? null : JSON.stringify(result), processedAtIso, Number(queueId));
   }
 
   markQueueItemFailed(
@@ -416,7 +444,8 @@ export class SqliteFiscalRepository implements FiscalRepository {
     errorCode: string,
     errorMessage: string,
     nextRetryAtIso: string | null,
-    _failedAtIso: string
+    failedAtIso: string,
+    result?: unknown
   ): void {
     const message = [errorCode, errorMessage].filter(Boolean).join(': ');
     db.prepare(`
@@ -425,9 +454,19 @@ export class SqliteFiscalRepository implements FiscalRepository {
         status = 'FAILED',
         last_error = ?,
         next_attempt_at = ?,
+        result_json = ?,
+        processed_at = ?,
+        locked_at = NULL,
+        locked_by = NULL,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(message, nextRetryAtIso ?? null, Number(queueId));
+    `).run(
+      message,
+      nextRetryAtIso ?? null,
+      result === undefined ? null : JSON.stringify(result),
+      failedAtIso,
+      Number(queueId)
+    );
   }
 
   listQueueItems(limit = 20): FiscalQueueItem[] {

@@ -8,6 +8,7 @@ import type {
   ConsultStatusRequest,
   ConsultStatusResponse,
   FiscalProviderConfig,
+  FiscalStatusServiceTestResult,
 } from '../types/fiscal.types';
 
 type GatewayEnvelope<T> = {
@@ -111,5 +112,41 @@ export class GatewayFiscalProvider implements FiscalProvider {
     });
 
     return parseGatewayResponse<ConsultStatusResponse>(response, 'GATEWAY_CONSULT_FAILED');
+  }
+
+  async testStatusServico(config: FiscalProviderConfig): Promise<FiscalStatusServiceTestResult> {
+    const startedAt = Date.now();
+    const response = await fetch(`${resolveBaseUrl(config)}/nfce/status-servico`, {
+      method: 'POST',
+      headers: resolveHeaders(config),
+      body: JSON.stringify({
+        environment: config.environment,
+        uf: config.uf ?? 'SP',
+        model: config.model ?? 65,
+      }),
+    });
+
+    const data = await parseGatewayResponse<Partial<FiscalStatusServiceTestResult>>(
+      response,
+      'GATEWAY_STATUS_SERVICE_FAILED'
+    );
+
+    return {
+      provider: 'gateway',
+      environment: config.environment,
+      uf: config.uf ?? data.uf ?? 'SP',
+      model: 65,
+      service: 'NFeStatusServico4',
+      url: `${resolveBaseUrl(config)}/nfce/status-servico`,
+      success: data.success ?? true,
+      statusCode: data.statusCode ?? null,
+      statusMessage: data.statusMessage ?? 'Consulta de status executada pelo gateway fiscal.',
+      responseTimeMs: data.responseTimeMs ?? Date.now() - startedAt,
+      rawRequest: data.rawRequest ?? '',
+      rawResponse: data.rawResponse ?? JSON.stringify(data),
+      checkedAt: data.checkedAt ?? new Date().toISOString(),
+      tlsValidation: data.tlsValidation ?? 'verified',
+      warning: data.warning ?? null,
+    };
   }
 }

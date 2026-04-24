@@ -6,6 +6,7 @@ import type {
   ConsultStatusRequest,
   ConsultStatusResponse,
   FiscalProviderConfig,
+  FiscalStatusServiceTestResult,
 } from '../types/fiscal.types';
 
 export interface FiscalProvider {
@@ -13,5 +14,5 @@ export interface FiscalProvider {
   authorizeNfce(request: AuthorizeNfceRequest, config: FiscalProviderConfig): Promise<AuthorizeNfceResponse>;
   cancelNfce(request: CancelNfceRequest, config: FiscalProviderConfig): Promise<CancelNfceResponse>;
   consultStatus(request: ConsultStatusRequest, config: FiscalProviderConfig): Promise<ConsultStatusResponse>;
+  testStatusServico(config: FiscalProviderConfig): Promise<FiscalStatusServiceTestResult>;
 }
-

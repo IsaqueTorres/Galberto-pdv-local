@@ -5,6 +5,7 @@ import type { FiscalQueueService } from '../contracts/FiscalQueueService';
 import type { FiscalRepository } from '../contracts/FiscalRepository';
 import type { FiscalService } from '../contracts/FiscalService';
 import { FiscalError, normalizeFiscalError } from '../errors/FiscalError';
+import { logger } from '../../../logger/logger';
 import type {
   AuthorizeNfceRequest,
   AuthorizeNfceResponse,
@@ -152,6 +153,33 @@ export class DefaultFiscalService implements FiscalService {
       this.repository.updateStatus(document.id, response.status, response.statusCode, response.statusMessage);
     }
     return response;
+  }
+
+  async runStatusServiceDiagnostic(): Promise<FiscalQueueItem> {
+    const config = this.configService.getConfig();
+    const idempotencyKey = `fiscal:test-status:${Date.now()}`;
+
+    logger.info(`[FiscalDiagnostic] Criando job ${idempotencyKey} para NFeStatusServico4.`);
+
+    const item = await this.queueService.enqueue({
+      saleId: 0,
+      documentId: null,
+      operation: 'TEST_STATUS_NFCE',
+      idempotencyKey,
+      maxAttempts: 1,
+      payload: {
+        saleId: 0,
+        operation: 'TEST_STATUS_NFCE',
+        provider: config.provider,
+        environment: config.environment,
+        uf: config.uf ?? 'SP',
+        model: config.model ?? 65,
+        requestedAt: new Date().toISOString(),
+      },
+    });
+
+    const processed = await this.queueService.processById(item.id);
+    return processed ?? item;
   }
 
   async getDanfe(documentId: number): Promise<DanfeResult> {

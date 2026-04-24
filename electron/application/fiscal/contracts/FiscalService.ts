@@ -18,10 +18,10 @@ export interface FiscalService {
   authorizeNfce(request: AuthorizeNfceRequest): Promise<AuthorizeNfceResponse>;
   cancelNfce(request: CancelNfceRequest): Promise<CancelNfceResponse>;
   consultStatusByAccessKey(accessKey: string): Promise<ConsultStatusResponse>;
+  runStatusServiceDiagnostic(): Promise<FiscalQueueItem>;
   getDanfe(documentId: number): Promise<DanfeResult>;
   enqueuePending(request: QueueEnqueueRequest): Promise<FiscalQueueItem>;
   reprocessQueueItem(queueId: string): Promise<FiscalQueueItem | null>;
   listQueue(limit?: number): Promise<FiscalQueueItem[]>;
   getQueueSummary(): Promise<FiscalQueueSummary>;
 }
-

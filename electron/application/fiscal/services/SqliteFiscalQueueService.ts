@@ -1,6 +1,7 @@
 import type { FiscalQueueService } from '../contracts/FiscalQueueService';
 import type { FiscalRepository } from '../contracts/FiscalRepository';
 import { normalizeFiscalError } from '../errors/FiscalError';
+import { logger } from '../../../logger/logger';
 import type {
   FiscalQueueItem,
   FiscalQueueProcessingResult,
@@ -29,21 +30,46 @@ export class SqliteFiscalQueueService implements FiscalQueueService {
     const item = this.repository.claimNextQueueItem(now, this.workerId);
 
     if (!item) {
+      logger.info('[FiscalQueue] Nenhum item pronto para processamento.');
       return null;
     }
+
+    return this.processClaimedItem(item);
+  }
+
+  async processById(queueId: string): Promise<FiscalQueueItem | null> {
+    const now = new Date().toISOString();
+    const item = this.repository.claimQueueItemById(queueId, now, this.workerId);
+
+    if (!item) {
+      logger.warn(`[FiscalQueue] Item ${queueId} nao encontrado ou nao esta pronto para processamento.`);
+      return this.repository.findQueueItemById(queueId);
+    }
+
+    return this.processClaimedItem(item);
+  }
+
+  private async processClaimedItem(item: FiscalQueueItem): Promise<FiscalQueueItem | null> {
+    logger.info(`[FiscalQueue] Iniciando job ${item.id} (${item.operation}).`);
 
     try {
       const result = await this.processor(item);
 
-      if (result.status === 'AUTHORIZED' || result.status === 'REJECTED' || result.status === 'CANCELLED') {
-        this.repository.markQueueItemDone(item.id, new Date().toISOString());
+      if (
+        result.status === 'AUTHORIZED'
+        || result.status === 'REJECTED'
+        || result.status === 'CANCELLED'
+        || result.status === 'COMPLETED'
+      ) {
+        this.repository.markQueueItemDone(item.id, new Date().toISOString(), result.result);
       } else if (result.status === 'FAILED_RETRYABLE' || result.status === 'PENDING_EXTERNAL') {
         this.repository.markQueueItemFailed(
           item.id,
           result.statusCode ?? result.status,
           result.statusMessage ?? 'Aguardando novo processamento fiscal.',
           result.nextRetryAt ?? new Date(Date.now() + Math.max(item.attempts, 1) * 60_000).toISOString(),
-          new Date().toISOString()
+          new Date().toISOString(),
+          result.result
         );
       } else {
         this.repository.markQueueItemFailed(
@@ -51,9 +77,11 @@ export class SqliteFiscalQueueService implements FiscalQueueService {
           result.statusCode ?? result.status,
           result.statusMessage ?? 'Falha fiscal definitiva.',
           null,
-          new Date().toISOString()
+          new Date().toISOString(),
+          result.result
         );
       }
+      logger.info(`[FiscalQueue] Job ${item.id} concluido com status ${result.status}.`);
     } catch (error) {
       const fiscalError = normalizeFiscalError(error, 'FISCAL_QUEUE_PROCESS_FAILED');
       const nextRetryAt = fiscalError.retryable
@@ -65,8 +93,16 @@ export class SqliteFiscalQueueService implements FiscalQueueService {
         fiscalError.code,
         fiscalError.message,
         nextRetryAt,
-        new Date().toISOString()
+        new Date().toISOString(),
+        {
+          success: false,
+          statusCode: fiscalError.code,
+          statusMessage: fiscalError.message,
+          category: fiscalError.category,
+          details: fiscalError.details ?? null,
+        }
       );
+      logger.error(`[FiscalQueue] Job ${item.id} falhou: ${fiscalError.code} - ${fiscalError.message}`);
     }
 
     return this.repository.findQueueItemById(item.id);

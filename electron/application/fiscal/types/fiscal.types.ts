@@ -13,7 +13,7 @@ export type FiscalDocumentStatus =
 
 export type FiscalQueueStatus = 'pending' | 'processing' | 'done' | 'failed';
 
-export type FiscalQueueOperation = 'AUTHORIZE_NFCE' | 'CANCEL_NFCE';
+export type FiscalQueueOperation = 'AUTHORIZE_NFCE' | 'CANCEL_NFCE' | 'TEST_STATUS_NFCE';
 
 export type FiscalQueueProcessingStatus =
   | 'AUTHORIZED'
@@ -21,6 +21,7 @@ export type FiscalQueueProcessingStatus =
   | 'FAILED_RETRYABLE'
   | 'FAILED_FINAL'
   | 'CANCELLED'
+  | 'COMPLETED'
   | 'PENDING_EXTERNAL';
 
 export type FiscalErrorCategory =
@@ -187,6 +188,24 @@ export interface ConsultStatusResponse {
   rawResponse?: unknown;
 }
 
+export interface FiscalStatusServiceTestResult {
+  provider: FiscalProviderKind;
+  environment: FiscalEnvironment;
+  uf: string;
+  model: 65;
+  service: 'NFeStatusServico4';
+  url: string;
+  success: boolean;
+  statusCode?: string | null;
+  statusMessage: string;
+  responseTimeMs: number;
+  rawRequest: string;
+  rawResponse: string;
+  checkedAt: string;
+  tlsValidation: 'verified' | 'bypassed-homologation';
+  warning?: string | null;
+}
+
 export interface DanfeResult {
   documentId: number;
   danfePath: string;
@@ -215,6 +234,8 @@ export interface FiscalProviderConfig {
   certificatePassword?: string | null;
   cscId?: string | null;
   cscToken?: string | null;
+  uf?: string | null;
+  model?: 65 | null;
   defaultSeries?: number | null;
   updatedAt: string;
 }
@@ -230,6 +251,8 @@ export interface FiscalConfigInput {
   certificatePassword?: string | null;
   cscId?: string | null;
   cscToken?: string | null;
+  uf?: string | null;
+  model?: 65 | null;
   defaultSeries?: number | null;
 }
 
@@ -242,6 +265,8 @@ export interface FiscalConfigView {
   gatewayBaseUrl?: string | null;
   certificatePath?: string | null;
   cscId?: string | null;
+  uf?: string | null;
+  model?: 65 | null;
   defaultSeries?: number | null;
   hasGatewayApiKey: boolean;
   hasCertificatePassword: boolean;
@@ -288,6 +313,7 @@ export interface FiscalQueueProcessingResult {
   statusCode?: string | null;
   statusMessage?: string | null;
   nextRetryAt?: string | null;
+  result?: unknown;
 }
 
 export interface FiscalQueueItem {
@@ -296,6 +322,7 @@ export interface FiscalQueueItem {
   documentId?: number | null;
   operation: FiscalQueueOperation;
   payload: unknown;
+  result?: unknown;
   status: FiscalQueueStatus;
   idempotencyKey: string;
   attempts: number;

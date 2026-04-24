@@ -7,6 +7,7 @@ import type {
   ConsultStatusRequest,
   ConsultStatusResponse,
   FiscalProviderConfig,
+  FiscalStatusServiceTestResult,
 } from '../types/fiscal.types';
 
 function buildAccessKey(request: AuthorizeNfceRequest): string {
@@ -62,5 +63,25 @@ export class MockFiscalProvider implements FiscalProvider {
       rawResponse: { mock: true },
     };
   }
-}
 
+  async testStatusServico(config: FiscalProviderConfig): Promise<FiscalStatusServiceTestResult> {
+    const checkedAt = new Date().toISOString();
+    return {
+      provider: 'mock',
+      environment: config.environment,
+      uf: config.uf ?? 'SP',
+      model: 65,
+      service: 'NFeStatusServico4',
+      url: 'mock://nfce/status-servico',
+      success: true,
+      statusCode: '107',
+      statusMessage: 'Servico em operacao em ambiente mock.',
+      responseTimeMs: 0,
+      rawRequest: '<mockStatusServico />',
+      rawResponse: '<retConsStatServ><cStat>107</cStat><xMotivo>Servico em operacao</xMotivo></retConsStatServ>',
+      checkedAt,
+      tlsValidation: 'verified',
+      warning: null,
+    };
+  }
+}

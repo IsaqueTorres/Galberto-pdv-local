@@ -267,6 +267,22 @@ function ensureFiscalPersistenceColumns(database: SQLiteDatabase) {
     statements.push(`ALTER TABLE fiscal_documents ADD COLUMN xml_cancellation TEXT`);
   }
 
+  if (!hasColumn(database, 'sync_queue', 'result_json')) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN result_json TEXT`);
+  }
+
+  if (!hasColumn(database, 'sync_queue', 'locked_at')) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN locked_at TEXT`);
+  }
+
+  if (!hasColumn(database, 'sync_queue', 'locked_by')) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN locked_by TEXT`);
+  }
+
+  if (!hasColumn(database, 'sync_queue', 'processed_at')) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN processed_at TEXT`);
+  }
+
   if (statements.length > 0) {
     database.exec(statements.join(';\n'));
   }

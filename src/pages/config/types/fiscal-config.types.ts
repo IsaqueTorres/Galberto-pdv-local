@@ -11,6 +11,8 @@ export type FiscalConfigView = {
   gatewayBaseUrl?: string | null;
   certificatePath?: string | null;
   cscId?: string | null;
+  uf?: string | null;
+  model?: 65 | null;
   defaultSeries?: number | null;
   hasGatewayApiKey: boolean;
   hasCertificatePassword: boolean;
@@ -29,6 +31,8 @@ export type FiscalConfigInput = {
   certificatePassword?: string | null;
   cscId?: string | null;
   cscToken?: string | null;
+  uf?: string | null;
+  model?: 65 | null;
   defaultSeries?: number | null;
 };
 
@@ -36,7 +40,9 @@ export type FiscalQueueItem = {
   id: string;
   saleId: number;
   documentId?: number | null;
-  operation: 'AUTHORIZE_NFCE' | 'CANCEL_NFCE';
+  operation: 'AUTHORIZE_NFCE' | 'CANCEL_NFCE' | 'TEST_STATUS_NFCE';
+  payload: unknown;
+  result?: unknown;
   status: 'pending' | 'processing' | 'done' | 'failed';
   idempotencyKey: string;
   attempts: number;

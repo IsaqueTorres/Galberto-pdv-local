@@ -3,6 +3,7 @@ import { ipcMain } from 'electron';
 import { fiscalCertificateService, fiscalConfigService, fiscalQueueService, fiscalService } from '../../application/fiscal';
 import { normalizeFiscalError } from '../../application/fiscal/errors/FiscalError';
 import { assertCurrentUserPermission } from '../security/permission.guard';
+import { logger } from '../../logger/logger';
 
 export default function registerFiscalHandlers() {
 
@@ -150,8 +151,49 @@ export default function registerFiscalHandlers() {
   });
 
   ipcMain.handle('fiscal:process-next-queue-item', async () => {
-    assertCurrentUserPermission('fiscal:manage');
-    return fiscalQueueService.processNext();
+    try {
+      assertCurrentUserPermission('fiscal:manage');
+      logger.info('[FiscalIPC] fiscal:process-next-queue-item recebido.');
+      return {
+        success: true,
+        data: await fiscalQueueService.processNext(),
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, 'FISCAL_PROCESS_QUEUE_FAILED');
+      logger.error(`[FiscalIPC] Falha em fiscal:process-next-queue-item: ${fiscalError.code} - ${fiscalError.message}`);
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable,
+        },
+      };
+    }
+  });
+
+  ipcMain.handle('fiscal:run-status-diagnostic', async () => {
+    try {
+      assertCurrentUserPermission('fiscal:manage');
+      logger.info('[FiscalIPC] fiscal:run-status-diagnostic recebido.');
+      return {
+        success: true,
+        data: await fiscalService.runStatusServiceDiagnostic(),
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, 'FISCAL_STATUS_DIAGNOSTIC_FAILED');
+      logger.error(`[FiscalIPC] Falha em fiscal:run-status-diagnostic: ${fiscalError.code} - ${fiscalError.message}`);
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable,
+        },
+      };
+    }
   });
 
 }

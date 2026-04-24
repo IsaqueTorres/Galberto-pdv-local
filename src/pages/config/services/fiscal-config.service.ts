@@ -14,7 +14,8 @@ type FiscalBridge = {
   getQueueSummary: () => Promise<FiscalQueueSummary>;
   listQueue: (limit?: number) => Promise<FiscalQueueItem[]>;
   reprocessQueueItem: (queueId: string) => Promise<FiscalHandlerResult<FiscalQueueItem | null>>;
-  processNextQueueItem: () => Promise<FiscalQueueItem | null>;
+  processNextQueueItem: () => Promise<FiscalHandlerResult<FiscalQueueItem | null>>;
+  runStatusDiagnostic: () => Promise<FiscalHandlerResult<FiscalQueueItem>>;
 };
 
 function fiscalBridge(): FiscalBridge {
@@ -55,6 +56,18 @@ export const fiscalConfigService = {
   },
 
   async processNextQueueItem() {
-    return fiscalBridge().processNextQueueItem();
+    const result = await fiscalBridge().processNextQueueItem();
+    if (result.success === false) {
+      throw new Error(result.error.message);
+    }
+    return result.data;
+  },
+
+  async runStatusDiagnostic() {
+    const result = await fiscalBridge().runStatusDiagnostic();
+    if (result.success === false) {
+      throw new Error(result.error.message);
+    }
+    return result.data;
   },
 };

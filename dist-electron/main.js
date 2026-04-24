@@ -14,6 +14,7 @@ import Database from "better-sqlite3";
 import { fileURLToPath } from "url";
 import { execFileSync } from "node:child_process";
 import crypto$1, { X509Certificate } from "node:crypto";
+import * as https from "node:https";
 import http from "node:http";
 import { URL as URL$1 } from "node:url";
 var main = { exports: {} };
@@ -731,6 +732,18 @@ function ensureFiscalPersistenceColumns(database) {
   }
   if (!hasColumn(database, "fiscal_documents", "xml_cancellation")) {
     statements.push(`ALTER TABLE fiscal_documents ADD COLUMN xml_cancellation TEXT`);
+  }
+  if (!hasColumn(database, "sync_queue", "result_json")) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN result_json TEXT`);
+  }
+  if (!hasColumn(database, "sync_queue", "locked_at")) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN locked_at TEXT`);
+  }
+  if (!hasColumn(database, "sync_queue", "locked_by")) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN locked_by TEXT`);
+  }
+  if (!hasColumn(database, "sync_queue", "processed_at")) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN processed_at TEXT`);
   }
   if (statements.length > 0) {
     database.exec(statements.join(";\n"));
@@ -3255,6 +3268,8 @@ function defaultConfig() {
     certificatePassword: null,
     cscId: null,
     cscToken: null,
+    uf: "SP",
+    model: 65,
     defaultSeries: 1,
     updatedAt: nowIso$1()
   };
@@ -3269,6 +3284,8 @@ function sanitizeForView(config2) {
     sefazBaseUrl: config2.sefazBaseUrl ?? null,
     certificatePath: config2.certificatePath ?? null,
     cscId: config2.cscId ?? null,
+    uf: config2.uf ?? "SP",
+    model: config2.model ?? 65,
     defaultSeries: config2.defaultSeries ?? null,
     hasGatewayApiKey: Boolean(config2.gatewayApiKey),
     hasCertificatePassword: Boolean(config2.certificatePassword),
@@ -3285,9 +3302,11 @@ class IntegrationFiscalSettingsService {
       LIMIT 1
     `).get(FISCAL_INTEGRATION_ID);
     if (!(row == null ? void 0 : row.raw_json)) {
+      logger.warn("[FiscalConfig] Configuracao fiscal fiscal:nfce nao encontrada. Usando defaults.");
       return defaultConfig();
     }
     const parsed = JSON.parse(row.raw_json);
+    logger.info(`[FiscalConfig] Configuracao fiscal carregada provider=${parsed.provider ?? "mock"} ambiente=${parsed.environment ?? "homologation"} uf=${parsed.uf ?? "SP"}.`);
     return {
       ...defaultConfig(),
       ...parsed,
@@ -3338,6 +3357,7 @@ class IntegrationFiscalSettingsService {
       JSON.stringify(next),
       next.updatedAt
     );
+    logger.info(`[FiscalConfig] Configuracao fiscal salva provider=${next.provider} ambiente=${next.environment} uf=${next.uf ?? "SP"}.`);
     return sanitizeForView(next);
   }
 }
@@ -3390,6 +3410,7 @@ function toQueueStatus(status) {
 }
 function toQueueItem(row) {
   const payload = JSON.parse(row.payload_json);
+  const result = row.result_json ? JSON.parse(row.result_json) : null;
   const parsedEntityId = Number(row.entity_id);
   return {
     id: String(row.id),
@@ -3397,6 +3418,7 @@ function toQueueItem(row) {
     documentId: Number.isNaN(parsedEntityId) ? null : parsedEntityId,
     operation: row.operation,
     payload,
+    result,
     status: toQueueStatus(row.status),
     idempotencyKey: row.idempotency_key,
     attempts: row.attempts,
@@ -3404,9 +3426,9 @@ function toQueueItem(row) {
     nextRetryAt: row.next_attempt_at,
     lastErrorCode: row.last_error ?? null,
     lastErrorMessage: row.last_error ?? null,
-    lockedAt: null,
-    lockedBy: null,
-    processedAt: row.status === "DONE" ? row.updated_at : null,
+    lockedAt: row.locked_at,
+    lockedBy: row.locked_by,
+    processedAt: row.processed_at ?? (row.status === "DONE" ? row.updated_at : null),
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -3620,27 +3642,46 @@ class SqliteFiscalRepository {
     this.markQueueItemProcessing(String(row.id), "main", nowIso2);
     return this.findQueueItemById(String(row.id));
   }
-  markQueueItemProcessing(queueId, _workerId, _nowIso) {
+  claimQueueItemById(queueId, nowIso2, workerId) {
+    const row = db.prepare(`
+      SELECT * FROM sync_queue
+      WHERE id = ?
+        AND status IN ('PENDING', 'FAILED')
+      LIMIT 1
+    `).get(Number(queueId));
+    if (!row) {
+      return null;
+    }
+    this.markQueueItemProcessing(String(row.id), workerId, nowIso2);
+    return this.findQueueItemById(String(row.id));
+  }
+  markQueueItemProcessing(queueId, workerId, nowIso2) {
     db.prepare(`
       UPDATE sync_queue
       SET
         status = 'PROCESSING',
         attempts = attempts + 1,
+        locked_at = ?,
+        locked_by = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(Number(queueId));
+    `).run(nowIso2, workerId, Number(queueId));
   }
-  markQueueItemDone(queueId, _processedAtIso) {
+  markQueueItemDone(queueId, processedAtIso, result) {
     db.prepare(`
       UPDATE sync_queue
       SET
         status = 'DONE',
         last_error = NULL,
+        result_json = ?,
+        processed_at = ?,
+        locked_at = NULL,
+        locked_by = NULL,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(Number(queueId));
+    `).run(result === void 0 ? null : JSON.stringify(result), processedAtIso, Number(queueId));
   }
-  markQueueItemFailed(queueId, errorCode, errorMessage, nextRetryAtIso, _failedAtIso) {
+  markQueueItemFailed(queueId, errorCode, errorMessage, nextRetryAtIso, failedAtIso, result) {
     const message = [errorCode, errorMessage].filter(Boolean).join(": ");
     db.prepare(`
       UPDATE sync_queue
@@ -3648,9 +3689,19 @@ class SqliteFiscalRepository {
         status = 'FAILED',
         last_error = ?,
         next_attempt_at = ?,
+        result_json = ?,
+        processed_at = ?,
+        locked_at = NULL,
+        locked_by = NULL,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(message, nextRetryAtIso ?? null, Number(queueId));
+    `).run(
+      message,
+      nextRetryAtIso ?? null,
+      result === void 0 ? null : JSON.stringify(result),
+      failedAtIso,
+      Number(queueId)
+    );
   }
   listQueueItems(limit = 20) {
     const rows = db.prepare(`
@@ -3773,6 +3824,39 @@ class GatewayFiscalProvider {
     });
     return parseGatewayResponse(response, "GATEWAY_CONSULT_FAILED");
   }
+  async testStatusServico(config2) {
+    const startedAt = Date.now();
+    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/status-servico`, {
+      method: "POST",
+      headers: resolveHeaders(config2),
+      body: JSON.stringify({
+        environment: config2.environment,
+        uf: config2.uf ?? "SP",
+        model: config2.model ?? 65
+      })
+    });
+    const data = await parseGatewayResponse(
+      response,
+      "GATEWAY_STATUS_SERVICE_FAILED"
+    );
+    return {
+      provider: "gateway",
+      environment: config2.environment,
+      uf: config2.uf ?? data.uf ?? "SP",
+      model: 65,
+      service: "NFeStatusServico4",
+      url: `${resolveBaseUrl(config2)}/nfce/status-servico`,
+      success: data.success ?? true,
+      statusCode: data.statusCode ?? null,
+      statusMessage: data.statusMessage ?? "Consulta de status executada pelo gateway fiscal.",
+      responseTimeMs: data.responseTimeMs ?? Date.now() - startedAt,
+      rawRequest: data.rawRequest ?? "",
+      rawResponse: data.rawResponse ?? JSON.stringify(data),
+      checkedAt: data.checkedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      tlsValidation: data.tlsValidation ?? "verified",
+      warning: data.warning ?? null
+    };
+  }
 }
 function buildAccessKey(request) {
   const base = `${request.emitter.address.state}${request.saleId}${request.number}${request.series}`.replace(/\D/g, "");
@@ -3824,6 +3908,229 @@ class MockFiscalProvider {
       rawResponse: { mock: true }
     };
   }
+  async testStatusServico(config2) {
+    const checkedAt = (/* @__PURE__ */ new Date()).toISOString();
+    return {
+      provider: "mock",
+      environment: config2.environment,
+      uf: config2.uf ?? "SP",
+      model: 65,
+      service: "NFeStatusServico4",
+      url: "mock://nfce/status-servico",
+      success: true,
+      statusCode: "107",
+      statusMessage: "Servico em operacao em ambiente mock.",
+      responseTimeMs: 0,
+      rawRequest: "<mockStatusServico />",
+      rawResponse: "<retConsStatServ><cStat>107</cStat><xMotivo>Servico em operacao</xMotivo></retConsStatServ>",
+      checkedAt,
+      tlsValidation: "verified",
+      warning: null
+    };
+  }
+}
+const SP_NFCE_ENDPOINTS = {
+  homologation: {
+    statusServico: "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeStatusServico4.asmx",
+    autorizacao: "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeAutorizacao4.asmx",
+    retAutorizacao: "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeRetAutorizacao4.asmx"
+  },
+  production: {
+    statusServico: "https://nfce.fazenda.sp.gov.br/ws/NFeStatusServico4.asmx",
+    autorizacao: "https://nfce.fazenda.sp.gov.br/ws/NFeAutorizacao4.asmx",
+    retAutorizacao: "https://nfce.fazenda.sp.gov.br/ws/NFeRetAutorizacao4.asmx"
+  }
+};
+const IBGE_UF_CODES = {
+  SP: "35"
+};
+function resolveUf(config2) {
+  return (config2.uf ?? "SP").trim().toUpperCase();
+}
+function resolveStatusServicoUrl(config2) {
+  var _a;
+  const configuredBaseUrl = (_a = config2.sefazBaseUrl) == null ? void 0 : _a.trim();
+  if (configuredBaseUrl) {
+    if (configuredBaseUrl.endsWith(".asmx")) {
+      return configuredBaseUrl;
+    }
+    return `${configuredBaseUrl.replace(/\/+$/, "")}/NFeStatusServico4.asmx`;
+  }
+  const uf = resolveUf(config2);
+  if (uf !== "SP") {
+    throw new FiscalError({
+      code: "SEFAZ_UF_NOT_SUPPORTED",
+      message: `SEFAZ direta para NFC-e ainda esta configurada somente para SP. UF recebida: ${uf}.`,
+      category: "CONFIGURATION"
+    });
+  }
+  return SP_NFCE_ENDPOINTS[config2.environment].statusServico;
+}
+function validateSefazDirectConfig(config2) {
+  var _a, _b, _c;
+  if (config2.provider !== "sefaz-direct") {
+    throw new FiscalError({
+      code: "SEFAZ_PROVIDER_INVALID",
+      message: "O teste SEFAZ direto exige provider sefaz-direct.",
+      category: "CONFIGURATION"
+    });
+  }
+  if (config2.environment !== "homologation" && config2.environment !== "production") {
+    throw new FiscalError({
+      code: "SEFAZ_ENVIRONMENT_INVALID",
+      message: "Ambiente fiscal invalido.",
+      category: "CONFIGURATION"
+    });
+  }
+  if ((config2.model ?? 65) !== 65) {
+    throw new FiscalError({
+      code: "SEFAZ_MODEL_NOT_SUPPORTED",
+      message: "O diagnostico atual suporta apenas NFC-e modelo 65.",
+      category: "CONFIGURATION"
+    });
+  }
+  if (!((_a = config2.certificatePath) == null ? void 0 : _a.trim())) {
+    throw new FiscalError({
+      code: "CERTIFICATE_NOT_CONFIGURED",
+      message: "Caminho do certificado A1 nao configurado.",
+      category: "CERTIFICATE"
+    });
+  }
+  if (!fs$1.existsSync(config2.certificatePath)) {
+    throw new FiscalError({
+      code: "CERTIFICATE_FILE_NOT_FOUND",
+      message: `Arquivo do certificado nao encontrado: ${config2.certificatePath}`,
+      category: "CERTIFICATE"
+    });
+  }
+  if (!config2.certificatePassword) {
+    throw new FiscalError({
+      code: "CERTIFICATE_PASSWORD_REQUIRED",
+      message: "Senha do certificado A1 nao configurada.",
+      category: "CERTIFICATE"
+    });
+  }
+  if (!((_b = config2.cscId) == null ? void 0 : _b.trim())) {
+    throw new FiscalError({
+      code: "CSC_ID_REQUIRED",
+      message: "CSC ID nao configurado.",
+      category: "CONFIGURATION"
+    });
+  }
+  if (!((_c = config2.cscToken) == null ? void 0 : _c.trim())) {
+    throw new FiscalError({
+      code: "CSC_TOKEN_REQUIRED",
+      message: "CSC Token nao configurado.",
+      category: "CONFIGURATION"
+    });
+  }
+}
+function buildStatusServicoSoap(config2) {
+  const uf = resolveUf(config2);
+  const cUf = IBGE_UF_CODES[uf];
+  if (!cUf) {
+    throw new FiscalError({
+      code: "SEFAZ_UF_CODE_NOT_MAPPED",
+      message: `Codigo IBGE da UF ${uf} nao esta mapeado para consulta de status.`,
+      category: "CONFIGURATION"
+    });
+  }
+  const tpAmb = config2.environment === "production" ? "1" : "2";
+  return `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4"><consStatServ xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${tpAmb}</tpAmb><cUF>${cUf}</cUF><xServ>STATUS</xServ></consStatServ></nfeDadosMsg></soap12:Body></soap12:Envelope>`;
+}
+function isLocalIssuerCertificateError(error) {
+  if (!(error instanceof FiscalError)) return false;
+  const details = error.details;
+  return error.code === "SEFAZ_NETWORK_OR_TLS_ERROR" && ((details == null ? void 0 : details.originalCode) === "UNABLE_TO_GET_ISSUER_CERT_LOCALLY" || (details == null ? void 0 : details.originalCode) === "SELF_SIGNED_CERT_IN_CHAIN" || /unable to get local issuer certificate|self-signed certificate/i.test((details == null ? void 0 : details.originalMessage) ?? error.message));
+}
+function postSoapWithCertificate(url, body, config2, options2 = {}) {
+  return new Promise((resolve, reject) => {
+    const startedAt = Date.now();
+    const request = https.request(
+      url,
+      {
+        method: "POST",
+        pfx: fs$1.readFileSync(config2.certificatePath),
+        passphrase: config2.certificatePassword ?? void 0,
+        rejectUnauthorized: options2.allowUnauthorizedServerCertificate !== true,
+        headers: {
+          "content-type": 'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF"',
+          "content-length": Buffer.byteLength(body, "utf8"),
+          soapaction: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF"
+        },
+        timeout: 3e4
+      },
+      (response) => {
+        let data = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          data += chunk;
+        });
+        response.on("end", () => {
+          if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+            reject(new FiscalError({
+              code: "SEFAZ_HTTP_ERROR",
+              message: `SEFAZ retornou HTTP ${response.statusCode ?? "sem status"} em ${Date.now() - startedAt}ms.`,
+              category: "SEFAZ",
+              retryable: true,
+              details: {
+                url,
+                statusCode: response.statusCode,
+                headers: response.headers,
+                body: data
+              }
+            }));
+            return;
+          }
+          resolve(data);
+        });
+      }
+    );
+    request.on("timeout", () => {
+      request.destroy(new Error("Timeout de 30000ms ao chamar NFeStatusServico4."));
+    });
+    request.on("error", (error) => {
+      reject(new FiscalError({
+        code: "SEFAZ_NETWORK_OR_TLS_ERROR",
+        message: `Falha de rede/TLS ao chamar SEFAZ: ${error.message}`,
+        category: "NETWORK",
+        retryable: true,
+        cause: error,
+        details: {
+          url,
+          originalCode: error.code ?? null,
+          originalMessage: error.message
+        }
+      }));
+    });
+    request.write(body, "utf8");
+    request.end();
+  });
+}
+async function postStatusServicoSoap(url, body, config2) {
+  try {
+    return {
+      rawResponse: await postSoapWithCertificate(url, body, config2),
+      tlsValidation: "verified",
+      warning: null
+    };
+  } catch (error) {
+    if (config2.environment === "homologation" && isLocalIssuerCertificateError(error)) {
+      return {
+        rawResponse: await postSoapWithCertificate(url, body, config2, {
+          allowUnauthorizedServerCertificate: true
+        }),
+        tlsValidation: "bypassed-homologation",
+        warning: "A cadeia TLS do servidor da SEFAZ nao foi validada pelo Node/Electron. O diagnostico repetiu a chamada em homologacao sem validar o certificado do servidor. Para producao, configure a cadeia de CA confiavel no ambiente."
+      };
+    }
+    throw error;
+  }
+}
+function extractXmlTag(xml, tagName) {
+  var _a;
+  const match = xml.match(new RegExp(`<[^:>]*:?${tagName}[^>]*>([^<]*)</[^:>]*:?${tagName}>`, "i"));
+  return ((_a = match == null ? void 0 : match[1]) == null ? void 0 : _a.trim()) ?? null;
 }
 class SefazDirectFiscalProvider {
   constructor() {
@@ -3849,6 +4156,34 @@ class SefazDirectFiscalProvider {
       message: "Provider SEFAZ direto ainda não implementado.",
       category: "PROVIDER"
     });
+  }
+  async testStatusServico(config2) {
+    validateSefazDirectConfig(config2);
+    const url = resolveStatusServicoUrl(config2);
+    const rawRequest = buildStatusServicoSoap(config2);
+    const startedAt = Date.now();
+    const response = await postStatusServicoSoap(url, rawRequest, config2);
+    const responseTimeMs = Date.now() - startedAt;
+    const rawResponse = response.rawResponse;
+    const statusCode = extractXmlTag(rawResponse, "cStat");
+    const statusMessage = extractXmlTag(rawResponse, "xMotivo") ?? "Resposta recebida da SEFAZ sem xMotivo.";
+    return {
+      provider: "sefaz-direct",
+      environment: config2.environment,
+      uf: resolveUf(config2),
+      model: 65,
+      service: "NFeStatusServico4",
+      url,
+      success: statusCode === "107",
+      statusCode,
+      statusMessage,
+      responseTimeMs,
+      rawRequest,
+      rawResponse,
+      checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      tlsValidation: response.tlsValidation,
+      warning: response.warning
+    };
   }
 }
 class FiscalProviderFactory {
@@ -3878,19 +4213,34 @@ class SqliteFiscalQueueService {
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const item = this.repository.claimNextQueueItem(now, this.workerId);
     if (!item) {
+      logger.info("[FiscalQueue] Nenhum item pronto para processamento.");
       return null;
     }
+    return this.processClaimedItem(item);
+  }
+  async processById(queueId) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const item = this.repository.claimQueueItemById(queueId, now, this.workerId);
+    if (!item) {
+      logger.warn(`[FiscalQueue] Item ${queueId} nao encontrado ou nao esta pronto para processamento.`);
+      return this.repository.findQueueItemById(queueId);
+    }
+    return this.processClaimedItem(item);
+  }
+  async processClaimedItem(item) {
+    logger.info(`[FiscalQueue] Iniciando job ${item.id} (${item.operation}).`);
     try {
       const result = await this.processor(item);
-      if (result.status === "AUTHORIZED" || result.status === "REJECTED" || result.status === "CANCELLED") {
-        this.repository.markQueueItemDone(item.id, (/* @__PURE__ */ new Date()).toISOString());
+      if (result.status === "AUTHORIZED" || result.status === "REJECTED" || result.status === "CANCELLED" || result.status === "COMPLETED") {
+        this.repository.markQueueItemDone(item.id, (/* @__PURE__ */ new Date()).toISOString(), result.result);
       } else if (result.status === "FAILED_RETRYABLE" || result.status === "PENDING_EXTERNAL") {
         this.repository.markQueueItemFailed(
           item.id,
           result.statusCode ?? result.status,
           result.statusMessage ?? "Aguardando novo processamento fiscal.",
           result.nextRetryAt ?? new Date(Date.now() + Math.max(item.attempts, 1) * 6e4).toISOString(),
-          (/* @__PURE__ */ new Date()).toISOString()
+          (/* @__PURE__ */ new Date()).toISOString(),
+          result.result
         );
       } else {
         this.repository.markQueueItemFailed(
@@ -3898,9 +4248,11 @@ class SqliteFiscalQueueService {
           result.statusCode ?? result.status,
           result.statusMessage ?? "Falha fiscal definitiva.",
           null,
-          (/* @__PURE__ */ new Date()).toISOString()
+          (/* @__PURE__ */ new Date()).toISOString(),
+          result.result
         );
       }
+      logger.info(`[FiscalQueue] Job ${item.id} concluido com status ${result.status}.`);
     } catch (error) {
       const fiscalError = normalizeFiscalError(error, "FISCAL_QUEUE_PROCESS_FAILED");
       const nextRetryAt = fiscalError.retryable ? new Date(Date.now() + item.attempts * 6e4).toISOString() : null;
@@ -3909,8 +4261,16 @@ class SqliteFiscalQueueService {
         fiscalError.code,
         fiscalError.message,
         nextRetryAt,
-        (/* @__PURE__ */ new Date()).toISOString()
+        (/* @__PURE__ */ new Date()).toISOString(),
+        {
+          success: false,
+          statusCode: fiscalError.code,
+          statusMessage: fiscalError.message,
+          category: fiscalError.category,
+          details: fiscalError.details ?? null
+        }
       );
+      logger.error(`[FiscalQueue] Job ${item.id} falhou: ${fiscalError.code} - ${fiscalError.message}`);
     }
     return this.repository.findQueueItemById(item.id);
   }
@@ -4483,6 +4843,29 @@ class DefaultFiscalService {
     }
     return response;
   }
+  async runStatusServiceDiagnostic() {
+    const config2 = this.configService.getConfig();
+    const idempotencyKey = `fiscal:test-status:${Date.now()}`;
+    logger.info(`[FiscalDiagnostic] Criando job ${idempotencyKey} para NFeStatusServico4.`);
+    const item = await this.queueService.enqueue({
+      saleId: 0,
+      documentId: null,
+      operation: "TEST_STATUS_NFCE",
+      idempotencyKey,
+      maxAttempts: 1,
+      payload: {
+        saleId: 0,
+        operation: "TEST_STATUS_NFCE",
+        provider: config2.provider,
+        environment: config2.environment,
+        uf: config2.uf ?? "SP",
+        model: config2.model ?? 65,
+        requestedAt: (/* @__PURE__ */ new Date()).toISOString()
+      }
+    });
+    const processed = await this.queueService.processById(item.id);
+    return processed ?? item;
+  }
   async getDanfe(documentId) {
     const document = this.repository.findById(documentId);
     if (!document) {
@@ -4571,6 +4954,21 @@ const queueService = new SqliteFiscalQueueService(repository, async (item) => {
   if (item.operation === "CANCEL_NFCE") {
     const response = await fiscalServiceRef.cancelNfce(payload);
     return mapCancelQueueResult(response);
+  }
+  if (item.operation === "TEST_STATUS_NFCE") {
+    const config2 = configService.getConfig();
+    logger.info(`[FiscalDiagnostic] Iniciando NFeStatusServico4 provider=${config2.provider} ambiente=${config2.environment} uf=${config2.uf ?? "SP"}.`);
+    await certificateService.assertCertificateReady(config2);
+    logger.info("[FiscalDiagnostic] Certificado validado com sucesso.");
+    const provider = providerFactory.resolve(config2);
+    const result = await provider.testStatusServico(config2);
+    logger.info(`[FiscalDiagnostic] NFeStatusServico4 finalizado url=${result.url} cStat=${result.statusCode ?? "sem cStat"} xMotivo=${result.statusMessage}.`);
+    return {
+      status: result.success ? "COMPLETED" : "FAILED_FINAL",
+      statusCode: result.statusCode ?? "SEFAZ_STATUS_FAILED",
+      statusMessage: result.statusMessage,
+      result
+    };
   }
   return {
     status: "FAILED_FINAL",
@@ -4836,8 +5234,48 @@ function registerFiscalHandlers() {
     }
   });
   ipcMain.handle("fiscal:process-next-queue-item", async () => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalQueueService.processNext();
+    try {
+      assertCurrentUserPermission("fiscal:manage");
+      logger.info("[FiscalIPC] fiscal:process-next-queue-item recebido.");
+      return {
+        success: true,
+        data: await fiscalQueueService.processNext()
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_PROCESS_QUEUE_FAILED");
+      logger.error(`[FiscalIPC] Falha em fiscal:process-next-queue-item: ${fiscalError.code} - ${fiscalError.message}`);
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
+        }
+      };
+    }
+  });
+  ipcMain.handle("fiscal:run-status-diagnostic", async () => {
+    try {
+      assertCurrentUserPermission("fiscal:manage");
+      logger.info("[FiscalIPC] fiscal:run-status-diagnostic recebido.");
+      return {
+        success: true,
+        data: await fiscalService.runStatusServiceDiagnostic()
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_STATUS_DIAGNOSTIC_FAILED");
+      logger.error(`[FiscalIPC] Falha em fiscal:run-status-diagnostic: ${fiscalError.code} - ${fiscalError.message}`);
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
+        }
+      };
+    }
   });
 }
 function mapDocument(row) {

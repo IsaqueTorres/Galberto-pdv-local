@@ -127,6 +127,7 @@ electron.contextBridge.exposeInMainWorld("electron", {
     getQueueSummary: () => electron.ipcRenderer.invoke("fiscal:get-queue-summary"),
     listQueue: (limit) => electron.ipcRenderer.invoke("fiscal:list-queue", limit),
     reprocessQueueItem: (queueId) => electron.ipcRenderer.invoke("fiscal:reprocess-queue-item", queueId),
-    processNextQueueItem: () => electron.ipcRenderer.invoke("fiscal:process-next-queue-item")
+    processNextQueueItem: () => electron.ipcRenderer.invoke("fiscal:process-next-queue-item"),
+    runStatusDiagnostic: () => electron.ipcRenderer.invoke("fiscal:run-status-diagnostic")
   }
 });

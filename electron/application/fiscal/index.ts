@@ -1,5 +1,6 @@
 import type { FiscalQueueItem, FiscalQueueProcessingResult } from './types/fiscal.types';
 import type { AuthorizeNfceRequest, CancelNfceRequest } from './types/fiscal.types';
+import { logger } from '../../logger/logger';
 import { HtmlDanfeService } from './services/HtmlDanfeService';
 import { FileSystemCertificateService } from './services/FileSystemCertificateService';
 import { IntegrationFiscalSettingsService } from './services/IntegrationFiscalSettingsService';
@@ -76,6 +77,23 @@ const queueService = new SqliteFiscalQueueService(repository, async (item: Fisca
   if (item.operation === 'CANCEL_NFCE') {
     const response = await fiscalServiceRef.cancelNfce(payload as unknown as CancelNfceRequest);
     return mapCancelQueueResult(response);
+  }
+
+  if (item.operation === 'TEST_STATUS_NFCE') {
+    const config = configService.getConfig();
+    logger.info(`[FiscalDiagnostic] Iniciando NFeStatusServico4 provider=${config.provider} ambiente=${config.environment} uf=${config.uf ?? 'SP'}.`);
+    await certificateService.assertCertificateReady(config);
+    logger.info('[FiscalDiagnostic] Certificado validado com sucesso.');
+    const provider = providerFactory.resolve(config);
+    const result = await provider.testStatusServico(config);
+    logger.info(`[FiscalDiagnostic] NFeStatusServico4 finalizado url=${result.url} cStat=${result.statusCode ?? 'sem cStat'} xMotivo=${result.statusMessage}.`);
+
+    return {
+      status: result.success ? 'COMPLETED' : 'FAILED_FINAL',
+      statusCode: result.statusCode ?? 'SEFAZ_STATUS_FAILED',
+      statusMessage: result.statusMessage,
+      result,
+    };
   }
 
   return {

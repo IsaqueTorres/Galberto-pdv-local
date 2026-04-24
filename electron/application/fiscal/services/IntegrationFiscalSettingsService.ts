@@ -1,4 +1,5 @@
 import db from '../../../infra/database/db';
+import { logger } from '../../../logger/logger';
 import type { FiscalConfigInput, FiscalConfigView, FiscalProviderConfig } from '../types/fiscal.types';
 
 const FISCAL_INTEGRATION_ID = 'fiscal:nfce';
@@ -29,6 +30,8 @@ function defaultConfig(): StoredFiscalConfig {
     certificatePassword: null,
     cscId: null,
     cscToken: null,
+    uf: 'SP',
+    model: 65,
     defaultSeries: 1,
     updatedAt: nowIso(),
   };
@@ -44,6 +47,8 @@ function sanitizeForView(config: StoredFiscalConfig): FiscalConfigView {
     sefazBaseUrl: config.sefazBaseUrl ?? null,
     certificatePath: config.certificatePath ?? null,
     cscId: config.cscId ?? null,
+    uf: config.uf ?? 'SP',
+    model: config.model ?? 65,
     defaultSeries: config.defaultSeries ?? null,
     hasGatewayApiKey: Boolean(config.gatewayApiKey),
     hasCertificatePassword: Boolean(config.certificatePassword),
@@ -62,10 +67,12 @@ export class IntegrationFiscalSettingsService {
     `).get(FISCAL_INTEGRATION_ID) as IntegrationConfigRow | undefined;
 
     if (!row?.raw_json) {
+      logger.warn('[FiscalConfig] Configuracao fiscal fiscal:nfce nao encontrada. Usando defaults.');
       return defaultConfig();
     }
 
     const parsed = JSON.parse(row.raw_json) as Partial<StoredFiscalConfig>;
+    logger.info(`[FiscalConfig] Configuracao fiscal carregada provider=${parsed.provider ?? 'mock'} ambiente=${parsed.environment ?? 'homologation'} uf=${parsed.uf ?? 'SP'}.`);
     return {
       ...defaultConfig(),
       ...parsed,
@@ -120,7 +127,7 @@ export class IntegrationFiscalSettingsService {
       next.updatedAt
     );
 
+    logger.info(`[FiscalConfig] Configuracao fiscal salva provider=${next.provider} ambiente=${next.environment} uf=${next.uf ?? 'SP'}.`);
     return sanitizeForView(next);
   }
 }
-

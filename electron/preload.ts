@@ -156,5 +156,6 @@ contextBridge.exposeInMainWorld('electron', {
     listQueue: (limit?: number) => ipcRenderer.invoke('fiscal:list-queue', limit),
     reprocessQueueItem: (queueId: string) => ipcRenderer.invoke('fiscal:reprocess-queue-item', queueId),
     processNextQueueItem: () => ipcRenderer.invoke('fiscal:process-next-queue-item'),
+    runStatusDiagnostic: () => ipcRenderer.invoke('fiscal:run-status-diagnostic'),
   },
 });
