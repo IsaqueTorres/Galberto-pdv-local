@@ -4,104 +4,160 @@
 - **Banco de Dados:** SQLite (better-sqlite3) - Offline-first.
 - **Público:** Pequenos mercados e comércios locais.
 - **Arquitetura:** - Existe uma tabela `integrations` para armazenar tokens, credenciais e configurações
-- O sistema já consome dados do Bling, que é o sistema mestre de produtos, clientes e outras entidades de retaguarda
-- O PDV é a frente de caixa e precisa ganhar a parte fiscal de emissão NFC-e
+- O sistema já consome dados do Bling, que é o sistema mestre de produtos, clientes e outras entidades de retaguarda. Porem no futuro sera integrado a um ERP que nos mesmos vamos desenvolver.
+
+
 
 ### 2. OBJETIVO DESSA TAREFA
 
-Contexto:
-- Já existe uma tabela `integrations`
-- O sistema precisa ganhar persistência fiscal robusta
-- O Bling é a origem de produtos/clientes; o PDV só consome esses dados
-- Agora queremos a modelagem local necessária para emissão NFC-e e reprocessamento
+Seguinte, os dados vem do Bling de acordo com os campos que estao preenchidos la, por exemplo se o cliente cadastrou o produto com ID, codigo, Descricao e Preco o Json vem somente com esses dados, ja se o cliente cadastrou mais o json tras os outros tambem, ou seja o json retorna via API oque tem informacao e omite os vazios.
 
-Objetivo:
-Criar a modelagem SQLite, migrations e repositórios TypeScript para suportar a camada fiscal do PDV.
+Porem acho melhor manter a tabela local como se fosse um espelho da tabela do bling e pega tudo que o cliente preencheu e armazena localmente, vai que um cliente especifico preencheu tudo.
 
-Crie as tabelas necessárias para o MVP fiscal:
-- `stores`
-- `sales`
-- `sale_items`
-- `payments`
-- `fiscal_documents`
-- `fiscal_events`
-- `sync_queue`
-- `printers` (se necessário para impressão)
-- reutilizar `integrations` apenas para credenciais/config
+Dessa maneira eu consigo tambem usar mais dados, extrair relatorios posteriores, e ate cadastrar os produtos localmente sem precisar alterar a tabela produtos, melhor sobrar do que faltar.
 
-Se algumas dessas tabelas já puderem existir no sistema, escreva a solução de forma incremental, com migrations seguras e idempotentes.
 
-Requisitos de modelagem:
-1. `fiscal_documents` deve armazenar pelo menos:
-   - id
-   - sale_id
-   - store_id
-   - model (65)
-   - series
-   - number
-   - access_key
-   - environment (homologation/production)
-   - status
-   - xml
-   - xml_signed
-   - protocol
-   - receipt_number
-   - qr_code_url
-   - authorization_datetime
-   - cancel_datetime
-   - contingency_type
-   - rejection_code
-   - rejection_reason
-   - created_at
-   - updated_at
+preciso de sua ajuda para ajustar a tabela produtos bem como o tipo de dados que o PDV trata, segue todos os dados que a Bling armazena 
 
-2. `fiscal_events` deve armazenar:
-   - id
-   - fiscal_document_id
-   - event_type
-   - payload_json
-   - response_json
-   - status
-   - created_at
 
-3. `sync_queue` deve suportar:
-   - id
-   - entity_type
-   - entity_id
-   - operation
-   - payload_json
-   - status
-   - attempts
-   - next_attempt_at
-   - last_error
-   - created_at
-   - updated_at
+ID
+Código
+Descrição
+Unidade
+NCM	Origem
+Preço
+Valor IPI fixo
+Observações
+Situação
+Estoque
+Preço de custo
+Cód. no fornecedor
+Fornecedor
+Localização
+Estoque máximo
+Estoque mínimo
+Peso líquido (Kg)
+Peso bruto (Kg)
+GTIN/EAN
+GTIN/EAN da Embalagem
+Largura do produto
+Altura do Produto
+Profundidade do produto
+Data Validade
+Descrição do Produto no Fornecedor
+Descrição Complementar
+Itens p/ caixa
+Produto Variação
+Tipo Produção
+Classe de enquadramento do IPI
+Código na Lista de Serviços
+Tipo do item
+Grupo de Tags/Tags
+Tributos
+Código Pai
+Código Integração
+Grupo de produtos
+Marca
+CEST
+Volumes	Descrição Curta	Cross-Docking
+URL Imagens Externas
+Link Externo
+Meses Garantia no Fornecedor
+Clonar dados do pai
+Condição do Produto	Frete Grátis
+Número FCI
+Departamento
+Unidade de Medida
+Preço de Compra
+Valor base ICMS ST para retenção
+Valor ICMS ST para retenção
+Valor ICMS próprio do substituto
+Categoria do produto
+Informações Adicionais
 
-4. Criar índices úteis
-5. Garantir integridade referencial possível dentro do SQLite
-6. Implementar repositories com better-sqlite3
-7. Implementar métodos de transação
-8. Implementar idempotência para evitar duas emissões para a mesma venda
+Essa e nossa tabela local repare que temos 2 um products e outra produtos, a products busca do bling e salva na espelho produtos, pode ver que ja armazenamos algumas coisas porem outras coisas nao armazenamos, preciso que voce ADICIONE os dados que faltam para termos uma tabela correspondente a tabela do bling, nao altere os nomes das colunas ja existentes para que nao tenha problema com as funcoes que ja manipulam a tabela products
 
-O que você deve entregar:
-- migrations SQL ou em TypeScript
-- tipos/interfaces de domínio
-- repositories completos
-- exemplos de uso
-- helpers utilitários
-- comentários objetivos no código
+function createTableProducts() {
+  const sqlComand = `
+    CREATE TABLE IF NOT EXISTS products (
+    id TEXT PRIMARY KEY,
+    external_id TEXT,
+    integration_source TEXT,
+    sku TEXT,
+    barcode TEXT,
+    category_id TEXT,
+    name TEXT NOT NULL,
+    unit TEXT,
+    sale_price_cents INTEGER NOT NULL DEFAULT 0,
+    cost_price_cents INTEGER NOT NULL DEFAULT 0,
+    current_stock REAL NOT NULL DEFAULT 0,
+    minimum_stock REAL NOT NULL DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1,
+    remote_created_at TEXT,
+    remote_updated_at TEXT,
+    last_synced_at TEXT,
+    sync_status TEXT NOT NULL DEFAULT 'synced',
+    raw_json TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+  );
 
-Também quero que você defina os enums/status para:
-- `FiscalDocumentStatus`
-- `QueueStatus`
-- `FiscalEventType`
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_products_integration_external
+    ON products (integration_source, external_id);
 
-No final, explique brevemente como essa modelagem suporta:
-- emissão
-- cancelamento
-- reimpressão
-- contingência
-- reprocessamento
+  CREATE INDEX IF NOT EXISTS idx_products_name
+    ON products (name);
+
+  CREATE INDEX IF NOT EXISTS idx_products_sku
+    ON products (sku);
+
+  CREATE INDEX IF NOT EXISTS idx_products_barcode
+    ON products (barcode);
+
+  CREATE INDEX IF NOT EXISTS idx_products_category_id
+    ON products (category_id);
+
+  CREATE TABLE IF NOT EXISTS produtos (
+    id TEXT PRIMARY KEY,
+    internal_code TEXT,
+    gtin TEXT,
+    nome TEXT NOT NULL,
+    marca TEXT,
+    preco_custo REAL NOT NULL DEFAULT 0,
+    preco_venda REAL NOT NULL DEFAULT 0,
+    estoque_atual REAL NOT NULL DEFAULT 0,
+    estoque_minimo REAL NOT NULL DEFAULT 0,
+    unidade_medida TEXT,
+    ncm TEXT,
+    cfop TEXT,
+    ativo INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_produtos_nome
+    ON produtos (nome);
+
+  CREATE INDEX IF NOT EXISTS idx_produtos_gtin
+    ON produtos (gtin);
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'products' checada/criada");
+}
+
+
+
+
+
+
+
+
+
+
+
+Mude o estilo para ficar parecido com o estilo do PDV (azul)
 
 - **Segurança:** Nunca exponha chaves de API no Frontend. Use o IPC Main do Electron para chamadas sensíveis.
 - **Tipagem:** Use TypeScript rigoroso. Crie Interfaces para as respostas do ERP e converta-as para o Schema do Galberto.

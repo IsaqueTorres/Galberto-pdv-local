@@ -43,22 +43,8 @@ export default function TabelaProdutos() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                     <h2 className="text-2xl font-black text-blue-950 tracking-tight">Gestão de Produtos</h2>
-                    <p className="text-sm text-blue-800">Pesquise, gerencie e cadastre Produtos do seu estoque.</p>
+                    <p className="text-sm text-blue-800">Consulte os Produtos do seu estoque.</p>
                 </div>
-
-                <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                    </h2>
-                    <button
-                        
-                        className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95"
-                        onClick={() => openAddProductWindow()}
-                    >   
-                         Cadastrar Produtos
-                    </button>
-                </div>
-
-
             </div>
 
             {/* FILTROS DA TABELA DE PRODUTOS*/}
