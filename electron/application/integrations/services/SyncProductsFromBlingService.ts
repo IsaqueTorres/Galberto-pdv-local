@@ -52,6 +52,98 @@ const PAGE_LIMIT = 100;
 // Mantido como constante para facilitar ajuste caso a regra da API mude.
 const PRODUCT_LIST_CRITERION = '5';
 
+function getNestedValue(source: unknown, path: string): unknown {
+  if (!source || typeof source !== 'object') return undefined;
+
+  let current: unknown = source;
+  for (const key of path.split('.')) {
+    if (!current || typeof current !== 'object' || !(key in current)) return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+
+  return current;
+}
+
+function pickValue(source: unknown, paths: string[]): unknown {
+  for (const path of paths) {
+    const value = getNestedValue(source, path);
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function toNullableString(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return null;
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    const normalized = trimmed.includes(',')
+      ? trimmed.replace(/\./g, '').replace(',', '.')
+      : trimmed;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function toMoneyCents(value: unknown): number | null {
+  const parsed = toNullableNumber(value);
+  return parsed == null ? null : Math.round(parsed * 100);
+}
+
+function toNullableInteger(value: unknown): number | null {
+  const parsed = toNullableNumber(value);
+  return parsed == null ? null : Math.round(parsed);
+}
+
+function toNullableBooleanInt(value: unknown): 0 | 1 | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (typeof value === 'number') return value === 0 ? 0 : 1;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 't', 'sim', 's', 'y', 'yes', 'a', 'ativo'].includes(normalized)) return 1;
+    if (['0', 'false', 'f', 'nao', 'não', 'n', 'no', 'i', 'inativo'].includes(normalized)) return 0;
+  }
+  return null;
+}
+
+function serializeStructuredValue(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return null;
+  }
+}
+
+function resolveCategoryExternalId(product: BlingProduct): string | null {
+  const categoryId = pickValue(product, [
+    'categoria.id',
+    'categoriaProduto.id',
+    'categoriaProdutoId',
+  ]);
+
+  return toNullableString(categoryId);
+}
+
 /**
  * Converte uma data ISO para o formato aceito pelo Bling em filtros de data/hora.
  *
@@ -99,7 +191,29 @@ function mapBlingProduct(
   categoryIdMap: Map<string, string>,
 ): StoredProduct {
   // O Bling envia a categoria com o id externo. Localmente salvamos o id interno.
-  const categoryExternalId = product.categoria?.id ? String(product.categoria.id) : null;
+  const categoryExternalId = resolveCategoryExternalId(product);
+  const salePriceCents = toMoneyCents(pickValue(product, ['preco'])) ?? 0;
+  const costPriceCents = toMoneyCents(pickValue(product, ['precoCusto'])) ?? 0;
+  const purchasePriceCents = toMoneyCents(pickValue(product, ['precoCompra', 'precoCusto']));
+  const currentStock = toNullableNumber(pickValue(product, [
+    'estoque.saldoVirtualTotal',
+    'estoque.saldoFisicoTotal',
+    'estoque',
+  ])) ?? 0;
+  const minimumStock = toNullableNumber(pickValue(product, [
+    'estoque.minimo',
+    'estoqueMinimo',
+  ])) ?? 0;
+  const activeFlag = toNullableBooleanInt(pickValue(product, ['situacao'])) ?? 0;
+  const supplierName = toNullableString(pickValue(product, [
+    'fornecedor.nome',
+    'fornecedor',
+  ]));
+  const categoryName = toNullableString(pickValue(product, [
+    'categoria.nome',
+    'categoriaProduto.nome',
+    'categoriaProduto',
+  ]));
 
   return {
     // Identificação do produto no Bling e origem da integração.
@@ -107,25 +221,84 @@ function mapBlingProduct(
     integrationSource: INTEGRATION_ID,
 
     // Dados comerciais e de identificação. Campos ausentes viram null para manter padrão local.
-    sku: product.codigo || null,
-    barcode: product.codigo || null,
+    sku: toNullableString(pickValue(product, ['codigo'])) ?? null,
+    barcode: toNullableString(pickValue(product, ['gtin', 'codigo'])) ?? null,
     categoryId: categoryExternalId ? (categoryIdMap.get(categoryExternalId) ?? null) : null,
     name: product.nome,
-    unit: null,
+    unit: toNullableString(pickValue(product, ['unidade', 'unidadeMedida'])) ?? null,
 
     // Valores monetários são armazenados em centavos para evitar problemas com ponto flutuante.
-    salePriceCents: Math.round((product.preco ?? 0) * 100),
-    costPriceCents: Math.round((product.precoCusto ?? 0) * 100),
+    salePriceCents,
+    costPriceCents,
+    purchasePriceCents,
 
     // Estoque e limites locais.
-    currentStock: Number(product.estoque?.saldoVirtualTotal ?? 0),
-    minimumStock: 0,
+    currentStock,
+    minimumStock,
+    maximumStock: toNullableNumber(pickValue(product, [
+      'estoque.maximo',
+      'estoqueMaximo',
+    ])),
+
+    // Espelho ampliado do Bling.
+    ncm: toNullableString(pickValue(product, ['ncm'])),
+    origin: toNullableString(pickValue(product, ['origem'])),
+    fixedIpiValueCents: toMoneyCents(pickValue(product, ['valorIpiFixo'])),
+    notes: toNullableString(pickValue(product, ['observacoes', 'observacao'])),
+    situation: toNullableString(pickValue(product, ['situacao'])),
+    supplierCode: toNullableString(pickValue(product, ['codigoFornecedor'])),
+    supplierName,
+    location: toNullableString(pickValue(product, ['localizacao'])),
+    netWeightKg: toNullableNumber(pickValue(product, ['pesoLiquido'])),
+    grossWeightKg: toNullableNumber(pickValue(product, ['pesoBruto'])),
+    packagingBarcode: toNullableString(pickValue(product, ['gtinEmbalagem'])),
+    widthCm: toNullableNumber(pickValue(product, ['larguraProduto', 'largura'])),
+    heightCm: toNullableNumber(pickValue(product, ['alturaProduto', 'altura'])),
+    depthCm: toNullableNumber(pickValue(product, ['profundidadeProduto', 'profundidade'])),
+    expirationDate: toNullableString(pickValue(product, ['dataValidade'])),
+    supplierProductDescription: toNullableString(pickValue(product, [
+      'descricaoFornecedor',
+      'descricaoProdutoFornecedor',
+    ])),
+    complementaryDescription: toNullableString(pickValue(product, ['descricaoComplementar'])),
+    itemsPerBox: toNullableNumber(pickValue(product, ['itensPorCaixa'])),
+    isVariation: toNullableBooleanInt(pickValue(product, ['produtoVariacao', 'variacao'])),
+    productionType: toNullableString(pickValue(product, ['tipoProducao'])),
+    ipiTaxClass: toNullableString(pickValue(product, ['classeEnquadramentoIpi'])),
+    serviceListCode: toNullableString(pickValue(product, ['codigoListaServicos'])),
+    itemType: toNullableString(pickValue(product, ['tipoItem', 'tipo'])),
+    tagsGroup: serializeStructuredValue(pickValue(product, ['grupoTags', 'grupoDeTags'])),
+    tags: serializeStructuredValue(pickValue(product, ['tags'])),
+    taxesJson: serializeStructuredValue(pickValue(product, ['tributos'])),
+    parentCode: toNullableString(pickValue(product, ['codigoPai'])),
+    integrationCode: toNullableString(pickValue(product, ['codigoIntegracao'])),
+    productGroup: toNullableString(pickValue(product, ['grupoProdutos', 'grupoProduto'])),
+    brand: toNullableString(pickValue(product, ['marca'])),
+    cest: toNullableString(pickValue(product, ['cest'])),
+    volumes: toNullableNumber(pickValue(product, ['volumes'])),
+    shortDescription: toNullableString(pickValue(product, ['descricaoCurta'])),
+    crossDockingDays: toNullableInteger(pickValue(product, ['crossDocking'])),
+    externalImageUrls: serializeStructuredValue(pickValue(product, ['urlImagensExternas', 'imagensURL', 'imagemURL'])),
+    externalLink: toNullableString(pickValue(product, ['linkExterno'])),
+    supplierWarrantyMonths: toNullableInteger(pickValue(product, ['mesesGarantiaFornecedor'])),
+    cloneParentData: toNullableBooleanInt(pickValue(product, ['clonarDadosPai'])),
+    productCondition: toNullableString(pickValue(product, ['condicaoProduto'])),
+    freeShipping: toNullableBooleanInt(pickValue(product, ['freteGratis'])),
+    fciNumber: toNullableString(pickValue(product, ['numeroFci', 'numeroFCI'])),
+    department: toNullableString(pickValue(product, ['departamento'])),
+    measurementUnit: toNullableString(pickValue(product, ['unidadeMedida', 'unidade'])),
+    icmsStRetentionBaseCents: toMoneyCents(pickValue(product, ['valorBaseIcmsStRetencao'])),
+    icmsStRetentionValueCents: toMoneyCents(pickValue(product, ['valorIcmsStRetencao'])),
+    icmsSubstituteOwnValueCents: toMoneyCents(pickValue(product, ['valorIcmsProprioSubstituto'])),
+    productCategoryName: categoryName,
+    additionalInfo: toNullableString(pickValue(product, ['informacoesAdicionais'])),
 
     // No Bling, "A" representa produto ativo.
-    active: product.situacao === 'A' ? 1 : 0,
+    active: activeFlag,
 
     // Datas e metadados de sincronização.
-    remoteUpdatedAt: product.dataAlteracao ?? null,
+    remoteCreatedAt: toNullableString(pickValue(product, ['dataCriacao'])),
+    remoteUpdatedAt: toNullableString(pickValue(product, ['dataAlteracao'])),
     lastSyncedAt: now,
     syncStatus: 'synced',
 

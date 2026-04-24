@@ -771,6 +771,56 @@ function createTableProducts() {
     last_synced_at TEXT,
     sync_status TEXT NOT NULL DEFAULT 'synced',
     raw_json TEXT,
+    ncm TEXT,
+    origin TEXT,
+    fixed_ipi_value_cents INTEGER,
+    notes TEXT,
+    situation TEXT,
+    supplier_code TEXT,
+    supplier_name TEXT,
+    location TEXT,
+    maximum_stock REAL,
+    net_weight_kg REAL,
+    gross_weight_kg REAL,
+    packaging_barcode TEXT,
+    width_cm REAL,
+    height_cm REAL,
+    depth_cm REAL,
+    expiration_date TEXT,
+    supplier_product_description TEXT,
+    complementary_description TEXT,
+    items_per_box REAL,
+    is_variation INTEGER,
+    production_type TEXT,
+    ipi_tax_class TEXT,
+    service_list_code TEXT,
+    item_type TEXT,
+    tags_group TEXT,
+    tags TEXT,
+    taxes_json TEXT,
+    parent_code TEXT,
+    integration_code TEXT,
+    product_group TEXT,
+    brand TEXT,
+    cest TEXT,
+    volumes REAL,
+    short_description TEXT,
+    cross_docking_days INTEGER,
+    external_image_urls TEXT,
+    external_link TEXT,
+    supplier_warranty_months INTEGER,
+    clone_parent_data INTEGER,
+    product_condition TEXT,
+    free_shipping INTEGER,
+    fci_number TEXT,
+    department TEXT,
+    measurement_unit TEXT,
+    purchase_price_cents INTEGER,
+    icms_st_retention_base_cents INTEGER,
+    icms_st_retention_value_cents INTEGER,
+    icms_substitute_own_value_cents INTEGER,
+    product_category_name TEXT,
+    additional_info TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
@@ -820,31 +870,87 @@ function createTableProducts() {
   logger.info("-> Tabela 'products' checada/criada");
 }
 function ensureProductsColumns() {
+  const productColumnDefinitions = [
+    `current_stock REAL NOT NULL DEFAULT 0`,
+    `minimum_stock REAL NOT NULL DEFAULT 0`,
+    `ncm TEXT`,
+    `origin TEXT`,
+    `fixed_ipi_value_cents INTEGER`,
+    `notes TEXT`,
+    `situation TEXT`,
+    `supplier_code TEXT`,
+    `supplier_name TEXT`,
+    `location TEXT`,
+    `maximum_stock REAL`,
+    `net_weight_kg REAL`,
+    `gross_weight_kg REAL`,
+    `packaging_barcode TEXT`,
+    `width_cm REAL`,
+    `height_cm REAL`,
+    `depth_cm REAL`,
+    `expiration_date TEXT`,
+    `supplier_product_description TEXT`,
+    `complementary_description TEXT`,
+    `items_per_box REAL`,
+    `is_variation INTEGER`,
+    `production_type TEXT`,
+    `ipi_tax_class TEXT`,
+    `service_list_code TEXT`,
+    `item_type TEXT`,
+    `tags_group TEXT`,
+    `tags TEXT`,
+    `taxes_json TEXT`,
+    `parent_code TEXT`,
+    `integration_code TEXT`,
+    `product_group TEXT`,
+    `brand TEXT`,
+    `cest TEXT`,
+    `volumes REAL`,
+    `short_description TEXT`,
+    `cross_docking_days INTEGER`,
+    `external_image_urls TEXT`,
+    `external_link TEXT`,
+    `supplier_warranty_months INTEGER`,
+    `clone_parent_data INTEGER`,
+    `product_condition TEXT`,
+    `free_shipping INTEGER`,
+    `fci_number TEXT`,
+    `department TEXT`,
+    `measurement_unit TEXT`,
+    `purchase_price_cents INTEGER`,
+    `icms_st_retention_base_cents INTEGER`,
+    `icms_st_retention_value_cents INTEGER`,
+    `icms_substitute_own_value_cents INTEGER`,
+    `product_category_name TEXT`,
+    `additional_info TEXT`
+  ];
   const columns = db.prepare(`PRAGMA table_info(products)`).all();
   const columnNames = new Set(columns.map((column) => column.name));
-  if (!columnNames.has("current_stock")) {
-    db.exec(`ALTER TABLE products ADD COLUMN current_stock REAL NOT NULL DEFAULT 0;`);
-  }
-  if (!columnNames.has("minimum_stock")) {
-    db.exec(`ALTER TABLE products ADD COLUMN minimum_stock REAL NOT NULL DEFAULT 0;`);
+  for (const definition of productColumnDefinitions) {
+    const [columnName] = definition.split(" ");
+    if (!columnNames.has(columnName)) {
+      db.exec(`ALTER TABLE products ADD COLUMN ${definition};`);
+    }
   }
 }
 function syncLegacyProductsMirror() {
   db.exec(`
     INSERT OR REPLACE INTO produtos (
-      id, internal_code, gtin, nome, preco_custo, preco_venda,
-      estoque_atual, estoque_minimo, unidade_medida, ativo, created_at, updated_at
+      id, internal_code, gtin, nome, marca, preco_custo, preco_venda,
+      estoque_atual, estoque_minimo, unidade_medida, ncm, ativo, created_at, updated_at
     )
     SELECT
       p.id,
       p.sku,
       p.barcode,
       p.name,
+      p.brand,
       p.cost_price_cents / 100.0,
       p.sale_price_cents / 100.0,
       p.current_stock,
       p.minimum_stock,
-      p.unit,
+      COALESCE(p.measurement_unit, p.unit),
+      p.ncm,
       p.active,
       COALESCE(prod.created_at, datetime('now')),
       datetime('now')
@@ -2271,12 +2377,73 @@ function select_product_by_id(id) {
       barcode AS codigo_barras,
       sku,
       name AS nome,
+      category_id,
+      category_id AS categoria_id,
       ROUND(sale_price_cents / 100.0, 2) AS preco_venda,
       ROUND(cost_price_cents / 100.0, 2) AS preco_custo,
+      ROUND(COALESCE(purchase_price_cents, cost_price_cents) / 100.0, 2) AS preco_compra,
       current_stock AS estoque_atual,
+      maximum_stock AS estoque_maximo,
       active AS ativo,
       unit AS unidade_medida,
+      measurement_unit,
       minimum_stock AS estoque_minimo,
+      ncm,
+      origin AS origem,
+      ROUND(COALESCE(fixed_ipi_value_cents, 0) / 100.0, 2) AS valor_ipi_fixo,
+      notes AS observacoes,
+      situation AS situacao,
+      supplier_code,
+      supplier_name,
+      location AS localizacao,
+      net_weight_kg,
+      gross_weight_kg,
+      packaging_barcode,
+      width_cm,
+      height_cm,
+      depth_cm,
+      expiration_date,
+      supplier_product_description,
+      complementary_description,
+      items_per_box,
+      is_variation,
+      production_type,
+      ipi_tax_class,
+      service_list_code,
+      item_type,
+      tags_group,
+      tags,
+      taxes_json,
+      parent_code,
+      integration_code,
+      product_group,
+      brand,
+      brand AS marca,
+      cest,
+      volumes,
+      short_description,
+      cross_docking_days,
+      external_image_urls,
+      external_link,
+      supplier_warranty_months,
+      clone_parent_data,
+      product_condition,
+      free_shipping,
+      fci_number,
+      department,
+      ROUND(COALESCE(icms_st_retention_base_cents, 0) / 100.0, 2) AS valor_base_icms_st_retencao,
+      ROUND(COALESCE(icms_st_retention_value_cents, 0) / 100.0, 2) AS valor_icms_st_retencao,
+      ROUND(COALESCE(icms_substitute_own_value_cents, 0) / 100.0, 2) AS valor_icms_proprio_substituto,
+      product_category_name,
+      additional_info,
+      integration_source,
+      remote_created_at,
+      remote_updated_at,
+      last_synced_at,
+      sync_status,
+      created_at,
+      updated_at,
+      deleted_at,
       raw_json
     FROM products
     WHERE id = ? AND deleted_at IS NULL
@@ -2334,7 +2501,7 @@ function selectSuggestionProduct(term) {
     id: product.id,
     internalCode: product.sku ?? "",
     name: product.name,
-    brand: "",
+    brand: product.brand ?? "",
     gtin: product.barcode ?? "",
     unitOfMeasure: product.unit ?? "UN",
     currentStock: Number(product.current_stock ?? 0),
@@ -7597,11 +7764,22 @@ class ProductRepository {
     db.prepare(`
       INSERT INTO products (
         id, external_id, integration_source, sku, barcode, category_id,
-        name, unit, sale_price_cents, cost_price_cents, current_stock, minimum_stock, active,
+        name, unit, sale_price_cents, cost_price_cents, current_stock, minimum_stock,
+        ncm, origin, fixed_ipi_value_cents, notes, situation, supplier_code, supplier_name,
+        location, maximum_stock, net_weight_kg, gross_weight_kg, packaging_barcode,
+        width_cm, height_cm, depth_cm, expiration_date, supplier_product_description,
+        complementary_description, items_per_box, is_variation, production_type,
+        ipi_tax_class, service_list_code, item_type, tags_group, tags, taxes_json,
+        parent_code, integration_code, product_group, brand, cest, volumes,
+        short_description, cross_docking_days, external_image_urls, external_link,
+        supplier_warranty_months, clone_parent_data, product_condition, free_shipping,
+        fci_number, department, measurement_unit, purchase_price_cents,
+        icms_st_retention_base_cents, icms_st_retention_value_cents,
+        icms_substitute_own_value_cents, product_category_name, additional_info, active,
         remote_created_at, remote_updated_at, last_synced_at, sync_status,
         raw_json, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(integration_source, external_id) DO UPDATE SET
         sku               = excluded.sku,
         barcode           = excluded.barcode,
@@ -7612,6 +7790,56 @@ class ProductRepository {
         cost_price_cents  = excluded.cost_price_cents,
         current_stock     = excluded.current_stock,
         minimum_stock     = excluded.minimum_stock,
+        ncm               = excluded.ncm,
+        origin            = excluded.origin,
+        fixed_ipi_value_cents = excluded.fixed_ipi_value_cents,
+        notes             = excluded.notes,
+        situation         = excluded.situation,
+        supplier_code     = excluded.supplier_code,
+        supplier_name     = excluded.supplier_name,
+        location          = excluded.location,
+        maximum_stock     = excluded.maximum_stock,
+        net_weight_kg     = excluded.net_weight_kg,
+        gross_weight_kg   = excluded.gross_weight_kg,
+        packaging_barcode = excluded.packaging_barcode,
+        width_cm          = excluded.width_cm,
+        height_cm         = excluded.height_cm,
+        depth_cm          = excluded.depth_cm,
+        expiration_date   = excluded.expiration_date,
+        supplier_product_description = excluded.supplier_product_description,
+        complementary_description = excluded.complementary_description,
+        items_per_box     = excluded.items_per_box,
+        is_variation      = excluded.is_variation,
+        production_type   = excluded.production_type,
+        ipi_tax_class     = excluded.ipi_tax_class,
+        service_list_code = excluded.service_list_code,
+        item_type         = excluded.item_type,
+        tags_group        = excluded.tags_group,
+        tags              = excluded.tags,
+        taxes_json        = excluded.taxes_json,
+        parent_code       = excluded.parent_code,
+        integration_code  = excluded.integration_code,
+        product_group     = excluded.product_group,
+        brand             = excluded.brand,
+        cest              = excluded.cest,
+        volumes           = excluded.volumes,
+        short_description = excluded.short_description,
+        cross_docking_days = excluded.cross_docking_days,
+        external_image_urls = excluded.external_image_urls,
+        external_link     = excluded.external_link,
+        supplier_warranty_months = excluded.supplier_warranty_months,
+        clone_parent_data = excluded.clone_parent_data,
+        product_condition = excluded.product_condition,
+        free_shipping     = excluded.free_shipping,
+        fci_number        = excluded.fci_number,
+        department        = excluded.department,
+        measurement_unit  = excluded.measurement_unit,
+        purchase_price_cents = excluded.purchase_price_cents,
+        icms_st_retention_base_cents = excluded.icms_st_retention_base_cents,
+        icms_st_retention_value_cents = excluded.icms_st_retention_value_cents,
+        icms_substitute_own_value_cents = excluded.icms_substitute_own_value_cents,
+        product_category_name = excluded.product_category_name,
+        additional_info   = excluded.additional_info,
         active            = excluded.active,
         remote_created_at = excluded.remote_created_at,
         remote_updated_at = excluded.remote_updated_at,
@@ -7632,6 +7860,56 @@ class ProductRepository {
       product.costPriceCents,
       product.currentStock ?? 0,
       product.minimumStock ?? 0,
+      product.ncm ?? null,
+      product.origin ?? null,
+      product.fixedIpiValueCents ?? null,
+      product.notes ?? null,
+      product.situation ?? null,
+      product.supplierCode ?? null,
+      product.supplierName ?? null,
+      product.location ?? null,
+      product.maximumStock ?? null,
+      product.netWeightKg ?? null,
+      product.grossWeightKg ?? null,
+      product.packagingBarcode ?? null,
+      product.widthCm ?? null,
+      product.heightCm ?? null,
+      product.depthCm ?? null,
+      product.expirationDate ?? null,
+      product.supplierProductDescription ?? null,
+      product.complementaryDescription ?? null,
+      product.itemsPerBox ?? null,
+      product.isVariation ?? null,
+      product.productionType ?? null,
+      product.ipiTaxClass ?? null,
+      product.serviceListCode ?? null,
+      product.itemType ?? null,
+      product.tagsGroup ?? null,
+      product.tags ?? null,
+      product.taxesJson ?? null,
+      product.parentCode ?? null,
+      product.integrationCode ?? null,
+      product.productGroup ?? null,
+      product.brand ?? null,
+      product.cest ?? null,
+      product.volumes ?? null,
+      product.shortDescription ?? null,
+      product.crossDockingDays ?? null,
+      product.externalImageUrls ?? null,
+      product.externalLink ?? null,
+      product.supplierWarrantyMonths ?? null,
+      product.cloneParentData ?? null,
+      product.productCondition ?? null,
+      product.freeShipping ?? null,
+      product.fciNumber ?? null,
+      product.department ?? null,
+      product.measurementUnit ?? null,
+      product.purchasePriceCents ?? null,
+      product.icmsStRetentionBaseCents ?? null,
+      product.icmsStRetentionValueCents ?? null,
+      product.icmsSubstituteOwnValueCents ?? null,
+      product.productCategoryName ?? null,
+      product.additionalInfo ?? null,
       product.active,
       product.remoteCreatedAt ?? null,
       product.remoteUpdatedAt ?? null,
@@ -7643,19 +7921,21 @@ class ProductRepository {
     );
     db.prepare(`
       INSERT INTO produtos (
-        id, internal_code, gtin, nome, preco_custo, preco_venda,
-        estoque_atual, estoque_minimo, unidade_medida, ativo, created_at, updated_at
+        id, internal_code, gtin, nome, marca, preco_custo, preco_venda,
+        estoque_atual, estoque_minimo, unidade_medida, ncm, ativo, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         internal_code = excluded.internal_code,
         gtin = excluded.gtin,
         nome = excluded.nome,
+        marca = excluded.marca,
         preco_custo = excluded.preco_custo,
         preco_venda = excluded.preco_venda,
         estoque_atual = excluded.estoque_atual,
         estoque_minimo = excluded.estoque_minimo,
         unidade_medida = excluded.unidade_medida,
+        ncm = excluded.ncm,
         ativo = excluded.ativo,
         updated_at = excluded.updated_at
     `).run(
@@ -7663,11 +7943,13 @@ class ProductRepository {
       product.sku ?? null,
       product.barcode ?? null,
       product.name,
+      product.brand ?? null,
       product.costPriceCents / 100,
       product.salePriceCents / 100,
       product.currentStock ?? 0,
       product.minimumStock ?? 0,
-      product.unit ?? null,
+      product.measurementUnit ?? product.unit ?? null,
+      product.ncm ?? null,
       product.active,
       product.createdAt ?? now,
       product.updatedAt ?? now
@@ -7726,6 +8008,56 @@ class ProductRepository {
       costPriceCents: row.cost_price_cents,
       currentStock: row.current_stock,
       minimumStock: row.minimum_stock,
+      ncm: row.ncm,
+      origin: row.origin,
+      fixedIpiValueCents: row.fixed_ipi_value_cents,
+      notes: row.notes,
+      situation: row.situation,
+      supplierCode: row.supplier_code,
+      supplierName: row.supplier_name,
+      location: row.location,
+      maximumStock: row.maximum_stock,
+      netWeightKg: row.net_weight_kg,
+      grossWeightKg: row.gross_weight_kg,
+      packagingBarcode: row.packaging_barcode,
+      widthCm: row.width_cm,
+      heightCm: row.height_cm,
+      depthCm: row.depth_cm,
+      expirationDate: row.expiration_date,
+      supplierProductDescription: row.supplier_product_description,
+      complementaryDescription: row.complementary_description,
+      itemsPerBox: row.items_per_box,
+      isVariation: row.is_variation,
+      productionType: row.production_type,
+      ipiTaxClass: row.ipi_tax_class,
+      serviceListCode: row.service_list_code,
+      itemType: row.item_type,
+      tagsGroup: row.tags_group,
+      tags: row.tags,
+      taxesJson: row.taxes_json,
+      parentCode: row.parent_code,
+      integrationCode: row.integration_code,
+      productGroup: row.product_group,
+      brand: row.brand,
+      cest: row.cest,
+      volumes: row.volumes,
+      shortDescription: row.short_description,
+      crossDockingDays: row.cross_docking_days,
+      externalImageUrls: row.external_image_urls,
+      externalLink: row.external_link,
+      supplierWarrantyMonths: row.supplier_warranty_months,
+      cloneParentData: row.clone_parent_data,
+      productCondition: row.product_condition,
+      freeShipping: row.free_shipping,
+      fciNumber: row.fci_number,
+      department: row.department,
+      measurementUnit: row.measurement_unit,
+      purchasePriceCents: row.purchase_price_cents,
+      icmsStRetentionBaseCents: row.icms_st_retention_base_cents,
+      icmsStRetentionValueCents: row.icms_st_retention_value_cents,
+      icmsSubstituteOwnValueCents: row.icms_substitute_own_value_cents,
+      productCategoryName: row.product_category_name,
+      additionalInfo: row.additional_info,
       active: row.active,
       remoteCreatedAt: row.remote_created_at,
       remoteUpdatedAt: row.remote_updated_at,
@@ -7742,6 +8074,83 @@ const INTEGRATION_ID = "bling";
 const RESOURCE = "products";
 const PAGE_LIMIT = 100;
 const PRODUCT_LIST_CRITERION = "5";
+function getNestedValue(source, path2) {
+  if (!source || typeof source !== "object") return void 0;
+  let current = source;
+  for (const key of path2.split(".")) {
+    if (!current || typeof current !== "object" || !(key in current)) return void 0;
+    current = current[key];
+  }
+  return current;
+}
+function pickValue(source, paths) {
+  for (const path2 of paths) {
+    const value = getNestedValue(source, path2);
+    if (value !== void 0 && value !== null && value !== "") {
+      return value;
+    }
+  }
+  return void 0;
+}
+function toNullableString(value) {
+  if (value === void 0 || value === null) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return null;
+}
+function toNullableNumber(value) {
+  if (value === void 0 || value === null || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    const normalized = trimmed.includes(",") ? trimmed.replace(/\./g, "").replace(",", ".") : trimmed;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+function toMoneyCents(value) {
+  const parsed = toNullableNumber(value);
+  return parsed == null ? null : Math.round(parsed * 100);
+}
+function toNullableInteger(value) {
+  const parsed = toNullableNumber(value);
+  return parsed == null ? null : Math.round(parsed);
+}
+function toNullableBooleanInt(value) {
+  if (value === void 0 || value === null || value === "") return null;
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (typeof value === "number") return value === 0 ? 0 : 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["1", "true", "t", "sim", "s", "y", "yes", "a", "ativo"].includes(normalized)) return 1;
+    if (["0", "false", "f", "nao", "não", "n", "no", "i", "inativo"].includes(normalized)) return 0;
+  }
+  return null;
+}
+function serializeStructuredValue(value) {
+  if (value === void 0 || value === null || value === "") return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return null;
+  }
+}
+function resolveCategoryExternalId(product) {
+  const categoryId = pickValue(product, [
+    "categoria.id",
+    "categoriaProduto.id",
+    "categoriaProdutoId"
+  ]);
+  return toNullableString(categoryId);
+}
 function toBlingDateTime(value) {
   return value.replace("T", " ").slice(0, 19);
 }
@@ -7752,28 +8161,107 @@ function getIncrementalCursor(state) {
   return toBlingDateTime(cursorDate);
 }
 function mapBlingProduct(product, now, categoryIdMap) {
-  var _a, _b;
-  const categoryExternalId = ((_a = product.categoria) == null ? void 0 : _a.id) ? String(product.categoria.id) : null;
+  const categoryExternalId = resolveCategoryExternalId(product);
+  const salePriceCents = toMoneyCents(pickValue(product, ["preco"])) ?? 0;
+  const costPriceCents = toMoneyCents(pickValue(product, ["precoCusto"])) ?? 0;
+  const purchasePriceCents = toMoneyCents(pickValue(product, ["precoCompra", "precoCusto"]));
+  const currentStock = toNullableNumber(pickValue(product, [
+    "estoque.saldoVirtualTotal",
+    "estoque.saldoFisicoTotal",
+    "estoque"
+  ])) ?? 0;
+  const minimumStock = toNullableNumber(pickValue(product, [
+    "estoque.minimo",
+    "estoqueMinimo"
+  ])) ?? 0;
+  const activeFlag = toNullableBooleanInt(pickValue(product, ["situacao"])) ?? 0;
+  const supplierName = toNullableString(pickValue(product, [
+    "fornecedor.nome",
+    "fornecedor"
+  ]));
+  const categoryName = toNullableString(pickValue(product, [
+    "categoria.nome",
+    "categoriaProduto.nome",
+    "categoriaProduto"
+  ]));
   return {
     // Identificação do produto no Bling e origem da integração.
     externalId: String(product.id),
     integrationSource: INTEGRATION_ID,
     // Dados comerciais e de identificação. Campos ausentes viram null para manter padrão local.
-    sku: product.codigo || null,
-    barcode: product.codigo || null,
+    sku: toNullableString(pickValue(product, ["codigo"])) ?? null,
+    barcode: toNullableString(pickValue(product, ["gtin", "codigo"])) ?? null,
     categoryId: categoryExternalId ? categoryIdMap.get(categoryExternalId) ?? null : null,
     name: product.nome,
-    unit: null,
+    unit: toNullableString(pickValue(product, ["unidade", "unidadeMedida"])) ?? null,
     // Valores monetários são armazenados em centavos para evitar problemas com ponto flutuante.
-    salePriceCents: Math.round((product.preco ?? 0) * 100),
-    costPriceCents: Math.round((product.precoCusto ?? 0) * 100),
+    salePriceCents,
+    costPriceCents,
+    purchasePriceCents,
     // Estoque e limites locais.
-    currentStock: Number(((_b = product.estoque) == null ? void 0 : _b.saldoVirtualTotal) ?? 0),
-    minimumStock: 0,
+    currentStock,
+    minimumStock,
+    maximumStock: toNullableNumber(pickValue(product, [
+      "estoque.maximo",
+      "estoqueMaximo"
+    ])),
+    // Espelho ampliado do Bling.
+    ncm: toNullableString(pickValue(product, ["ncm"])),
+    origin: toNullableString(pickValue(product, ["origem"])),
+    fixedIpiValueCents: toMoneyCents(pickValue(product, ["valorIpiFixo"])),
+    notes: toNullableString(pickValue(product, ["observacoes", "observacao"])),
+    situation: toNullableString(pickValue(product, ["situacao"])),
+    supplierCode: toNullableString(pickValue(product, ["codigoFornecedor"])),
+    supplierName,
+    location: toNullableString(pickValue(product, ["localizacao"])),
+    netWeightKg: toNullableNumber(pickValue(product, ["pesoLiquido"])),
+    grossWeightKg: toNullableNumber(pickValue(product, ["pesoBruto"])),
+    packagingBarcode: toNullableString(pickValue(product, ["gtinEmbalagem"])),
+    widthCm: toNullableNumber(pickValue(product, ["larguraProduto", "largura"])),
+    heightCm: toNullableNumber(pickValue(product, ["alturaProduto", "altura"])),
+    depthCm: toNullableNumber(pickValue(product, ["profundidadeProduto", "profundidade"])),
+    expirationDate: toNullableString(pickValue(product, ["dataValidade"])),
+    supplierProductDescription: toNullableString(pickValue(product, [
+      "descricaoFornecedor",
+      "descricaoProdutoFornecedor"
+    ])),
+    complementaryDescription: toNullableString(pickValue(product, ["descricaoComplementar"])),
+    itemsPerBox: toNullableNumber(pickValue(product, ["itensPorCaixa"])),
+    isVariation: toNullableBooleanInt(pickValue(product, ["produtoVariacao", "variacao"])),
+    productionType: toNullableString(pickValue(product, ["tipoProducao"])),
+    ipiTaxClass: toNullableString(pickValue(product, ["classeEnquadramentoIpi"])),
+    serviceListCode: toNullableString(pickValue(product, ["codigoListaServicos"])),
+    itemType: toNullableString(pickValue(product, ["tipoItem", "tipo"])),
+    tagsGroup: serializeStructuredValue(pickValue(product, ["grupoTags", "grupoDeTags"])),
+    tags: serializeStructuredValue(pickValue(product, ["tags"])),
+    taxesJson: serializeStructuredValue(pickValue(product, ["tributos"])),
+    parentCode: toNullableString(pickValue(product, ["codigoPai"])),
+    integrationCode: toNullableString(pickValue(product, ["codigoIntegracao"])),
+    productGroup: toNullableString(pickValue(product, ["grupoProdutos", "grupoProduto"])),
+    brand: toNullableString(pickValue(product, ["marca"])),
+    cest: toNullableString(pickValue(product, ["cest"])),
+    volumes: toNullableNumber(pickValue(product, ["volumes"])),
+    shortDescription: toNullableString(pickValue(product, ["descricaoCurta"])),
+    crossDockingDays: toNullableInteger(pickValue(product, ["crossDocking"])),
+    externalImageUrls: serializeStructuredValue(pickValue(product, ["urlImagensExternas", "imagensURL", "imagemURL"])),
+    externalLink: toNullableString(pickValue(product, ["linkExterno"])),
+    supplierWarrantyMonths: toNullableInteger(pickValue(product, ["mesesGarantiaFornecedor"])),
+    cloneParentData: toNullableBooleanInt(pickValue(product, ["clonarDadosPai"])),
+    productCondition: toNullableString(pickValue(product, ["condicaoProduto"])),
+    freeShipping: toNullableBooleanInt(pickValue(product, ["freteGratis"])),
+    fciNumber: toNullableString(pickValue(product, ["numeroFci", "numeroFCI"])),
+    department: toNullableString(pickValue(product, ["departamento"])),
+    measurementUnit: toNullableString(pickValue(product, ["unidadeMedida", "unidade"])),
+    icmsStRetentionBaseCents: toMoneyCents(pickValue(product, ["valorBaseIcmsStRetencao"])),
+    icmsStRetentionValueCents: toMoneyCents(pickValue(product, ["valorIcmsStRetencao"])),
+    icmsSubstituteOwnValueCents: toMoneyCents(pickValue(product, ["valorIcmsProprioSubstituto"])),
+    productCategoryName: categoryName,
+    additionalInfo: toNullableString(pickValue(product, ["informacoesAdicionais"])),
     // No Bling, "A" representa produto ativo.
-    active: product.situacao === "A" ? 1 : 0,
+    active: activeFlag,
     // Datas e metadados de sincronização.
-    remoteUpdatedAt: product.dataAlteracao ?? null,
+    remoteCreatedAt: toNullableString(pickValue(product, ["dataCriacao"])),
+    remoteUpdatedAt: toNullableString(pickValue(product, ["dataAlteracao"])),
     lastSyncedAt: now,
     syncStatus: "synced",
     // Guarda o payload original para auditoria/debug e futuras evoluções do mapeamento.

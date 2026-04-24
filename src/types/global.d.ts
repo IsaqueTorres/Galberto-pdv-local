@@ -1,4 +1,4 @@
-import { ProductFormData, insertStockMovement, ProdutoInput, Produto, ProdutoCarrinho } from "../pages/products/types/products.types";
+import { ProductFormData, ProductRecord, insertStockMovement, ProdutoInput, Produto, ProdutoCarrinho } from "../pages/products/types/products.types";
 import {
     CashMovementData,
     CashSessionActionResult,
@@ -94,7 +94,7 @@ declare global {
             retomarVendaNoPdv: (venda: unknown) => void
             onVendaRetomada: (callback: (venda: unknown) => void) => () => void
             removerProdutos?: () => void;
-            getProductById: (id: number) => Promise<Product>;
+            getProductById: (id: number) => Promise<ProductRecord | null>;
             buscarProdutoPorNome: (termo: string) => Promise<any>;
             buscarProdutoPorCodigoBarras: (termo: string) => Promise<any>;
             definirAlertasProduto?: () => void;

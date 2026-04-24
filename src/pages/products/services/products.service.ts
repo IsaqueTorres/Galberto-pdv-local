@@ -1,4 +1,4 @@
-import { ProductLookupResult } from "../types/products.types"
+import { ProductLookupResult, ProductRecord } from "../types/products.types"
 
 
 export async function buscarProdutoPorCodigoBarras(codigo: string) {
@@ -20,7 +20,7 @@ export async function searchProductWindow() {
   return await window.api.openSearchProductWindow();
 }
 
-export async function getProductById(id: number) {
+export async function getProductById(id: number): Promise<ProductRecord | null> {
   return await window.api.getProductById(id);
 }
 
