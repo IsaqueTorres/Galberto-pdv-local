@@ -48,6 +48,7 @@ function createTableProducts() {
     sync_status TEXT NOT NULL DEFAULT 'synced',
     raw_json TEXT,
     ncm TEXT,
+    cfop TEXT,
     origin TEXT,
     fixed_ipi_value_cents INTEGER,
     notes TEXT,
@@ -151,6 +152,7 @@ function ensureProductsColumns() {
     `current_stock REAL NOT NULL DEFAULT 0`,
     `minimum_stock REAL NOT NULL DEFAULT 0`,
     `ncm TEXT`,
+    `cfop TEXT`,
     `origin TEXT`,
     `fixed_ipi_value_cents INTEGER`,
     `notes TEXT`,
@@ -1105,7 +1107,7 @@ function getSaleDefaults() {
 
 function getSaleItemSnapshot(productId: string | number) {
   const product = db.prepare(`
-    SELECT id, barcode, name, unit, sale_price_cents
+    SELECT id, barcode, name, unit, sale_price_cents, ncm, cfop, origin, cest
     FROM products
     WHERE id = ? AND deleted_at IS NULL
     LIMIT 1
@@ -1115,6 +1117,10 @@ function getSaleItemSnapshot(productId: string | number) {
     name: string;
     unit: string | null;
     sale_price_cents: number;
+    ncm: string | null;
+    cfop: string | null;
+    origin: string | null;
+    cest: string | null;
   } | undefined;
 
   if (!product) {
@@ -1127,10 +1133,81 @@ function getSaleItemSnapshot(productId: string | number) {
     gtin: product.barcode,
     unidade: product.unit || 'UN',
     precoUnitario: Number(product.sale_price_cents ?? 0) / 100,
-    ncm: '',
-    cfop: '5102',
-    cest: null,
+    ncm: product.ncm ?? '',
+    cfop: product.cfop ?? '5102',
+    cest: product.cest ?? null,
+    originCode: product.origin ?? null,
   };
+}
+
+function getDefaultTaxProfile() {
+  return db.prepare(`
+    SELECT origin_code, cfop_padrao_saida_interna, csosn, icms_cst, pis_cst, cofins_cst
+    FROM tax_profiles
+    WHERE ativo = 1
+    ORDER BY id ASC
+    LIMIT 1
+  `).get() as {
+    origin_code: string;
+    cfop_padrao_saida_interna: string | null;
+    csosn: string | null;
+    icms_cst: string | null;
+    pis_cst: string;
+    cofins_cst: string;
+  } | undefined;
+}
+
+function insertSaleItemTaxSnapshot(input: {
+  saleItemId: number;
+  ncm: string;
+  cfop: string;
+  cest: string | null;
+  originCode: string | null;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+}) {
+  const profile = getDefaultTaxProfile();
+  const originCode = input.originCode || profile?.origin_code || '0';
+  const cfop = input.cfop || profile?.cfop_padrao_saida_interna || '5102';
+  const pisCst = profile?.pis_cst || '49';
+  const cofinsCst = profile?.cofins_cst || '49';
+  const csosn = profile?.csosn || '102';
+  const icmsCst = profile?.icms_cst ?? null;
+
+  db.prepare(`
+    INSERT INTO sale_item_tax_snapshot (
+      sale_item_id, origem, origin_code, ncm, cfop, cest, csosn, icms_cst,
+      pis_cst, cofins_cst, utrib, qtrib, vuntrib
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(sale_item_id) DO UPDATE SET
+      origem = excluded.origem,
+      origin_code = excluded.origin_code,
+      ncm = excluded.ncm,
+      cfop = excluded.cfop,
+      cest = excluded.cest,
+      csosn = excluded.csosn,
+      icms_cst = excluded.icms_cst,
+      pis_cst = excluded.pis_cst,
+      cofins_cst = excluded.cofins_cst,
+      utrib = excluded.utrib,
+      qtrib = excluded.qtrib,
+      vuntrib = excluded.vuntrib
+  `).run(
+    input.saleItemId,
+    originCode,
+    originCode,
+    input.ncm,
+    cfop,
+    input.cest,
+    csosn,
+    icmsCst,
+    pisCst,
+    cofinsCst,
+    input.unit,
+    input.quantity,
+    input.unitPrice
+  );
 }
 
 function replaceSaleItems(vendaId: number, itens: Array<{
@@ -1163,7 +1240,7 @@ function replaceSaleItems(vendaId: number, itens: Array<{
     const valorDesconto = Math.max(0, Math.min(Number(item.valor_desconto ?? 0), valorBruto));
     const subtotal = Number(item.subtotal ?? Math.max(valorBruto - valorDesconto, 0));
 
-    insertItem.run(
+    const result = insertItem.run(
       vendaId,
       item.produto_id,
       snapshot.codigoProduto,
@@ -1183,6 +1260,17 @@ function replaceSaleItems(vendaId: number, itens: Array<{
       valorDesconto,
       subtotal
     );
+
+    insertSaleItemTaxSnapshot({
+      saleItemId: Number(result.lastInsertRowid),
+      ncm: snapshot.ncm,
+      cfop: snapshot.cfop,
+      cest: snapshot.cest,
+      originCode: snapshot.originCode,
+      unit: snapshot.unidade,
+      quantity: quantidade,
+      unitPrice: precoUnitario,
+    });
   }
 }
 
@@ -1856,6 +1944,7 @@ export function select_product_by_id(id: number | string) {
       measurement_unit,
       minimum_stock AS estoque_minimo,
       ncm,
+      cfop,
       origin AS origem,
       ROUND(COALESCE(fixed_ipi_value_cents, 0) / 100.0, 2) AS valor_ipi_fixo,
       notes AS observacoes,

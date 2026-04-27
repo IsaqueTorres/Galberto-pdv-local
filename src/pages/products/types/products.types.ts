@@ -81,6 +81,7 @@ export type ProductRecord = {
   unidade_medida: string | null;
   measurement_unit: string | null;
   ncm: string | null;
+  cfop: string | null;
   origem: string | null;
   valor_ipi_fixo: number;
   observacoes: string | null;
@@ -177,7 +178,6 @@ export type ProdutoCarrinho = {
   quantidade: number
   imagem?: string
 }
-
 
 
 

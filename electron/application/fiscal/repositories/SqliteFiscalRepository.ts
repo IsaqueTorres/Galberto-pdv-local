@@ -168,7 +168,7 @@ export class SqliteFiscalRepository implements FiscalRepository {
         issued_datetime, xml, xml_signed, xml_authorized, xml_cancellation, protocol, receipt_number, qr_code_url, authorization_datetime,
         cancel_datetime, contingency_type, rejection_code, rejection_reason, danfe_path,
         provider, created_at, updated_at
-      ) VALUES (?, ?, 65, ?, ?, NULL, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ?, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ) VALUES (?, ?, 65, ?, ?, NULL, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ?, NULL, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
       request.saleId,
       request.companyId,
@@ -187,6 +187,7 @@ export class SqliteFiscalRepository implements FiscalRepository {
     documentId: number,
     input: {
       issuedAt?: string | null;
+      accessKey?: string | null;
       xmlBuilt?: string | null;
       xmlSigned?: string | null;
       xmlAuthorized?: string | null;
@@ -197,6 +198,7 @@ export class SqliteFiscalRepository implements FiscalRepository {
       UPDATE fiscal_documents
       SET
         issued_datetime = COALESCE(?, issued_datetime),
+        access_key = COALESCE(?, access_key),
         xml = COALESCE(?, xml),
         xml_signed = COALESCE(?, xml_signed),
         xml_authorized = COALESCE(?, xml_authorized),
@@ -205,6 +207,7 @@ export class SqliteFiscalRepository implements FiscalRepository {
       WHERE id = ?
     `).run(
       input.issuedAt ?? null,
+      input.accessKey ?? null,
       input.xmlBuilt ?? null,
       input.xmlSigned ?? null,
       input.xmlAuthorized ?? null,

@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 
 import { fiscalCertificateService, fiscalConfigService, fiscalContextService, fiscalQueueService, fiscalReadinessService, fiscalService, fiscalStoreConfigService } from '../../application/fiscal';
 import { normalizeFiscalError } from '../../application/fiscal/errors/FiscalError';
+import { issueFiscalDocumentForSaleService } from '../../application/fiscal/services/IssueFiscalDocumentForSaleService';
 import { assertCurrentUserPermission } from '../security/permission.guard';
 import { logger } from '../../logger/logger';
 
@@ -81,6 +82,27 @@ export default function registerFiscalHandlers() {
       };
     } catch (error) {
       const fiscalError = normalizeFiscalError(error, 'FISCAL_AUTHORIZE_FAILED');
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable,
+        },
+      };
+    }
+  });
+
+  ipcMain.handle('fiscal:generate-nfce-xml-for-sale', async (_event, legacySaleId: number) => {
+    try {
+      assertCurrentUserPermission('fiscal:manage');
+      return {
+        success: true,
+        data: issueFiscalDocumentForSaleService.generateXml(legacySaleId),
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, 'FISCAL_XML_BUILD_FAILED');
       return {
         success: false,
         error: {

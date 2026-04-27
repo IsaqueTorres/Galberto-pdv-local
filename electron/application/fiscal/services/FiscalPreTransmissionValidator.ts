@@ -94,9 +94,13 @@ export class FiscalPreTransmissionValidator {
     this.validateRuntimeConfig(request, config, issues);
 
     if (issues.some((issue) => issue.severity === 'error')) {
+      const message = issues
+        .filter((issue) => issue.severity === 'error')
+        .map((issue) => issue.message)
+        .join(' | ');
       throw new FiscalError({
         code: 'FISCAL_PREREQUISITES_NOT_MET',
-        message: 'A venda não está pronta para emissão fiscal.',
+        message: message || 'A venda não está pronta para emissão fiscal.',
         category: 'VALIDATION',
         retryable: false,
         details: issues,

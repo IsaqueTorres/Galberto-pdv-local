@@ -116,6 +116,25 @@ export default function registerIntegrationHandlers() {
     return await blingApiService.getProducts({ page: 1, limit: 5 });
   });
 
+  ipcMain.handle('integrations:bling:debug-product', async (_event, input: { id?: string | number; code?: string }) => {
+    assertCurrentUserPermission('integrations:manage');
+    if (input?.id) {
+      return await blingApiService.getProductById(input.id);
+    }
+    if (input?.code) {
+      const list = await blingApiService.getProductByCode(input.code);
+      const first = Array.isArray(list.data) ? list.data[0] : null;
+      if (!first?.id) {
+        return { data: null, list };
+      }
+      return {
+        list,
+        detail: await blingApiService.getProductById(first.id),
+      };
+    }
+    throw new Error('Informe id ou code para diagnosticar produto do Bling.');
+  });
+
   ipcMain.handle('integrations:bling:test-categories', async () => {
     assertCurrentUserPermission('integrations:manage');
     return await blingApiService.getCategories({ page: 1, limit: 5 });

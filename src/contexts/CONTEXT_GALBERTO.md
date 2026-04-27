@@ -200,3 +200,135 @@ Se possível, organize a resposta em forma de matriz:
 * **falta complementar algo?**
 * **onde deve ficar no modelo final?**
 
+
+
+
+  - Descrição: CANETA ESFEROGRAFICA AZUL TESTE
+  - Código/SKU: TESTE-CANETA-001
+  - GTIN/EAN: deixar vazio ou SEM GTIN, se o Bling permitir
+  - Unidade: UN
+  - Preço: 1,00
+  - NCM: 96081000
+  - CEST: 1902700
+  - Origem: 0 - Nacional
+  - CFOP: 5102
+  - CST/CSOSN ICMS: 102
+  - PIS CST: 49
+  - COFINS CST: 49
+  - Situação: Ativo
+
+
+  NCM: 96081000
+  CEST: 1902700
+  Origem: 0
+  CFOP: 5102
+  CSOSN: 102
+  PIS CST: 49
+  COFINS CST: 49
+
+
+{
+    "id": 16639418987,
+    "nome": "CANETA ESFEROGRAFICA AZUL",
+    "codigo": "TESTE-CANETA-001",
+    "preco": 0.9,
+    "estoque": {
+        "minimo": 0,
+        "maximo": 0,
+        "crossdocking": 0,
+        "localizacao": "",
+        "saldoVirtualTotal": 50
+    },
+    "tipo": "P",
+    "situacao": "A",
+    "formato": "S",
+    "descricaoCurta": "",
+    "dataValidade": "0000-00-00",
+    "unidade": "Un",
+    "pesoLiquido": 0,
+    "pesoBruto": 0,
+    "volumes": 0,
+    "itensPorCaixa": 0,
+    "gtin": "",
+    "gtinEmbalagem": "",
+    "tipoProducao": "P",
+    "condicao": 1,
+    "freteGratis": false,
+    "marca": "",
+    "descricaoComplementar": "",
+    "linkExterno": "",
+    "observacoes": "",
+    "descricaoEmbalagemDiscreta": "",
+    "categoria": {
+        "id": 13410739
+    },
+    "fornecedor": {
+        "id": 0,
+        "contato": {
+            "id": 0,
+            "nome": ""
+        },
+        "codigo": "",
+        "precoCusto": 0,
+        "precoCompra": 0
+    },
+    "actionEstoque": "",
+    "dimensoes": {
+        "largura": 0,
+        "altura": 0,
+        "profundidade": 0,
+        "unidadeMedida": 1
+    },
+    "tributacao": {
+        "origem": 0,
+        "nFCI": "",
+        "ncm": "9608.10.00",
+        "cest": "19.027.00",
+        "codigoListaServicos": "",
+        "spedTipoItem": "00",
+        "codigoItem": "",
+        "percentualTributos": 0,
+        "valorBaseStRetencao": 0,
+        "valorStRetencao": 0,
+        "valorICMSSubstituto": 0,
+        "codigoExcecaoTipi": "0",
+        "classeEnquadramentoIpi": "",
+        "valorIpiFixo": 0,
+        "codigoSeloIpi": "",
+        "valorPisFixo": 0,
+        "valorCofinsFixo": 0,
+        "codigoANP": "",
+        "descricaoANP": "",
+        "percentualGLP": 0,
+        "percentualGasNacional": 0,
+        "percentualGasImportado": 0,
+        "valorPartida": 0,
+        "tipoArmamento": 0,
+        "descricaoCompletaArmamento": "",
+        "dadosAdicionais": "Produto cadastrado para teste de emissão NFC-e em homologação.",
+        "grupoProduto": {
+            "id": 0
+        }
+    },
+    "midia": {
+        "video": {
+            "url": ""
+        },
+        "imagens": {
+            "externas": [],
+            "internas": [],
+            "imagensURL": []
+        }
+    },
+    "linhaProduto": {
+        "id": 0
+    },
+    "estrutura": {
+        "tipoEstoque": "",
+        "lancamentoEstoque": "",
+        "componentes": []
+    },
+    "camposCustomizados": [],
+    "variacoes": [],
+    "artigoPerigoso": false
+}

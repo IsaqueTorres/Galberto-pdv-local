@@ -16,6 +16,7 @@ export type StoredProduct = {
   currentStock?: number;
   minimumStock?: number;
   ncm?: string | null;
+  cfop?: string | null;
   origin?: string | null;
   fixedIpiValueCents?: number | null;
   notes?: string | null;
@@ -89,6 +90,7 @@ type ProductRow = {
   current_stock: number;
   minimum_stock: number;
   ncm: string | null;
+  cfop: string | null;
   origin: string | null;
   fixed_ipi_value_cents: number | null;
   notes: string | null;
@@ -166,7 +168,7 @@ class ProductRepository {
       INSERT INTO products (
         id, external_id, integration_source, sku, barcode, category_id,
         name, unit, sale_price_cents, cost_price_cents, current_stock, minimum_stock,
-        ncm, origin, fixed_ipi_value_cents, notes, situation, supplier_code, supplier_name,
+        ncm, cfop, origin, fixed_ipi_value_cents, notes, situation, supplier_code, supplier_name,
         location, maximum_stock, net_weight_kg, gross_weight_kg, packaging_barcode,
         width_cm, height_cm, depth_cm, expiration_date, supplier_product_description,
         complementary_description, items_per_box, is_variation, production_type,
@@ -180,7 +182,7 @@ class ProductRepository {
         remote_created_at, remote_updated_at, last_synced_at, sync_status,
         raw_json, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(integration_source, external_id) DO UPDATE SET
         sku               = excluded.sku,
         barcode           = excluded.barcode,
@@ -192,6 +194,7 @@ class ProductRepository {
         current_stock     = excluded.current_stock,
         minimum_stock     = excluded.minimum_stock,
         ncm               = excluded.ncm,
+        cfop              = excluded.cfop,
         origin            = excluded.origin,
         fixed_ipi_value_cents = excluded.fixed_ipi_value_cents,
         notes             = excluded.notes,
@@ -262,6 +265,7 @@ class ProductRepository {
       product.currentStock ?? 0,
       product.minimumStock ?? 0,
       product.ncm ?? null,
+      product.cfop ?? null,
       product.origin ?? null,
       product.fixedIpiValueCents ?? null,
       product.notes ?? null,
@@ -412,6 +416,7 @@ class ProductRepository {
       currentStock: row.current_stock,
       minimumStock: row.minimum_stock,
       ncm: row.ncm,
+      cfop: row.cfop,
       origin: row.origin,
       fixedIpiValueCents: row.fixed_ipi_value_cents,
       notes: row.notes,

@@ -271,6 +271,7 @@ declare global {
                 }>>;
                 // Testes
                 testBling: () => Promise<unknown>;
+                debugBlingProduct: (input: { id?: string | number; code?: string }) => Promise<unknown>;
                 testIcmpBling: () => Promise<unknown>;
             };
         };

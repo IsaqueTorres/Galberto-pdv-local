@@ -677,6 +677,174 @@ function executeMigration(database) {
   });
   transaction();
 }
+function ensureFiscalCoreSchema(database) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS stores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      legal_name TEXT NOT NULL,
+      cnpj TEXT NOT NULL UNIQUE,
+      state_registration TEXT NOT NULL,
+      tax_regime_code TEXT NOT NULL,
+      environment TEXT NOT NULL CHECK (environment IN ('homologation', 'production')),
+      csc_id TEXT,
+      csc_token TEXT,
+      default_series INTEGER NOT NULL DEFAULT 1,
+      next_nfce_number INTEGER NOT NULL DEFAULT 1,
+      address_street TEXT NOT NULL,
+      address_number TEXT NOT NULL,
+      address_neighborhood TEXT NOT NULL,
+      address_city TEXT NOT NULL,
+      address_state TEXT NOT NULL,
+      address_zip_code TEXT NOT NULL,
+      address_city_ibge_code TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS sales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      store_id INTEGER NOT NULL,
+      customer_id TEXT,
+      customer_name TEXT,
+      customer_document TEXT,
+      status TEXT NOT NULL CHECK (status IN ('OPEN', 'PAID', 'CANCELLED')) DEFAULT 'OPEN',
+      subtotal_amount REAL NOT NULL DEFAULT 0,
+      discount_amount REAL NOT NULL DEFAULT 0,
+      surcharge_amount REAL NOT NULL DEFAULT 0,
+      total_amount REAL NOT NULL DEFAULT 0,
+      change_amount REAL NOT NULL DEFAULT 0,
+      external_reference TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (store_id) REFERENCES stores(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS sale_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_id INTEGER NOT NULL,
+      product_id TEXT,
+      sku TEXT,
+      description TEXT NOT NULL,
+      unit TEXT NOT NULL,
+      quantity REAL NOT NULL,
+      unit_price REAL NOT NULL,
+      gross_amount REAL NOT NULL,
+      discount_amount REAL NOT NULL DEFAULT 0,
+      total_amount REAL NOT NULL,
+      ncm TEXT,
+      cfop TEXT,
+      cest TEXT,
+      origin_code TEXT,
+      tax_snapshot_json TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_id INTEGER NOT NULL,
+      method TEXT NOT NULL,
+      amount REAL NOT NULL,
+      received_amount REAL NOT NULL DEFAULT 0,
+      change_amount REAL NOT NULL DEFAULT 0,
+      integration_reference TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS fiscal_documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_id INTEGER NOT NULL,
+      store_id INTEGER NOT NULL,
+      model INTEGER NOT NULL DEFAULT 65 CHECK (model = 65),
+      series INTEGER NOT NULL,
+      number INTEGER NOT NULL,
+      access_key TEXT,
+      environment TEXT NOT NULL CHECK (environment IN ('homologation', 'production')),
+      status TEXT NOT NULL,
+      issued_datetime TEXT,
+      xml TEXT,
+      xml_signed TEXT,
+      xml_authorized TEXT,
+      xml_cancellation TEXT,
+      protocol TEXT,
+      receipt_number TEXT,
+      qr_code_url TEXT,
+      authorization_datetime TEXT,
+      cancel_datetime TEXT,
+      contingency_type TEXT,
+      rejection_code TEXT,
+      rejection_reason TEXT,
+      danfe_path TEXT,
+      provider TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
+      FOREIGN KEY (store_id) REFERENCES stores(id),
+      UNIQUE (sale_id),
+      UNIQUE (store_id, model, series, number, environment),
+      UNIQUE (access_key)
+    );
+
+    CREATE TABLE IF NOT EXISTS fiscal_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      fiscal_document_id INTEGER NOT NULL,
+      event_type TEXT NOT NULL,
+      payload_json TEXT,
+      response_json TEXT,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (fiscal_document_id) REFERENCES fiscal_documents(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      operation TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('PENDING', 'PROCESSING', 'DONE', 'FAILED')) DEFAULT 'PENDING',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at TEXT,
+      last_error TEXT,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_sales_external_reference
+    ON sales(external_reference);
+
+    CREATE INDEX IF NOT EXISTS idx_sales_store_status
+    ON sales(store_id, status, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id
+    ON sale_items(sale_id);
+
+    CREATE INDEX IF NOT EXISTS idx_payments_sale_id
+    ON payments(sale_id);
+
+    CREATE INDEX IF NOT EXISTS idx_fiscal_documents_status
+    ON fiscal_documents(status, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_fiscal_documents_sale_store
+    ON fiscal_documents(sale_id, store_id);
+
+    CREATE INDEX IF NOT EXISTS idx_fiscal_events_document
+    ON fiscal_events(fiscal_document_id, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_sync_queue_status_next
+    ON sync_queue(status, next_attempt_at, created_at);
+
+    CREATE INDEX IF NOT EXISTS idx_sync_queue_entity
+    ON sync_queue(entity_type, entity_id, operation);
+  `);
+}
 function normalizeText$1(value) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -914,6 +1082,7 @@ function runFiscalPersistenceMigrations(database) {
   if (!hasMigration(database, MIGRATION_ID)) {
     executeMigration(database);
   }
+  ensureFiscalCoreSchema(database);
   ensureFiscalPersistenceColumns(database);
   ensureFiscalSettingsSchema(database);
   backfillFiscalSettings(database);
@@ -947,6 +1116,7 @@ function createTableProducts() {
     sync_status TEXT NOT NULL DEFAULT 'synced',
     raw_json TEXT,
     ncm TEXT,
+    cfop TEXT,
     origin TEXT,
     fixed_ipi_value_cents INTEGER,
     notes TEXT,
@@ -1049,6 +1219,7 @@ function ensureProductsColumns() {
     `current_stock REAL NOT NULL DEFAULT 0`,
     `minimum_stock REAL NOT NULL DEFAULT 0`,
     `ncm TEXT`,
+    `cfop TEXT`,
     `origin TEXT`,
     `fixed_ipi_value_cents INTEGER`,
     `notes TEXT`,
@@ -1940,7 +2111,7 @@ function getSaleDefaults() {
 }
 function getSaleItemSnapshot(productId) {
   const product = db.prepare(`
-    SELECT id, barcode, name, unit, sale_price_cents
+    SELECT id, barcode, name, unit, sale_price_cents, ncm, cfop, origin, cest
     FROM products
     WHERE id = ? AND deleted_at IS NULL
     LIMIT 1
@@ -1954,10 +2125,62 @@ function getSaleItemSnapshot(productId) {
     gtin: product.barcode,
     unidade: product.unit || "UN",
     precoUnitario: Number(product.sale_price_cents ?? 0) / 100,
-    ncm: "",
-    cfop: "5102",
-    cest: null
+    ncm: product.ncm ?? "",
+    cfop: product.cfop ?? "5102",
+    cest: product.cest ?? null,
+    originCode: product.origin ?? null
   };
+}
+function getDefaultTaxProfile() {
+  return db.prepare(`
+    SELECT origin_code, cfop_padrao_saida_interna, csosn, icms_cst, pis_cst, cofins_cst
+    FROM tax_profiles
+    WHERE ativo = 1
+    ORDER BY id ASC
+    LIMIT 1
+  `).get();
+}
+function insertSaleItemTaxSnapshot(input) {
+  const profile = getDefaultTaxProfile();
+  const originCode = input.originCode || (profile == null ? void 0 : profile.origin_code) || "0";
+  const cfop = input.cfop || (profile == null ? void 0 : profile.cfop_padrao_saida_interna) || "5102";
+  const pisCst = (profile == null ? void 0 : profile.pis_cst) || "49";
+  const cofinsCst = (profile == null ? void 0 : profile.cofins_cst) || "49";
+  const csosn = (profile == null ? void 0 : profile.csosn) || "102";
+  const icmsCst = (profile == null ? void 0 : profile.icms_cst) ?? null;
+  db.prepare(`
+    INSERT INTO sale_item_tax_snapshot (
+      sale_item_id, origem, origin_code, ncm, cfop, cest, csosn, icms_cst,
+      pis_cst, cofins_cst, utrib, qtrib, vuntrib
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(sale_item_id) DO UPDATE SET
+      origem = excluded.origem,
+      origin_code = excluded.origin_code,
+      ncm = excluded.ncm,
+      cfop = excluded.cfop,
+      cest = excluded.cest,
+      csosn = excluded.csosn,
+      icms_cst = excluded.icms_cst,
+      pis_cst = excluded.pis_cst,
+      cofins_cst = excluded.cofins_cst,
+      utrib = excluded.utrib,
+      qtrib = excluded.qtrib,
+      vuntrib = excluded.vuntrib
+  `).run(
+    input.saleItemId,
+    originCode,
+    originCode,
+    input.ncm,
+    cfop,
+    input.cest,
+    csosn,
+    icmsCst,
+    pisCst,
+    cofinsCst,
+    input.unit,
+    input.quantity,
+    input.unitPrice
+  );
 }
 function replaceSaleItems(vendaId, itens) {
   db.prepare(`DELETE FROM venda_itens WHERE venda_id = ?`).run(vendaId);
@@ -1977,7 +2200,7 @@ function replaceSaleItems(vendaId, itens) {
     const valorBruto = Number(item.valor_bruto ?? quantidade * precoUnitario);
     const valorDesconto = Math.max(0, Math.min(Number(item.valor_desconto ?? 0), valorBruto));
     const subtotal = Number(item.subtotal ?? Math.max(valorBruto - valorDesconto, 0));
-    insertItem.run(
+    const result = insertItem.run(
       vendaId,
       item.produto_id,
       snapshot.codigoProduto,
@@ -1997,6 +2220,16 @@ function replaceSaleItems(vendaId, itens) {
       valorDesconto,
       subtotal
     );
+    insertSaleItemTaxSnapshot({
+      saleItemId: Number(result.lastInsertRowid),
+      ncm: snapshot.ncm,
+      cfop: snapshot.cfop,
+      cest: snapshot.cest,
+      originCode: snapshot.originCode,
+      unit: snapshot.unidade,
+      quantity: quantidade,
+      unitPrice: precoUnitario
+    });
   }
 }
 function salvarVendaPendente(venda, status, vendaId) {
@@ -2487,6 +2720,7 @@ function select_product_by_id(id) {
       measurement_unit,
       minimum_stock AS estoque_minimo,
       ncm,
+      cfop,
       origin AS origem,
       ROUND(COALESCE(fixed_ipi_value_cents, 0) / 100.0, 2) AS valor_ipi_fixo,
       notes AS observacoes,
@@ -3901,7 +4135,7 @@ class FiscalSettingsService {
     `).get(LEGACY_INTEGRATION_ID);
   }
 }
-function onlyDigits(value) {
+function onlyDigits$2(value) {
   return String(value ?? "").replace(/\D/g, "");
 }
 function hasText(value) {
@@ -3913,7 +4147,7 @@ function addIssue(issues, code, message, field, table, severity = "error") {
 class FiscalReadinessValidator {
   validateContext(context) {
     const issues = [];
-    if (onlyDigits(context.emitter.cnpj).length !== 14) {
+    if (onlyDigits$2(context.emitter.cnpj).length !== 14) {
       addIssue(issues, "EMITTER_CNPJ_REQUIRED", "CNPJ do emitente deve ter 14 digitos.", "cnpj", "stores");
     }
     if (!hasText(context.emitter.stateRegistration)) {
@@ -3931,8 +4165,8 @@ class FiscalReadinessValidator {
     if (!hasText(address.neighborhood)) addIssue(issues, "EMITTER_NEIGHBORHOOD_REQUIRED", "Bairro do emitente e obrigatorio.", "address_neighborhood", "stores");
     if (!hasText(address.city)) addIssue(issues, "EMITTER_CITY_REQUIRED", "Municipio do emitente e obrigatorio.", "address_city", "stores");
     if (!hasText(address.state) || address.state.length !== 2) addIssue(issues, "EMITTER_UF_REQUIRED", "UF do emitente deve ter 2 letras.", "address_state", "stores");
-    if (onlyDigits(address.zipCode).length !== 8) addIssue(issues, "EMITTER_ZIP_REQUIRED", "CEP do emitente deve ter 8 digitos.", "address_zip_code", "stores");
-    if (onlyDigits(address.cityIbgeCode).length !== 7) addIssue(issues, "EMITTER_IBGE_REQUIRED", "Codigo IBGE do municipio deve ter 7 digitos.", "address_city_ibge_code", "stores");
+    if (onlyDigits$2(address.zipCode).length !== 8) addIssue(issues, "EMITTER_ZIP_REQUIRED", "CEP do emitente deve ter 8 digitos.", "address_zip_code", "stores");
+    if (onlyDigits$2(address.cityIbgeCode).length !== 7) addIssue(issues, "EMITTER_IBGE_REQUIRED", "Codigo IBGE do municipio deve ter 7 digitos.", "address_city_ibge_code", "stores");
     if (!context.environment) addIssue(issues, "FISCAL_ENVIRONMENT_REQUIRED", "Ambiente fiscal e obrigatorio.", "environment", "stores");
     if (!context.provider) addIssue(issues, "FISCAL_PROVIDER_REQUIRED", "Provider fiscal e obrigatorio.", "provider", "fiscal_settings");
     if (context.provider === "sefaz-direct" && !hasText(context.sefazBaseUrl) && context.uf !== "SP") {
@@ -3980,12 +4214,12 @@ class FiscalReadinessValidator {
       if (!hasText(item.unit)) addIssue(issues, "ITEM_UNIT_REQUIRED", "Unidade do item e obrigatoria.", `${prefix}.unit`, "sale_items");
       if (item.quantity <= 0) addIssue(issues, "ITEM_QUANTITY_REQUIRED", "Quantidade do item deve ser maior que zero.", `${prefix}.quantity`, "sale_items");
       if (item.unitPrice <= 0) addIssue(issues, "ITEM_UNIT_PRICE_REQUIRED", "Valor unitario do item deve ser maior que zero.", `${prefix}.unitPrice`, "sale_items");
-      if (onlyDigits((_a = item.tax) == null ? void 0 : _a.ncm).length !== 8) addIssue(issues, "ITEM_NCM_REQUIRED", "NCM do item deve ter 8 digitos.", `${prefix}.tax.ncm`, "sale_items");
-      if (onlyDigits((_b = item.tax) == null ? void 0 : _b.cfop).length !== 4) addIssue(issues, "ITEM_CFOP_REQUIRED", "CFOP do item deve ter 4 digitos.", `${prefix}.tax.cfop`, "sale_items");
-      if (!hasText((_c = item.tax) == null ? void 0 : _c.originCode)) addIssue(issues, "ITEM_ORIGIN_REQUIRED", "Origem tributaria do item e obrigatoria.", `${prefix}.tax.originCode`, "sale_item_tax_snapshot");
-      if (!hasText((_d = item.tax) == null ? void 0 : _d.csosn) && !hasText((_e = item.tax) == null ? void 0 : _e.icmsCst)) addIssue(issues, "ITEM_ICMS_REQUIRED", "CST ou CSOSN do ICMS e obrigatorio.", `${prefix}.tax`, "sale_item_tax_snapshot");
-      if (!hasText((_f = item.tax) == null ? void 0 : _f.pisCst)) addIssue(issues, "ITEM_PIS_REQUIRED", "CST de PIS e obrigatorio.", `${prefix}.tax.pisCst`, "sale_item_tax_snapshot");
-      if (!hasText((_g = item.tax) == null ? void 0 : _g.cofinsCst)) addIssue(issues, "ITEM_COFINS_REQUIRED", "CST de COFINS e obrigatorio.", `${prefix}.tax.cofinsCst`, "sale_item_tax_snapshot");
+      if (onlyDigits$2((_a = item.tax) == null ? void 0 : _a.ncm).length !== 8) addIssue(issues, "ITEM_NCM_REQUIRED", `NCM do item "${item.description}" deve ter 8 digitos. Corrija o cadastro do produto antes de emitir NFC-e.`, `${prefix}.tax.ncm`, "sale_items");
+      if (onlyDigits$2((_b = item.tax) == null ? void 0 : _b.cfop).length !== 4) addIssue(issues, "ITEM_CFOP_REQUIRED", "CFOP do item deve ter 4 digitos.", `${prefix}.tax.cfop`, "sale_items");
+      if (!hasText((_c = item.tax) == null ? void 0 : _c.originCode)) addIssue(issues, "ITEM_ORIGIN_REQUIRED", `Origem tributaria do item "${item.description}" e obrigatoria.`, `${prefix}.tax.originCode`, "sale_item_tax_snapshot");
+      if (!hasText((_d = item.tax) == null ? void 0 : _d.csosn) && !hasText((_e = item.tax) == null ? void 0 : _e.icmsCst)) addIssue(issues, "ITEM_ICMS_REQUIRED", `CST ou CSOSN do ICMS do item "${item.description}" e obrigatorio.`, `${prefix}.tax`, "sale_item_tax_snapshot");
+      if (!hasText((_f = item.tax) == null ? void 0 : _f.pisCst)) addIssue(issues, "ITEM_PIS_REQUIRED", `CST de PIS do item "${item.description}" e obrigatorio.`, `${prefix}.tax.pisCst`, "sale_item_tax_snapshot");
+      if (!hasText((_g = item.tax) == null ? void 0 : _g.cofinsCst)) addIssue(issues, "ITEM_COFINS_REQUIRED", `CST de COFINS do item "${item.description}" e obrigatorio.`, `${prefix}.tax.cofinsCst`, "sale_item_tax_snapshot");
     });
   }
   validatePayments(payments, issues) {
@@ -4168,7 +4402,7 @@ class SqliteFiscalRepository {
         issued_datetime, xml, xml_signed, xml_authorized, xml_cancellation, protocol, receipt_number, qr_code_url, authorization_datetime,
         cancel_datetime, contingency_type, rejection_code, rejection_reason, danfe_path,
         provider, created_at, updated_at
-      ) VALUES (?, ?, 65, ?, ?, NULL, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ?, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ) VALUES (?, ?, 65, ?, ?, NULL, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ?, NULL, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
       request.saleId,
       request.companyId,
@@ -4186,6 +4420,7 @@ class SqliteFiscalRepository {
       UPDATE fiscal_documents
       SET
         issued_datetime = COALESCE(?, issued_datetime),
+        access_key = COALESCE(?, access_key),
         xml = COALESCE(?, xml),
         xml_signed = COALESCE(?, xml_signed),
         xml_authorized = COALESCE(?, xml_authorized),
@@ -4194,6 +4429,7 @@ class SqliteFiscalRepository {
       WHERE id = ?
     `).run(
       input.issuedAt ?? null,
+      input.accessKey ?? null,
       input.xmlBuilt ?? null,
       input.xmlSigned ?? null,
       input.xmlAuthorized ?? null,
@@ -5093,9 +5329,10 @@ class FiscalPreTransmissionValidator {
     this.validateItems(request, issues);
     this.validateRuntimeConfig(request, config2, issues);
     if (issues.some((issue) => issue.severity === "error")) {
+      const message = issues.filter((issue) => issue.severity === "error").map((issue) => issue.message).join(" | ");
       throw new FiscalError({
         code: "FISCAL_PREREQUISITES_NOT_MET",
-        message: "A venda não está pronta para emissão fiscal.",
+        message: message || "A venda não está pronta para emissão fiscal.",
         category: "VALIDATION",
         retryable: false,
         details: issues
@@ -5266,99 +5503,369 @@ class FiscalPreTransmissionValidator {
   }
 }
 const fiscalPreTransmissionValidator = new FiscalPreTransmissionValidator();
+const UF_CODES = {
+  AC: "12",
+  AL: "27",
+  AP: "16",
+  AM: "13",
+  BA: "29",
+  CE: "23",
+  DF: "53",
+  ES: "32",
+  GO: "52",
+  MA: "21",
+  MT: "51",
+  MS: "50",
+  MG: "31",
+  PA: "15",
+  PB: "25",
+  PR: "41",
+  PE: "26",
+  PI: "22",
+  RJ: "33",
+  RN: "24",
+  RS: "43",
+  RO: "11",
+  RR: "14",
+  SC: "42",
+  SP: "35",
+  SE: "28",
+  TO: "17"
+};
+function onlyDigits$1(value) {
+  return String(value ?? "").replace(/\D/g, "");
+}
+function leftPad(value, length) {
+  return onlyDigits$1(value).padStart(length, "0").slice(-length);
+}
+function modulo11CheckDigit(base) {
+  let weight = 2;
+  let sum = 0;
+  for (let index = base.length - 1; index >= 0; index -= 1) {
+    sum += Number(base[index]) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  const mod = sum % 11;
+  const digit = 11 - mod;
+  return digit >= 10 ? "0" : String(digit);
+}
+function yearMonthFromIssuedAt(issuedAt) {
+  const date = new Date(issuedAt);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Data de emissao invalida para gerar chave de acesso.");
+  }
+  return `${String(date.getFullYear()).slice(-2)}${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+class NfceAccessKeyService {
+  generate(input) {
+    var _a;
+    const ufCode = UF_CODES[input.uf.toUpperCase()];
+    if (!ufCode) {
+      throw new Error(`UF sem codigo IBGE configurado para chave NFC-e: ${input.uf}`);
+    }
+    const cnpj = leftPad(input.cnpj, 14);
+    if (cnpj.length !== 14 || /^0+$/.test(cnpj)) {
+      throw new Error("CNPJ invalido para gerar chave de acesso NFC-e.");
+    }
+    const numericCode = ((_a = input.numericCode) == null ? void 0 : _a.replace(/\D/g, "").padStart(8, "0").slice(-8)) ?? crypto$1.randomInt(0, 1e8).toString().padStart(8, "0");
+    const base = [
+      ufCode,
+      yearMonthFromIssuedAt(input.issuedAt),
+      cnpj,
+      "65",
+      leftPad(input.series, 3),
+      leftPad(input.number, 9),
+      String(input.emissionType),
+      numericCode
+    ].join("");
+    const checkDigit = modulo11CheckDigit(base);
+    return {
+      accessKey: `${base}${checkDigit}`,
+      numericCode,
+      checkDigit,
+      ufCode,
+      yearMonth: base.slice(2, 6)
+    };
+  }
+}
+const nfceAccessKeyService = new NfceAccessKeyService();
+const NFE_NAMESPACE = "http://www.portalfiscal.inf.br/nfe";
+const PROC_VERSION = "GalbertoPDV-0.1.0";
 function escapeXml(value) {
   return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+function onlyDigits(value) {
+  return String(value ?? "").replace(/\D/g, "");
 }
 function money(value) {
   return Number(value ?? 0).toFixed(2);
 }
-class NfceXmlBuilderService {
-  buildAuthorizeXml(request) {
-    var _a;
-    const itemsXml = request.items.map(
-      (item, index) => `    <det nItem="${index + 1}">
-      <prod>
-        <cProd>${escapeXml(item.id)}</cProd>
-        <xProd>${escapeXml(item.description)}</xProd>
-        <cEAN>${escapeXml(item.gtin ?? "SEM GTIN")}</cEAN>
-        <NCM>${escapeXml(item.tax.ncm)}</NCM>
-        <CFOP>${escapeXml(item.tax.cfop)}</CFOP>
-        ${item.tax.cest ? `<CEST>${escapeXml(item.tax.cest)}</CEST>` : ""}
-        <uCom>${escapeXml(item.unit)}</uCom>
-        <qCom>${escapeXml(item.quantity.toFixed(4))}</qCom>
-        <vUnCom>${money(item.unitPrice)}</vUnCom>
-        <vProd>${money(item.grossAmount)}</vProd>
-        <uTrib>${escapeXml(item.unit)}</uTrib>
-        <qTrib>${escapeXml(item.quantity.toFixed(4))}</qTrib>
-        <vUnTrib>${money(item.unitPrice)}</vUnTrib>
-        <vDesc>${money(item.discountAmount)}</vDesc>
-        <indTot>1</indTot>
-      </prod>
-      <imposto>
-        <ICMS><orig>${escapeXml(item.tax.originCode)}</orig>${item.tax.csosn ? `<CSOSN>${escapeXml(item.tax.csosn)}</CSOSN>` : ""}${item.tax.icmsCst ? `<CST>${escapeXml(item.tax.icmsCst)}</CST>` : ""}</ICMS>
-        <PIS><CST>${escapeXml(item.tax.pisCst)}</CST></PIS>
-        <COFINS><CST>${escapeXml(item.tax.cofinsCst)}</CST></COFINS>
-      </imposto>
-    </det>`
-    ).join("\n");
-    const paymentsXml = request.payments.map(
-      (payment) => `      <detPag>
-        <indPag>0</indPag>
-        <tPag>${escapeXml(payment.method)}</tPag>
-        <vPag>${money(payment.amount)}</vPag>
-        ${payment.description ? `<xPag>${escapeXml(payment.description)}</xPag>` : ""}
-      </detPag>`
-    ).join("\n");
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<NFe xmlns="http://www.portalfiscal.inf.br/nfe">
-  <infNFe versao="4.00" Id="">
-    <ide>
-      <mod>65</mod>
-      <serie>${escapeXml(request.series)}</serie>
-      <nNF>${escapeXml(request.number)}</nNF>
-      <dhEmi>${escapeXml(request.issuedAt)}</dhEmi>
-      <tpAmb>${request.environment === "production" ? "1" : "2"}</tpAmb>
-      <tpImp>4</tpImp>
-      <tpEmis>1</tpEmis>
-      <finNFe>1</finNFe>
-      <indFinal>1</indFinal>
-      <indPres>1</indPres>
-    </ide>
-    <emit>
-      <CNPJ>${escapeXml(request.emitter.cnpj)}</CNPJ>
-      <xNome>${escapeXml(request.emitter.legalName)}</xNome>
-      <xFant>${escapeXml(request.emitter.tradeName)}</xFant>
-      <IE>${escapeXml(request.emitter.stateRegistration)}</IE>
-      <CRT>${escapeXml(request.emitter.taxRegimeCode)}</CRT>
-      <enderEmit>
-        <xLgr>${escapeXml(request.emitter.address.street)}</xLgr>
-        <nro>${escapeXml(request.emitter.address.number)}</nro>
-        <xBairro>${escapeXml(request.emitter.address.neighborhood)}</xBairro>
-        <cMun>${escapeXml(request.emitter.address.cityIbgeCode)}</cMun>
-        <xMun>${escapeXml(request.emitter.address.city)}</xMun>
-        <UF>${escapeXml(request.emitter.address.state)}</UF>
-        <CEP>${escapeXml(request.emitter.address.zipCode)}</CEP>
-      </enderEmit>
-    </emit>
-    ${((_a = request.customer) == null ? void 0 : _a.cpfCnpj) ? `<dest>
-      <${request.customer.cpfCnpj.replace(/\D/g, "").length === 11 ? "CPF" : "CNPJ"}>${escapeXml(request.customer.cpfCnpj)}</${request.customer.cpfCnpj.replace(/\D/g, "").length === 11 ? "CPF" : "CNPJ"}>
-      ${request.customer.name ? `<xNome>${escapeXml(request.customer.name)}</xNome>` : ""}
-    </dest>` : ""}
-${itemsXml}
-    <total>
-      <ICMSTot>
-        <vProd>${money(request.totals.productsAmount)}</vProd>
-        <vDesc>${money(request.totals.discountAmount)}</vDesc>
-        <vNF>${money(request.totals.finalAmount)}</vNF>
-      </ICMSTot>
-    </total>
-    <pag>
-${paymentsXml}
-      <vTroco>${money(request.totals.changeAmount)}</vTroco>
-    </pag>
-    ${request.additionalInfo ? `<infAdic><infCpl>${escapeXml(request.additionalInfo)}</infCpl></infAdic>` : ""}
-  </infNFe>
+function quantity(value) {
+  return Number(value ?? 0).toFixed(4);
+}
+function normalizeIsoWithTimezone(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (part) => String(part).padStart(2, "0");
+  const offsetMinutes = -date.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const absoluteOffset = Math.abs(offsetMinutes);
+  const offset = `${sign}${pad(Math.floor(absoluteOffset / 60))}:${pad(absoluteOffset % 60)}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${offset}`;
+}
+function gtin(value) {
+  const normalized = String(value ?? "").trim();
+  return normalized.length > 0 ? normalized : "SEM GTIN";
+}
+function paymentCode(method) {
+  const map = {
+    DINHEIRO: "01",
+    CREDITO: "03",
+    DEBITO: "04",
+    VOUCHER: "99",
+    PIX: "17",
+    OUTROS: "99"
+  };
+  return map[method] ?? "99";
+}
+function icmsXml(item) {
+  const origin = escapeXml(item.tax.originCode || "0");
+  if (item.tax.csosn) {
+    return `<ICMS><ICMSSN102><orig>${origin}</orig><CSOSN>${escapeXml(item.tax.csosn)}</CSOSN></ICMSSN102></ICMS>`;
+  }
+  const cst = item.tax.icmsCst || "00";
+  if (["40", "41", "50"].includes(cst)) {
+    return `<ICMS><ICMS40><orig>${origin}</orig><CST>${escapeXml(cst)}</CST></ICMS40></ICMS>`;
+  }
+  return `<ICMS><ICMS00><orig>${origin}</orig><CST>${escapeXml(cst)}</CST><modBC>3</modBC><vBC>${money(item.totalAmount)}</vBC><pICMS>0.00</pICMS><vICMS>0.00</vICMS></ICMS00></ICMS>`;
+}
+function pisXml(item) {
+  const cst = item.tax.pisCst || "49";
+  if (["04", "05", "06", "07", "08", "09"].includes(cst)) {
+    return `<PIS><PISNT><CST>${escapeXml(cst)}</CST></PISNT></PIS>`;
+  }
+  if (["01", "02"].includes(cst)) {
+    return `<PIS><PISAliq><CST>${escapeXml(cst)}</CST><vBC>${money(item.totalAmount)}</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISAliq></PIS>`;
+  }
+  return `<PIS><PISOutr><CST>${escapeXml(cst)}</CST><vBC>0.00</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISOutr></PIS>`;
+}
+function cofinsXml(item) {
+  const cst = item.tax.cofinsCst || "49";
+  if (["04", "05", "06", "07", "08", "09"].includes(cst)) {
+    return `<COFINS><COFINSNT><CST>${escapeXml(cst)}</CST></COFINSNT></COFINS>`;
+  }
+  if (["01", "02"].includes(cst)) {
+    return `<COFINS><COFINSAliq><CST>${escapeXml(cst)}</CST><vBC>${money(item.totalAmount)}</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSAliq></COFINS>`;
+  }
+  return `<COFINS><COFINSOutr><CST>${escapeXml(cst)}</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINSOutr></COFINS>`;
+}
+function itemXml(item, index) {
+  const itemCode = item.id || String(index + 1);
+  const itemGtin = gtin(item.gtin);
+  const discount = item.discountAmount > 0 ? `<vDesc>${money(item.discountAmount)}</vDesc>` : "";
+  return `<det nItem="${index + 1}">
+<prod>
+<cProd>${escapeXml(itemCode)}</cProd>
+<cEAN>${escapeXml(itemGtin)}</cEAN>
+<xProd>${escapeXml(item.description)}</xProd>
+<NCM>${escapeXml(onlyDigits(item.tax.ncm))}</NCM>
+${item.tax.cest ? `<CEST>${escapeXml(onlyDigits(item.tax.cest))}</CEST>` : ""}
+<CFOP>${escapeXml(onlyDigits(item.tax.cfop))}</CFOP>
+<uCom>${escapeXml(item.unit)}</uCom>
+<qCom>${quantity(item.quantity)}</qCom>
+<vUnCom>${money(item.unitPrice)}</vUnCom>
+<vProd>${money(item.grossAmount)}</vProd>
+<cEANTrib>${escapeXml(itemGtin)}</cEANTrib>
+<uTrib>${escapeXml(item.unit)}</uTrib>
+<qTrib>${quantity(item.quantity)}</qTrib>
+<vUnTrib>${money(item.unitPrice)}</vUnTrib>
+${discount}
+<indTot>1</indTot>
+</prod>
+<imposto>
+${icmsXml(item)}
+${pisXml(item)}
+${cofinsXml(item)}
+</imposto>
+</det>`;
+}
+function customerXml(customer) {
+  const document = onlyDigits(customer == null ? void 0 : customer.cpfCnpj);
+  if (!document) return "";
+  const documentTag = document.length === 14 ? "CNPJ" : "CPF";
+  const name = (customer == null ? void 0 : customer.name) ? `<xNome>${escapeXml(customer.name)}</xNome>` : "";
+  return `<dest>
+<${documentTag}>${document}</${documentTag}>
+${name}
+<indIEDest>9</indIEDest>
+</dest>`;
+}
+function paymentsXml(payments, changeAmount) {
+  const details = payments.map((payment) => {
+    const code = paymentCode(payment.method);
+    const description = code === "99" && payment.description ? `<xPag>${escapeXml(payment.description)}</xPag>` : "";
+    return `<detPag><indPag>0</indPag><tPag>${code}</tPag>${description}<vPag>${money(payment.amount)}</vPag></detPag>`;
+  }).join("");
+  return `<pag>${details}${changeAmount > 0 ? `<vTroco>${money(changeAmount)}</vTroco>` : ""}</pag>`;
+}
+function technicalResponsibleXml(input) {
+  if (!input) return "";
+  return `<infRespTec>
+<CNPJ>${onlyDigits(input.cnpj)}</CNPJ>
+<xContato>${escapeXml(input.contactName)}</xContato>
+<email>${escapeXml(input.email)}</email>
+<fone>${onlyDigits(input.phone)}</fone>
+${input.csrtId ? `<idCSRT>${escapeXml(input.csrtId)}</idCSRT>` : ""}
+${input.csrtHash ? `<hashCSRT>${escapeXml(input.csrtHash)}</hashCSRT>` : ""}
+</infRespTec>`;
+}
+function validateDocument(model) {
+  const errors = [];
+  const warnings = [];
+  const { input } = model;
+  const addError = (code, message, field) => errors.push({ code, message, field, severity: "error" });
+  const addWarning = (code, message, field) => warnings.push({ code, message, field, severity: "warning" });
+  if (model.accessKey.accessKey.length !== 44) addError("ACCESS_KEY_INVALID", "Chave de acesso deve ter 44 digitos.", "accessKey");
+  if (!input.items.length) addError("ITEMS_REQUIRED", "NFC-e deve possuir ao menos um item.", "items");
+  if (!input.payments.length) addError("PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments");
+  if (!onlyDigits(input.fiscalContext.emitter.cnpj)) addError("EMITTER_CNPJ_REQUIRED", "CNPJ do emitente e obrigatorio.", "fiscalContext.emitter.cnpj");
+  if (!onlyDigits(input.fiscalContext.emitter.address.cityIbgeCode)) addError("CMUNFG_REQUIRED", "Codigo IBGE do municipio de fato gerador e obrigatorio.", "fiscalContext.emitter.address.cityIbgeCode");
+  input.items.forEach((item, index) => {
+    if (onlyDigits(item.tax.ncm).length !== 8) addError("ITEM_NCM_INVALID", "NCM deve ter 8 digitos.", `items[${index}].tax.ncm`);
+    if (onlyDigits(item.tax.cfop).length !== 4) addError("ITEM_CFOP_INVALID", "CFOP deve ter 4 digitos.", `items[${index}].tax.cfop`);
+    if (item.tax.csosn && !["102", "103", "300", "400"].includes(item.tax.csosn)) {
+      addWarning("ITEM_CSOSN_LIMITED_SUPPORT", `CSOSN ${item.tax.csosn} sera serializado no grupo ICMSSN102; valide a regra fiscal antes de transmitir.`, `items[${index}].tax.csosn`);
+    }
+  });
+  return { ok: errors.length === 0, errors, warnings };
+}
+function serializeDocument(model) {
+  const { input, accessKey } = model;
+  const context = input.fiscalContext;
+  const emitter = context.emitter;
+  const address = emitter.address;
+  const tpAmb = context.environment === "production" ? "1" : "2";
+  const tpEmis = 1;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<NFe xmlns="${NFE_NAMESPACE}">
+<infNFe versao="4.00" Id="NFe${accessKey.accessKey}">
+<ide>
+<cUF>${accessKey.ufCode}</cUF>
+<cNF>${accessKey.numericCode}</cNF>
+<natOp>${escapeXml(input.sale.natureOperation || "VENDA")}</natOp>
+<mod>65</mod>
+<serie>${input.sale.series}</serie>
+<nNF>${input.sale.number}</nNF>
+<dhEmi>${escapeXml(normalizeIsoWithTimezone(input.sale.issuedAt))}</dhEmi>
+<tpNF>1</tpNF>
+<idDest>1</idDest>
+<cMunFG>${onlyDigits(address.cityIbgeCode)}</cMunFG>
+<tpImp>4</tpImp>
+<tpEmis>${tpEmis}</tpEmis>
+<cDV>${accessKey.checkDigit}</cDV>
+<tpAmb>${tpAmb}</tpAmb>
+<finNFe>1</finNFe>
+<indFinal>1</indFinal>
+<indPres>1</indPres>
+<procEmi>0</procEmi>
+<verProc>${escapeXml(PROC_VERSION)}</verProc>
+</ide>
+<emit>
+<CNPJ>${onlyDigits(emitter.cnpj)}</CNPJ>
+<xNome>${escapeXml(emitter.legalName)}</xNome>
+${emitter.tradeName ? `<xFant>${escapeXml(emitter.tradeName)}</xFant>` : ""}
+<enderEmit>
+<xLgr>${escapeXml(address.street)}</xLgr>
+<nro>${escapeXml(address.number)}</nro>
+<xBairro>${escapeXml(address.neighborhood)}</xBairro>
+<cMun>${onlyDigits(address.cityIbgeCode)}</cMun>
+<xMun>${escapeXml(address.city)}</xMun>
+<UF>${escapeXml(address.state)}</UF>
+<CEP>${onlyDigits(address.zipCode)}</CEP>
+<cPais>1058</cPais>
+<xPais>BRASIL</xPais>
+</enderEmit>
+<IE>${onlyDigits(emitter.stateRegistration)}</IE>
+<CRT>${escapeXml(emitter.taxRegimeCode)}</CRT>
+</emit>
+${customerXml(input.customer)}
+${input.items.map(itemXml).join("")}
+<total>
+<ICMSTot>
+<vBC>0.00</vBC>
+<vICMS>0.00</vICMS>
+<vICMSDeson>0.00</vICMSDeson>
+<vFCP>0.00</vFCP>
+<vBCST>0.00</vBCST>
+<vST>0.00</vST>
+<vFCPST>0.00</vFCPST>
+<vFCPSTRet>0.00</vFCPSTRet>
+<vProd>${money(input.totals.productsAmount)}</vProd>
+<vFrete>0.00</vFrete>
+<vSeg>0.00</vSeg>
+<vDesc>${money(input.totals.discountAmount)}</vDesc>
+<vII>0.00</vII>
+<vIPI>0.00</vIPI>
+<vIPIDevol>0.00</vIPIDevol>
+<vPIS>0.00</vPIS>
+<vCOFINS>0.00</vCOFINS>
+<vOutro>0.00</vOutro>
+<vNF>${money(input.totals.finalAmount)}</vNF>
+</ICMSTot>
+</total>
+<transp><modFrete>9</modFrete></transp>
+${paymentsXml(input.payments, input.totals.changeAmount)}
+${input.sale.additionalInfo ? `<infAdic><infCpl>${escapeXml(input.sale.additionalInfo)}</infCpl></infAdic>` : ""}
+${technicalResponsibleXml(input.technicalResponsible)}
+</infNFe>
 </NFe>`;
+}
+class NfceXmlBuilderService {
+  build(input) {
+    const accessKey = nfceAccessKeyService.generate({
+      uf: input.fiscalContext.uf,
+      issuedAt: input.sale.issuedAt,
+      cnpj: input.fiscalContext.emitter.cnpj,
+      model: 65,
+      series: input.sale.series,
+      number: input.sale.number,
+      emissionType: 1,
+      environment: input.fiscalContext.environment
+    });
+    const model = { accessKey, input };
+    const validation = validateDocument(model);
+    if (!validation.ok) {
+      return {
+        accessKey: accessKey.accessKey,
+        numericCode: accessKey.numericCode,
+        checkDigit: accessKey.checkDigit,
+        xml: "",
+        validation
+      };
+    }
+    return {
+      accessKey: accessKey.accessKey,
+      numericCode: accessKey.numericCode,
+      checkDigit: accessKey.checkDigit,
+      xml: serializeDocument(model),
+      validation
+    };
+  }
+  buildAuthorizeXml(request, fiscalContext) {
+    return this.build({
+      fiscalContext,
+      sale: {
+        id: request.saleId,
+        issuedAt: request.issuedAt,
+        series: request.series,
+        number: request.number,
+        additionalInfo: request.additionalInfo
+      },
+      customer: request.customer,
+      items: request.items,
+      payments: request.payments,
+      totals: request.totals
+    });
   }
 }
 const nfceXmlBuilderService = new NfceXmlBuilderService();
@@ -5407,10 +5914,21 @@ class DefaultFiscalService {
     const config2 = fiscalContextResolver.resolveProviderConfig(request.companyId);
     fiscalPreTransmissionValidator.validateAuthorizeRequest(request, config2);
     this.repository.updateStatus(persisted.id, "PENDING");
-    const builtXml = nfceXmlBuilderService.buildAuthorizeXml(request);
+    const builtXml = nfceXmlBuilderService.buildAuthorizeXml(request, context);
+    if (!builtXml.validation.ok) {
+      const message = builtXml.validation.errors.map((issue) => issue.message).join(" | ");
+      this.repository.updateStatus(persisted.id, "ERROR", "NFCE_XML_BUILD_FAILED", message);
+      throw new FiscalError({
+        code: "NFCE_XML_BUILD_FAILED",
+        message,
+        category: "VALIDATION",
+        details: builtXml.validation
+      });
+    }
     this.repository.updateTransmissionArtifacts(persisted.id, {
       issuedAt: request.issuedAt,
-      xmlBuilt: builtXml
+      accessKey: builtXml.accessKey,
+      xmlBuilt: builtXml.xml
     });
     try {
       await this.certificateService.assertCertificateReady(config2);
@@ -5419,7 +5937,8 @@ class DefaultFiscalService {
       const enrichedResponse = {
         ...response,
         issuedAt: response.issuedAt ?? request.issuedAt,
-        xmlBuilt: response.xmlBuilt ?? builtXml
+        accessKey: builtXml.accessKey,
+        xmlBuilt: response.xmlBuilt ?? builtXml.xml
       };
       if (enrichedResponse.status === "AUTHORIZED") {
         const document = this.repository.markAsAuthorized(persisted.id, enrichedResponse);
@@ -5645,6 +6164,655 @@ function startFiscalQueueWorker(intervalMs = 15e3) {
     void fiscalQueueService.processNext();
   }, intervalMs);
 }
+function mapDocument(row) {
+  return {
+    id: row.id,
+    saleId: row.sale_id,
+    storeId: row.store_id,
+    model: row.model,
+    series: row.series,
+    number: row.number,
+    accessKey: row.access_key,
+    environment: row.environment,
+    status: row.status,
+    issuedDatetime: row.issued_datetime,
+    xml: row.xml,
+    xmlSigned: row.xml_signed,
+    xmlAuthorized: row.xml_authorized,
+    xmlCancellation: row.xml_cancellation,
+    protocol: row.protocol,
+    receiptNumber: row.receipt_number,
+    qrCodeUrl: row.qr_code_url,
+    authorizationDatetime: row.authorization_datetime,
+    cancelDatetime: row.cancel_datetime,
+    contingencyType: row.contingency_type,
+    rejectionCode: row.rejection_code,
+    rejectionReason: row.rejection_reason,
+    danfePath: row.danfe_path,
+    provider: row.provider,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+class FiscalDocumentRepository {
+  createPending(input) {
+    const result = db.prepare(`
+      INSERT INTO fiscal_documents (
+        sale_id, store_id, model, series, number, access_key, environment, status,
+        issued_datetime, xml, xml_signed, xml_authorized, xml_cancellation, protocol, receipt_number, qr_code_url, authorization_datetime,
+        cancel_datetime, contingency_type, rejection_code, rejection_reason, danfe_path,
+        provider, created_at, updated_at
+      ) VALUES (?, ?, 65, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `).run(
+      input.saleId,
+      input.storeId,
+      input.series,
+      input.number,
+      input.accessKey ?? null,
+      input.environment,
+      input.status,
+      input.issuedDatetime ?? null,
+      input.xml ?? null,
+      input.xmlSigned ?? null,
+      input.xmlAuthorized ?? null,
+      input.xmlCancellation ?? null,
+      input.protocol ?? null,
+      input.receiptNumber ?? null,
+      input.qrCodeUrl ?? null,
+      input.authorizationDatetime ?? null,
+      input.cancelDatetime ?? null,
+      input.contingencyType ?? null,
+      input.rejectionCode ?? null,
+      input.rejectionReason ?? null,
+      input.danfePath ?? null,
+      input.provider ?? null
+    );
+    return this.findById(Number(result.lastInsertRowid));
+  }
+  upsertBySale(input) {
+    const existing = this.findBySaleId(input.saleId);
+    if (!existing) {
+      return this.createPending(input);
+    }
+    db.prepare(`
+      UPDATE fiscal_documents
+      SET
+        store_id = ?,
+        series = ?,
+        number = ?,
+        access_key = ?,
+        environment = ?,
+        status = ?,
+        issued_datetime = ?,
+        xml = ?,
+        xml_signed = ?,
+        xml_authorized = ?,
+        xml_cancellation = ?,
+        protocol = ?,
+        receipt_number = ?,
+        qr_code_url = ?,
+        authorization_datetime = ?,
+        cancel_datetime = ?,
+        contingency_type = ?,
+        rejection_code = ?,
+        rejection_reason = ?,
+        danfe_path = ?,
+        provider = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      input.storeId,
+      input.series,
+      input.number,
+      input.accessKey ?? existing.accessKey ?? null,
+      input.environment,
+      input.status,
+      input.issuedDatetime ?? existing.issuedDatetime ?? null,
+      input.xml ?? existing.xml ?? null,
+      input.xmlSigned ?? existing.xmlSigned ?? null,
+      input.xmlAuthorized ?? existing.xmlAuthorized ?? null,
+      input.xmlCancellation ?? existing.xmlCancellation ?? null,
+      input.protocol ?? existing.protocol ?? null,
+      input.receiptNumber ?? existing.receiptNumber ?? null,
+      input.qrCodeUrl ?? existing.qrCodeUrl ?? null,
+      input.authorizationDatetime ?? existing.authorizationDatetime ?? null,
+      input.cancelDatetime ?? existing.cancelDatetime ?? null,
+      input.contingencyType ?? existing.contingencyType ?? null,
+      input.rejectionCode ?? existing.rejectionCode ?? null,
+      input.rejectionReason ?? existing.rejectionReason ?? null,
+      input.danfePath ?? existing.danfePath ?? null,
+      input.provider ?? existing.provider ?? null,
+      existing.id
+    );
+    return this.findById(existing.id);
+  }
+  findById(id) {
+    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1`).get(id);
+    return row ? mapDocument(row) : null;
+  }
+  findBySaleId(saleId) {
+    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(saleId);
+    return row ? mapDocument(row) : null;
+  }
+  findByAccessKey(accessKey) {
+    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1`).get(accessKey);
+    return row ? mapDocument(row) : null;
+  }
+  markCancelled(id, cancelDatetime, protocol) {
+    db.prepare(`
+      UPDATE fiscal_documents
+      SET
+        status = 'CANCELLED',
+        cancel_datetime = ?,
+        protocol = COALESCE(?, protocol),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(cancelDatetime, protocol ?? null, id);
+  }
+}
+const fiscalDocumentRepository = new FiscalDocumentRepository();
+const FiscalDocumentStatuses = {
+  DRAFT: "DRAFT",
+  QUEUED: "QUEUED",
+  SIGNING: "SIGNING",
+  TRANSMITTING: "TRANSMITTING",
+  AUTHORIZED: "AUTHORIZED",
+  REJECTED: "REJECTED",
+  CANCELLED: "CANCELLED",
+  CONTINGENCY: "CONTINGENCY",
+  ERROR: "ERROR"
+};
+const FiscalEventTypes = {
+  AUTHORIZATION_REQUESTED: "AUTHORIZATION_REQUESTED",
+  AUTHORIZATION_RESPONSE: "AUTHORIZATION_RESPONSE",
+  STATUS_CONSULTED: "STATUS_CONSULTED",
+  CANCELLATION_REQUESTED: "CANCELLATION_REQUESTED",
+  CANCELLATION_RESPONSE: "CANCELLATION_RESPONSE",
+  DANFE_REPRINTED: "DANFE_REPRINTED",
+  CONTINGENCY_ACTIVATED: "CONTINGENCY_ACTIVATED",
+  CONTINGENCY_SYNC_REQUESTED: "CONTINGENCY_SYNC_REQUESTED"
+};
+class FiscalNumberingService {
+  getOrReserveForSale(saleId, storeId) {
+    const existing = fiscalDocumentRepository.findBySaleId(saleId);
+    if (existing) {
+      return {
+        series: existing.series,
+        number: existing.number
+      };
+    }
+    return storeRepository.reserveNextNfceNumber(storeId);
+  }
+}
+const fiscalNumberingService = new FiscalNumberingService();
+function mapPaymentMethod(tpag) {
+  const map = {
+    "01": "DINHEIRO",
+    "03": "CREDITO",
+    "04": "DEBITO",
+    "10": "VOUCHER",
+    "17": "PIX"
+  };
+  return map[tpag] ?? "OUTROS";
+}
+function mapEnvironment(ambiente) {
+  return ambiente === 1 ? "production" : "homologation";
+}
+function resolvePrimaryPaymentMethod(payments) {
+  if (payments.length === 0) {
+    return "OUTROS";
+  }
+  const unique = new Set(payments.map((payment) => payment.method));
+  return unique.size === 1 ? payments[0].method : "OUTROS";
+}
+function taxValue(primary, fallback, defaultValue = "") {
+  const value = String(primary ?? fallback ?? "").trim();
+  return value || defaultValue;
+}
+class PdvSaleFiscalAdapter {
+  loadActiveCompany() {
+    const company = db.prepare(`
+      SELECT
+        nome_fantasia,
+        razao_social,
+        cnpj,
+        inscricao_estadual,
+        crt,
+        rua,
+        numero,
+        bairro,
+        cidade,
+        uf,
+        cep,
+        cod_municipio_ibge,
+        ambiente_emissao,
+        serie_nfce,
+        proximo_numero_nfce,
+        csc_id,
+        csc_token
+      FROM company
+      WHERE ativo = 1
+      LIMIT 1
+    `).get();
+    return company ?? null;
+  }
+  resolveActiveStore() {
+    const existingStore = storeRepository.findActive();
+    if (existingStore) {
+      return existingStore;
+    }
+    const company = this.loadActiveCompany();
+    if (!company) {
+      throw new Error("Nenhuma store ativa encontrada e não existe company ativa para criar o espelho fiscal.");
+    }
+    return storeRepository.create({
+      code: "MAIN",
+      name: company.nome_fantasia,
+      legalName: company.razao_social,
+      cnpj: company.cnpj,
+      stateRegistration: company.inscricao_estadual,
+      taxRegimeCode: String(company.crt),
+      environment: mapEnvironment(company.ambiente_emissao),
+      cscId: company.csc_id,
+      cscToken: company.csc_token,
+      defaultSeries: Number(company.serie_nfce ?? 1),
+      nextNfceNumber: Number(company.proximo_numero_nfce ?? 1),
+      addressStreet: company.rua,
+      addressNumber: company.numero,
+      addressNeighborhood: company.bairro,
+      addressCity: company.cidade,
+      addressState: company.uf,
+      addressZipCode: company.cep,
+      addressCityIbgeCode: company.cod_municipio_ibge,
+      active: true
+    });
+  }
+  loadLegacySale(legacySaleId) {
+    const sale = db.prepare(`
+      SELECT
+        id, ambiente, data_emissao, valor_produtos, valor_desconto,
+        valor_total, valor_troco, cliente_nome, cpf_cliente, cnpj_cliente
+      FROM vendas
+      WHERE id = ?
+      LIMIT 1
+    `).get(legacySaleId);
+    if (!sale) {
+      throw new Error(`Venda ${legacySaleId} não encontrada para emissão fiscal.`);
+    }
+    return sale;
+  }
+  loadLegacyItems(legacySaleId) {
+    return db.prepare(`
+      SELECT
+        vi.id,
+        vi.produto_id,
+        vi.codigo_produto,
+        vi.nome_produto,
+        vi.gtin,
+        vi.unidade_comercial,
+        vi.quantidade_comercial,
+        vi.valor_unitario_comercial,
+        vi.valor_bruto,
+        vi.valor_desconto,
+        vi.subtotal,
+        COALESCE(NULLIF(vi.ncm, ''), NULLIF(snapshot.ncm, ''), NULLIF(product.ncm, '')) AS ncm,
+        COALESCE(NULLIF(vi.cfop, ''), NULLIF(snapshot.cfop, ''), NULLIF(product.cfop, ''), '5102') AS cfop,
+        COALESCE(vi.cest, snapshot.cest, product.cest) AS cest,
+        COALESCE(NULLIF(snapshot.origin_code, ''), NULLIF(product.origin, ''), '0') AS origin_code,
+        COALESCE(NULLIF(snapshot.csosn, ''), '102') AS csosn,
+        snapshot.icms_cst,
+        COALESCE(NULLIF(snapshot.pis_cst, ''), '49') AS pis_cst,
+        COALESCE(NULLIF(snapshot.cofins_cst, ''), '49') AS cofins_cst
+      FROM venda_itens vi
+      LEFT JOIN sale_item_tax_snapshot snapshot
+        ON snapshot.sale_item_id = vi.id
+      LEFT JOIN products product
+        ON product.id = vi.produto_id
+      WHERE vi.venda_id = ?
+      ORDER BY vi.id ASC
+    `).all(legacySaleId);
+  }
+  loadLegacyPayments(legacySaleId) {
+    return db.prepare(`
+      SELECT id, tpag, valor, valor_recebido, troco, descricao_outro
+      FROM venda_pagamento
+      WHERE venda_id = ?
+      ORDER BY id ASC
+    `).all(legacySaleId);
+  }
+  buildAuthorizeRequest(legacySaleId, storeId, series, number) {
+    const sale = this.loadLegacySale(legacySaleId);
+    const store = storeRepository.findById(storeId);
+    if (!store) {
+      throw new Error(`Store fiscal ${storeId} não encontrada para emissão.`);
+    }
+    const items = this.loadLegacyItems(legacySaleId);
+    const payments = this.loadLegacyPayments(legacySaleId).map((payment) => ({
+      method: mapPaymentMethod(payment.tpag),
+      amount: Number(payment.valor ?? 0),
+      receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : void 0,
+      changeAmount: payment.troco != null ? Number(payment.troco) : void 0,
+      description: payment.descricao_outro ?? null
+    }));
+    return {
+      saleId: sale.id,
+      companyId: store.id,
+      number,
+      series,
+      environment: mapEnvironment(sale.ambiente),
+      paymentMethod: resolvePrimaryPaymentMethod(payments),
+      payments,
+      issuedAt: sale.data_emissao,
+      emitter: {
+        cnpj: store.cnpj,
+        stateRegistration: store.stateRegistration,
+        legalName: store.legalName,
+        tradeName: store.name,
+        taxRegimeCode: String(store.taxRegimeCode),
+        address: {
+          street: store.addressStreet,
+          number: store.addressNumber,
+          neighborhood: store.addressNeighborhood,
+          city: store.addressCity,
+          state: store.addressState,
+          zipCode: store.addressZipCode,
+          cityIbgeCode: store.addressCityIbgeCode
+        }
+      },
+      customer: {
+        name: sale.cliente_nome ?? void 0,
+        cpfCnpj: sale.cpf_cliente ?? sale.cnpj_cliente ?? null
+      },
+      items: items.map((item) => ({
+        id: item.produto_id ?? item.codigo_produto,
+        description: item.nome_produto,
+        unit: item.unidade_comercial,
+        quantity: Number(item.quantidade_comercial ?? 0),
+        unitPrice: Number(item.valor_unitario_comercial ?? 0),
+        grossAmount: Number(item.valor_bruto ?? 0),
+        discountAmount: Number(item.valor_desconto ?? 0),
+        totalAmount: Number(item.subtotal ?? 0),
+        gtin: item.gtin,
+        tax: {
+          ncm: item.ncm ?? "",
+          cfop: taxValue(item.cfop, null, "5102"),
+          cest: item.cest,
+          originCode: taxValue(item.origin_code, null, "0"),
+          csosn: item.csosn ?? "102",
+          icmsCst: item.icms_cst,
+          pisCst: item.pis_cst ?? "49",
+          cofinsCst: item.cofins_cst ?? "49"
+        }
+      })),
+      totals: {
+        productsAmount: Number(sale.valor_produtos ?? 0),
+        discountAmount: Number(sale.valor_desconto ?? 0),
+        finalAmount: Number(sale.valor_total ?? 0),
+        receivedAmount: payments.reduce((sum, payment) => sum + Number(payment.receivedAmount ?? payment.amount ?? 0), 0),
+        changeAmount: payments.reduce((sum, payment) => sum + Number(payment.changeAmount ?? 0), 0) || Number(sale.valor_troco ?? 0)
+      },
+      additionalInfo: `Venda PDV ${sale.id}`,
+      offlineFallbackMode: "queue",
+      idempotencyKey: `nfce-sale-${sale.id}`
+    };
+  }
+  mirrorLegacySale(legacySaleId) {
+    const store = this.resolveActiveStore();
+    const sale = this.loadLegacySale(legacySaleId);
+    const items = this.loadLegacyItems(legacySaleId);
+    const payments = this.loadLegacyPayments(legacySaleId);
+    const externalReference = `legacy-sale:${legacySaleId}`;
+    const existing = salesRepository.findByExternalReference(externalReference);
+    const aggregate = existing ?? salesRepository.create({
+      storeId: store.id,
+      customerName: sale.cliente_nome ?? null,
+      customerDocument: sale.cpf_cliente ?? sale.cnpj_cliente ?? null,
+      status: "PAID",
+      subtotalAmount: Number(sale.valor_produtos ?? 0),
+      discountAmount: Number(sale.valor_desconto ?? 0),
+      totalAmount: Number(sale.valor_total ?? 0),
+      changeAmount: Number(sale.valor_troco ?? 0),
+      externalReference,
+      items: items.map((item) => ({
+        productId: item.produto_id ?? item.codigo_produto,
+        description: item.nome_produto,
+        unit: item.unidade_comercial,
+        quantity: Number(item.quantidade_comercial ?? 0),
+        unitPrice: Number(item.valor_unitario_comercial ?? 0),
+        grossAmount: Number(item.valor_bruto ?? 0),
+        discountAmount: Number(item.valor_desconto ?? 0),
+        totalAmount: Number(item.subtotal ?? 0),
+        ncm: item.ncm ?? null,
+        cfop: taxValue(item.cfop, null, "5102"),
+        cest: item.cest,
+        originCode: taxValue(item.origin_code, null, "0"),
+        taxSnapshot: {
+          ncm: item.ncm,
+          cfop: taxValue(item.cfop, null, "5102"),
+          cest: item.cest,
+          originCode: taxValue(item.origin_code, null, "0"),
+          csosn: item.csosn ?? "102",
+          icmsCst: item.icms_cst,
+          pisCst: item.pis_cst ?? "49",
+          cofinsCst: item.cofins_cst ?? "49"
+        }
+      })),
+      payments: payments.map((payment) => ({
+        method: mapPaymentMethod(payment.tpag),
+        amount: Number(payment.valor ?? 0),
+        receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : Number(payment.valor ?? 0),
+        changeAmount: Number(payment.troco ?? 0),
+        integrationReference: payment.descricao_outro ?? null
+      }))
+    });
+    const numbering = fiscalNumberingService.getOrReserveForSale(aggregate.sale.id, store.id);
+    const request = this.buildAuthorizeRequest(legacySaleId, store.id, numbering.series, numbering.number);
+    const persistedDocument = fiscalDocumentRepository.upsertBySale({
+      saleId: aggregate.sale.id,
+      storeId: store.id,
+      series: numbering.series,
+      number: numbering.number,
+      environment: request.environment,
+      status: FiscalDocumentStatuses.DRAFT,
+      issuedDatetime: request.issuedAt,
+      contingencyType: request.offlineFallbackMode === "queue" ? "queue" : null,
+      provider: null
+    });
+    return {
+      request,
+      store,
+      mirroredSale: aggregate,
+      mirroredFiscalDocument: persistedDocument
+    };
+  }
+}
+const pdvSaleFiscalAdapter = new PdvSaleFiscalAdapter();
+function mapEvent(row) {
+  return {
+    id: row.id,
+    fiscalDocumentId: row.fiscal_document_id,
+    eventType: row.event_type,
+    payloadJson: row.payload_json,
+    responseJson: row.response_json,
+    status: row.status,
+    createdAt: row.created_at
+  };
+}
+class FiscalEventRepository {
+  create(input) {
+    const result = db.prepare(`
+      INSERT INTO fiscal_events (
+        fiscal_document_id, event_type, payload_json, response_json, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).run(
+      input.fiscalDocumentId,
+      input.eventType,
+      input.payload ? serializeJson(input.payload) : null,
+      input.response ? serializeJson(input.response) : null,
+      input.status
+    );
+    return this.findById(Number(result.lastInsertRowid));
+  }
+  findById(id) {
+    const row = db.prepare(`SELECT * FROM fiscal_events WHERE id = ? LIMIT 1`).get(id);
+    return row ? mapEvent(row) : null;
+  }
+  listByFiscalDocument(fiscalDocumentId) {
+    const rows = db.prepare(`
+      SELECT * FROM fiscal_events
+      WHERE fiscal_document_id = ?
+      ORDER BY created_at DESC, id DESC
+    `).all(fiscalDocumentId);
+    return rows.map(mapEvent);
+  }
+}
+const fiscalEventRepository = new FiscalEventRepository();
+class IssueFiscalDocumentForSaleService {
+  generateXml(legacySaleId) {
+    const mirrored = pdvSaleFiscalAdapter.mirrorLegacySale(legacySaleId);
+    const fiscalRequest = {
+      ...mirrored.request,
+      saleId: mirrored.mirroredSale.sale.id,
+      companyId: mirrored.store.id,
+      idempotencyKey: `nfce-sale-${mirrored.mirroredSale.sale.id}`
+    };
+    const context = fiscalContextResolver.resolve(mirrored.store.id);
+    const readiness = fiscalReadinessValidator.validateAuthorizeReadiness(context, fiscalRequest);
+    if (!readiness.ok) {
+      const message = readiness.errors.map((issue) => issue.message).join(" | ");
+      fiscalDocumentRepository.upsertBySale({
+        saleId: mirrored.mirroredSale.sale.id,
+        storeId: mirrored.store.id,
+        series: fiscalRequest.series,
+        number: fiscalRequest.number,
+        environment: fiscalRequest.environment,
+        status: FiscalDocumentStatuses.ERROR,
+        issuedDatetime: fiscalRequest.issuedAt,
+        rejectionCode: "FISCAL_READINESS_FAILED",
+        rejectionReason: message
+      });
+      return {
+        success: false,
+        saleId: legacySaleId,
+        fiscal: {
+          status: "ERROR",
+          statusCode: "FISCAL_READINESS_FAILED",
+          statusMessage: message,
+          documentId: mirrored.mirroredFiscalDocument.id
+        },
+        validation: readiness
+      };
+    }
+    const built = nfceXmlBuilderService.buildAuthorizeXml(fiscalRequest, context);
+    const document = fiscalDocumentRepository.upsertBySale({
+      saleId: mirrored.mirroredSale.sale.id,
+      storeId: mirrored.store.id,
+      series: fiscalRequest.series,
+      number: fiscalRequest.number,
+      environment: fiscalRequest.environment,
+      status: built.validation.ok ? FiscalDocumentStatuses.DRAFT : FiscalDocumentStatuses.ERROR,
+      issuedDatetime: fiscalRequest.issuedAt,
+      accessKey: built.accessKey,
+      xml: built.xml || null,
+      rejectionCode: built.validation.ok ? null : "NFCE_XML_BUILD_FAILED",
+      rejectionReason: built.validation.ok ? null : built.validation.errors.map((issue) => issue.message).join(" | ")
+    });
+    fiscalEventRepository.create({
+      fiscalDocumentId: document.id,
+      eventType: FiscalEventTypes.AUTHORIZATION_REQUESTED,
+      payload: {
+        legacySaleId,
+        action: "GENERATE_XML_ONLY",
+        accessKey: built.accessKey,
+        warnings: built.validation.warnings
+      },
+      status: document.status
+    });
+    return {
+      success: built.validation.ok,
+      saleId: legacySaleId,
+      fiscal: {
+        status: document.status,
+        accessKey: document.accessKey,
+        statusCode: built.validation.ok ? "XML_BUILT" : "NFCE_XML_BUILD_FAILED",
+        statusMessage: built.validation.ok ? "XML NFC-e gerado e persistido." : "Falha ao montar XML NFC-e.",
+        documentId: document.id
+      },
+      validation: built.validation
+    };
+  }
+  async execute(legacySaleId) {
+    try {
+      const mirrored = pdvSaleFiscalAdapter.mirrorLegacySale(legacySaleId);
+      const fiscalRequest = {
+        ...mirrored.request,
+        saleId: mirrored.mirroredSale.sale.id,
+        companyId: mirrored.store.id,
+        idempotencyKey: `nfce-sale-${mirrored.mirroredSale.sale.id}`
+      };
+      fiscalEventRepository.create({
+        fiscalDocumentId: mirrored.mirroredFiscalDocument.id,
+        eventType: FiscalEventTypes.AUTHORIZATION_REQUESTED,
+        payload: { legacySaleId, request: fiscalRequest },
+        status: FiscalDocumentStatuses.TRANSMITTING
+      });
+      const response = await fiscalService.authorizeNfce(fiscalRequest);
+      const document = fiscalDocumentRepository.findBySaleId(mirrored.mirroredSale.sale.id);
+      if (document) {
+        fiscalEventRepository.create({
+          fiscalDocumentId: document.id,
+          eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
+          payload: { legacySaleId, request: fiscalRequest },
+          response,
+          status: response.status
+        });
+      }
+      return {
+        success: true,
+        saleId: legacySaleId,
+        fiscal: {
+          status: response.status,
+          accessKey: response.accessKey,
+          protocol: response.protocol,
+          receiptNumber: response.receiptNumber,
+          qrCodeUrl: response.qrCodeUrl,
+          authorizedAt: response.authorizedAt,
+          statusCode: response.statusCode,
+          statusMessage: response.statusMessage,
+          documentId: (document == null ? void 0 : document.id) ?? null,
+          provider: response.provider
+        }
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "ISSUE_FISCAL_SALE_FAILED");
+      const document = fiscalDocumentRepository.findBySaleId(legacySaleId);
+      if (document) {
+        fiscalEventRepository.create({
+          fiscalDocumentId: document.id,
+          eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
+          payload: { legacySaleId },
+          response: {
+            status: "ERROR",
+            statusCode: fiscalError.code,
+            statusMessage: fiscalError.message
+          },
+          status: FiscalDocumentStatuses.ERROR
+        });
+      }
+      return {
+        success: false,
+        saleId: legacySaleId,
+        fiscal: {
+          status: "ERROR",
+          statusCode: fiscalError.code,
+          statusMessage: fiscalError.message,
+          documentId: (document == null ? void 0 : document.id) ?? null
+        }
+      };
+    }
+  }
+}
+const issueFiscalDocumentForSaleService = new IssueFiscalDocumentForSaleService();
 let currentSessionId = null;
 function setCurrentSession(id) {
   currentSessionId = id;
@@ -5825,6 +6993,26 @@ function registerFiscalHandlers() {
       };
     }
   });
+  ipcMain.handle("fiscal:generate-nfce-xml-for-sale", async (_event, legacySaleId) => {
+    try {
+      assertCurrentUserPermission("fiscal:manage");
+      return {
+        success: true,
+        data: issueFiscalDocumentForSaleService.generateXml(legacySaleId)
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_XML_BUILD_FAILED");
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
+        }
+      };
+    }
+  });
   ipcMain.handle("fiscal:cancel-nfce", async (_event, request) => {
     try {
       assertCurrentUserPermission("fiscal:manage");
@@ -5958,576 +7146,6 @@ function registerFiscalHandlers() {
     }
   });
 }
-function mapDocument(row) {
-  return {
-    id: row.id,
-    saleId: row.sale_id,
-    storeId: row.store_id,
-    model: row.model,
-    series: row.series,
-    number: row.number,
-    accessKey: row.access_key,
-    environment: row.environment,
-    status: row.status,
-    issuedDatetime: row.issued_datetime,
-    xml: row.xml,
-    xmlSigned: row.xml_signed,
-    xmlAuthorized: row.xml_authorized,
-    xmlCancellation: row.xml_cancellation,
-    protocol: row.protocol,
-    receiptNumber: row.receipt_number,
-    qrCodeUrl: row.qr_code_url,
-    authorizationDatetime: row.authorization_datetime,
-    cancelDatetime: row.cancel_datetime,
-    contingencyType: row.contingency_type,
-    rejectionCode: row.rejection_code,
-    rejectionReason: row.rejection_reason,
-    danfePath: row.danfe_path,
-    provider: row.provider,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  };
-}
-class FiscalDocumentRepository {
-  createPending(input) {
-    const result = db.prepare(`
-      INSERT INTO fiscal_documents (
-        sale_id, store_id, model, series, number, access_key, environment, status,
-        issued_datetime, xml, xml_signed, xml_authorized, xml_cancellation, protocol, receipt_number, qr_code_url, authorization_datetime,
-        cancel_datetime, contingency_type, rejection_code, rejection_reason, danfe_path,
-        provider, created_at, updated_at
-      ) VALUES (?, ?, 65, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `).run(
-      input.saleId,
-      input.storeId,
-      input.series,
-      input.number,
-      input.accessKey ?? null,
-      input.environment,
-      input.status,
-      input.issuedDatetime ?? null,
-      input.xml ?? null,
-      input.xmlSigned ?? null,
-      input.xmlAuthorized ?? null,
-      input.xmlCancellation ?? null,
-      input.protocol ?? null,
-      input.receiptNumber ?? null,
-      input.qrCodeUrl ?? null,
-      input.authorizationDatetime ?? null,
-      input.cancelDatetime ?? null,
-      input.contingencyType ?? null,
-      input.rejectionCode ?? null,
-      input.rejectionReason ?? null,
-      input.danfePath ?? null,
-      input.provider ?? null
-    );
-    return this.findById(Number(result.lastInsertRowid));
-  }
-  upsertBySale(input) {
-    const existing = this.findBySaleId(input.saleId);
-    if (!existing) {
-      return this.createPending(input);
-    }
-    db.prepare(`
-      UPDATE fiscal_documents
-      SET
-        store_id = ?,
-        series = ?,
-        number = ?,
-        access_key = ?,
-        environment = ?,
-        status = ?,
-        issued_datetime = ?,
-        xml = ?,
-        xml_signed = ?,
-        xml_authorized = ?,
-        xml_cancellation = ?,
-        protocol = ?,
-        receipt_number = ?,
-        qr_code_url = ?,
-        authorization_datetime = ?,
-        cancel_datetime = ?,
-        contingency_type = ?,
-        rejection_code = ?,
-        rejection_reason = ?,
-        danfe_path = ?,
-        provider = ?,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(
-      input.storeId,
-      input.series,
-      input.number,
-      input.accessKey ?? existing.accessKey ?? null,
-      input.environment,
-      input.status,
-      input.issuedDatetime ?? existing.issuedDatetime ?? null,
-      input.xml ?? existing.xml ?? null,
-      input.xmlSigned ?? existing.xmlSigned ?? null,
-      input.xmlAuthorized ?? existing.xmlAuthorized ?? null,
-      input.xmlCancellation ?? existing.xmlCancellation ?? null,
-      input.protocol ?? existing.protocol ?? null,
-      input.receiptNumber ?? existing.receiptNumber ?? null,
-      input.qrCodeUrl ?? existing.qrCodeUrl ?? null,
-      input.authorizationDatetime ?? existing.authorizationDatetime ?? null,
-      input.cancelDatetime ?? existing.cancelDatetime ?? null,
-      input.contingencyType ?? existing.contingencyType ?? null,
-      input.rejectionCode ?? existing.rejectionCode ?? null,
-      input.rejectionReason ?? existing.rejectionReason ?? null,
-      input.danfePath ?? existing.danfePath ?? null,
-      input.provider ?? existing.provider ?? null,
-      existing.id
-    );
-    return this.findById(existing.id);
-  }
-  findById(id) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1`).get(id);
-    return row ? mapDocument(row) : null;
-  }
-  findBySaleId(saleId) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(saleId);
-    return row ? mapDocument(row) : null;
-  }
-  findByAccessKey(accessKey) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1`).get(accessKey);
-    return row ? mapDocument(row) : null;
-  }
-  markCancelled(id, cancelDatetime, protocol) {
-    db.prepare(`
-      UPDATE fiscal_documents
-      SET
-        status = 'CANCELLED',
-        cancel_datetime = ?,
-        protocol = COALESCE(?, protocol),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(cancelDatetime, protocol ?? null, id);
-  }
-}
-const fiscalDocumentRepository = new FiscalDocumentRepository();
-const FiscalDocumentStatuses = {
-  DRAFT: "DRAFT",
-  QUEUED: "QUEUED",
-  SIGNING: "SIGNING",
-  TRANSMITTING: "TRANSMITTING",
-  AUTHORIZED: "AUTHORIZED",
-  REJECTED: "REJECTED",
-  CANCELLED: "CANCELLED",
-  CONTINGENCY: "CONTINGENCY",
-  ERROR: "ERROR"
-};
-const FiscalEventTypes = {
-  AUTHORIZATION_REQUESTED: "AUTHORIZATION_REQUESTED",
-  AUTHORIZATION_RESPONSE: "AUTHORIZATION_RESPONSE",
-  STATUS_CONSULTED: "STATUS_CONSULTED",
-  CANCELLATION_REQUESTED: "CANCELLATION_REQUESTED",
-  CANCELLATION_RESPONSE: "CANCELLATION_RESPONSE",
-  DANFE_REPRINTED: "DANFE_REPRINTED",
-  CONTINGENCY_ACTIVATED: "CONTINGENCY_ACTIVATED",
-  CONTINGENCY_SYNC_REQUESTED: "CONTINGENCY_SYNC_REQUESTED"
-};
-class FiscalNumberingService {
-  getOrReserveForSale(saleId, storeId) {
-    const existing = fiscalDocumentRepository.findBySaleId(saleId);
-    if (existing) {
-      return {
-        series: existing.series,
-        number: existing.number
-      };
-    }
-    return storeRepository.reserveNextNfceNumber(storeId);
-  }
-}
-const fiscalNumberingService = new FiscalNumberingService();
-function mapPaymentMethod(tpag) {
-  const map = {
-    "01": "DINHEIRO",
-    "03": "CREDITO",
-    "04": "DEBITO",
-    "10": "VOUCHER",
-    "17": "PIX"
-  };
-  return map[tpag] ?? "OUTROS";
-}
-function mapEnvironment(ambiente) {
-  return ambiente === 1 ? "production" : "homologation";
-}
-function resolvePrimaryPaymentMethod(payments) {
-  if (payments.length === 0) {
-    return "OUTROS";
-  }
-  const unique = new Set(payments.map((payment) => payment.method));
-  return unique.size === 1 ? payments[0].method : "OUTROS";
-}
-class PdvSaleFiscalAdapter {
-  loadActiveCompany() {
-    const company = db.prepare(`
-      SELECT
-        nome_fantasia,
-        razao_social,
-        cnpj,
-        inscricao_estadual,
-        crt,
-        rua,
-        numero,
-        bairro,
-        cidade,
-        uf,
-        cep,
-        cod_municipio_ibge,
-        ambiente_emissao,
-        serie_nfce,
-        proximo_numero_nfce,
-        csc_id,
-        csc_token
-      FROM company
-      WHERE ativo = 1
-      LIMIT 1
-    `).get();
-    return company ?? null;
-  }
-  resolveActiveStore() {
-    const existingStore = storeRepository.findActive();
-    if (existingStore) {
-      return existingStore;
-    }
-    const company = this.loadActiveCompany();
-    if (!company) {
-      throw new Error("Nenhuma store ativa encontrada e não existe company ativa para criar o espelho fiscal.");
-    }
-    return storeRepository.create({
-      code: "MAIN",
-      name: company.nome_fantasia,
-      legalName: company.razao_social,
-      cnpj: company.cnpj,
-      stateRegistration: company.inscricao_estadual,
-      taxRegimeCode: String(company.crt),
-      environment: mapEnvironment(company.ambiente_emissao),
-      cscId: company.csc_id,
-      cscToken: company.csc_token,
-      defaultSeries: Number(company.serie_nfce ?? 1),
-      nextNfceNumber: Number(company.proximo_numero_nfce ?? 1),
-      addressStreet: company.rua,
-      addressNumber: company.numero,
-      addressNeighborhood: company.bairro,
-      addressCity: company.cidade,
-      addressState: company.uf,
-      addressZipCode: company.cep,
-      addressCityIbgeCode: company.cod_municipio_ibge,
-      active: true
-    });
-  }
-  loadLegacySale(legacySaleId) {
-    const sale = db.prepare(`
-      SELECT
-        id, ambiente, data_emissao, valor_produtos, valor_desconto,
-        valor_total, valor_troco, cliente_nome, cpf_cliente, cnpj_cliente
-      FROM vendas
-      WHERE id = ?
-      LIMIT 1
-    `).get(legacySaleId);
-    if (!sale) {
-      throw new Error(`Venda ${legacySaleId} não encontrada para emissão fiscal.`);
-    }
-    return sale;
-  }
-  loadLegacyItems(legacySaleId) {
-    return db.prepare(`
-      SELECT
-        vi.id,
-        vi.produto_id,
-        vi.codigo_produto,
-        vi.nome_produto,
-        vi.gtin,
-        vi.unidade_comercial,
-        vi.quantidade_comercial,
-        vi.valor_unitario_comercial,
-        vi.valor_bruto,
-        vi.valor_desconto,
-        vi.subtotal,
-        vi.ncm,
-        vi.cfop,
-        vi.cest,
-        snapshot.origin_code,
-        snapshot.csosn,
-        snapshot.icms_cst,
-        snapshot.pis_cst,
-        snapshot.cofins_cst
-      FROM venda_itens vi
-      LEFT JOIN sale_item_tax_snapshot snapshot
-        ON snapshot.sale_item_id = vi.id
-      WHERE vi.venda_id = ?
-      ORDER BY vi.id ASC
-    `).all(legacySaleId);
-  }
-  loadLegacyPayments(legacySaleId) {
-    return db.prepare(`
-      SELECT id, tpag, valor, valor_recebido, troco, descricao_outro
-      FROM venda_pagamento
-      WHERE venda_id = ?
-      ORDER BY id ASC
-    `).all(legacySaleId);
-  }
-  buildAuthorizeRequest(legacySaleId, storeId, series, number) {
-    const sale = this.loadLegacySale(legacySaleId);
-    const store = storeRepository.findById(storeId);
-    if (!store) {
-      throw new Error(`Store fiscal ${storeId} não encontrada para emissão.`);
-    }
-    const items = this.loadLegacyItems(legacySaleId);
-    const payments = this.loadLegacyPayments(legacySaleId).map((payment) => ({
-      method: mapPaymentMethod(payment.tpag),
-      amount: Number(payment.valor ?? 0),
-      receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : void 0,
-      changeAmount: payment.troco != null ? Number(payment.troco) : void 0,
-      description: payment.descricao_outro ?? null
-    }));
-    return {
-      saleId: sale.id,
-      companyId: store.id,
-      number,
-      series,
-      environment: mapEnvironment(sale.ambiente),
-      paymentMethod: resolvePrimaryPaymentMethod(payments),
-      payments,
-      issuedAt: sale.data_emissao,
-      emitter: {
-        cnpj: store.cnpj,
-        stateRegistration: store.stateRegistration,
-        legalName: store.legalName,
-        tradeName: store.name,
-        taxRegimeCode: String(store.taxRegimeCode),
-        address: {
-          street: store.addressStreet,
-          number: store.addressNumber,
-          neighborhood: store.addressNeighborhood,
-          city: store.addressCity,
-          state: store.addressState,
-          zipCode: store.addressZipCode,
-          cityIbgeCode: store.addressCityIbgeCode
-        }
-      },
-      customer: {
-        name: sale.cliente_nome ?? void 0,
-        cpfCnpj: sale.cpf_cliente ?? sale.cnpj_cliente ?? null
-      },
-      items: items.map((item) => ({
-        id: item.produto_id ?? item.codigo_produto,
-        description: item.nome_produto,
-        unit: item.unidade_comercial,
-        quantity: Number(item.quantidade_comercial ?? 0),
-        unitPrice: Number(item.valor_unitario_comercial ?? 0),
-        grossAmount: Number(item.valor_bruto ?? 0),
-        discountAmount: Number(item.valor_desconto ?? 0),
-        totalAmount: Number(item.subtotal ?? 0),
-        gtin: item.gtin,
-        tax: {
-          ncm: item.ncm ?? "",
-          cfop: item.cfop ?? "",
-          cest: item.cest,
-          originCode: item.origin_code ?? "",
-          csosn: item.csosn,
-          icmsCst: item.icms_cst,
-          pisCst: item.pis_cst ?? "",
-          cofinsCst: item.cofins_cst ?? ""
-        }
-      })),
-      totals: {
-        productsAmount: Number(sale.valor_produtos ?? 0),
-        discountAmount: Number(sale.valor_desconto ?? 0),
-        finalAmount: Number(sale.valor_total ?? 0),
-        receivedAmount: payments.reduce((sum, payment) => sum + Number(payment.receivedAmount ?? payment.amount ?? 0), 0),
-        changeAmount: payments.reduce((sum, payment) => sum + Number(payment.changeAmount ?? 0), 0) || Number(sale.valor_troco ?? 0)
-      },
-      additionalInfo: `Venda PDV ${sale.id}`,
-      offlineFallbackMode: "queue",
-      idempotencyKey: `nfce-sale-${sale.id}`
-    };
-  }
-  mirrorLegacySale(legacySaleId) {
-    const store = this.resolveActiveStore();
-    const sale = this.loadLegacySale(legacySaleId);
-    const items = this.loadLegacyItems(legacySaleId);
-    const payments = this.loadLegacyPayments(legacySaleId);
-    const externalReference = `legacy-sale:${legacySaleId}`;
-    const existing = salesRepository.findByExternalReference(externalReference);
-    const aggregate = existing ?? salesRepository.create({
-      storeId: store.id,
-      customerName: sale.cliente_nome ?? null,
-      customerDocument: sale.cpf_cliente ?? sale.cnpj_cliente ?? null,
-      status: "PAID",
-      subtotalAmount: Number(sale.valor_produtos ?? 0),
-      discountAmount: Number(sale.valor_desconto ?? 0),
-      totalAmount: Number(sale.valor_total ?? 0),
-      changeAmount: Number(sale.valor_troco ?? 0),
-      externalReference,
-      items: items.map((item) => ({
-        productId: item.produto_id ?? item.codigo_produto,
-        description: item.nome_produto,
-        unit: item.unidade_comercial,
-        quantity: Number(item.quantidade_comercial ?? 0),
-        unitPrice: Number(item.valor_unitario_comercial ?? 0),
-        grossAmount: Number(item.valor_bruto ?? 0),
-        discountAmount: Number(item.valor_desconto ?? 0),
-        totalAmount: Number(item.subtotal ?? 0),
-        ncm: item.ncm ?? null,
-        cfop: item.cfop ?? null,
-        cest: item.cest,
-        originCode: item.origin_code,
-        taxSnapshot: {
-          ncm: item.ncm,
-          cfop: item.cfop,
-          cest: item.cest,
-          originCode: item.origin_code,
-          csosn: item.csosn,
-          icmsCst: item.icms_cst,
-          pisCst: item.pis_cst,
-          cofinsCst: item.cofins_cst
-        }
-      })),
-      payments: payments.map((payment) => ({
-        method: mapPaymentMethod(payment.tpag),
-        amount: Number(payment.valor ?? 0),
-        receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : Number(payment.valor ?? 0),
-        changeAmount: Number(payment.troco ?? 0),
-        integrationReference: payment.descricao_outro ?? null
-      }))
-    });
-    const numbering = fiscalNumberingService.getOrReserveForSale(aggregate.sale.id, store.id);
-    const request = this.buildAuthorizeRequest(legacySaleId, store.id, numbering.series, numbering.number);
-    const persistedDocument = fiscalDocumentRepository.upsertBySale({
-      saleId: aggregate.sale.id,
-      storeId: store.id,
-      series: numbering.series,
-      number: numbering.number,
-      environment: request.environment,
-      status: FiscalDocumentStatuses.DRAFT,
-      issuedDatetime: request.issuedAt,
-      contingencyType: request.offlineFallbackMode === "queue" ? "queue" : null,
-      provider: null
-    });
-    return {
-      request,
-      store,
-      mirroredSale: aggregate,
-      mirroredFiscalDocument: persistedDocument
-    };
-  }
-}
-const pdvSaleFiscalAdapter = new PdvSaleFiscalAdapter();
-function mapEvent(row) {
-  return {
-    id: row.id,
-    fiscalDocumentId: row.fiscal_document_id,
-    eventType: row.event_type,
-    payloadJson: row.payload_json,
-    responseJson: row.response_json,
-    status: row.status,
-    createdAt: row.created_at
-  };
-}
-class FiscalEventRepository {
-  create(input) {
-    const result = db.prepare(`
-      INSERT INTO fiscal_events (
-        fiscal_document_id, event_type, payload_json, response_json, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `).run(
-      input.fiscalDocumentId,
-      input.eventType,
-      input.payload ? serializeJson(input.payload) : null,
-      input.response ? serializeJson(input.response) : null,
-      input.status
-    );
-    return this.findById(Number(result.lastInsertRowid));
-  }
-  findById(id) {
-    const row = db.prepare(`SELECT * FROM fiscal_events WHERE id = ? LIMIT 1`).get(id);
-    return row ? mapEvent(row) : null;
-  }
-  listByFiscalDocument(fiscalDocumentId) {
-    const rows = db.prepare(`
-      SELECT * FROM fiscal_events
-      WHERE fiscal_document_id = ?
-      ORDER BY created_at DESC, id DESC
-    `).all(fiscalDocumentId);
-    return rows.map(mapEvent);
-  }
-}
-const fiscalEventRepository = new FiscalEventRepository();
-class IssueFiscalDocumentForSaleService {
-  async execute(legacySaleId) {
-    try {
-      const mirrored = pdvSaleFiscalAdapter.mirrorLegacySale(legacySaleId);
-      const fiscalRequest = {
-        ...mirrored.request,
-        saleId: mirrored.mirroredSale.sale.id,
-        companyId: mirrored.store.id,
-        idempotencyKey: `nfce-sale-${mirrored.mirroredSale.sale.id}`
-      };
-      fiscalEventRepository.create({
-        fiscalDocumentId: mirrored.mirroredFiscalDocument.id,
-        eventType: FiscalEventTypes.AUTHORIZATION_REQUESTED,
-        payload: { legacySaleId, request: fiscalRequest },
-        status: FiscalDocumentStatuses.TRANSMITTING
-      });
-      const response = await fiscalService.authorizeNfce(fiscalRequest);
-      const document = fiscalDocumentRepository.findBySaleId(mirrored.mirroredSale.sale.id);
-      if (document) {
-        fiscalEventRepository.create({
-          fiscalDocumentId: document.id,
-          eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
-          payload: { legacySaleId, request: fiscalRequest },
-          response,
-          status: response.status
-        });
-      }
-      return {
-        success: true,
-        saleId: legacySaleId,
-        fiscal: {
-          status: response.status,
-          accessKey: response.accessKey,
-          protocol: response.protocol,
-          receiptNumber: response.receiptNumber,
-          qrCodeUrl: response.qrCodeUrl,
-          authorizedAt: response.authorizedAt,
-          statusCode: response.statusCode,
-          statusMessage: response.statusMessage,
-          documentId: (document == null ? void 0 : document.id) ?? null,
-          provider: response.provider
-        }
-      };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "ISSUE_FISCAL_SALE_FAILED");
-      const document = fiscalDocumentRepository.findBySaleId(legacySaleId);
-      if (document) {
-        fiscalEventRepository.create({
-          fiscalDocumentId: document.id,
-          eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
-          payload: { legacySaleId },
-          response: {
-            status: "ERROR",
-            statusCode: fiscalError.code,
-            statusMessage: fiscalError.message
-          },
-          status: FiscalDocumentStatuses.ERROR
-        });
-      }
-      return {
-        success: false,
-        saleId: legacySaleId,
-        fiscal: {
-          status: "ERROR",
-          statusCode: fiscalError.code,
-          statusMessage: fiscalError.message,
-          documentId: (document == null ? void 0 : document.id) ?? null
-        }
-      };
-    }
-  }
-}
-const issueFiscalDocumentForSaleService = new IssueFiscalDocumentForSaleService();
 function mapPrintedDocument(row) {
   return {
     id: Number(row.id),
@@ -8478,6 +9096,16 @@ class BlingApiService {
       dataAlteracaoInicial: params == null ? void 0 : params.dataAlteracaoInicial
     });
   }
+  async getProductById(id) {
+    return this.get(`/produtos/${id}`);
+  }
+  async getProductByCode(code) {
+    return this.get("/produtos", {
+      codigos: code,
+      criterio: "5",
+      limite: 10
+    });
+  }
   async getCategories(params) {
     return this.get("/categorias/produtos", {
       pagina: (params == null ? void 0 : params.page) ?? 1,
@@ -8883,7 +9511,7 @@ class ProductRepository {
       INSERT INTO products (
         id, external_id, integration_source, sku, barcode, category_id,
         name, unit, sale_price_cents, cost_price_cents, current_stock, minimum_stock,
-        ncm, origin, fixed_ipi_value_cents, notes, situation, supplier_code, supplier_name,
+        ncm, cfop, origin, fixed_ipi_value_cents, notes, situation, supplier_code, supplier_name,
         location, maximum_stock, net_weight_kg, gross_weight_kg, packaging_barcode,
         width_cm, height_cm, depth_cm, expiration_date, supplier_product_description,
         complementary_description, items_per_box, is_variation, production_type,
@@ -8897,7 +9525,7 @@ class ProductRepository {
         remote_created_at, remote_updated_at, last_synced_at, sync_status,
         raw_json, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(integration_source, external_id) DO UPDATE SET
         sku               = excluded.sku,
         barcode           = excluded.barcode,
@@ -8909,6 +9537,7 @@ class ProductRepository {
         current_stock     = excluded.current_stock,
         minimum_stock     = excluded.minimum_stock,
         ncm               = excluded.ncm,
+        cfop              = excluded.cfop,
         origin            = excluded.origin,
         fixed_ipi_value_cents = excluded.fixed_ipi_value_cents,
         notes             = excluded.notes,
@@ -8979,6 +9608,7 @@ class ProductRepository {
       product.currentStock ?? 0,
       product.minimumStock ?? 0,
       product.ncm ?? null,
+      product.cfop ?? null,
       product.origin ?? null,
       product.fixedIpiValueCents ?? null,
       product.notes ?? null,
@@ -9127,6 +9757,7 @@ class ProductRepository {
       currentStock: row.current_stock,
       minimumStock: row.minimum_stock,
       ncm: row.ncm,
+      cfop: row.cfop,
       origin: row.origin,
       fixedIpiValueCents: row.fixed_ipi_value_cents,
       notes: row.notes,
@@ -9218,6 +9849,25 @@ function toNullableString(value) {
   }
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return null;
+}
+function normalizeNcm(value) {
+  var _a;
+  const digits = ((_a = toNullableString(value)) == null ? void 0 : _a.replace(/\D/g, "")) ?? null;
+  return digits && digits.length > 0 ? digits : null;
+}
+function normalizeCest(value) {
+  var _a;
+  const digits = ((_a = toNullableString(value)) == null ? void 0 : _a.replace(/\D/g, "")) ?? null;
+  return digits && digits.length > 0 ? digits : null;
+}
+function normalizeOrigin(value) {
+  if (typeof value === "number") {
+    return Number.isInteger(value) && value >= 0 && value <= 8 ? String(value) : null;
+  }
+  const text = toNullableString(value);
+  if (text === null) return null;
+  const match = text.match(/[0-8]/);
+  return (match == null ? void 0 : match[0]) ?? null;
 }
 function toNullableNumber(value) {
   if (value === void 0 || value === null || value === "") return null;
@@ -9324,8 +9974,9 @@ function mapBlingProduct(product, now, categoryIdMap) {
       "estoqueMaximo"
     ])),
     // Espelho ampliado do Bling.
-    ncm: toNullableString(pickValue(product, ["ncm"])),
-    origin: toNullableString(pickValue(product, ["origem"])),
+    ncm: normalizeNcm(pickValue(product, ["ncm", "tributacao.ncm", "tributos.ncm"])),
+    cfop: toNullableString(pickValue(product, ["cfop", "tributacao.cfop", "tributos.cfop", "cfopPadrao"])),
+    origin: normalizeOrigin(pickValue(product, ["origem", "tributacao.origem", "tributos.origem"])),
     fixedIpiValueCents: toMoneyCents(pickValue(product, ["valorIpiFixo"])),
     notes: toNullableString(pickValue(product, ["observacoes", "observacao"])),
     situation: toNullableString(pickValue(product, ["situacao"])),
@@ -9357,7 +10008,7 @@ function mapBlingProduct(product, now, categoryIdMap) {
     integrationCode: toNullableString(pickValue(product, ["codigoIntegracao"])),
     productGroup: toNullableString(pickValue(product, ["grupoProdutos", "grupoProduto"])),
     brand: toNullableString(pickValue(product, ["marca"])),
-    cest: toNullableString(pickValue(product, ["cest"])),
+    cest: normalizeCest(pickValue(product, ["cest", "tributacao.cest", "tributos.cest"])),
     volumes: toNullableNumber(pickValue(product, ["volumes"])),
     shortDescription: toNullableString(pickValue(product, ["descricaoCurta"])),
     crossDockingDays: toNullableInteger(pickValue(product, ["crossDocking"])),
@@ -9449,8 +10100,32 @@ class SyncProductsFromBlingService {
           hasMore = false;
           break;
         }
+        const detailedProducts = [];
+        for (const product of validRaw) {
+          try {
+            const detailResponse = await blingApiService.getProductById(product.id);
+            const detailed = normalizeBlingProduct(detailResponse.data) ?? product;
+            detailedProducts.push({ ...product, ...detailed });
+            await sleep(120);
+          } catch (detailError) {
+            console.warn(`[SyncProductsFromBlingService] Falha ao buscar detalhe do produto ${product.id}. Usando payload da listagem.`, detailError);
+            detailedProducts.push(product);
+          }
+        }
         const now = nowIso();
-        const mapped = validRaw.map((product) => mapBlingProduct(product, now, categoryIdMap));
+        const mapped = detailedProducts.map((product) => mapBlingProduct(product, now, categoryIdMap));
+        const missingFiscal = mapped.filter((product) => !product.ncm || !product.origin);
+        if (missingFiscal.length > 0) {
+          console.warn("[SyncProductsFromBlingService] Produtos sem NCM/origem apos detalhe do Bling:", missingFiscal.slice(0, 5).map((product) => ({
+            externalId: product.externalId,
+            sku: product.sku,
+            name: product.name,
+            ncm: product.ncm,
+            origin: product.origin,
+            rawKeys: product.raw && typeof product.raw === "object" ? Object.keys(product.raw) : [],
+            tributacao: product.raw && typeof product.raw === "object" ? product.raw.tributacao : void 0
+          })));
+        }
         for (const product of mapped) {
           if (product.remoteUpdatedAt && (!checkpointCursor || product.remoteUpdatedAt > checkpointCursor)) {
             checkpointCursor = product.remoteUpdatedAt;
@@ -9611,6 +10286,24 @@ function registerIntegrationHandlers() {
   ipcMain.handle("integrations:bling:test", async () => {
     assertCurrentUserPermission("integrations:manage");
     return await blingApiService.getProducts({ page: 1, limit: 5 });
+  });
+  ipcMain.handle("integrations:bling:debug-product", async (_event, input) => {
+    assertCurrentUserPermission("integrations:manage");
+    if (input == null ? void 0 : input.id) {
+      return await blingApiService.getProductById(input.id);
+    }
+    if (input == null ? void 0 : input.code) {
+      const list = await blingApiService.getProductByCode(input.code);
+      const first = Array.isArray(list.data) ? list.data[0] : null;
+      if (!(first == null ? void 0 : first.id)) {
+        return { data: null, list };
+      }
+      return {
+        list,
+        detail: await blingApiService.getProductById(first.id)
+      };
+    }
+    throw new Error("Informe id ou code para diagnosticar produto do Bling.");
   });
   ipcMain.handle("integrations:bling:test-categories", async () => {
     assertCurrentUserPermission("integrations:manage");

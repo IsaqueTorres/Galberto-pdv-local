@@ -85,6 +85,26 @@ function toNullableString(value: unknown): string | null {
   return null;
 }
 
+function normalizeNcm(value: unknown): string | null {
+  const digits = toNullableString(value)?.replace(/\D/g, '') ?? null;
+  return digits && digits.length > 0 ? digits : null;
+}
+
+function normalizeCest(value: unknown): string | null {
+  const digits = toNullableString(value)?.replace(/\D/g, '') ?? null;
+  return digits && digits.length > 0 ? digits : null;
+}
+
+function normalizeOrigin(value: unknown): string | null {
+  if (typeof value === 'number') {
+    return Number.isInteger(value) && value >= 0 && value <= 8 ? String(value) : null;
+  }
+  const text = toNullableString(value);
+  if (text === null) return null;
+  const match = text.match(/[0-8]/);
+  return match?.[0] ?? null;
+}
+
 function toNullableNumber(value: unknown): number | null {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -241,8 +261,9 @@ function mapBlingProduct(
     ])),
 
     // Espelho ampliado do Bling.
-    ncm: toNullableString(pickValue(product, ['ncm'])),
-    origin: toNullableString(pickValue(product, ['origem'])),
+    ncm: normalizeNcm(pickValue(product, ['ncm', 'tributacao.ncm', 'tributos.ncm'])),
+    cfop: toNullableString(pickValue(product, ['cfop', 'tributacao.cfop', 'tributos.cfop', 'cfopPadrao'])),
+    origin: normalizeOrigin(pickValue(product, ['origem', 'tributacao.origem', 'tributos.origem'])),
     fixedIpiValueCents: toMoneyCents(pickValue(product, ['valorIpiFixo'])),
     notes: toNullableString(pickValue(product, ['observacoes', 'observacao'])),
     situation: toNullableString(pickValue(product, ['situacao'])),
@@ -274,7 +295,7 @@ function mapBlingProduct(
     integrationCode: toNullableString(pickValue(product, ['codigoIntegracao'])),
     productGroup: toNullableString(pickValue(product, ['grupoProdutos', 'grupoProduto'])),
     brand: toNullableString(pickValue(product, ['marca'])),
-    cest: toNullableString(pickValue(product, ['cest'])),
+    cest: normalizeCest(pickValue(product, ['cest', 'tributacao.cest', 'tributos.cest'])),
     volumes: toNullableNumber(pickValue(product, ['volumes'])),
     shortDescription: toNullableString(pickValue(product, ['descricaoCurta'])),
     crossDockingDays: toNullableInteger(pickValue(product, ['crossDocking'])),
@@ -430,9 +451,34 @@ export class SyncProductsFromBlingService {
           break;
         }
 
+        const detailedProducts: BlingProduct[] = [];
+        for (const product of validRaw) {
+          try {
+            const detailResponse = await blingApiService.getProductById(product.id);
+            const detailed = normalizeBlingProduct(detailResponse.data) ?? product;
+            detailedProducts.push({ ...product, ...detailed });
+            await sleep(120);
+          } catch (detailError) {
+            console.warn(`[SyncProductsFromBlingService] Falha ao buscar detalhe do produto ${product.id}. Usando payload da listagem.`, detailError);
+            detailedProducts.push(product);
+          }
+        }
+
         // Usa a mesma data/hora para todos os produtos da página, mantendo consistência no lote.
         const now = nowIso();
-        const mapped = validRaw.map(product => mapBlingProduct(product, now, categoryIdMap));
+        const mapped = detailedProducts.map(product => mapBlingProduct(product, now, categoryIdMap));
+        const missingFiscal = mapped.filter(product => !product.ncm || !product.origin);
+        if (missingFiscal.length > 0) {
+          console.warn('[SyncProductsFromBlingService] Produtos sem NCM/origem apos detalhe do Bling:', missingFiscal.slice(0, 5).map(product => ({
+            externalId: product.externalId,
+            sku: product.sku,
+            name: product.name,
+            ncm: product.ncm,
+            origin: product.origin,
+            rawKeys: product.raw && typeof product.raw === 'object' ? Object.keys(product.raw as Record<string, unknown>) : [],
+            tributacao: product.raw && typeof product.raw === 'object' ? (product.raw as Record<string, unknown>).tributacao : undefined,
+          })));
+        }
 
         // Atualiza o checkpoint com a maior data de alteração remota encontrada.
         for (const product of mapped) {

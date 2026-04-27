@@ -27,7 +27,7 @@
  */
 
 import { blingOAuthService } from './bling-oauth.service';
-import { BlingCategoriesResponse, BlingProductsResponse } from './types/integration.types'
+import { BlingCategoriesResponse, BlingProduct, BlingProductsResponse } from './types/integration.types'
 const BLING_API_BASE_URL = 'https://api.bling.com.br/Api/v3';
 
 export class BlingApiService {
@@ -106,6 +106,18 @@ export class BlingApiService {
       limite: params?.limit ?? 100,
       criterio: params?.criterio,
       dataAlteracaoInicial: params?.dataAlteracaoInicial,
+    });
+  }
+
+  async getProductById(id: string | number): Promise<{ data: BlingProduct }> {
+    return this.get(`/produtos/${id}`);
+  }
+
+  async getProductByCode(code: string): Promise<BlingProductsResponse> {
+    return this.get('/produtos', {
+      codigos: code,
+      criterio: '5',
+      limite: 10,
     });
   }
 

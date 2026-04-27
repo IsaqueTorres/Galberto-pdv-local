@@ -17,6 +17,7 @@ type FiscalBridge = {
   saveActiveStore: (input: FiscalStoreInput) => Promise<FiscalHandlerResult<FiscalStoreRecord>>;
   getCertificateInfo: () => Promise<CertificateInfo>;
   saveConfig: (input: FiscalConfigInput) => Promise<FiscalHandlerResult<FiscalConfigView> | FiscalConfigView>;
+  generateNfceXmlForSale?: (legacySaleId: number) => Promise<FiscalHandlerResult<unknown>>;
   getQueueSummary: () => Promise<FiscalQueueSummary>;
   listQueue: (limit?: number) => Promise<FiscalQueueItem[]>;
   reprocessQueueItem: (queueId: string) => Promise<FiscalHandlerResult<FiscalQueueItem | null>>;
@@ -59,6 +60,17 @@ export const fiscalConfigService = {
       throw new Error(result.error.message);
     }
     return 'success' in result ? result.data : result;
+  },
+
+  async generateNfceXmlForSale(legacySaleId: number) {
+    const result = await fiscalBridge().generateNfceXmlForSale?.(legacySaleId);
+    if (!result) {
+      throw new Error('Canal fiscal:generate-nfce-xml-for-sale nao disponivel.');
+    }
+    if (result.success === false) {
+      throw new Error(result.error.message);
+    }
+    return result.data;
   },
 
   async getCertificateInfo() {

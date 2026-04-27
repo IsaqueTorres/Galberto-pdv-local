@@ -17,6 +17,7 @@ export interface FiscalRepository {
     documentId: number,
     input: {
       issuedAt?: string | null;
+      accessKey?: string | null;
       xmlBuilt?: string | null;
       xmlSigned?: string | null;
       xmlAuthorized?: string | null;

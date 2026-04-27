@@ -78,10 +78,22 @@ export class DefaultFiscalService implements FiscalService {
     const config = fiscalContextResolver.resolveProviderConfig(request.companyId);
     fiscalPreTransmissionValidator.validateAuthorizeRequest(request, config);
     this.repository.updateStatus(persisted.id, 'PENDING');
-    const builtXml = nfceXmlBuilderService.buildAuthorizeXml(request);
+    const builtXml = nfceXmlBuilderService.buildAuthorizeXml(request, context);
+    if (!builtXml.validation.ok) {
+      const message = builtXml.validation.errors.map((issue) => issue.message).join(' | ');
+      this.repository.updateStatus(persisted.id, 'ERROR', 'NFCE_XML_BUILD_FAILED', message);
+      throw new FiscalError({
+        code: 'NFCE_XML_BUILD_FAILED',
+        message,
+        category: 'VALIDATION',
+        details: builtXml.validation,
+      });
+    }
+
     this.repository.updateTransmissionArtifacts(persisted.id, {
       issuedAt: request.issuedAt,
-      xmlBuilt: builtXml,
+      accessKey: builtXml.accessKey,
+      xmlBuilt: builtXml.xml,
     });
 
     try {
@@ -91,7 +103,8 @@ export class DefaultFiscalService implements FiscalService {
       const enrichedResponse = {
         ...response,
         issuedAt: response.issuedAt ?? request.issuedAt,
-        xmlBuilt: response.xmlBuilt ?? builtXml,
+        accessKey: builtXml.accessKey,
+        xmlBuilt: response.xmlBuilt ?? builtXml.xml,
       };
 
       if (enrichedResponse.status === 'AUTHORIZED') {

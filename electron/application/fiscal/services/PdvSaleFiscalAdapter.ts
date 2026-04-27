@@ -96,6 +96,11 @@ function resolvePrimaryPaymentMethod(payments: NfcePaymentInput[]): NfcePaymentM
   return unique.size === 1 ? payments[0].method : 'OUTROS';
 }
 
+function taxValue(primary: string | null | undefined, fallback: string | null | undefined, defaultValue = ''): string {
+  const value = String(primary ?? fallback ?? '').trim();
+  return value || defaultValue;
+}
+
 export class PdvSaleFiscalAdapter {
   private loadActiveCompany(): LegacyCompanyRow | null {
     const company = db.prepare(`
@@ -190,17 +195,19 @@ export class PdvSaleFiscalAdapter {
         vi.valor_bruto,
         vi.valor_desconto,
         vi.subtotal,
-        vi.ncm,
-        vi.cfop,
-        vi.cest,
-        snapshot.origin_code,
-        snapshot.csosn,
+        COALESCE(NULLIF(vi.ncm, ''), NULLIF(snapshot.ncm, ''), NULLIF(product.ncm, '')) AS ncm,
+        COALESCE(NULLIF(vi.cfop, ''), NULLIF(snapshot.cfop, ''), NULLIF(product.cfop, ''), '5102') AS cfop,
+        COALESCE(vi.cest, snapshot.cest, product.cest) AS cest,
+        COALESCE(NULLIF(snapshot.origin_code, ''), NULLIF(product.origin, ''), '0') AS origin_code,
+        COALESCE(NULLIF(snapshot.csosn, ''), '102') AS csosn,
         snapshot.icms_cst,
-        snapshot.pis_cst,
-        snapshot.cofins_cst
+        COALESCE(NULLIF(snapshot.pis_cst, ''), '49') AS pis_cst,
+        COALESCE(NULLIF(snapshot.cofins_cst, ''), '49') AS cofins_cst
       FROM venda_itens vi
       LEFT JOIN sale_item_tax_snapshot snapshot
         ON snapshot.sale_item_id = vi.id
+      LEFT JOIN products product
+        ON product.id = vi.produto_id
       WHERE vi.venda_id = ?
       ORDER BY vi.id ASC
     `).all(legacySaleId) as LegacySaleItemRow[];
@@ -278,13 +285,13 @@ export class PdvSaleFiscalAdapter {
         gtin: item.gtin,
         tax: {
           ncm: item.ncm ?? '',
-          cfop: item.cfop ?? '',
+          cfop: taxValue(item.cfop, null, '5102'),
           cest: item.cest,
-          originCode: item.origin_code ?? '',
-          csosn: item.csosn,
+          originCode: taxValue(item.origin_code, null, '0'),
+          csosn: item.csosn ?? '102',
           icmsCst: item.icms_cst,
-          pisCst: item.pis_cst ?? '',
-          cofinsCst: item.cofins_cst ?? '',
+          pisCst: item.pis_cst ?? '49',
+          cofinsCst: item.cofins_cst ?? '49',
         },
       })),
       totals: {
@@ -331,18 +338,18 @@ export class PdvSaleFiscalAdapter {
           discountAmount: Number(item.valor_desconto ?? 0),
           totalAmount: Number(item.subtotal ?? 0),
           ncm: item.ncm ?? null,
-          cfop: item.cfop ?? null,
+          cfop: taxValue(item.cfop, null, '5102'),
           cest: item.cest,
-          originCode: item.origin_code,
+          originCode: taxValue(item.origin_code, null, '0'),
           taxSnapshot: {
             ncm: item.ncm,
-            cfop: item.cfop,
+            cfop: taxValue(item.cfop, null, '5102'),
             cest: item.cest,
-            originCode: item.origin_code,
-            csosn: item.csosn,
+            originCode: taxValue(item.origin_code, null, '0'),
+            csosn: item.csosn ?? '102',
             icmsCst: item.icms_cst,
-            pisCst: item.pis_cst,
-            cofinsCst: item.cofins_cst,
+            pisCst: item.pis_cst ?? '49',
+            cofinsCst: item.cofins_cst ?? '49',
           },
         })),
         payments: payments.map((payment) => ({
@@ -374,6 +381,10 @@ export class PdvSaleFiscalAdapter {
       mirroredSale: aggregate,
       mirroredFiscalDocument: persistedDocument,
     };
+  }
+
+  findMirroredSaleByLegacyId(legacySaleId: number) {
+    return salesRepository.findByExternalReference(`legacy-sale:${legacySaleId}`);
   }
 }
 

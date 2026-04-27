@@ -113,6 +113,7 @@ electron.contextBridge.exposeInMainWorld("electron", {
     getCategoriesSyncLogs: () => electron.ipcRenderer.invoke("integrations:bling:sync-logs-categories"),
     // Testes
     testBling: () => electron.ipcRenderer.invoke("integrations:bling:test"),
+    debugBlingProduct: (input) => electron.ipcRenderer.invoke("integrations:bling:debug-product", input),
     testCategories: () => electron.ipcRenderer.invoke("integrations:bling:test-categories"),
     testIcmpBling: () => electron.ipcRenderer.invoke("integrations:bling:test-icmp")
   },
@@ -125,6 +126,7 @@ electron.contextBridge.exposeInMainWorld("electron", {
     getCertificateInfo: () => electron.ipcRenderer.invoke("fiscal:get-certificate-info"),
     saveConfig: (input) => electron.ipcRenderer.invoke("fiscal:save-runtime-config", input),
     authorizeNfce: (request) => electron.ipcRenderer.invoke("fiscal:authorize-nfce", request),
+    generateNfceXmlForSale: (legacySaleId) => electron.ipcRenderer.invoke("fiscal:generate-nfce-xml-for-sale", legacySaleId),
     cancelNfce: (request) => electron.ipcRenderer.invoke("fiscal:cancel-nfce", request),
     consultStatus: (accessKey) => electron.ipcRenderer.invoke("fiscal:consult-status", accessKey),
     getDanfe: (documentId) => electron.ipcRenderer.invoke("fiscal:get-danfe", documentId),

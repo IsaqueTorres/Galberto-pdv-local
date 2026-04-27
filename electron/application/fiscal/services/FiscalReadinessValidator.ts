@@ -129,12 +129,12 @@ export class FiscalReadinessValidator {
       if (!hasText(item.unit)) addIssue(issues, 'ITEM_UNIT_REQUIRED', 'Unidade do item e obrigatoria.', `${prefix}.unit`, 'sale_items');
       if (item.quantity <= 0) addIssue(issues, 'ITEM_QUANTITY_REQUIRED', 'Quantidade do item deve ser maior que zero.', `${prefix}.quantity`, 'sale_items');
       if (item.unitPrice <= 0) addIssue(issues, 'ITEM_UNIT_PRICE_REQUIRED', 'Valor unitario do item deve ser maior que zero.', `${prefix}.unitPrice`, 'sale_items');
-      if (onlyDigits(item.tax?.ncm).length !== 8) addIssue(issues, 'ITEM_NCM_REQUIRED', 'NCM do item deve ter 8 digitos.', `${prefix}.tax.ncm`, 'sale_items');
+      if (onlyDigits(item.tax?.ncm).length !== 8) addIssue(issues, 'ITEM_NCM_REQUIRED', `NCM do item "${item.description}" deve ter 8 digitos. Corrija o cadastro do produto antes de emitir NFC-e.`, `${prefix}.tax.ncm`, 'sale_items');
       if (onlyDigits(item.tax?.cfop).length !== 4) addIssue(issues, 'ITEM_CFOP_REQUIRED', 'CFOP do item deve ter 4 digitos.', `${prefix}.tax.cfop`, 'sale_items');
-      if (!hasText(item.tax?.originCode)) addIssue(issues, 'ITEM_ORIGIN_REQUIRED', 'Origem tributaria do item e obrigatoria.', `${prefix}.tax.originCode`, 'sale_item_tax_snapshot');
-      if (!hasText(item.tax?.csosn) && !hasText(item.tax?.icmsCst)) addIssue(issues, 'ITEM_ICMS_REQUIRED', 'CST ou CSOSN do ICMS e obrigatorio.', `${prefix}.tax`, 'sale_item_tax_snapshot');
-      if (!hasText(item.tax?.pisCst)) addIssue(issues, 'ITEM_PIS_REQUIRED', 'CST de PIS e obrigatorio.', `${prefix}.tax.pisCst`, 'sale_item_tax_snapshot');
-      if (!hasText(item.tax?.cofinsCst)) addIssue(issues, 'ITEM_COFINS_REQUIRED', 'CST de COFINS e obrigatorio.', `${prefix}.tax.cofinsCst`, 'sale_item_tax_snapshot');
+      if (!hasText(item.tax?.originCode)) addIssue(issues, 'ITEM_ORIGIN_REQUIRED', `Origem tributaria do item "${item.description}" e obrigatoria.`, `${prefix}.tax.originCode`, 'sale_item_tax_snapshot');
+      if (!hasText(item.tax?.csosn) && !hasText(item.tax?.icmsCst)) addIssue(issues, 'ITEM_ICMS_REQUIRED', `CST ou CSOSN do ICMS do item "${item.description}" e obrigatorio.`, `${prefix}.tax`, 'sale_item_tax_snapshot');
+      if (!hasText(item.tax?.pisCst)) addIssue(issues, 'ITEM_PIS_REQUIRED', `CST de PIS do item "${item.description}" e obrigatorio.`, `${prefix}.tax.pisCst`, 'sale_item_tax_snapshot');
+      if (!hasText(item.tax?.cofinsCst)) addIssue(issues, 'ITEM_COFINS_REQUIRED', `CST de COFINS do item "${item.description}" e obrigatorio.`, `${prefix}.tax.cofinsCst`, 'sale_item_tax_snapshot');
     });
   }
 
