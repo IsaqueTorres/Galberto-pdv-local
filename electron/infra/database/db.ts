@@ -4,14 +4,12 @@ import { app } from "electron";
 import { logger } from "../../logger/logger";
 import { VendaDTO } from '../../../src/types/itemCarrinho'
 import { hashSenha } from "./../../auth";
-import { seedCnaes } from "./seeds/seedCnaes";
 import { runFiscalPersistenceMigrations } from "../../application/fiscal/persistence/migrations/runFiscalPersistenceMigrations";
 import { CashRestoreSessionData, CashSessionData, CloseCashSessionData, CashRestoredSession } from "../../../src/types/session.types";
 import { SupplierFilter } from "../../../src/types/supplier";
 import { Usuario } from "../../../src/types/Usuario";
 
 
-//import { seedCnaes } from "../../../src/seeds/seedCnaes"
 
 // caminho seguro em Linux, Windows e Mac
 const dbPath = path.join(app.getPath("userData"), "galberto.db");
@@ -660,66 +658,6 @@ function createTableVendaPagamento() {
   logger.info("-> Tabela 'venda_pagamento' checada/criada");
 }
 
-function createTableDocumentosFiscais() {
-  // LEGADO TEMPORARIO:
-  // `documentos_fiscais` pertence ao fluxo fiscal anterior do ERP/PDV.
-  // A partir da consolidacao atual, a fonte oficial de documento/status fiscal
-  // passa a ser `fiscal_documents` na camada `electron/application/fiscal/persistence`.
-  // Esta tabela permanece apenas para compatibilidade historica e leitura eventual,
-  // sem receber nova logica fiscal.
-  const sqlComand = `
-    CREATE TABLE IF NOT EXISTS documentos_fiscais (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-      venda_id INTEGER NOT NULL,
-      company_id INTEGER NOT NULL,
-
-      modelo INTEGER NOT NULL CHECK (modelo IN (55, 65)),
-      serie INTEGER NOT NULL,
-      numero INTEGER NOT NULL,
-      ambiente INTEGER NOT NULL CHECK (ambiente IN (1, 2)),
-
-      chave_acesso TEXT UNIQUE,
-      protocolo_autorizacao TEXT,
-      recibo_lote TEXT,
-
-      status_sefaz TEXT NOT NULL DEFAULT 'PENDENTE', 
-      -- PENDENTE, AUTORIZADA, REJEITADA, CANCELADA, INUTILIZADA, CONTINGENCIA
-
-      codigo_status_sefaz TEXT,
-      motivo_status_sefaz TEXT,
-
-      tipo_emissao INTEGER NOT NULL DEFAULT 1, -- 1 normal / 9 contingência offline
-      data_emissao TEXT NOT NULL,
-      data_autorizacao TEXT,
-      data_cancelamento TEXT,
-
-      justificativa_contingencia TEXT,
-      data_entrada_contingencia TEXT,
-
-      justificativa_cancelamento TEXT,
-      protocolo_cancelamento TEXT,
-
-      xml_enviado TEXT,
-      xml_autorizado TEXT,
-      xml_cancelamento TEXT,
-
-      danfe_path TEXT,
-      qr_code_url TEXT,
-      digest_value TEXT,
-
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-      FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE,
-      FOREIGN KEY (company_id) REFERENCES company(id),
-
-      UNIQUE (modelo, serie, numero, ambiente, company_id)
-    );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela legada 'documentos_fiscais' checada/criada");
-}
 
 function createTablePrinters() {
   const sqlComand = `
@@ -820,26 +758,6 @@ function createTableSession() {
   logger.info("-> Tabela 'sessions' checada/criada");
 }
 
-function createTableCnaes() {
-  const sqlComand = `
-    CREATE TABLE IF NOT EXISTS cnaes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      codigo TEXT NOT NULL UNIQUE,
-      secao TEXT NOT NULL,
-      divisao TEXT NOT NULL,
-      grupo TEXT NOT NULL,
-      classe TEXT NOT NULL,
-      subclasse TEXT,
-      denominacao TEXT NOT NULL,
-      ativo INTEGER NOT NULL DEFAULT 1,
-      versao TEXT DEFAULT 'CNAE_2.0',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME
-    );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'cnaes' checada/criada");
-}
 
 function createTableStockMoviments() {
   const sqlComand = `CREATE TABLE IF NOT EXISTS stock_movements (
@@ -1140,14 +1058,11 @@ createTablePrinters();
 ensurePrintersColumns();
 createTablePrinterLogs();
 createTableSession();
-createTableCnaes();
-seedCnaes(db); // Funcao que realiza seed de cnaes na tabela Cnaes
 createTableTaxProfile();
 createTableSaleItemTaxSnapshot();
 createTableStockMoviments();
 createTableVendaPagamento();
 ensureVendaPagamentoColumns();
-createTableDocumentosFiscais();
 createTableCashRegisterSessions();
 ensureCashRegisterSessionsColumns();
 createTableCashRegisterMovements();

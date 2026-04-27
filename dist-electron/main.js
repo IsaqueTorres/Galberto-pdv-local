@@ -11,7 +11,6 @@ import * as fs$1 from "node:fs";
 import * as path$1 from "node:path";
 import path__default from "node:path";
 import Database from "better-sqlite3";
-import { fileURLToPath } from "url";
 import { execFileSync } from "node:child_process";
 import crypto$1, { X509Certificate } from "node:crypto";
 import * as https from "node:https";
@@ -438,50 +437,6 @@ function autenticarUsuario(username, password) {
     login: user.username,
     sessionId
   };
-}
-const __filename$1 = fileURLToPath(import.meta.url);
-const __dirname$3 = path$2.dirname(__filename$1);
-function seedCnaes(db2) {
-  const count = db2.prepare("SELECT COUNT(*) as total FROM cnaes").get();
-  if (count.total > 0) {
-    console.log("CNAEs já cadastrados. Seed ignorado.");
-    return;
-  }
-  console.log("Iniciando seed de CNAEs...");
-  const filePath = path$2.join(__dirname$3, "../electron/infra/database/seeds/files/cnaes-1.csv");
-  const fileContent = fs__default.readFileSync(filePath, "utf-8");
-  const lines = fileContent.split(/\r?\n/).slice(1);
-  const insert = db2.prepare(`
-    INSERT INTO cnaes 
-    (codigo, secao, divisao, grupo, classe, denominacao, ativo)
-    VALUES (?, ?, ?, ?, ?, ?, 1)
-  `);
-  const insertMany = db2.transaction((rows) => {
-    for (const row of rows) {
-      insert.run(
-        row[3],
-        // codigo
-        row[0],
-        // secao
-        row[1],
-        // divisao
-        row[2],
-        // grupo
-        row[3],
-        // classe
-        row[4]
-        // denominacao
-      );
-    }
-  });
-  const parsedRows = lines.filter((line) => line.trim() !== "").map((line) => line.split("%"));
-  insertMany(parsedRows);
-  for (const row of parsedRows) {
-    if (!row[3]) {
-      console.log("LINHA COM PROBLEMA:", row);
-    }
-  }
-  console.log("Seed de CNAEs concluído.");
 }
 const MIGRATION_ID = "2026-04-16-fiscal-persistence-v1";
 function ensureMigrationsTable(database) {
@@ -1378,60 +1333,6 @@ function createTableVendaPagamento() {
   db.exec(sqlComand);
   logger.info("-> Tabela 'venda_pagamento' checada/criada");
 }
-function createTableDocumentosFiscais() {
-  const sqlComand = `
-    CREATE TABLE IF NOT EXISTS documentos_fiscais (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-      venda_id INTEGER NOT NULL,
-      company_id INTEGER NOT NULL,
-
-      modelo INTEGER NOT NULL CHECK (modelo IN (55, 65)),
-      serie INTEGER NOT NULL,
-      numero INTEGER NOT NULL,
-      ambiente INTEGER NOT NULL CHECK (ambiente IN (1, 2)),
-
-      chave_acesso TEXT UNIQUE,
-      protocolo_autorizacao TEXT,
-      recibo_lote TEXT,
-
-      status_sefaz TEXT NOT NULL DEFAULT 'PENDENTE', 
-      -- PENDENTE, AUTORIZADA, REJEITADA, CANCELADA, INUTILIZADA, CONTINGENCIA
-
-      codigo_status_sefaz TEXT,
-      motivo_status_sefaz TEXT,
-
-      tipo_emissao INTEGER NOT NULL DEFAULT 1, -- 1 normal / 9 contingência offline
-      data_emissao TEXT NOT NULL,
-      data_autorizacao TEXT,
-      data_cancelamento TEXT,
-
-      justificativa_contingencia TEXT,
-      data_entrada_contingencia TEXT,
-
-      justificativa_cancelamento TEXT,
-      protocolo_cancelamento TEXT,
-
-      xml_enviado TEXT,
-      xml_autorizado TEXT,
-      xml_cancelamento TEXT,
-
-      danfe_path TEXT,
-      qr_code_url TEXT,
-      digest_value TEXT,
-
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-      FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE,
-      FOREIGN KEY (company_id) REFERENCES company(id),
-
-      UNIQUE (modelo, serie, numero, ambiente, company_id)
-    );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela legada 'documentos_fiscais' checada/criada");
-}
 function createTablePrinters() {
   const sqlComand = `
     CREATE TABLE IF NOT EXISTS printers (
@@ -1526,26 +1427,6 @@ function createTableSession() {
   `;
   db.exec(sqlComand);
   logger.info("-> Tabela 'sessions' checada/criada");
-}
-function createTableCnaes() {
-  const sqlComand = `
-    CREATE TABLE IF NOT EXISTS cnaes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      codigo TEXT NOT NULL UNIQUE,
-      secao TEXT NOT NULL,
-      divisao TEXT NOT NULL,
-      grupo TEXT NOT NULL,
-      classe TEXT NOT NULL,
-      subclasse TEXT,
-      denominacao TEXT NOT NULL,
-      ativo INTEGER NOT NULL DEFAULT 1,
-      versao TEXT DEFAULT 'CNAE_2.0',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME
-    );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'cnaes' checada/criada");
 }
 function createTableStockMoviments() {
   const sqlComand = `CREATE TABLE IF NOT EXISTS stock_movements (
@@ -1814,14 +1695,11 @@ createTablePrinters();
 ensurePrintersColumns();
 createTablePrinterLogs();
 createTableSession();
-createTableCnaes();
-seedCnaes(db);
 createTableTaxProfile();
 createTableSaleItemTaxSnapshot();
 createTableStockMoviments();
 createTableVendaPagamento();
 ensureVendaPagamentoColumns();
-createTableDocumentosFiscais();
 createTableCashRegisterSessions();
 ensureCashRegisterSessionsColumns();
 createTableCashRegisterMovements();

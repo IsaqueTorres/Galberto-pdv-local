@@ -10,19 +10,27 @@
 
 ### 2. OBJETIVO DESSA TAREFA
 
-Legal, gostei da sua apresentacao. Porem isso precisa ser um pouco mais facilitado para o usuario.
+Certo GPT, para essa atividade ja temos o seguinte.
 
-Na tela fiscal quero que voce deixe as informacoes do ambiente que foi salvo como se fosse em um dashboard, apenas mostrando e um botao  "alterar ambiente fiscal" onde abre o formulario de alteracao do ambiente, do jeito que esta hoje esta confuso e parece que nao esta configurado.
+1 - Credenciamento no ambiente de homologacao da SEFAZ-SP.
+2 - CSC valido.
+3 - Certificado digital ICP-Brasil.
 
- Quero que essa tela de alteracao das informacoes fiscal apareca, quando abrir, um mock de alerta dizendo que alterar os dados pode causar interrupcao nas vendas e risco fiscal.
+Ainda precisamos montar o XML fiscal, quando finalizo a venda somente faco as movimentacoes de baixar estoque no banco e guardar as informacoes, precisamos transformar a venda no XML. 
 
- Voce vai criar tambem um painel de status onde vai exibir o tempo de latencia da SEFAZ e informacoes de conexao, a ideia é o operador clicar ali apos configurar todo o ambiente e o PDV fazer os testes passo a passo e mostrar onde deu erro, exatamente igual voce comentou.
+- **identificação da nota**: UF, ambiente, modelo, série, número, data/hora, tipo de emissão;
+    Aqui ja temos armazenados, UF, Ambiente, modelo
 
- Tipo
+- **emitente**: CNPJ, IE, razão social/nome, endereço e regime tributário compatíveis com o cadastro fiscal;
 
- Certificado okay           - Bolinha verde okay ou vermelha error
- SEFAZ respondeu ping
- JOBs criados e por ai vai
+
+- **itens**: código do produto, descrição, unidade, quantidade, valor unitário, valor total, NCM e demais dados tributários aplicáveis;
+- **impostos**: CST/CSOSN e demais tributos conforme o regime da empresa e as regras aplicáveis;
+- **totais**: total dos produtos, descontos, frete, acréscimos, total final;
+- **pagamento**: a documentação técnica tornou obrigatório o preenchimento do grupo de pagamentos para NF-e/NFC-e;
+- **consumidor/destinatário**, quando identificado;
+- **informações adicionais**, quando necessárias.
+
 
 
 
