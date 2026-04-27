@@ -3,7 +3,10 @@ import type { AuthorizeNfceRequest, CancelNfceRequest } from './types/fiscal.typ
 import { logger } from '../../logger/logger';
 import { HtmlDanfeService } from './services/HtmlDanfeService';
 import { FileSystemCertificateService } from './services/FileSystemCertificateService';
-import { IntegrationFiscalSettingsService } from './services/IntegrationFiscalSettingsService';
+import { FiscalSettingsService } from './services/FiscalSettingsService';
+import { fiscalContextResolver } from './services/FiscalContextResolver';
+import { fiscalReadinessValidator } from './services/FiscalReadinessValidator';
+import { fiscalStoreService } from './services/FiscalStoreService';
 import { SqliteFiscalRepository } from './repositories/SqliteFiscalRepository';
 import { FiscalProviderFactory } from './providers/FiscalProviderFactory';
 import { SqliteFiscalQueueService } from './services/SqliteFiscalQueueService';
@@ -12,7 +15,7 @@ import { DefaultFiscalService } from './services/DefaultFiscalService';
 const repository = new SqliteFiscalRepository();
 repository.ensureSchema();
 
-const configService = new IntegrationFiscalSettingsService();
+const configService = new FiscalSettingsService();
 const providerFactory = new FiscalProviderFactory();
 const certificateService = new FileSystemCertificateService();
 const danfeService = new HtmlDanfeService();
@@ -80,7 +83,7 @@ const queueService = new SqliteFiscalQueueService(repository, async (item: Fisca
   }
 
   if (item.operation === 'TEST_STATUS_NFCE') {
-    const config = configService.getConfig();
+    const config = fiscalContextResolver.resolveProviderConfig();
     logger.info(`[FiscalDiagnostic] Iniciando NFeStatusServico4 provider=${config.provider} ambiente=${config.environment} uf=${config.uf ?? 'SP'}.`);
     await certificateService.assertCertificateReady(config);
     logger.info('[FiscalDiagnostic] Certificado validado com sucesso.');
@@ -109,13 +112,16 @@ fiscalServiceRef = new DefaultFiscalService(
   certificateService,
   danfeService,
   configService,
-  () => providerFactory.resolve(configService.getConfig())
+  (config) => providerFactory.resolve(config)
 );
 
 export const fiscalService = fiscalServiceRef;
 export const fiscalConfigService = configService;
 export const fiscalQueueService = queueService;
 export const fiscalCertificateService = certificateService;
+export const fiscalContextService = fiscalContextResolver;
+export const fiscalReadinessService = fiscalReadinessValidator;
+export const fiscalStoreConfigService = fiscalStoreService;
 
 let fiscalQueueWorkerStarted = false;
 

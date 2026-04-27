@@ -1,23 +1,6 @@
-import db from '../../../infra/database/db';
 import { FiscalError } from '../errors/FiscalError';
 import { storeRepository } from '../persistence/repositories/StoreRepository';
 import type { FiscalValidationIssue, AuthorizeNfceRequest, FiscalProviderConfig, NfcePaymentInput } from '../types/fiscal.types';
-
-type CompanyRow = {
-  id: number;
-  nome_fantasia: string;
-  razao_social: string;
-  cnpj: string;
-  inscricao_estadual: string;
-  ambiente_emissao: number | null;
-  rua: string;
-  numero: string;
-  bairro: string;
-  cidade: string;
-  uf: string;
-  cep: string;
-  cod_municipio_ibge: string;
-};
 
 function normalizeDigits(value: string | null | undefined): string {
   return String(value ?? '').replace(/\D/g, '');
@@ -106,7 +89,6 @@ export class FiscalPreTransmissionValidator {
     }
 
     this.validateEmitter(request, config, store?.environment ?? null, issues);
-    this.validateCompanyConsistency(store?.environment ?? null, request.companyId, issues);
     this.validatePayments(request, issues);
     this.validateItems(request, issues);
     this.validateRuntimeConfig(request, config, issues);
@@ -176,102 +158,6 @@ export class FiscalPreTransmissionValidator {
         code: 'STORE_ENVIRONMENT_MISMATCH',
         message: 'Ambiente fiscal da store diverge do request de emissão.',
         field: 'environment',
-        severity: 'error',
-      });
-    }
-  }
-
-  private validateCompanyConsistency(
-    storeEnvironment: 'production' | 'homologation' | null,
-    storeId: number,
-    issues: FiscalValidationIssue[]
-  ) {
-    const store = storeRepository.findById(storeId);
-    const company = db.prepare(`
-      SELECT
-        id,
-        nome_fantasia,
-        razao_social,
-        cnpj,
-        inscricao_estadual,
-        ambiente_emissao,
-        rua,
-        numero,
-        bairro,
-        cidade,
-        uf,
-        cep,
-        cod_municipio_ibge
-      FROM company
-      WHERE ativo = 1
-      ORDER BY id ASC
-      LIMIT 1
-    `).get() as CompanyRow | undefined;
-
-    if (!store || !company) {
-      return;
-    }
-
-    const comparisons: Array<{ code: string; left: string; right: string; message: string }> = [
-      {
-        code: 'STORE_COMPANY_CNPJ_MISMATCH',
-        left: normalizeDigits(store.cnpj),
-        right: normalizeDigits(company.cnpj),
-        message: 'CNPJ divergente entre stores e company.',
-      },
-      {
-        code: 'STORE_COMPANY_IE_MISMATCH',
-        left: normalizeText(store.stateRegistration),
-        right: normalizeText(company.inscricao_estadual),
-        message: 'IE divergente entre stores e company.',
-      },
-      {
-        code: 'STORE_COMPANY_LEGAL_NAME_MISMATCH',
-        left: normalizeText(store.legalName),
-        right: normalizeText(company.razao_social),
-        message: 'Razão social divergente entre stores e company.',
-      },
-      {
-        code: 'STORE_COMPANY_TRADE_NAME_MISMATCH',
-        left: normalizeText(store.name),
-        right: normalizeText(company.nome_fantasia),
-        message: 'Nome fantasia divergente entre stores e company.',
-      },
-      {
-        code: 'STORE_COMPANY_CITY_MISMATCH',
-        left: normalizeText(store.addressCity),
-        right: normalizeText(company.cidade),
-        message: 'Cidade divergente entre stores e company.',
-      },
-      {
-        code: 'STORE_COMPANY_STATE_MISMATCH',
-        left: normalizeText(store.addressState),
-        right: normalizeText(company.uf),
-        message: 'UF divergente entre stores e company.',
-      },
-      {
-        code: 'STORE_COMPANY_IBGE_MISMATCH',
-        left: normalizeDigits(store.addressCityIbgeCode),
-        right: normalizeDigits(company.cod_municipio_ibge),
-        message: 'Código IBGE divergente entre stores e company.',
-      },
-    ];
-
-    for (const comparison of comparisons) {
-      if (comparison.left !== comparison.right) {
-        issues.push({
-          code: comparison.code,
-          message: comparison.message,
-          severity: 'error',
-        });
-      }
-    }
-
-    const companyEnvironment = company.ambiente_emissao === 1 ? 'production' : 'homologation';
-    if (storeEnvironment && companyEnvironment !== storeEnvironment) {
-      issues.push({
-        code: 'STORE_COMPANY_ENVIRONMENT_MISMATCH',
-        message: 'Ambiente divergente entre stores e company.',
         severity: 'error',
       });
     }

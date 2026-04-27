@@ -179,6 +179,7 @@ function postSoapWithCertificate(
         method: 'POST',
         pfx: fs.readFileSync(config.certificatePath as string),
         passphrase: config.certificatePassword ?? undefined,
+        ca: config.caBundlePath ? fs.readFileSync(config.caBundlePath) : undefined,
         rejectUnauthorized: options.allowUnauthorizedServerCertificate !== true,
         headers: {
           'content-type': 'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF"',

@@ -118,6 +118,10 @@ electron.contextBridge.exposeInMainWorld("electron", {
   },
   fiscal: {
     getConfig: () => electron.ipcRenderer.invoke("fiscal:get-runtime-config"),
+    getContext: (storeId) => electron.ipcRenderer.invoke("fiscal:get-context", storeId),
+    validateReadiness: (storeId) => electron.ipcRenderer.invoke("fiscal:validate-readiness", storeId),
+    getActiveStore: () => electron.ipcRenderer.invoke("fiscal:get-active-store"),
+    saveActiveStore: (input) => electron.ipcRenderer.invoke("fiscal:save-active-store", input),
     getCertificateInfo: () => electron.ipcRenderer.invoke("fiscal:get-certificate-info"),
     saveConfig: (input) => electron.ipcRenderer.invoke("fiscal:save-runtime-config", input),
     authorizeNfce: (request) => electron.ipcRenderer.invoke("fiscal:authorize-nfce", request),

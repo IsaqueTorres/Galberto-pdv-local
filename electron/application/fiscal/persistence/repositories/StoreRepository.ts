@@ -1,5 +1,5 @@
 import db from '../../../../infra/database/db';
-import type { CreateStoreInput, StoreRecord } from '../types/schema.types';
+import type { CreateStoreInput, StoreRecord, UpsertActiveStoreInput } from '../types/schema.types';
 import { booleanToInt } from '../utils/db.utils';
 
 type StoreRow = {
@@ -105,6 +105,96 @@ export class StoreRepository {
     return row ? mapStore(row) : null;
   }
 
+  upsertActive(input: UpsertActiveStoreInput): StoreRecord {
+    const current = input.id ? this.findById(input.id) : this.findActive();
+    if (!current) {
+      return this.create({ ...input, code: input.code || 'MAIN', active: true });
+    }
+
+    db.prepare(`
+      UPDATE stores
+      SET
+        code = ?,
+        name = ?,
+        legal_name = ?,
+        cnpj = ?,
+        state_registration = ?,
+        tax_regime_code = ?,
+        environment = ?,
+        csc_id = ?,
+        csc_token = ?,
+        default_series = ?,
+        next_nfce_number = ?,
+        address_street = ?,
+        address_number = ?,
+        address_neighborhood = ?,
+        address_city = ?,
+        address_state = ?,
+        address_zip_code = ?,
+        address_city_ibge_code = ?,
+        active = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      input.code || current.code || 'MAIN',
+      input.name,
+      input.legalName,
+      input.cnpj,
+      input.stateRegistration,
+      input.taxRegimeCode,
+      input.environment,
+      input.cscId ?? null,
+      input.cscToken ?? current.cscToken ?? null,
+      input.defaultSeries ?? current.defaultSeries,
+      input.nextNfceNumber ?? current.nextNfceNumber,
+      input.addressStreet,
+      input.addressNumber,
+      input.addressNeighborhood,
+      input.addressCity,
+      input.addressState,
+      input.addressZipCode,
+      input.addressCityIbgeCode,
+      booleanToInt(input.active ?? true),
+      current.id
+    );
+
+    return this.findById(current.id) as StoreRecord;
+  }
+
+  updateFiscalConfiguration(
+    storeId: number,
+    input: {
+      environment?: StoreRecord['environment'];
+      cscId?: string | null;
+      cscToken?: string | null;
+      defaultSeries?: number | null;
+    }
+  ): StoreRecord {
+    const current = this.findById(storeId);
+    if (!current) {
+      throw new Error(`Store ${storeId} não encontrada.`);
+    }
+
+    db.prepare(`
+      UPDATE stores
+      SET
+        environment = ?,
+        csc_id = ?,
+        csc_token = ?,
+        default_series = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      input.environment ?? current.environment,
+      input.cscId ?? current.cscId ?? null,
+      input.cscToken ?? current.cscToken ?? null,
+      input.defaultSeries && input.defaultSeries > 0 ? input.defaultSeries : current.defaultSeries,
+      storeId
+    );
+
+    return this.findById(storeId) as StoreRecord;
+  }
+
   reserveNextNfceNumber(storeId: number): { series: number; number: number } {
     const transaction = db.transaction(() => {
       const current = db.prepare(`
@@ -135,4 +225,3 @@ export class StoreRepository {
 }
 
 export const storeRepository = new StoreRepository();
-

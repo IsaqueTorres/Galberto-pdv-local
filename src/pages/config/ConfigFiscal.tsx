@@ -1,6 +1,11 @@
+import { useState } from 'react';
 import { FiscalSettingsPanel } from './components/FiscalSettingsPanel';
+import { FiscalStorePanel } from './components/FiscalStorePanel';
+import type { FiscalStoreRecord } from './types/fiscal-config.types';
 
 export default function ConfigFiscal() {
+  const [storeReady, setStoreReady] = useState<FiscalStoreRecord | null>(null);
+
   return (
     <section className="p-6">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -20,7 +25,15 @@ export default function ConfigFiscal() {
           credenciais na UI.
         </div>
 
-        <FiscalSettingsPanel />
+        <FiscalStorePanel onStoreReady={setStoreReady} />
+
+        {storeReady ? (
+          <FiscalSettingsPanel />
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm font-semibold text-slate-600">
+            Cadastre a Store fiscal para liberar certificado, CSC, SEFAZ e diagnostico de emissao.
+          </div>
+        )}
       </div>
     </section>
   );

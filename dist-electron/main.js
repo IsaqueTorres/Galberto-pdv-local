@@ -677,6 +677,211 @@ function executeMigration(database) {
   });
   transaction();
 }
+function normalizeText$1(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+function normalizeProvider(value) {
+  return value === "sefaz-direct" || value === "gateway" || value === "mock" ? value : "mock";
+}
+function normalizeEnvironment(value) {
+  return value === "production" || value === "homologation" ? value : null;
+}
+function normalizeContingencyMode(value) {
+  return value === "online" || value === "offline-contingency" || value === "queue" ? value : "queue";
+}
+function normalizeTlsMode(value) {
+  return value === "bypass-homologation-diagnostic" ? value : "strict";
+}
+function readLegacyFiscalConfig(database) {
+  const row = database.prepare(`
+    SELECT raw_json
+    FROM integrations
+    WHERE integration_id = 'fiscal:nfce'
+    LIMIT 1
+  `).get();
+  if (!(row == null ? void 0 : row.raw_json)) return null;
+  try {
+    return JSON.parse(row.raw_json);
+  } catch (error) {
+    logger.warn(`[FiscalMigration] Falha ao ler integrations.raw_json fiscal:nfce: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
+}
+function ensureFiscalSettingsSchema(database) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS fiscal_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      store_id INTEGER NOT NULL,
+      provider TEXT NOT NULL,
+      document_model INTEGER NOT NULL DEFAULT 65 CHECK (document_model = 65),
+      contingency_mode TEXT,
+      sefaz_base_url TEXT,
+      gateway_base_url TEXT,
+      gateway_api_key TEXT,
+      certificate_type TEXT NOT NULL DEFAULT 'A1',
+      certificate_path TEXT,
+      certificate_password TEXT,
+      certificate_valid_until TEXT,
+      ca_bundle_path TEXT,
+      tls_validation_mode TEXT NOT NULL DEFAULT 'strict',
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (store_id) REFERENCES stores(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_fiscal_settings_store_active
+    ON fiscal_settings(store_id, active);
+
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_fiscal_settings_active_store
+    ON fiscal_settings(store_id)
+    WHERE active = 1;
+  `);
+}
+function ensureStoreFromCompany(database) {
+  const store = database.prepare(`SELECT id FROM stores WHERE active = 1 ORDER BY id ASC LIMIT 1`).get();
+  if (store) return;
+  database.exec(`
+    INSERT INTO stores (
+      code,
+      name,
+      legal_name,
+      cnpj,
+      state_registration,
+      tax_regime_code,
+      environment,
+      csc_id,
+      csc_token,
+      default_series,
+      next_nfce_number,
+      address_street,
+      address_number,
+      address_neighborhood,
+      address_city,
+      address_state,
+      address_zip_code,
+      address_city_ibge_code,
+      active,
+      created_at,
+      updated_at
+    )
+    SELECT
+      'MAIN',
+      nome_fantasia,
+      razao_social,
+      cnpj,
+      inscricao_estadual,
+      CAST(crt AS TEXT),
+      CASE ambiente_emissao WHEN 1 THEN 'production' ELSE 'homologation' END,
+      csc_id,
+      csc_token,
+      COALESCE(serie_nfce, 1),
+      COALESCE(proximo_numero_nfce, 1),
+      rua,
+      numero,
+      bairro,
+      cidade,
+      uf,
+      cep,
+      cod_municipio_ibge,
+      ativo,
+      COALESCE(created_at, CURRENT_TIMESTAMP),
+      COALESCE(updated_at, CURRENT_TIMESTAMP)
+    FROM company
+    WHERE ativo = 1
+      AND NOT EXISTS (SELECT 1 FROM stores WHERE active = 1)
+    LIMIT 1;
+  `);
+}
+function backfillFiscalSettings(database) {
+  ensureStoreFromCompany(database);
+  const store = database.prepare(`
+    SELECT id, csc_id, csc_token, default_series
+    FROM stores
+    WHERE active = 1
+    ORDER BY id ASC
+    LIMIT 1
+  `).get();
+  if (!store) {
+    logger.warn("[FiscalMigration] Nenhuma store ativa encontrada para backfill de fiscal_settings.");
+    return;
+  }
+  const existingSettings = database.prepare(`
+    SELECT id
+    FROM fiscal_settings
+    WHERE store_id = ? AND active = 1
+    LIMIT 1
+  `).get(store.id);
+  if (existingSettings) {
+    logger.info(`[FiscalMigration] fiscal_settings ativo ja existe para store=${store.id}; backfill preservado.`);
+    return;
+  }
+  const legacy = readLegacyFiscalConfig(database);
+  const company = database.prepare(`
+    SELECT cert_tipo, cert_path, cert_password, cert_validade, csc_id, csc_token, serie_nfce
+    FROM company
+    WHERE ativo = 1
+    ORDER BY id ASC
+    LIMIT 1
+  `).get();
+  const legacyEnvironment = normalizeEnvironment(legacy == null ? void 0 : legacy.environment);
+  const legacyCscId = normalizeText$1(legacy == null ? void 0 : legacy.cscId) ?? normalizeText$1(company == null ? void 0 : company.csc_id);
+  const legacyCscToken = normalizeText$1(legacy == null ? void 0 : legacy.cscToken) ?? normalizeText$1(company == null ? void 0 : company.csc_token);
+  const legacySeries = Number((legacy == null ? void 0 : legacy.defaultSeries) ?? (company == null ? void 0 : company.serie_nfce) ?? store.default_series ?? 1);
+  database.prepare(`
+    UPDATE stores
+    SET
+      environment = COALESCE(?, environment),
+      csc_id = COALESCE(?, csc_id),
+      csc_token = COALESCE(?, csc_token),
+      default_series = CASE WHEN ? > 0 THEN ? ELSE default_series END,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(
+    legacyEnvironment,
+    legacyCscId,
+    legacyCscToken,
+    legacySeries,
+    legacySeries,
+    store.id
+  );
+  database.prepare(`
+    INSERT INTO fiscal_settings (
+      store_id,
+      provider,
+      document_model,
+      contingency_mode,
+      sefaz_base_url,
+      gateway_base_url,
+      gateway_api_key,
+      certificate_type,
+      certificate_path,
+      certificate_password,
+      certificate_valid_until,
+      ca_bundle_path,
+      tls_validation_mode,
+      active,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, 65, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).run(
+    store.id,
+    normalizeProvider(legacy == null ? void 0 : legacy.provider),
+    normalizeContingencyMode(legacy == null ? void 0 : legacy.contingencyMode),
+    normalizeText$1(legacy == null ? void 0 : legacy.sefazBaseUrl),
+    normalizeText$1(legacy == null ? void 0 : legacy.gatewayBaseUrl),
+    normalizeText$1(legacy == null ? void 0 : legacy.gatewayApiKey),
+    normalizeText$1(company == null ? void 0 : company.cert_tipo) ?? "A1",
+    normalizeText$1(legacy == null ? void 0 : legacy.certificatePath) ?? normalizeText$1(company == null ? void 0 : company.cert_path),
+    normalizeText$1(legacy == null ? void 0 : legacy.certificatePassword) ?? normalizeText$1(company == null ? void 0 : company.cert_password),
+    normalizeText$1(legacy == null ? void 0 : legacy.certificateValidUntil) ?? normalizeText$1(company == null ? void 0 : company.cert_validade),
+    normalizeText$1(legacy == null ? void 0 : legacy.caBundlePath),
+    normalizeTlsMode(legacy == null ? void 0 : legacy.tlsValidationMode)
+  );
+  logger.info(`[FiscalMigration] fiscal_settings criado para store=${store.id} usando integrations/company como origem legada.`);
+}
 function ensureFiscalPersistenceColumns(database) {
   const statements = [];
   if (!hasColumn(database, "fiscal_documents", "issued_datetime")) {
@@ -710,6 +915,8 @@ function runFiscalPersistenceMigrations(database) {
     executeMigration(database);
   }
   ensureFiscalPersistenceColumns(database);
+  ensureFiscalSettingsSchema(database);
+  backfillFiscalSettings(database);
 }
 const dbPath = path__default.join(app.getPath("userData"), "galberto.db");
 console.log(" Criando/abrindo banco de dados em: ", dbPath);
@@ -2857,6 +3064,82 @@ class StoreRepository {
     `).get();
     return row ? mapStore(row) : null;
   }
+  upsertActive(input) {
+    const current = input.id ? this.findById(input.id) : this.findActive();
+    if (!current) {
+      return this.create({ ...input, code: input.code || "MAIN", active: true });
+    }
+    db.prepare(`
+      UPDATE stores
+      SET
+        code = ?,
+        name = ?,
+        legal_name = ?,
+        cnpj = ?,
+        state_registration = ?,
+        tax_regime_code = ?,
+        environment = ?,
+        csc_id = ?,
+        csc_token = ?,
+        default_series = ?,
+        next_nfce_number = ?,
+        address_street = ?,
+        address_number = ?,
+        address_neighborhood = ?,
+        address_city = ?,
+        address_state = ?,
+        address_zip_code = ?,
+        address_city_ibge_code = ?,
+        active = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      input.code || current.code || "MAIN",
+      input.name,
+      input.legalName,
+      input.cnpj,
+      input.stateRegistration,
+      input.taxRegimeCode,
+      input.environment,
+      input.cscId ?? null,
+      input.cscToken ?? current.cscToken ?? null,
+      input.defaultSeries ?? current.defaultSeries,
+      input.nextNfceNumber ?? current.nextNfceNumber,
+      input.addressStreet,
+      input.addressNumber,
+      input.addressNeighborhood,
+      input.addressCity,
+      input.addressState,
+      input.addressZipCode,
+      input.addressCityIbgeCode,
+      booleanToInt(input.active ?? true),
+      current.id
+    );
+    return this.findById(current.id);
+  }
+  updateFiscalConfiguration(storeId, input) {
+    const current = this.findById(storeId);
+    if (!current) {
+      throw new Error(`Store ${storeId} não encontrada.`);
+    }
+    db.prepare(`
+      UPDATE stores
+      SET
+        environment = ?,
+        csc_id = ?,
+        csc_token = ?,
+        default_series = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      input.environment ?? current.environment,
+      input.cscId ?? current.cscId ?? null,
+      input.cscToken ?? current.cscToken ?? null,
+      input.defaultSeries && input.defaultSeries > 0 ? input.defaultSeries : current.defaultSeries,
+      storeId
+    );
+    return this.findById(storeId);
+  }
   reserveNextNfceNumber(storeId) {
     const transaction = db.transaction(() => {
       const current = db.prepare(`
@@ -3128,6 +3411,125 @@ class FileSystemCertificateService {
     }
   }
 }
+function mapFiscalSettings(row) {
+  return {
+    id: row.id,
+    storeId: row.store_id,
+    provider: row.provider,
+    documentModel: row.document_model,
+    contingencyMode: row.contingency_mode,
+    sefazBaseUrl: row.sefaz_base_url,
+    gatewayBaseUrl: row.gateway_base_url,
+    gatewayApiKey: row.gateway_api_key,
+    certificateType: row.certificate_type,
+    certificatePath: row.certificate_path,
+    certificatePassword: row.certificate_password,
+    certificateValidUntil: row.certificate_valid_until,
+    caBundlePath: row.ca_bundle_path,
+    tlsValidationMode: row.tls_validation_mode,
+    active: Boolean(row.active),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+class FiscalSettingsRepository {
+  findActiveByStoreId(storeId) {
+    const row = db.prepare(`
+      SELECT *
+      FROM fiscal_settings
+      WHERE store_id = ? AND active = 1
+      ORDER BY id DESC
+      LIMIT 1
+    `).get(storeId);
+    return row ? mapFiscalSettings(row) : null;
+  }
+  upsertActive(input) {
+    const current = this.findActiveByStoreId(input.storeId);
+    if (!current) {
+      const result = db.prepare(`
+        INSERT INTO fiscal_settings (
+          store_id,
+          provider,
+          document_model,
+          contingency_mode,
+          sefaz_base_url,
+          gateway_base_url,
+          gateway_api_key,
+          certificate_type,
+          certificate_path,
+          certificate_password,
+          certificate_valid_until,
+          ca_bundle_path,
+          tls_validation_mode,
+          active,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `).run(
+        input.storeId,
+        input.provider,
+        input.documentModel ?? 65,
+        input.contingencyMode ?? "queue",
+        input.sefazBaseUrl ?? null,
+        input.gatewayBaseUrl ?? null,
+        input.gatewayApiKey ?? null,
+        input.certificateType ?? "A1",
+        input.certificatePath ?? null,
+        input.certificatePassword ?? null,
+        input.certificateValidUntil ?? null,
+        input.caBundlePath ?? null,
+        input.tlsValidationMode ?? "strict",
+        booleanToInt(input.active ?? true)
+      );
+      return this.findById(Number(result.lastInsertRowid));
+    }
+    db.prepare(`
+      UPDATE fiscal_settings
+      SET
+        provider = ?,
+        document_model = ?,
+        contingency_mode = ?,
+        sefaz_base_url = ?,
+        gateway_base_url = ?,
+        gateway_api_key = ?,
+        certificate_type = ?,
+        certificate_path = ?,
+        certificate_password = ?,
+        certificate_valid_until = ?,
+        ca_bundle_path = ?,
+        tls_validation_mode = ?,
+        active = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      input.provider,
+      input.documentModel ?? current.documentModel,
+      input.contingencyMode ?? current.contingencyMode ?? "queue",
+      input.sefazBaseUrl ?? null,
+      input.gatewayBaseUrl ?? null,
+      input.gatewayApiKey ?? null,
+      input.certificateType ?? current.certificateType,
+      input.certificatePath ?? null,
+      input.certificatePassword ?? null,
+      input.certificateValidUntil ?? null,
+      input.caBundlePath ?? null,
+      input.tlsValidationMode ?? current.tlsValidationMode,
+      booleanToInt(input.active ?? current.active),
+      current.id
+    );
+    return this.findById(current.id);
+  }
+  findById(id) {
+    const row = db.prepare(`
+      SELECT *
+      FROM fiscal_settings
+      WHERE id = ?
+      LIMIT 1
+    `).get(id);
+    return row ? mapFiscalSettings(row) : null;
+  }
+}
+const fiscalSettingsRepository = new FiscalSettingsRepository();
 const FISCAL_INTEGRATION_ID = "fiscal:nfce";
 const CONFIG_SENTINEL = "__FISCAL_CONFIG__";
 function nowIso$1() {
@@ -3149,10 +3551,14 @@ function defaultConfig() {
     uf: "SP",
     model: 65,
     defaultSeries: 1,
+    certificateType: "A1",
+    certificateValidUntil: null,
+    caBundlePath: null,
+    tlsValidationMode: "strict",
     updatedAt: nowIso$1()
   };
 }
-function sanitizeForView(config2) {
+function sanitizeForView$1(config2) {
   return {
     provider: config2.provider,
     environment: config2.environment,
@@ -3165,6 +3571,10 @@ function sanitizeForView(config2) {
     uf: config2.uf ?? "SP",
     model: config2.model ?? 65,
     defaultSeries: config2.defaultSeries ?? null,
+    certificateType: config2.certificateType ?? "A1",
+    certificateValidUntil: config2.certificateValidUntil ?? null,
+    caBundlePath: config2.caBundlePath ?? null,
+    tlsValidationMode: config2.tlsValidationMode ?? "strict",
     hasGatewayApiKey: Boolean(config2.gatewayApiKey),
     hasCertificatePassword: Boolean(config2.certificatePassword),
     hasCscToken: Boolean(config2.cscToken),
@@ -3172,6 +3582,10 @@ function sanitizeForView(config2) {
   };
 }
 class IntegrationFiscalSettingsService {
+  /**
+   * Legacy fallback only.
+   * Fiscal runtime must use FiscalSettingsService/FiscalContextResolver as the primary source.
+   */
   getConfig() {
     const row = db.prepare(`
       SELECT integration_id, raw_json, updated_at
@@ -3193,7 +3607,7 @@ class IntegrationFiscalSettingsService {
     };
   }
   getConfigView() {
-    return sanitizeForView(this.getConfig());
+    return sanitizeForView$1(this.getConfig());
   }
   saveConfig(input) {
     const current = this.getConfig();
@@ -3236,9 +3650,438 @@ class IntegrationFiscalSettingsService {
       next.updatedAt
     );
     logger.info(`[FiscalConfig] Configuracao fiscal salva provider=${next.provider} ambiente=${next.environment} uf=${next.uf ?? "SP"}.`);
-    return sanitizeForView(next);
+    return sanitizeForView$1(next);
   }
 }
+function mapCompanyToStoreInput(company) {
+  return {
+    code: "MAIN",
+    name: company.nome_fantasia,
+    legalName: company.razao_social,
+    cnpj: company.cnpj,
+    stateRegistration: company.inscricao_estadual,
+    taxRegimeCode: String(company.crt),
+    environment: company.ambiente_emissao === 1 ? "production" : "homologation",
+    cscId: company.csc_id,
+    cscToken: company.csc_token,
+    defaultSeries: Number(company.serie_nfce ?? 1),
+    nextNfceNumber: Number(company.proximo_numero_nfce ?? 1),
+    addressStreet: company.rua,
+    addressNumber: company.numero,
+    addressNeighborhood: company.bairro,
+    addressCity: company.cidade,
+    addressState: company.uf,
+    addressZipCode: company.cep,
+    addressCityIbgeCode: company.cod_municipio_ibge,
+    active: Boolean(company.ativo)
+  };
+}
+function ensureActiveFiscalStore() {
+  const existing = storeRepository.findActive();
+  if (existing) return existing;
+  const company = db.prepare(`
+    SELECT *
+    FROM company
+    WHERE ativo = 1
+    ORDER BY id ASC
+    LIMIT 1
+  `).get();
+  if (!company) {
+    logger.warn("[FiscalStore] Nenhuma store ativa e nenhuma company ativa encontrada.");
+    return null;
+  }
+  const store = storeRepository.create(mapCompanyToStoreInput(company));
+  logger.info(`[FiscalStore] Store fiscal criada a partir de company ativa store=${store.id}.`);
+  return store;
+}
+const LEGACY_INTEGRATION_ID$1 = "fiscal:nfce";
+function normalizeUf(value) {
+  return (value ?? "SP").trim().toUpperCase() || "SP";
+}
+function mapSettingsToProviderConfig(context) {
+  return {
+    provider: context.provider,
+    environment: context.environment,
+    contingencyMode: context.contingencyMode,
+    integrationId: LEGACY_INTEGRATION_ID$1,
+    certificateType: context.certificateType ?? "A1",
+    sefazBaseUrl: context.sefazBaseUrl ?? null,
+    gatewayBaseUrl: context.gatewayBaseUrl ?? null,
+    gatewayApiKey: context.gatewayApiKey ?? null,
+    certificatePath: context.certificatePath ?? null,
+    certificatePassword: context.certificatePassword ?? null,
+    certificateValidUntil: context.certificateValidUntil ?? null,
+    caBundlePath: context.caBundlePath ?? null,
+    tlsValidationMode: context.tlsValidationMode,
+    cscId: context.cscId ?? null,
+    cscToken: context.cscToken ?? null,
+    uf: context.uf,
+    model: context.documentModel,
+    defaultSeries: context.defaultSeries,
+    updatedAt: context.updatedAt
+  };
+}
+class FiscalContextResolver {
+  constructor(legacySettings = new IntegrationFiscalSettingsService()) {
+    this.legacySettings = legacySettings;
+  }
+  resolve(storeId) {
+    const effectiveStore = storeId ? storeRepository.findById(storeId) : ensureActiveFiscalStore();
+    if (storeId && !effectiveStore) {
+      throw new Error(`Store fiscal ${storeId} não encontrada ou inativa.`);
+    }
+    if (!effectiveStore) {
+      throw new Error("Nenhuma store fiscal ativa encontrada. Cadastre os dados do emitente antes da emissão.");
+    }
+    const settings = fiscalSettingsRepository.findActiveByStoreId(effectiveStore.id);
+    const legacy = settings ? null : this.legacySettings.getConfig();
+    const legacyFallbackUsed = !settings && Boolean(legacy);
+    if (legacyFallbackUsed) {
+      logger.warn(`[FiscalContext] Usando fallback legado integrations para store=${effectiveStore.id}.`);
+    }
+    const settingsSource = settings ? "fiscal_settings" : legacyFallbackUsed ? "integrations-fallback" : "defaults";
+    return this.buildContext(effectiveStore, settings, legacy ?? null, settingsSource, legacyFallbackUsed);
+  }
+  resolveProviderConfig(storeId) {
+    return mapSettingsToProviderConfig(this.resolve(storeId));
+  }
+  buildContext(store, settings, legacy, settingsSource, legacyFallbackUsed) {
+    return {
+      storeId: store.id,
+      provider: (settings == null ? void 0 : settings.provider) ?? (legacy == null ? void 0 : legacy.provider) ?? "mock",
+      environment: store.environment,
+      contingencyMode: (settings == null ? void 0 : settings.contingencyMode) ?? (legacy == null ? void 0 : legacy.contingencyMode) ?? "queue",
+      documentModel: 65,
+      sefazBaseUrl: (settings == null ? void 0 : settings.sefazBaseUrl) ?? (legacy == null ? void 0 : legacy.sefazBaseUrl) ?? null,
+      gatewayBaseUrl: (settings == null ? void 0 : settings.gatewayBaseUrl) ?? (legacy == null ? void 0 : legacy.gatewayBaseUrl) ?? null,
+      gatewayApiKey: (settings == null ? void 0 : settings.gatewayApiKey) ?? (legacy == null ? void 0 : legacy.gatewayApiKey) ?? null,
+      certificateType: (settings == null ? void 0 : settings.certificateType) ?? (legacy == null ? void 0 : legacy.certificateType) ?? "A1",
+      certificatePath: (settings == null ? void 0 : settings.certificatePath) ?? (legacy == null ? void 0 : legacy.certificatePath) ?? null,
+      certificatePassword: (settings == null ? void 0 : settings.certificatePassword) ?? (legacy == null ? void 0 : legacy.certificatePassword) ?? null,
+      certificateValidUntil: (settings == null ? void 0 : settings.certificateValidUntil) ?? (legacy == null ? void 0 : legacy.certificateValidUntil) ?? null,
+      caBundlePath: (settings == null ? void 0 : settings.caBundlePath) ?? (legacy == null ? void 0 : legacy.caBundlePath) ?? null,
+      tlsValidationMode: (settings == null ? void 0 : settings.tlsValidationMode) ?? (legacy == null ? void 0 : legacy.tlsValidationMode) ?? "strict",
+      cscId: store.cscId ?? (legacy == null ? void 0 : legacy.cscId) ?? null,
+      cscToken: store.cscToken ?? (legacy == null ? void 0 : legacy.cscToken) ?? null,
+      uf: normalizeUf(store.addressState ?? (legacy == null ? void 0 : legacy.uf)),
+      defaultSeries: store.defaultSeries,
+      nextNfceNumber: store.nextNfceNumber,
+      emitter: {
+        cnpj: store.cnpj,
+        stateRegistration: store.stateRegistration,
+        legalName: store.legalName,
+        tradeName: store.name,
+        taxRegimeCode: store.taxRegimeCode,
+        address: {
+          street: store.addressStreet,
+          number: store.addressNumber,
+          neighborhood: store.addressNeighborhood,
+          city: store.addressCity,
+          state: store.addressState,
+          zipCode: store.addressZipCode,
+          cityIbgeCode: store.addressCityIbgeCode
+        }
+      },
+      source: {
+        store: "stores",
+        settings: settingsSource,
+        legacyFallbackUsed
+      },
+      updatedAt: (settings == null ? void 0 : settings.updatedAt) ?? (legacy == null ? void 0 : legacy.updatedAt) ?? store.updatedAt
+    };
+  }
+}
+const fiscalContextResolver = new FiscalContextResolver();
+const LEGACY_INTEGRATION_ID = "fiscal:nfce";
+function sanitizeForView(config2) {
+  return {
+    provider: config2.provider,
+    environment: config2.environment,
+    contingencyMode: config2.contingencyMode,
+    integrationId: config2.integrationId,
+    certificateType: config2.certificateType ?? "A1",
+    gatewayBaseUrl: config2.gatewayBaseUrl ?? null,
+    sefazBaseUrl: config2.sefazBaseUrl ?? null,
+    certificatePath: config2.certificatePath ?? null,
+    certificateValidUntil: config2.certificateValidUntil ?? null,
+    caBundlePath: config2.caBundlePath ?? null,
+    tlsValidationMode: config2.tlsValidationMode ?? "strict",
+    cscId: config2.cscId ?? null,
+    uf: config2.uf ?? "SP",
+    model: config2.model ?? 65,
+    defaultSeries: config2.defaultSeries ?? null,
+    hasGatewayApiKey: Boolean(config2.gatewayApiKey),
+    hasCertificatePassword: Boolean(config2.certificatePassword),
+    hasCscToken: Boolean(config2.cscToken),
+    updatedAt: config2.updatedAt
+  };
+}
+function normalizeNullableText(value) {
+  if (value === void 0 || value === null) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+class FiscalSettingsService {
+  constructor(legacySettings = new IntegrationFiscalSettingsService()) {
+    this.legacySettings = legacySettings;
+  }
+  getConfig() {
+    return fiscalContextResolver.resolveProviderConfig();
+  }
+  getConfigView() {
+    return sanitizeForView(this.getConfig());
+  }
+  saveConfig(input) {
+    const store = ensureActiveFiscalStore();
+    if (!store) {
+      throw new Error("Nenhuma store fiscal ativa encontrada. Cadastre os dados do emitente antes de salvar a configuração fiscal.");
+    }
+    const current = this.getConfig();
+    const nextPassword = input.certificatePassword === "" ? current.certificatePassword : input.certificatePassword ?? current.certificatePassword ?? null;
+    const nextGatewayApiKey = input.gatewayApiKey === "" ? current.gatewayApiKey : input.gatewayApiKey ?? current.gatewayApiKey ?? null;
+    const nextCscToken = input.cscToken === "" ? current.cscToken : input.cscToken ?? current.cscToken ?? null;
+    const updatedStore = storeRepository.updateFiscalConfiguration(store.id, {
+      environment: input.environment,
+      cscId: normalizeNullableText(input.cscId) ?? current.cscId ?? null,
+      cscToken: nextCscToken,
+      defaultSeries: input.defaultSeries ?? current.defaultSeries ?? store.defaultSeries
+    });
+    const settings = fiscalSettingsRepository.upsertActive({
+      storeId: updatedStore.id,
+      provider: input.provider,
+      documentModel: input.model ?? 65,
+      contingencyMode: input.contingencyMode,
+      sefazBaseUrl: normalizeNullableText(input.sefazBaseUrl),
+      gatewayBaseUrl: normalizeNullableText(input.gatewayBaseUrl),
+      gatewayApiKey: normalizeNullableText(nextGatewayApiKey),
+      certificateType: input.certificateType ?? current.certificateType ?? "A1",
+      certificatePath: normalizeNullableText(input.certificatePath) ?? current.certificatePath ?? null,
+      certificatePassword: normalizeNullableText(nextPassword),
+      certificateValidUntil: normalizeNullableText(input.certificateValidUntil) ?? current.certificateValidUntil ?? null,
+      caBundlePath: normalizeNullableText(input.caBundlePath),
+      tlsValidationMode: input.tlsValidationMode ?? current.tlsValidationMode ?? "strict",
+      active: true
+    });
+    const nextConfig = fiscalContextResolver.resolveProviderConfig(updatedStore.id);
+    this.mirrorLegacyConfig(nextConfig);
+    logger.info(`[FiscalConfig] Configuracao fiscal salva em fiscal_settings store=${settings.storeId} provider=${settings.provider} ambiente=${updatedStore.environment}.`);
+    return sanitizeForView(nextConfig);
+  }
+  mirrorLegacyConfig(config2) {
+    try {
+      this.legacySettings.saveConfig({
+        provider: config2.provider,
+        environment: config2.environment,
+        contingencyMode: config2.contingencyMode,
+        certificateType: config2.certificateType,
+        sefazBaseUrl: config2.sefazBaseUrl,
+        gatewayBaseUrl: config2.gatewayBaseUrl,
+        gatewayApiKey: config2.gatewayApiKey,
+        certificatePath: config2.certificatePath,
+        certificatePassword: config2.certificatePassword,
+        certificateValidUntil: config2.certificateValidUntil,
+        caBundlePath: config2.caBundlePath,
+        tlsValidationMode: config2.tlsValidationMode,
+        cscId: config2.cscId,
+        cscToken: config2.cscToken,
+        uf: config2.uf,
+        model: config2.model,
+        defaultSeries: config2.defaultSeries
+      });
+    } catch (error) {
+      logger.warn(`[FiscalConfig] Falha ao espelhar configuracao fiscal no legado integrations: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  getLegacyRowForDiagnostics() {
+    return db.prepare(`
+      SELECT integration_id, updated_at
+      FROM integrations
+      WHERE integration_id = ?
+      LIMIT 1
+    `).get(LEGACY_INTEGRATION_ID);
+  }
+}
+function onlyDigits(value) {
+  return String(value ?? "").replace(/\D/g, "");
+}
+function hasText(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+function addIssue(issues, code, message, field, table, severity = "error") {
+  issues.push({ code, message, field, table, severity });
+}
+class FiscalReadinessValidator {
+  validateContext(context) {
+    const issues = [];
+    if (onlyDigits(context.emitter.cnpj).length !== 14) {
+      addIssue(issues, "EMITTER_CNPJ_REQUIRED", "CNPJ do emitente deve ter 14 digitos.", "cnpj", "stores");
+    }
+    if (!hasText(context.emitter.stateRegistration)) {
+      addIssue(issues, "EMITTER_IE_REQUIRED", "IE do emitente e obrigatoria.", "state_registration", "stores");
+    }
+    if (!hasText(context.emitter.legalName)) {
+      addIssue(issues, "EMITTER_LEGAL_NAME_REQUIRED", "Razao social do emitente e obrigatoria.", "legal_name", "stores");
+    }
+    if (!hasText(context.emitter.taxRegimeCode)) {
+      addIssue(issues, "EMITTER_TAX_REGIME_REQUIRED", "Regime tributario/CRT e obrigatorio.", "tax_regime_code", "stores");
+    }
+    const address = context.emitter.address;
+    if (!hasText(address.street)) addIssue(issues, "EMITTER_STREET_REQUIRED", "Logradouro do emitente e obrigatorio.", "address_street", "stores");
+    if (!hasText(address.number)) addIssue(issues, "EMITTER_NUMBER_REQUIRED", "Numero do endereco do emitente e obrigatorio.", "address_number", "stores");
+    if (!hasText(address.neighborhood)) addIssue(issues, "EMITTER_NEIGHBORHOOD_REQUIRED", "Bairro do emitente e obrigatorio.", "address_neighborhood", "stores");
+    if (!hasText(address.city)) addIssue(issues, "EMITTER_CITY_REQUIRED", "Municipio do emitente e obrigatorio.", "address_city", "stores");
+    if (!hasText(address.state) || address.state.length !== 2) addIssue(issues, "EMITTER_UF_REQUIRED", "UF do emitente deve ter 2 letras.", "address_state", "stores");
+    if (onlyDigits(address.zipCode).length !== 8) addIssue(issues, "EMITTER_ZIP_REQUIRED", "CEP do emitente deve ter 8 digitos.", "address_zip_code", "stores");
+    if (onlyDigits(address.cityIbgeCode).length !== 7) addIssue(issues, "EMITTER_IBGE_REQUIRED", "Codigo IBGE do municipio deve ter 7 digitos.", "address_city_ibge_code", "stores");
+    if (!context.environment) addIssue(issues, "FISCAL_ENVIRONMENT_REQUIRED", "Ambiente fiscal e obrigatorio.", "environment", "stores");
+    if (!context.provider) addIssue(issues, "FISCAL_PROVIDER_REQUIRED", "Provider fiscal e obrigatorio.", "provider", "fiscal_settings");
+    if (context.provider === "sefaz-direct" && !hasText(context.sefazBaseUrl) && context.uf !== "SP") {
+      addIssue(issues, "SEFAZ_URL_REQUIRED", "URL SEFAZ deve ser configurada para UF diferente de SP.", "sefaz_base_url", "fiscal_settings");
+    }
+    if (context.provider === "gateway" && !hasText(context.gatewayBaseUrl)) {
+      addIssue(issues, "GATEWAY_URL_REQUIRED", "URL do gateway fiscal e obrigatoria para provider gateway.", "gateway_base_url", "fiscal_settings");
+    }
+    if (context.provider === "gateway" && !hasText(context.gatewayApiKey)) {
+      addIssue(issues, "GATEWAY_API_KEY_REQUIRED", "API key do gateway fiscal e obrigatoria para provider gateway.", "gateway_api_key", "fiscal_settings");
+    }
+    if (context.provider !== "mock") {
+      if (!hasText(context.certificatePath)) addIssue(issues, "CERTIFICATE_PATH_REQUIRED", "Certificado A1 e obrigatorio para emissao real.", "certificate_path", "fiscal_settings");
+      if (!hasText(context.certificatePassword)) addIssue(issues, "CERTIFICATE_PASSWORD_REQUIRED", "Senha do certificado A1 e obrigatoria.", "certificate_password", "fiscal_settings");
+      if (!hasText(context.cscId)) addIssue(issues, "CSC_ID_REQUIRED", "CSC ID e obrigatorio para NFC-e.", "csc_id", "stores");
+      if (!hasText(context.cscToken)) addIssue(issues, "CSC_TOKEN_REQUIRED", "CSC token e obrigatorio para NFC-e.", "csc_token", "stores");
+    }
+    if (!Number.isInteger(context.defaultSeries) || context.defaultSeries <= 0) {
+      addIssue(issues, "DEFAULT_SERIES_REQUIRED", "Serie padrao NFC-e deve ser maior que zero.", "default_series", "stores");
+    }
+    if (!Number.isInteger(context.nextNfceNumber) || context.nextNfceNumber <= 0) {
+      addIssue(issues, "NEXT_NFCE_NUMBER_REQUIRED", "Proximo numero NFC-e deve ser maior que zero.", "next_nfce_number", "stores");
+    }
+    return this.toResult(issues);
+  }
+  validateAuthorizeReadiness(context, request) {
+    const contextResult = this.validateContext(context);
+    const issues = [...contextResult.errors, ...contextResult.warnings];
+    this.validateItems(request.items, issues);
+    this.validatePayments(request.payments, issues);
+    if (!request.totals || request.totals.finalAmount <= 0) {
+      addIssue(issues, "SALE_TOTAL_REQUIRED", "Total da venda deve ser maior que zero.", "totals.finalAmount", "sales");
+    }
+    return this.toResult(issues);
+  }
+  validateItems(items, issues) {
+    if (!Array.isArray(items) || items.length === 0) {
+      addIssue(issues, "SALE_ITEMS_REQUIRED", "Venda deve possuir ao menos um item.", "items", "sale_items");
+      return;
+    }
+    items.forEach((item, index) => {
+      var _a, _b, _c, _d, _e, _f, _g;
+      const prefix = `items[${index}]`;
+      if (!hasText(item.description)) addIssue(issues, "ITEM_DESCRIPTION_REQUIRED", "Descricao do item e obrigatoria.", `${prefix}.description`, "sale_items");
+      if (!hasText(item.unit)) addIssue(issues, "ITEM_UNIT_REQUIRED", "Unidade do item e obrigatoria.", `${prefix}.unit`, "sale_items");
+      if (item.quantity <= 0) addIssue(issues, "ITEM_QUANTITY_REQUIRED", "Quantidade do item deve ser maior que zero.", `${prefix}.quantity`, "sale_items");
+      if (item.unitPrice <= 0) addIssue(issues, "ITEM_UNIT_PRICE_REQUIRED", "Valor unitario do item deve ser maior que zero.", `${prefix}.unitPrice`, "sale_items");
+      if (onlyDigits((_a = item.tax) == null ? void 0 : _a.ncm).length !== 8) addIssue(issues, "ITEM_NCM_REQUIRED", "NCM do item deve ter 8 digitos.", `${prefix}.tax.ncm`, "sale_items");
+      if (onlyDigits((_b = item.tax) == null ? void 0 : _b.cfop).length !== 4) addIssue(issues, "ITEM_CFOP_REQUIRED", "CFOP do item deve ter 4 digitos.", `${prefix}.tax.cfop`, "sale_items");
+      if (!hasText((_c = item.tax) == null ? void 0 : _c.originCode)) addIssue(issues, "ITEM_ORIGIN_REQUIRED", "Origem tributaria do item e obrigatoria.", `${prefix}.tax.originCode`, "sale_item_tax_snapshot");
+      if (!hasText((_d = item.tax) == null ? void 0 : _d.csosn) && !hasText((_e = item.tax) == null ? void 0 : _e.icmsCst)) addIssue(issues, "ITEM_ICMS_REQUIRED", "CST ou CSOSN do ICMS e obrigatorio.", `${prefix}.tax`, "sale_item_tax_snapshot");
+      if (!hasText((_f = item.tax) == null ? void 0 : _f.pisCst)) addIssue(issues, "ITEM_PIS_REQUIRED", "CST de PIS e obrigatorio.", `${prefix}.tax.pisCst`, "sale_item_tax_snapshot");
+      if (!hasText((_g = item.tax) == null ? void 0 : _g.cofinsCst)) addIssue(issues, "ITEM_COFINS_REQUIRED", "CST de COFINS e obrigatorio.", `${prefix}.tax.cofinsCst`, "sale_item_tax_snapshot");
+    });
+  }
+  validatePayments(payments, issues) {
+    if (!Array.isArray(payments) || payments.length === 0) {
+      addIssue(issues, "PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments", "payments");
+      return;
+    }
+    payments.forEach((payment, index) => {
+      const prefix = `payments[${index}]`;
+      if (!hasText(payment.method)) addIssue(issues, "PAYMENT_METHOD_REQUIRED", "Forma de pagamento e obrigatoria.", `${prefix}.method`, "payments");
+      if (payment.amount <= 0) addIssue(issues, "PAYMENT_AMOUNT_REQUIRED", "Valor do pagamento deve ser maior que zero.", `${prefix}.amount`, "payments");
+    });
+  }
+  toResult(issues) {
+    const errors = issues.filter((issue) => issue.severity === "error");
+    const warnings = issues.filter((issue) => issue.severity === "warning");
+    return { ok: errors.length === 0, errors, warnings };
+  }
+}
+const fiscalReadinessValidator = new FiscalReadinessValidator();
+function cleanDigits(value) {
+  return String(value ?? "").replace(/\D/g, "");
+}
+function cleanText(value) {
+  return String(value ?? "").trim();
+}
+function requireText(input, field, label) {
+  const value = cleanText(String(input[field] ?? ""));
+  if (!value) {
+    throw new Error(`${label} e obrigatorio.`);
+  }
+  return value;
+}
+function normalizeStoreInput(input) {
+  const normalized = {
+    id: input.id,
+    code: cleanText(input.code || "MAIN") || "MAIN",
+    name: requireText(input, "name", "Nome fantasia"),
+    legalName: requireText(input, "legalName", "Razao social"),
+    cnpj: cleanDigits(input.cnpj),
+    stateRegistration: cleanText(input.stateRegistration),
+    taxRegimeCode: cleanText(input.taxRegimeCode),
+    environment: input.environment === "production" ? "production" : "homologation",
+    cscId: cleanText(input.cscId ?? "") || null,
+    cscToken: cleanText(input.cscToken ?? "") || null,
+    defaultSeries: Number(input.defaultSeries ?? 1),
+    nextNfceNumber: Number(input.nextNfceNumber ?? 1),
+    addressStreet: requireText(input, "addressStreet", "Logradouro"),
+    addressNumber: requireText(input, "addressNumber", "Numero"),
+    addressNeighborhood: requireText(input, "addressNeighborhood", "Bairro"),
+    addressCity: requireText(input, "addressCity", "Cidade"),
+    addressState: cleanText(input.addressState).toUpperCase(),
+    addressZipCode: cleanDigits(input.addressZipCode),
+    addressCityIbgeCode: cleanDigits(input.addressCityIbgeCode),
+    active: true
+  };
+  if (normalized.cnpj.length !== 14) {
+    throw new Error("CNPJ deve conter 14 digitos.");
+  }
+  if (!normalized.stateRegistration) {
+    throw new Error("Inscricao estadual e obrigatoria.");
+  }
+  if (!normalized.taxRegimeCode) {
+    throw new Error("CRT/regime tributario e obrigatorio.");
+  }
+  if (!["1", "2", "3"].includes(normalized.taxRegimeCode)) {
+    throw new Error("CRT deve ser 1, 2 ou 3.");
+  }
+  if (normalized.addressState.length !== 2) {
+    throw new Error("UF deve conter 2 letras.");
+  }
+  if (normalized.addressZipCode.length !== 8) {
+    throw new Error("CEP deve conter 8 digitos.");
+  }
+  if (normalized.addressCityIbgeCode.length !== 7) {
+    throw new Error("Codigo IBGE do municipio deve conter 7 digitos.");
+  }
+  if (!Number.isInteger(normalized.defaultSeries ?? 0) || (normalized.defaultSeries ?? 0) <= 0) {
+    throw new Error("Serie padrao NFC-e deve ser maior que zero.");
+  }
+  if (!Number.isInteger(normalized.nextNfceNumber ?? 0) || (normalized.nextNfceNumber ?? 0) <= 0) {
+    throw new Error("Proximo numero NFC-e deve ser maior que zero.");
+  }
+  return normalized;
+}
+class FiscalStoreService {
+  getActiveStore() {
+    return storeRepository.findActive();
+  }
+  saveActiveStore(input) {
+    const store = storeRepository.upsertActive(normalizeStoreInput(input));
+    logger.info(`[FiscalStore] Store fiscal salva id=${store.id} cnpj=${store.cnpj} ambiente=${store.environment}.`);
+    return store;
+  }
+}
+const fiscalStoreService = new FiscalStoreService();
 function toPersistedDocument(row) {
   return {
     id: row.id,
@@ -3930,6 +4773,7 @@ function postSoapWithCertificate(url, body, config2, options2 = {}) {
         method: "POST",
         pfx: fs$1.readFileSync(config2.certificatePath),
         passphrase: config2.certificatePassword ?? void 0,
+        ca: config2.caBundlePath ? fs$1.readFileSync(config2.caBundlePath) : void 0,
         rejectUnauthorized: options2.allowUnauthorizedServerCertificate !== true,
         headers: {
           "content-type": 'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF"',
@@ -4245,7 +5089,6 @@ class FiscalPreTransmissionValidator {
       });
     }
     this.validateEmitter(request, config2, (store == null ? void 0 : store.environment) ?? null, issues);
-    this.validateCompanyConsistency((store == null ? void 0 : store.environment) ?? null, request.companyId, issues);
     this.validatePayments(request, issues);
     this.validateItems(request, issues);
     this.validateRuntimeConfig(request, config2, issues);
@@ -4298,93 +5141,6 @@ class FiscalPreTransmissionValidator {
         code: "STORE_ENVIRONMENT_MISMATCH",
         message: "Ambiente fiscal da store diverge do request de emissão.",
         field: "environment",
-        severity: "error"
-      });
-    }
-  }
-  validateCompanyConsistency(storeEnvironment, storeId, issues) {
-    const store = storeRepository.findById(storeId);
-    const company = db.prepare(`
-      SELECT
-        id,
-        nome_fantasia,
-        razao_social,
-        cnpj,
-        inscricao_estadual,
-        ambiente_emissao,
-        rua,
-        numero,
-        bairro,
-        cidade,
-        uf,
-        cep,
-        cod_municipio_ibge
-      FROM company
-      WHERE ativo = 1
-      ORDER BY id ASC
-      LIMIT 1
-    `).get();
-    if (!store || !company) {
-      return;
-    }
-    const comparisons = [
-      {
-        code: "STORE_COMPANY_CNPJ_MISMATCH",
-        left: normalizeDigits(store.cnpj),
-        right: normalizeDigits(company.cnpj),
-        message: "CNPJ divergente entre stores e company."
-      },
-      {
-        code: "STORE_COMPANY_IE_MISMATCH",
-        left: normalizeText(store.stateRegistration),
-        right: normalizeText(company.inscricao_estadual),
-        message: "IE divergente entre stores e company."
-      },
-      {
-        code: "STORE_COMPANY_LEGAL_NAME_MISMATCH",
-        left: normalizeText(store.legalName),
-        right: normalizeText(company.razao_social),
-        message: "Razão social divergente entre stores e company."
-      },
-      {
-        code: "STORE_COMPANY_TRADE_NAME_MISMATCH",
-        left: normalizeText(store.name),
-        right: normalizeText(company.nome_fantasia),
-        message: "Nome fantasia divergente entre stores e company."
-      },
-      {
-        code: "STORE_COMPANY_CITY_MISMATCH",
-        left: normalizeText(store.addressCity),
-        right: normalizeText(company.cidade),
-        message: "Cidade divergente entre stores e company."
-      },
-      {
-        code: "STORE_COMPANY_STATE_MISMATCH",
-        left: normalizeText(store.addressState),
-        right: normalizeText(company.uf),
-        message: "UF divergente entre stores e company."
-      },
-      {
-        code: "STORE_COMPANY_IBGE_MISMATCH",
-        left: normalizeDigits(store.addressCityIbgeCode),
-        right: normalizeDigits(company.cod_municipio_ibge),
-        message: "Código IBGE divergente entre stores e company."
-      }
-    ];
-    for (const comparison of comparisons) {
-      if (comparison.left !== comparison.right) {
-        issues.push({
-          code: comparison.code,
-          message: comparison.message,
-          severity: "error"
-        });
-      }
-    }
-    const companyEnvironment = company.ambiente_emissao === 1 ? "production" : "homologation";
-    if (storeEnvironment && companyEnvironment !== storeEnvironment) {
-      issues.push({
-        code: "STORE_COMPANY_ENVIRONMENT_MISMATCH",
-        message: "Ambiente divergente entre stores e company.",
         severity: "error"
       });
     }
@@ -4638,7 +5394,17 @@ class DefaultFiscalService {
       };
     }
     const persisted = existing ?? this.repository.createPendingDocument(request);
-    const config2 = this.configService.getConfig();
+    const context = fiscalContextResolver.resolve(request.companyId);
+    const readiness = fiscalReadinessValidator.validateAuthorizeReadiness(context, request);
+    if (!readiness.ok) {
+      throw new FiscalError({
+        code: "FISCAL_READINESS_FAILED",
+        message: readiness.errors.map((issue) => issue.message).join(" | "),
+        category: "VALIDATION",
+        details: readiness
+      });
+    }
+    const config2 = fiscalContextResolver.resolveProviderConfig(request.companyId);
     fiscalPreTransmissionValidator.validateAuthorizeRequest(request, config2);
     this.repository.updateStatus(persisted.id, "PENDING");
     const builtXml = nfceXmlBuilderService.buildAuthorizeXml(request);
@@ -4648,7 +5414,7 @@ class DefaultFiscalService {
     });
     try {
       await this.certificateService.assertCertificateReady(config2);
-      const provider = this.resolveProvider();
+      const provider = this.resolveProvider(config2);
       const response = await provider.authorizeNfce(request, config2);
       const enrichedResponse = {
         ...response,
@@ -4705,15 +5471,15 @@ class DefaultFiscalService {
         xmlCancellation: document.xmlCancellation
       };
     }
-    const provider = this.resolveProvider();
-    const config2 = this.configService.getConfig();
+    const config2 = fiscalContextResolver.resolveProviderConfig(document.companyId);
+    const provider = this.resolveProvider(config2);
     const response = await provider.cancelNfce(request, config2);
     this.repository.markAsCancelled(document.id, request, response);
     return response;
   }
   async consultStatusByAccessKey(accessKey) {
     const config2 = this.configService.getConfig();
-    const provider = this.resolveProvider();
+    const provider = this.resolveProvider(config2);
     const response = await provider.consultStatus({ accessKey }, config2);
     const document = this.repository.findByAccessKey(accessKey);
     if (document) {
@@ -4776,7 +5542,7 @@ class DefaultFiscalService {
 }
 const repository = new SqliteFiscalRepository();
 repository.ensureSchema();
-const configService = new IntegrationFiscalSettingsService();
+const configService = new FiscalSettingsService();
 const providerFactory = new FiscalProviderFactory();
 const certificateService = new FileSystemCertificateService();
 const danfeService = new HtmlDanfeService();
@@ -4834,7 +5600,7 @@ const queueService = new SqliteFiscalQueueService(repository, async (item) => {
     return mapCancelQueueResult(response);
   }
   if (item.operation === "TEST_STATUS_NFCE") {
-    const config2 = configService.getConfig();
+    const config2 = fiscalContextResolver.resolveProviderConfig();
     logger.info(`[FiscalDiagnostic] Iniciando NFeStatusServico4 provider=${config2.provider} ambiente=${config2.environment} uf=${config2.uf ?? "SP"}.`);
     await certificateService.assertCertificateReady(config2);
     logger.info("[FiscalDiagnostic] Certificado validado com sucesso.");
@@ -4860,12 +5626,15 @@ fiscalServiceRef = new DefaultFiscalService(
   certificateService,
   danfeService,
   configService,
-  () => providerFactory.resolve(configService.getConfig())
+  (config2) => providerFactory.resolve(config2)
 );
 const fiscalService = fiscalServiceRef;
 const fiscalConfigService = configService;
 const fiscalQueueService = queueService;
 const fiscalCertificateService = certificateService;
+const fiscalContextService = fiscalContextResolver;
+const fiscalReadinessService = fiscalReadinessValidator;
+const fiscalStoreConfigService = fiscalStoreService;
 let fiscalQueueWorkerStarted = false;
 function startFiscalQueueWorker(intervalMs = 15e3) {
   if (fiscalQueueWorkerStarted) {
@@ -4981,6 +5750,39 @@ function registerFiscalHandlers() {
   ipcMain.handle("fiscal:get-runtime-config", async () => {
     assertCurrentUserPermission("fiscal:manage");
     return fiscalService.getConfig();
+  });
+  ipcMain.handle("fiscal:get-context", async (_event, storeId) => {
+    assertCurrentUserPermission("fiscal:manage");
+    return fiscalContextService.resolve(storeId);
+  });
+  ipcMain.handle("fiscal:get-active-store", async () => {
+    assertCurrentUserPermission("fiscal:manage");
+    return fiscalStoreConfigService.getActiveStore();
+  });
+  ipcMain.handle("fiscal:save-active-store", async (_event, input) => {
+    try {
+      assertCurrentUserPermission("fiscal:manage");
+      return {
+        success: true,
+        data: fiscalStoreConfigService.saveActiveStore(input)
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_STORE_SAVE_FAILED");
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
+        }
+      };
+    }
+  });
+  ipcMain.handle("fiscal:validate-readiness", async (_event, storeId) => {
+    assertCurrentUserPermission("fiscal:manage");
+    const context = fiscalContextService.resolve(storeId);
+    return fiscalReadinessService.validateContext(context);
   });
   ipcMain.handle("fiscal:save-runtime-config", async (_event, input) => {
     try {

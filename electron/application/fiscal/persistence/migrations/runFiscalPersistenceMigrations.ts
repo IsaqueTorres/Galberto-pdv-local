@@ -1,4 +1,5 @@
 import type { SQLiteDatabase } from '../../../../infra/database/db';
+import { logger } from '../../../../logger/logger';
 
 const MIGRATION_ID = '2026-04-16-fiscal-persistence-v1';
 
@@ -252,6 +253,259 @@ function executeMigration(database: SQLiteDatabase) {
   transaction();
 }
 
+type LegacyFiscalConfig = {
+  provider?: string | null;
+  environment?: string | null;
+  contingencyMode?: string | null;
+  sefazBaseUrl?: string | null;
+  gatewayBaseUrl?: string | null;
+  gatewayApiKey?: string | null;
+  certificatePath?: string | null;
+  certificatePassword?: string | null;
+  certificateValidUntil?: string | null;
+  caBundlePath?: string | null;
+  tlsValidationMode?: string | null;
+  cscId?: string | null;
+  cscToken?: string | null;
+  uf?: string | null;
+  model?: number | null;
+  defaultSeries?: number | null;
+};
+
+function normalizeText(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeProvider(value: unknown): 'mock' | 'sefaz-direct' | 'gateway' {
+  return value === 'sefaz-direct' || value === 'gateway' || value === 'mock' ? value : 'mock';
+}
+
+function normalizeEnvironment(value: unknown): 'homologation' | 'production' | null {
+  return value === 'production' || value === 'homologation' ? value : null;
+}
+
+function normalizeContingencyMode(value: unknown): 'online' | 'offline-contingency' | 'queue' {
+  return value === 'online' || value === 'offline-contingency' || value === 'queue' ? value : 'queue';
+}
+
+function normalizeTlsMode(value: unknown): 'strict' | 'bypass-homologation-diagnostic' {
+  return value === 'bypass-homologation-diagnostic' ? value : 'strict';
+}
+
+function readLegacyFiscalConfig(database: SQLiteDatabase): LegacyFiscalConfig | null {
+  const row = database.prepare(`
+    SELECT raw_json
+    FROM integrations
+    WHERE integration_id = 'fiscal:nfce'
+    LIMIT 1
+  `).get() as { raw_json: string | null } | undefined;
+
+  if (!row?.raw_json) return null;
+
+  try {
+    return JSON.parse(row.raw_json) as LegacyFiscalConfig;
+  } catch (error) {
+    logger.warn(`[FiscalMigration] Falha ao ler integrations.raw_json fiscal:nfce: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
+}
+
+function ensureFiscalSettingsSchema(database: SQLiteDatabase) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS fiscal_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      store_id INTEGER NOT NULL,
+      provider TEXT NOT NULL,
+      document_model INTEGER NOT NULL DEFAULT 65 CHECK (document_model = 65),
+      contingency_mode TEXT,
+      sefaz_base_url TEXT,
+      gateway_base_url TEXT,
+      gateway_api_key TEXT,
+      certificate_type TEXT NOT NULL DEFAULT 'A1',
+      certificate_path TEXT,
+      certificate_password TEXT,
+      certificate_valid_until TEXT,
+      ca_bundle_path TEXT,
+      tls_validation_mode TEXT NOT NULL DEFAULT 'strict',
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (store_id) REFERENCES stores(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_fiscal_settings_store_active
+    ON fiscal_settings(store_id, active);
+
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_fiscal_settings_active_store
+    ON fiscal_settings(store_id)
+    WHERE active = 1;
+  `);
+}
+
+function ensureStoreFromCompany(database: SQLiteDatabase) {
+  const store = database.prepare(`SELECT id FROM stores WHERE active = 1 ORDER BY id ASC LIMIT 1`).get();
+  if (store) return;
+
+  database.exec(`
+    INSERT INTO stores (
+      code,
+      name,
+      legal_name,
+      cnpj,
+      state_registration,
+      tax_regime_code,
+      environment,
+      csc_id,
+      csc_token,
+      default_series,
+      next_nfce_number,
+      address_street,
+      address_number,
+      address_neighborhood,
+      address_city,
+      address_state,
+      address_zip_code,
+      address_city_ibge_code,
+      active,
+      created_at,
+      updated_at
+    )
+    SELECT
+      'MAIN',
+      nome_fantasia,
+      razao_social,
+      cnpj,
+      inscricao_estadual,
+      CAST(crt AS TEXT),
+      CASE ambiente_emissao WHEN 1 THEN 'production' ELSE 'homologation' END,
+      csc_id,
+      csc_token,
+      COALESCE(serie_nfce, 1),
+      COALESCE(proximo_numero_nfce, 1),
+      rua,
+      numero,
+      bairro,
+      cidade,
+      uf,
+      cep,
+      cod_municipio_ibge,
+      ativo,
+      COALESCE(created_at, CURRENT_TIMESTAMP),
+      COALESCE(updated_at, CURRENT_TIMESTAMP)
+    FROM company
+    WHERE ativo = 1
+      AND NOT EXISTS (SELECT 1 FROM stores WHERE active = 1)
+    LIMIT 1;
+  `);
+}
+
+function backfillFiscalSettings(database: SQLiteDatabase) {
+  ensureStoreFromCompany(database);
+
+  const store = database.prepare(`
+    SELECT id, csc_id, csc_token, default_series
+    FROM stores
+    WHERE active = 1
+    ORDER BY id ASC
+    LIMIT 1
+  `).get() as { id: number; csc_id: string | null; csc_token: string | null; default_series: number } | undefined;
+
+  if (!store) {
+    logger.warn('[FiscalMigration] Nenhuma store ativa encontrada para backfill de fiscal_settings.');
+    return;
+  }
+
+  const existingSettings = database.prepare(`
+    SELECT id
+    FROM fiscal_settings
+    WHERE store_id = ? AND active = 1
+    LIMIT 1
+  `).get(store.id);
+
+  if (existingSettings) {
+    logger.info(`[FiscalMigration] fiscal_settings ativo ja existe para store=${store.id}; backfill preservado.`);
+    return;
+  }
+
+  const legacy = readLegacyFiscalConfig(database);
+  const company = database.prepare(`
+    SELECT cert_tipo, cert_path, cert_password, cert_validade, csc_id, csc_token, serie_nfce
+    FROM company
+    WHERE ativo = 1
+    ORDER BY id ASC
+    LIMIT 1
+  `).get() as {
+    cert_tipo?: string | null;
+    cert_path?: string | null;
+    cert_password?: string | null;
+    cert_validade?: string | null;
+    csc_id?: string | null;
+    csc_token?: string | null;
+    serie_nfce?: number | null;
+  } | undefined;
+
+  const legacyEnvironment = normalizeEnvironment(legacy?.environment);
+  const legacyCscId = normalizeText(legacy?.cscId) ?? normalizeText(company?.csc_id);
+  const legacyCscToken = normalizeText(legacy?.cscToken) ?? normalizeText(company?.csc_token);
+  const legacySeries = Number(legacy?.defaultSeries ?? company?.serie_nfce ?? store.default_series ?? 1);
+
+  database.prepare(`
+    UPDATE stores
+    SET
+      environment = COALESCE(?, environment),
+      csc_id = COALESCE(?, csc_id),
+      csc_token = COALESCE(?, csc_token),
+      default_series = CASE WHEN ? > 0 THEN ? ELSE default_series END,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(
+    legacyEnvironment,
+    legacyCscId,
+    legacyCscToken,
+    legacySeries,
+    legacySeries,
+    store.id
+  );
+
+  database.prepare(`
+    INSERT INTO fiscal_settings (
+      store_id,
+      provider,
+      document_model,
+      contingency_mode,
+      sefaz_base_url,
+      gateway_base_url,
+      gateway_api_key,
+      certificate_type,
+      certificate_path,
+      certificate_password,
+      certificate_valid_until,
+      ca_bundle_path,
+      tls_validation_mode,
+      active,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, 65, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).run(
+    store.id,
+    normalizeProvider(legacy?.provider),
+    normalizeContingencyMode(legacy?.contingencyMode),
+    normalizeText(legacy?.sefazBaseUrl),
+    normalizeText(legacy?.gatewayBaseUrl),
+    normalizeText(legacy?.gatewayApiKey),
+    normalizeText(company?.cert_tipo) ?? 'A1',
+    normalizeText(legacy?.certificatePath) ?? normalizeText(company?.cert_path),
+    normalizeText(legacy?.certificatePassword) ?? normalizeText(company?.cert_password),
+    normalizeText(legacy?.certificateValidUntil) ?? normalizeText(company?.cert_validade),
+    normalizeText(legacy?.caBundlePath),
+    normalizeTlsMode(legacy?.tlsValidationMode)
+  );
+
+  logger.info(`[FiscalMigration] fiscal_settings criado para store=${store.id} usando integrations/company como origem legada.`);
+}
+
 function ensureFiscalPersistenceColumns(database: SQLiteDatabase) {
   const statements: string[] = [];
 
@@ -294,4 +548,6 @@ export function runFiscalPersistenceMigrations(database: SQLiteDatabase) {
     executeMigration(database);
   }
   ensureFiscalPersistenceColumns(database);
+  ensureFiscalSettingsSchema(database);
+  backfillFiscalSettings(database);
 }

@@ -33,6 +33,10 @@ function defaultConfig(): StoredFiscalConfig {
     uf: 'SP',
     model: 65,
     defaultSeries: 1,
+    certificateType: 'A1',
+    certificateValidUntil: null,
+    caBundlePath: null,
+    tlsValidationMode: 'strict',
     updatedAt: nowIso(),
   };
 }
@@ -50,6 +54,10 @@ function sanitizeForView(config: StoredFiscalConfig): FiscalConfigView {
     uf: config.uf ?? 'SP',
     model: config.model ?? 65,
     defaultSeries: config.defaultSeries ?? null,
+    certificateType: config.certificateType ?? 'A1',
+    certificateValidUntil: config.certificateValidUntil ?? null,
+    caBundlePath: config.caBundlePath ?? null,
+    tlsValidationMode: config.tlsValidationMode ?? 'strict',
     hasGatewayApiKey: Boolean(config.gatewayApiKey),
     hasCertificatePassword: Boolean(config.certificatePassword),
     hasCscToken: Boolean(config.cscToken),
@@ -58,6 +66,10 @@ function sanitizeForView(config: StoredFiscalConfig): FiscalConfigView {
 }
 
 export class IntegrationFiscalSettingsService {
+  /**
+   * Legacy fallback only.
+   * Fiscal runtime must use FiscalSettingsService/FiscalContextResolver as the primary source.
+   */
   getConfig(): FiscalProviderConfig {
     const row = db.prepare(`
       SELECT integration_id, raw_json, updated_at

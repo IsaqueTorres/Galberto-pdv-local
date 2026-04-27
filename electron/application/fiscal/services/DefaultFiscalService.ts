@@ -18,12 +18,15 @@ import type {
   FiscalQueueItem,
   FiscalQueueSummary,
   QueueEnqueueRequest,
+  FiscalProviderConfig,
 } from '../types/fiscal.types';
-import { IntegrationFiscalSettingsService } from './IntegrationFiscalSettingsService';
+import { FiscalSettingsService } from './FiscalSettingsService';
+import { fiscalContextResolver } from './FiscalContextResolver';
+import { fiscalReadinessValidator } from './FiscalReadinessValidator';
 import { fiscalPreTransmissionValidator } from './FiscalPreTransmissionValidator';
 import { nfceXmlBuilderService } from './NfceXmlBuilderService';
 
-type ProviderResolver = () => FiscalProvider;
+type ProviderResolver = (config: FiscalProviderConfig) => FiscalProvider;
 
 export class DefaultFiscalService implements FiscalService {
   constructor(
@@ -31,7 +34,7 @@ export class DefaultFiscalService implements FiscalService {
     private readonly queueService: FiscalQueueService,
     private readonly certificateService: CertificateService,
     private readonly danfeService: DanfeService,
-    private readonly configService: IntegrationFiscalSettingsService,
+    private readonly configService: FiscalSettingsService,
     private readonly resolveProvider: ProviderResolver
   ) {}
 
@@ -61,7 +64,18 @@ export class DefaultFiscalService implements FiscalService {
     }
 
     const persisted = existing ?? this.repository.createPendingDocument(request);
-    const config = this.configService.getConfig();
+    const context = fiscalContextResolver.resolve(request.companyId);
+    const readiness = fiscalReadinessValidator.validateAuthorizeReadiness(context, request);
+    if (!readiness.ok) {
+      throw new FiscalError({
+        code: 'FISCAL_READINESS_FAILED',
+        message: readiness.errors.map((issue) => issue.message).join(' | '),
+        category: 'VALIDATION',
+        details: readiness,
+      });
+    }
+
+    const config = fiscalContextResolver.resolveProviderConfig(request.companyId);
     fiscalPreTransmissionValidator.validateAuthorizeRequest(request, config);
     this.repository.updateStatus(persisted.id, 'PENDING');
     const builtXml = nfceXmlBuilderService.buildAuthorizeXml(request);
@@ -72,7 +86,7 @@ export class DefaultFiscalService implements FiscalService {
 
     try {
       await this.certificateService.assertCertificateReady(config);
-      const provider = this.resolveProvider();
+      const provider = this.resolveProvider(config);
       const response = await provider.authorizeNfce(request, config);
       const enrichedResponse = {
         ...response,
@@ -137,8 +151,8 @@ export class DefaultFiscalService implements FiscalService {
       };
     }
 
-    const provider = this.resolveProvider();
-    const config = this.configService.getConfig();
+    const config = fiscalContextResolver.resolveProviderConfig(document.companyId);
+    const provider = this.resolveProvider(config);
     const response = await provider.cancelNfce(request, config);
     this.repository.markAsCancelled(document.id, request, response);
     return response;
@@ -146,7 +160,7 @@ export class DefaultFiscalService implements FiscalService {
 
   async consultStatusByAccessKey(accessKey: string): Promise<ConsultStatusResponse> {
     const config = this.configService.getConfig();
-    const provider = this.resolveProvider();
+    const provider = this.resolveProvider(config);
     const response = await provider.consultStatus({ accessKey }, config);
     const document = this.repository.findByAccessKey(accessKey);
     if (document) {

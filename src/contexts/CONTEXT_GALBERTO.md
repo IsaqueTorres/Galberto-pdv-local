@@ -1,56 +1,202 @@
 ### 1. CONTEXTO DO SISTEMA
-- **Nome:** Galberto PDV
-- **Tipo:** PDV Desktop (Electron + React + TypeScript + Vite) Offline-first
-- **Banco de Dados:** SQLite (better-sqlite3) - Offline-first.
-- **Público:** Pequenos mercados e comércios locais.
-- **Arquitetura:** - Existe uma tabela `integrations` para armazenar tokens, credenciais e configurações
-- O sistema já consome dados do Bling, que é o sistema mestre de produtos, clientes e outras entidades de retaguarda. Porem no futuro sera integrado a um ERP que nos mesmos vamos desenvolver.
 
+* **Nome:** Galberto PDV
+* **Tipo:** PDV Desktop (**Electron + React + TypeScript + Vite**) offline-first
+* **Banco de dados:** SQLite (`better-sqlite3`)
+* **Público:** pequenos mercados e comércios locais
+* **Arquitetura atual:** existe uma tabela `integrations` para armazenar tokens, credenciais e configurações de integrações externas
+* O sistema já consome dados do **Bling**, que hoje é o sistema mestre de produtos, clientes e outras entidades de retaguarda
+* No futuro, o Bling será substituído por um ERP próprio
 
+---
 
-### 2. OBJETIVO DESSA TAREFA
+### 2. OBJETIVO DESTA TAREFA
 
-Certo GPT, para essa atividade ja temos o seguinte.
+Estou trabalhando agora na parte de **emissão de NFC-e na SEFAZ-SP**.
 
-1 - Credenciamento no ambiente de homologacao da SEFAZ-SP.
-2 - CSC valido.
-3 - Certificado digital ICP-Brasil.
+Já temos:
 
-Ainda precisamos montar o XML fiscal, quando finalizo a venda somente faco as movimentacoes de baixar estoque no banco e guardar as informacoes, precisamos transformar a venda no XML. 
+1. credenciamento no ambiente de homologação da SEFAZ-SP;
+2. CSC válido;
+3. certificado digital ICP-Brasil;
+4. algumas configurações fiscais armazenadas atualmente na tabela `integrations`.
 
-- **identificação da nota**: UF, ambiente, modelo, série, número, data/hora, tipo de emissão;
-    Aqui ja temos armazenados, UF, Ambiente, modelo
+Porém, a tabela `integrations` foi pensada para integrações com ERPs e softwares terceiros.
+Minha intenção é **tirar a configuração fiscal dali** e colocar isso em uma estrutura específica de fiscal.
 
-- **emitente**: CNPJ, IE, razão social/nome, endereço e regime tributário compatíveis com o cadastro fiscal;
+---
 
+### 3. O QUE EU PRECISO QUE VOCÊ FAÇA
 
-- **itens**: código do produto, descrição, unidade, quantidade, valor unitário, valor total, NCM e demais dados tributários aplicáveis;
-- **impostos**: CST/CSOSN e demais tributos conforme o regime da empresa e as regras aplicáveis;
-- **totais**: total dos produtos, descontos, frete, acréscimos, total final;
-- **pagamento**: a documentação técnica tornou obrigatório o preenchimento do grupo de pagamentos para NF-e/NFC-e;
-- **consumidor/destinatário**, quando identificado;
-- **informações adicionais**, quando necessárias.
+Quero que você faça uma **análise técnica do sistema atual** para identificar:
 
+1. **quais informações já existem armazenadas** e podem ser reaproveitadas para emissão de NFC-e;
+2. **quais informações obrigatórias para montar o XML ainda não existem**;
+3. **onde cada informação está armazenada hoje**;
+4. **qual tabela atual pode ser reaproveitada** e **qual tabela nova deve ser criada**, se necessário.
 
+---
 
+### 4. TABELAS FISCAIS JÁ EXISTENTES
 
+Hoje o PDV já possui estas tabelas relacionadas a fiscal:
 
+* `fiscal_documents`
+* `fiscal_events`
+* `fiscal_queue`
 
+Minha leitura inicial é:
 
-Mude o estilo para ficar parecido com o estilo do PDV (azul)
+* `fiscal_documents`: possivelmente para armazenar documentos fiscais emitidos ou em emissão;
+* `fiscal_events`: para armazenar eventos fiscais como emissão, autorização, rejeição, cancelamento, inutilização etc.;
+* `fiscal_queue`: para controlar a fila de processamento/reprocessamento dos eventos/documentos fiscais.
 
-- **Segurança:** Nunca exponha chaves de API no Frontend. Use o IPC Main do Electron para chamadas sensíveis.
-- **Tipagem:** Use TypeScript rigoroso. Crie Interfaces para as respostas do ERP e converta-as para o Schema do Galberto.
-- **Resiliência:** Implemente tratamento de erros para quando o cliente estiver sem internet (Queue de sincronização).
-- **Estilo:** Tailwind CSS para UI, seguindo o padrão de cores Zinc/Emerald que já utilizamos.
+**Importante:**
+Não assuma que alguma dessas tabelas serve para armazenar configuração fiscal da empresa.
+Quero que você analise tecnicamente se alguma delas pode ser reaproveitada ou se o correto é criar uma nova tabela específica para configuração fiscal.
 
+---
 
+### 5. DADOS NECESSÁRIOS PARA MONTAR O XML DA NFC-e
 
-### 4. FORMATO DE SAÍDA ESPERADO
-- Código Typescript para o `Main Process` (Electron) lidando com a API.
-- Componente React (Tailwind) para a UI de configuração.
-- Query SQL (SQLite) caso seja necessário alterar ou buscar dados na tabela `integrations`.
+Precisamos garantir armazenamento adequado para os grupos de dados abaixo:
 
-### 5. INPUTS DE REFERÊNCIA
-[COLE AQUI O JSON DA API DO ERP OU O ERRO DO TERMINAL FEDORA]
+#### identificação da nota
+
+* UF
+* ambiente
+* modelo
+* série
+* número
+* data/hora
+* tipo de emissão
+
+#### emitente
+
+* CNPJ
+* IE
+* razão social / nome
+* endereço completo
+* regime tributário compatível com o cadastro fiscal
+
+#### itens
+
+* código do produto
+* descrição
+* unidade
+* quantidade
+* valor unitário
+* valor total
+* NCM
+* demais dados tributários aplicáveis
+
+#### impostos
+
+* CST / CSOSN
+* demais tributos conforme regime tributário e regras fiscais aplicáveis
+
+#### totais
+
+* total dos produtos
+* descontos
+* frete
+* acréscimos
+* total final
+
+#### pagamento
+
+* grupo de pagamento obrigatório para NFC-e
+
+#### consumidor / destinatário
+
+* quando identificado
+
+#### informações adicionais
+
+* quando necessárias
+
+---
+
+### 6. O QUE EU ESPERO DA ANÁLISE
+
+Quero que você faça um levantamento completo e me entregue uma resposta estruturada com:
+
+#### A. Inventário do que já existe
+
+Para cada informação necessária à emissão, diga:
+
+* se já existe no sistema;
+* em qual tabela/campo está;
+* se o dado parece confiável para uso fiscal;
+* se precisa de ajuste.
+
+#### B. O que está faltando
+
+Liste tudo o que ainda não existe e precisa ser:
+
+* armazenado;
+* solicitado ao cliente;
+* derivado/calculado;
+* ou definido por configuração.
+
+#### C. Separação por responsabilidade
+
+Quero que você classifique as informações em grupos:
+
+1. **configuração fiscal da empresa**
+   Ex.: ambiente, CSC, série padrão, regime tributário, dados do emitente, certificado etc.
+
+2. **dados transacionais da venda**
+   Ex.: itens vendidos, quantidades, total, descontos, pagamentos etc.
+
+3. **documento fiscal gerado**
+   Ex.: XML, chave, número, protocolo, status, retorno da SEFAZ etc.
+
+4. **eventos e fila fiscal**
+   Ex.: autorização, rejeição, cancelamento, retry, processamento etc.
+
+#### D. Proposta de modelagem
+
+Quero que você diga objetivamente:
+
+* se alguma tabela existente pode ser reaproveitada para cada responsabilidade;
+* se precisa criar uma nova tabela;
+* qual seria o melhor nome da nova tabela;
+* quais campos ela deveria ter.
+
+---
+
+### 7. REGRAS IMPORTANTES
+
+* não implemente nada ainda sem antes analisar o schema atual;
+* não assuma que `integrations` é o local correto para configuração fiscal;
+* não assuma que `fiscal_documents`, `fiscal_events` ou `fiscal_queue` servem para configuração;
+* primeiro identifique o que já existe no banco e no código;
+* considere também tipos/interfaces TypeScript e formulários já existentes;
+* preserve compatibilidade com a arquitetura offline-first;
+* o objetivo agora **não é montar o XML ainda**, e sim garantir que teremos todos os dados organizados corretamente antes dessa etapa.
+
+---
+
+### 8. FORMATO DA RESPOSTA
+
+Quero que você me devolva:
+
+1. análise das tabelas atuais relevantes;
+2. análise dos campos já disponíveis;
+3. lista do que falta;
+4. proposta de onde armazenar cada grupo de informação;
+5. recomendação final sobre:
+
+   * reutilizar tabela existente
+   * ou criar nova tabela específica para configuração fiscal.
+
+Se possível, organize a resposta em forma de matriz:
+
+* **informação**
+* **já existe?**
+* **onde está hoje?**
+* **serve para uso fiscal?**
+* **falta complementar algo?**
+* **onde deve ficar no modelo final?**
 

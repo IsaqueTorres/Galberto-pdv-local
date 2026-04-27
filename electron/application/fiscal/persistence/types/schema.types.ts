@@ -78,6 +78,43 @@ export interface StoreRecord {
   updatedAt: string;
 }
 
+export interface FiscalSettingsRecord {
+  id: number;
+  storeId: number;
+  provider: 'mock' | 'sefaz-direct' | 'gateway';
+  documentModel: 65;
+  contingencyMode?: 'online' | 'offline-contingency' | 'queue' | null;
+  sefazBaseUrl?: string | null;
+  gatewayBaseUrl?: string | null;
+  gatewayApiKey?: string | null;
+  certificateType: 'A1' | 'A3' | 'UNKNOWN';
+  certificatePath?: string | null;
+  certificatePassword?: string | null;
+  certificateValidUntil?: string | null;
+  caBundlePath?: string | null;
+  tlsValidationMode: 'strict' | 'bypass-homologation-diagnostic';
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertFiscalSettingsInput {
+  storeId: number;
+  provider: FiscalSettingsRecord['provider'];
+  documentModel?: 65;
+  contingencyMode?: FiscalSettingsRecord['contingencyMode'];
+  sefazBaseUrl?: string | null;
+  gatewayBaseUrl?: string | null;
+  gatewayApiKey?: string | null;
+  certificateType?: FiscalSettingsRecord['certificateType'];
+  certificatePath?: string | null;
+  certificatePassword?: string | null;
+  certificateValidUntil?: string | null;
+  caBundlePath?: string | null;
+  tlsValidationMode?: FiscalSettingsRecord['tlsValidationMode'];
+  active?: boolean;
+}
+
 export interface SaleRecord {
   id: number;
   storeId: number;
@@ -203,6 +240,10 @@ export interface CreateStoreInput {
   addressZipCode: string;
   addressCityIbgeCode: string;
   active?: boolean;
+}
+
+export interface UpsertActiveStoreInput extends CreateStoreInput {
+  id?: number;
 }
 
 export interface CreateSaleItemInput {

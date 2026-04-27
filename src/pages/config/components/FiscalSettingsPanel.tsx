@@ -218,7 +218,7 @@ export function FiscalSettingsPanel() {
             <p className="text-xs font-black uppercase tracking-wide text-slate-500">Camada Fiscal NFC-e</p>
             <h2 className="mt-1 text-xl font-black text-slate-950">Ambiente fiscal ativo</h2>
             <p className="mt-1 text-sm font-medium text-slate-600">
-              Dados salvos em `integrations.raw_json` para emissao offline-first.
+              Fonte oficial: stores + fiscal_settings. integrations fica apenas como fallback legado temporario.
             </p>
           </div>
           <button

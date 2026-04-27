@@ -5,10 +5,16 @@ import type {
   FiscalHandlerResult,
   FiscalQueueItem,
   FiscalQueueSummary,
+  FiscalStoreInput,
+  FiscalStoreRecord,
 } from '../types/fiscal-config.types';
 
 type FiscalBridge = {
   getConfig: () => Promise<FiscalConfigView>;
+  getContext?: (storeId?: number) => Promise<unknown>;
+  validateReadiness?: (storeId?: number) => Promise<unknown>;
+  getActiveStore: () => Promise<FiscalStoreRecord | null>;
+  saveActiveStore: (input: FiscalStoreInput) => Promise<FiscalHandlerResult<FiscalStoreRecord>>;
   getCertificateInfo: () => Promise<CertificateInfo>;
   saveConfig: (input: FiscalConfigInput) => Promise<FiscalHandlerResult<FiscalConfigView> | FiscalConfigView>;
   getQueueSummary: () => Promise<FiscalQueueSummary>;
@@ -25,6 +31,26 @@ function fiscalBridge(): FiscalBridge {
 export const fiscalConfigService = {
   async getConfig() {
     return fiscalBridge().getConfig();
+  },
+
+  async getContext(storeId?: number) {
+    return fiscalBridge().getContext?.(storeId);
+  },
+
+  async validateReadiness(storeId?: number) {
+    return fiscalBridge().validateReadiness?.(storeId);
+  },
+
+  async getActiveStore() {
+    return fiscalBridge().getActiveStore();
+  },
+
+  async saveActiveStore(input: FiscalStoreInput) {
+    const result = await fiscalBridge().saveActiveStore(input);
+    if (result.success === false) {
+      throw new Error(result.error.message);
+    }
+    return result.data;
   },
 
   async saveConfig(input: FiscalConfigInput) {

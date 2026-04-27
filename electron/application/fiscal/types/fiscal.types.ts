@@ -38,6 +38,8 @@ export type NfcePaymentMethod = 'DINHEIRO' | 'PIX' | 'DEBITO' | 'CREDITO' | 'VOU
 
 export type FiscalContingencyMode = 'online' | 'offline-contingency' | 'queue';
 
+export type FiscalTlsValidationMode = 'strict' | 'bypass-homologation-diagnostic';
+
 export interface FiscalPartyAddress {
   street: string;
   number: string;
@@ -227,11 +229,15 @@ export interface FiscalProviderConfig {
   environment: FiscalEnvironment;
   contingencyMode: FiscalContingencyMode;
   integrationId: string;
+  certificateType?: 'A1' | 'A3' | 'UNKNOWN' | null;
   sefazBaseUrl?: string | null;
   gatewayBaseUrl?: string | null;
   gatewayApiKey?: string | null;
   certificatePath?: string | null;
   certificatePassword?: string | null;
+  certificateValidUntil?: string | null;
+  caBundlePath?: string | null;
+  tlsValidationMode?: FiscalTlsValidationMode | null;
   cscId?: string | null;
   cscToken?: string | null;
   uf?: string | null;
@@ -244,11 +250,15 @@ export interface FiscalConfigInput {
   provider: FiscalProviderKind;
   environment: FiscalEnvironment;
   contingencyMode: FiscalContingencyMode;
+  certificateType?: 'A1' | 'A3' | 'UNKNOWN' | null;
   sefazBaseUrl?: string | null;
   gatewayBaseUrl?: string | null;
   gatewayApiKey?: string | null;
   certificatePath?: string | null;
   certificatePassword?: string | null;
+  certificateValidUntil?: string | null;
+  caBundlePath?: string | null;
+  tlsValidationMode?: FiscalTlsValidationMode | null;
   cscId?: string | null;
   cscToken?: string | null;
   uf?: string | null;
@@ -261,9 +271,13 @@ export interface FiscalConfigView {
   environment: FiscalEnvironment;
   contingencyMode: FiscalContingencyMode;
   integrationId: string;
+  certificateType?: 'A1' | 'A3' | 'UNKNOWN' | null;
   sefazBaseUrl?: string | null;
   gatewayBaseUrl?: string | null;
   certificatePath?: string | null;
+  certificateValidUntil?: string | null;
+  caBundlePath?: string | null;
+  tlsValidationMode?: FiscalTlsValidationMode | null;
   cscId?: string | null;
   uf?: string | null;
   model?: 65 | null;
@@ -272,6 +286,65 @@ export interface FiscalConfigView {
   hasCertificatePassword: boolean;
   hasCscToken: boolean;
   updatedAt: string;
+}
+
+export interface FiscalContext {
+  storeId: number;
+  provider: FiscalProviderKind;
+  environment: FiscalEnvironment;
+  contingencyMode: FiscalContingencyMode;
+  documentModel: 65;
+  sefazBaseUrl?: string | null;
+  gatewayBaseUrl?: string | null;
+  gatewayApiKey?: string | null;
+  certificateType?: 'A1' | 'A3' | 'UNKNOWN' | null;
+  certificatePath?: string | null;
+  certificatePassword?: string | null;
+  certificateValidUntil?: string | null;
+  caBundlePath?: string | null;
+  tlsValidationMode: FiscalTlsValidationMode;
+  cscId?: string | null;
+  cscToken?: string | null;
+  uf: string;
+  defaultSeries: number;
+  nextNfceNumber: number;
+  emitter: FiscalEmitter;
+  source: {
+    store: 'stores';
+    settings: 'fiscal_settings' | 'integrations-fallback' | 'defaults';
+    legacyFallbackUsed: boolean;
+  };
+  updatedAt: string;
+}
+
+export interface FiscalReadinessIssue {
+  code: string;
+  message: string;
+  field: string;
+  table?: string;
+  severity: 'error' | 'warning';
+}
+
+export interface FiscalReadinessResult {
+  ok: boolean;
+  errors: FiscalReadinessIssue[];
+  warnings: FiscalReadinessIssue[];
+}
+
+export interface NfceXmlBuildInput {
+  fiscalContext: FiscalContext;
+  sale: {
+    id: number;
+    totalAmount: number;
+    discountAmount: number;
+    changeAmount: number;
+    customerName?: string | null;
+    customerDocument?: string | null;
+  };
+  items: NfceItemInput[];
+  payments: NfcePaymentInput[];
+  totals: NfceTotals;
+  taxSnapshots: NfceItemTaxSnapshot[];
 }
 
 export interface PersistedFiscalDocument {

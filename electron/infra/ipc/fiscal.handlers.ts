@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
 
-import { fiscalCertificateService, fiscalConfigService, fiscalQueueService, fiscalService } from '../../application/fiscal';
+import { fiscalCertificateService, fiscalConfigService, fiscalContextService, fiscalQueueService, fiscalReadinessService, fiscalService, fiscalStoreConfigService } from '../../application/fiscal';
 import { normalizeFiscalError } from '../../application/fiscal/errors/FiscalError';
 import { assertCurrentUserPermission } from '../security/permission.guard';
 import { logger } from '../../logger/logger';
@@ -10,6 +10,43 @@ export default function registerFiscalHandlers() {
   ipcMain.handle('fiscal:get-runtime-config', async () => {
     assertCurrentUserPermission('fiscal:manage');
     return fiscalService.getConfig();
+  });
+
+  ipcMain.handle('fiscal:get-context', async (_event, storeId?: number) => {
+    assertCurrentUserPermission('fiscal:manage');
+    return fiscalContextService.resolve(storeId);
+  });
+
+  ipcMain.handle('fiscal:get-active-store', async () => {
+    assertCurrentUserPermission('fiscal:manage');
+    return fiscalStoreConfigService.getActiveStore();
+  });
+
+  ipcMain.handle('fiscal:save-active-store', async (_event, input) => {
+    try {
+      assertCurrentUserPermission('fiscal:manage');
+      return {
+        success: true,
+        data: fiscalStoreConfigService.saveActiveStore(input),
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, 'FISCAL_STORE_SAVE_FAILED');
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable,
+        },
+      };
+    }
+  });
+
+  ipcMain.handle('fiscal:validate-readiness', async (_event, storeId?: number) => {
+    assertCurrentUserPermission('fiscal:manage');
+    const context = fiscalContextService.resolve(storeId);
+    return fiscalReadinessService.validateContext(context);
   });
 
   ipcMain.handle('fiscal:save-runtime-config', async (_event, input) => {
