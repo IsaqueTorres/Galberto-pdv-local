@@ -7,9 +7,11 @@ import type {
   NfceTotals,
 } from '../types/fiscal.types';
 import { nfceAccessKeyService, type NfceAccessKeyResult } from './NfceAccessKeyService';
+import { createHash } from 'node:crypto';
 
 const NFE_NAMESPACE = 'http://www.portalfiscal.inf.br/nfe';
 const PROC_VERSION = 'GalbertoPDV-0.1.0';
+const HOMOLOGATION_FIRST_ITEM_DESCRIPTION = 'NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL';
 
 export type NfceXmlBuilderInput = {
   fiscalContext: FiscalContext;
@@ -44,6 +46,7 @@ export type NfceXmlBuildResult = {
   numericCode: string;
   checkDigit: string;
   xml: string;
+  qrCodeUrl?: string | null;
   validation: {
     ok: boolean;
     errors: FiscalReadinessIssue[];
@@ -63,6 +66,43 @@ function escapeXml(value: string | number | null | undefined): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+function compactXml(xml: string): string {
+  return xml.replace(/>\s+</g, '><').trim();
+}
+
+function normalizeCscId(value: string | null | undefined): string {
+  const digits = onlyDigits(value);
+  if (!digits) return '';
+  return String(Number(digits));
+}
+
+function buildSpNfcePublicUrls(environment: FiscalContext['environment']) {
+  const host = environment === 'production'
+    ? 'www.nfce.fazenda.sp.gov.br'
+    : 'www.homologacao.nfce.fazenda.sp.gov.br';
+
+  return {
+    qrCodeBaseUrl: `https://${host}/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx`,
+    publicConsultUrl: `https://${host}/consulta`,
+  };
+}
+
+function sha1Hex(value: string): string {
+  return createHash('sha1').update(value, 'utf8').digest('hex').toUpperCase();
+}
+
+function buildQrCodeUrl(context: FiscalContext, accessKey: string): string {
+  const cscId = normalizeCscId(context.cscId);
+  const cscToken = String(context.cscToken ?? '').trim();
+  const tpAmb = context.environment === 'production' ? '1' : '2';
+  const qrCodeVersion = '2';
+  const { qrCodeBaseUrl } = buildSpNfcePublicUrls(context.environment);
+  const hash = sha1Hex(`${accessKey}|${qrCodeVersion}|${tpAmb}|${cscId}${cscToken}`);
+  const parameter = `${accessKey}|${qrCodeVersion}|${tpAmb}|${cscId}|${hash}`;
+
+  return `${qrCodeBaseUrl}?p=${parameter}`;
 }
 
 function onlyDigits(value: string | number | null | undefined): string {
@@ -107,11 +147,25 @@ function paymentCode(method: NfcePaymentInput['method']): string {
   return map[method] ?? '99';
 }
 
-function icmsXml(item: NfceItemInput): string {
+function paymentCardXml(code: string): string {
+  if (!['03', '04', '17'].includes(code)) {
+    return '';
+  }
+
+  // 2 = pagamento nao integrado ao sistema de automacao/TEF.
+  return '<card><tpIntegra>2</tpIntegra></card>';
+}
+
+function isSimpleNationalCrt(taxRegimeCode: string | number | null | undefined): boolean {
+  return ['1', '4'].includes(String(taxRegimeCode ?? '').trim());
+}
+
+function icmsXml(item: NfceItemInput, context: FiscalContext): string {
   const origin = escapeXml(item.tax.originCode || '0');
 
-  if (item.tax.csosn) {
-    return `<ICMS><ICMSSN102><orig>${origin}</orig><CSOSN>${escapeXml(item.tax.csosn)}</CSOSN></ICMSSN102></ICMS>`;
+  if (isSimpleNationalCrt(context.emitter.taxRegimeCode)) {
+    const csosn = item.tax.csosn || '102';
+    return `<ICMS><ICMSSN102><orig>${origin}</orig><CSOSN>${escapeXml(csosn)}</CSOSN></ICMSSN102></ICMS>`;
   }
 
   const cst = item.tax.icmsCst || '00';
@@ -141,19 +195,22 @@ function cofinsXml(item: NfceItemInput): string {
   if (['01', '02'].includes(cst)) {
     return `<COFINS><COFINSAliq><CST>${escapeXml(cst)}</CST><vBC>${money(item.totalAmount)}</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSAliq></COFINS>`;
   }
-  return `<COFINS><COFINSOutr><CST>${escapeXml(cst)}</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINSOutr></COFINS>`;
+  return `<COFINS><COFINSOutr><CST>${escapeXml(cst)}</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>`;
 }
 
-function itemXml(item: NfceItemInput, index: number): string {
+function itemXml(item: NfceItemInput, index: number, context: FiscalContext): string {
   const itemCode = item.id || String(index + 1);
   const itemGtin = gtin(item.gtin);
   const discount = item.discountAmount > 0 ? `<vDesc>${money(item.discountAmount)}</vDesc>` : '';
+  const description = context.environment === 'homologation' && index === 0
+    ? HOMOLOGATION_FIRST_ITEM_DESCRIPTION
+    : item.description;
 
   return `<det nItem="${index + 1}">
 <prod>
 <cProd>${escapeXml(itemCode)}</cProd>
 <cEAN>${escapeXml(itemGtin)}</cEAN>
-<xProd>${escapeXml(item.description)}</xProd>
+<xProd>${escapeXml(description)}</xProd>
 <NCM>${escapeXml(onlyDigits(item.tax.ncm))}</NCM>
 ${item.tax.cest ? `<CEST>${escapeXml(onlyDigits(item.tax.cest))}</CEST>` : ''}
 <CFOP>${escapeXml(onlyDigits(item.tax.cfop))}</CFOP>
@@ -169,7 +226,7 @@ ${discount}
 <indTot>1</indTot>
 </prod>
 <imposto>
-${icmsXml(item)}
+${icmsXml(item, context)}
 ${pisXml(item)}
 ${cofinsXml(item)}
 </imposto>
@@ -194,7 +251,7 @@ function paymentsXml(payments: NfcePaymentInput[], changeAmount: number): string
   const details = payments.map((payment) => {
     const code = paymentCode(payment.method);
     const description = code === '99' && payment.description ? `<xPag>${escapeXml(payment.description)}</xPag>` : '';
-    return `<detPag><indPag>0</indPag><tPag>${code}</tPag>${description}<vPag>${money(payment.amount)}</vPag></detPag>`;
+    return `<detPag><indPag>0</indPag><tPag>${code}</tPag>${description}<vPag>${money(payment.amount)}</vPag>${paymentCardXml(code)}</detPag>`;
   }).join('');
 
   return `<pag>${details}${changeAmount > 0 ? `<vTroco>${money(changeAmount)}</vTroco>` : ''}</pag>`;
@@ -212,6 +269,13 @@ ${input.csrtHash ? `<hashCSRT>${escapeXml(input.csrtHash)}</hashCSRT>` : ''}
 </infRespTec>`;
 }
 
+function infNFeSuplXml(context: FiscalContext, accessKey: string): string {
+  const qrCodeUrl = buildQrCodeUrl(context, accessKey);
+  const { publicConsultUrl } = buildSpNfcePublicUrls(context.environment);
+
+  return `<infNFeSupl><qrCode><![CDATA[${qrCodeUrl}]]></qrCode><urlChave>${escapeXml(publicConsultUrl)}</urlChave></infNFeSupl>`;
+}
+
 function validateDocument(model: NfceDocumentModel): NfceXmlBuildResult['validation'] {
   const errors: FiscalReadinessIssue[] = [];
   const warnings: FiscalReadinessIssue[] = [];
@@ -225,11 +289,13 @@ function validateDocument(model: NfceDocumentModel): NfceXmlBuildResult['validat
   if (!input.payments.length) addError('PAYMENTS_REQUIRED', 'NFC-e exige grupo de pagamento.', 'payments');
   if (!onlyDigits(input.fiscalContext.emitter.cnpj)) addError('EMITTER_CNPJ_REQUIRED', 'CNPJ do emitente e obrigatorio.', 'fiscalContext.emitter.cnpj');
   if (!onlyDigits(input.fiscalContext.emitter.address.cityIbgeCode)) addError('CMUNFG_REQUIRED', 'Codigo IBGE do municipio de fato gerador e obrigatorio.', 'fiscalContext.emitter.address.cityIbgeCode');
+  if (!normalizeCscId(input.fiscalContext.cscId)) addError('CSC_ID_REQUIRED', 'CSC ID e obrigatorio para gerar QR Code NFC-e.', 'fiscalContext.cscId');
+  if (!String(input.fiscalContext.cscToken ?? '').trim()) addError('CSC_TOKEN_REQUIRED', 'CSC Token e obrigatorio para gerar QR Code NFC-e.', 'fiscalContext.cscToken');
 
   input.items.forEach((item, index) => {
     if (onlyDigits(item.tax.ncm).length !== 8) addError('ITEM_NCM_INVALID', 'NCM deve ter 8 digitos.', `items[${index}].tax.ncm`);
     if (onlyDigits(item.tax.cfop).length !== 4) addError('ITEM_CFOP_INVALID', 'CFOP deve ter 4 digitos.', `items[${index}].tax.cfop`);
-    if (item.tax.csosn && !['102', '103', '300', '400'].includes(item.tax.csosn)) {
+    if (isSimpleNationalCrt(input.fiscalContext.emitter.taxRegimeCode) && item.tax.csosn && !['102', '103', '300', '400'].includes(item.tax.csosn)) {
       addWarning('ITEM_CSOSN_LIMITED_SUPPORT', `CSOSN ${item.tax.csosn} sera serializado no grupo ICMSSN102; valide a regra fiscal antes de transmitir.`, `items[${index}].tax.csosn`);
     }
   });
@@ -288,7 +354,7 @@ ${emitter.tradeName ? `<xFant>${escapeXml(emitter.tradeName)}</xFant>` : ''}
 <CRT>${escapeXml(emitter.taxRegimeCode)}</CRT>
 </emit>
 ${customerXml(input.customer)}
-${input.items.map(itemXml).join('')}
+${input.items.map((item, index) => itemXml(item, index, context)).join('')}
 <total>
 <ICMSTot>
 <vBC>0.00</vBC>
@@ -317,6 +383,7 @@ ${paymentsXml(input.payments, input.totals.changeAmount)}
 ${input.sale.additionalInfo ? `<infAdic><infCpl>${escapeXml(input.sale.additionalInfo)}</infCpl></infAdic>` : ''}
 ${technicalResponsibleXml(input.technicalResponsible)}
 </infNFe>
+${infNFeSuplXml(context, accessKey.accessKey)}
 </NFe>`;
 }
 
@@ -341,15 +408,19 @@ export class NfceXmlBuilderService {
         numericCode: accessKey.numericCode,
         checkDigit: accessKey.checkDigit,
         xml: '',
+        qrCodeUrl: null,
         validation,
       };
     }
+
+    const qrCodeUrl = buildQrCodeUrl(input.fiscalContext, accessKey.accessKey);
 
     return {
       accessKey: accessKey.accessKey,
       numericCode: accessKey.numericCode,
       checkDigit: accessKey.checkDigit,
-      xml: serializeDocument(model),
+      xml: compactXml(serializeDocument(model)),
+      qrCodeUrl,
       validation,
     };
   }

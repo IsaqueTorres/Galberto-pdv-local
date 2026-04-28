@@ -259,6 +259,10 @@ export class SqliteFiscalRepository implements FiscalRepository {
       UPDATE fiscal_documents
       SET
         status = ?,
+        access_key = COALESCE(?, access_key),
+        protocol = COALESCE(?, protocol),
+        receipt_number = COALESCE(?, receipt_number),
+        qr_code_url = COALESCE(?, qr_code_url),
         issued_datetime = COALESCE(?, issued_datetime),
         xml = COALESCE(?, xml),
         xml_signed = COALESCE(?, xml_signed),
@@ -270,6 +274,10 @@ export class SqliteFiscalRepository implements FiscalRepository {
       WHERE id = ?
     `).run(
       response.status,
+      response.accessKey ?? null,
+      response.protocol ?? null,
+      response.receiptNumber ?? null,
+      response.qrCodeUrl ?? null,
       response.issuedAt ?? null,
       response.xmlBuilt ?? response.xmlSent ?? null,
       response.xmlSigned ?? null,

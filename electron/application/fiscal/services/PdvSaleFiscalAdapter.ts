@@ -101,6 +101,40 @@ function taxValue(primary: string | null | undefined, fallback: string | null | 
   return value || defaultValue;
 }
 
+function isSimpleNationalStore(store: StoreRecord): boolean {
+  return ['1', '4'].includes(String(store.taxRegimeCode ?? '').trim());
+}
+
+function resolveIcmsTaxForStore(store: StoreRecord, item: LegacySaleItemRow) {
+  if (isSimpleNationalStore(store)) {
+    return {
+      csosn: item.csosn ?? '102',
+      icmsCst: item.icms_cst,
+    };
+  }
+
+  return {
+    csosn: null,
+    icmsCst: item.icms_cst ?? '00',
+  };
+}
+
+function nowInSaoPauloIso(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date());
+
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '00';
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}-03:00`;
+}
+
 export class PdvSaleFiscalAdapter {
   private loadActiveCompany(): LegacyCompanyRow | null {
     const company = db.prepare(`
@@ -199,7 +233,7 @@ export class PdvSaleFiscalAdapter {
         COALESCE(NULLIF(vi.cfop, ''), NULLIF(snapshot.cfop, ''), NULLIF(product.cfop, ''), '5102') AS cfop,
         COALESCE(vi.cest, snapshot.cest, product.cest) AS cest,
         COALESCE(NULLIF(snapshot.origin_code, ''), NULLIF(product.origin, ''), '0') AS origin_code,
-        COALESCE(NULLIF(snapshot.csosn, ''), '102') AS csosn,
+        NULLIF(snapshot.csosn, '') AS csosn,
         snapshot.icms_cst,
         COALESCE(NULLIF(snapshot.pis_cst, ''), '49') AS pis_cst,
         COALESCE(NULLIF(snapshot.cofins_cst, ''), '49') AS cofins_cst
@@ -244,6 +278,8 @@ export class PdvSaleFiscalAdapter {
       description: payment.descricao_outro ?? null,
     }));
 
+    const fiscalIssuedAt = nowInSaoPauloIso();
+
     return {
       saleId: sale.id,
       companyId: store.id,
@@ -252,7 +288,7 @@ export class PdvSaleFiscalAdapter {
       environment: mapEnvironment(sale.ambiente),
       paymentMethod: resolvePrimaryPaymentMethod(payments),
       payments,
-      issuedAt: sale.data_emissao,
+      issuedAt: fiscalIssuedAt,
       emitter: {
         cnpj: store.cnpj,
         stateRegistration: store.stateRegistration,
@@ -273,27 +309,30 @@ export class PdvSaleFiscalAdapter {
         name: sale.cliente_nome ?? undefined,
         cpfCnpj: sale.cpf_cliente ?? sale.cnpj_cliente ?? null,
       },
-      items: items.map((item) => ({
-        id: item.produto_id ?? item.codigo_produto,
-        description: item.nome_produto,
-        unit: item.unidade_comercial,
-        quantity: Number(item.quantidade_comercial ?? 0),
-        unitPrice: Number(item.valor_unitario_comercial ?? 0),
-        grossAmount: Number(item.valor_bruto ?? 0),
-        discountAmount: Number(item.valor_desconto ?? 0),
-        totalAmount: Number(item.subtotal ?? 0),
-        gtin: item.gtin,
-        tax: {
-          ncm: item.ncm ?? '',
-          cfop: taxValue(item.cfop, null, '5102'),
-          cest: item.cest,
-          originCode: taxValue(item.origin_code, null, '0'),
-          csosn: item.csosn ?? '102',
-          icmsCst: item.icms_cst,
-          pisCst: item.pis_cst ?? '49',
-          cofinsCst: item.cofins_cst ?? '49',
-        },
-      })),
+      items: items.map((item) => {
+        const icmsTax = resolveIcmsTaxForStore(store, item);
+        return {
+          id: item.produto_id ?? item.codigo_produto,
+          description: item.nome_produto,
+          unit: item.unidade_comercial,
+          quantity: Number(item.quantidade_comercial ?? 0),
+          unitPrice: Number(item.valor_unitario_comercial ?? 0),
+          grossAmount: Number(item.valor_bruto ?? 0),
+          discountAmount: Number(item.valor_desconto ?? 0),
+          totalAmount: Number(item.subtotal ?? 0),
+          gtin: item.gtin,
+          tax: {
+            ncm: item.ncm ?? '',
+            cfop: taxValue(item.cfop, null, '5102'),
+            cest: item.cest,
+            originCode: taxValue(item.origin_code, null, '0'),
+            csosn: icmsTax.csosn,
+            icmsCst: icmsTax.icmsCst,
+            pisCst: item.pis_cst ?? '49',
+            cofinsCst: item.cofins_cst ?? '49',
+          },
+        };
+      }),
       totals: {
         productsAmount: Number(sale.valor_produtos ?? 0),
         discountAmount: Number(sale.valor_desconto ?? 0),
@@ -328,30 +367,33 @@ export class PdvSaleFiscalAdapter {
         totalAmount: Number(sale.valor_total ?? 0),
         changeAmount: Number(sale.valor_troco ?? 0),
         externalReference,
-        items: items.map((item) => ({
-          productId: item.produto_id ?? item.codigo_produto,
-          description: item.nome_produto,
-          unit: item.unidade_comercial,
-          quantity: Number(item.quantidade_comercial ?? 0),
-          unitPrice: Number(item.valor_unitario_comercial ?? 0),
-          grossAmount: Number(item.valor_bruto ?? 0),
-          discountAmount: Number(item.valor_desconto ?? 0),
-          totalAmount: Number(item.subtotal ?? 0),
-          ncm: item.ncm ?? null,
-          cfop: taxValue(item.cfop, null, '5102'),
-          cest: item.cest,
-          originCode: taxValue(item.origin_code, null, '0'),
-          taxSnapshot: {
-            ncm: item.ncm,
+        items: items.map((item) => {
+          const icmsTax = resolveIcmsTaxForStore(store, item);
+          return {
+            productId: item.produto_id ?? item.codigo_produto,
+            description: item.nome_produto,
+            unit: item.unidade_comercial,
+            quantity: Number(item.quantidade_comercial ?? 0),
+            unitPrice: Number(item.valor_unitario_comercial ?? 0),
+            grossAmount: Number(item.valor_bruto ?? 0),
+            discountAmount: Number(item.valor_desconto ?? 0),
+            totalAmount: Number(item.subtotal ?? 0),
+            ncm: item.ncm ?? null,
             cfop: taxValue(item.cfop, null, '5102'),
             cest: item.cest,
             originCode: taxValue(item.origin_code, null, '0'),
-            csosn: item.csosn ?? '102',
-            icmsCst: item.icms_cst,
-            pisCst: item.pis_cst ?? '49',
-            cofinsCst: item.cofins_cst ?? '49',
-          },
-        })),
+            taxSnapshot: {
+              ncm: item.ncm,
+              cfop: taxValue(item.cfop, null, '5102'),
+              cest: item.cest,
+              originCode: taxValue(item.origin_code, null, '0'),
+              csosn: icmsTax.csosn,
+              icmsCst: icmsTax.icmsCst,
+              pisCst: item.pis_cst ?? '49',
+              cofinsCst: item.cofins_cst ?? '49',
+            },
+          };
+        }),
         payments: payments.map((payment) => ({
           method: mapPaymentMethod(payment.tpag),
           amount: Number(payment.valor ?? 0),

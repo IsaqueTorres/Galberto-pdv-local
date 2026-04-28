@@ -80,7 +80,7 @@ export class IssueFiscalDocumentForSaleService {
 
     fiscalEventRepository.create({
       fiscalDocumentId: document.id,
-      eventType: FiscalEventTypes.AUTHORIZATION_REQUESTED,
+      eventType: FiscalEventTypes.XML_GENERATED,
       payload: {
         legacySaleId,
         action: 'GENERATE_XML_ONLY',
@@ -125,6 +125,19 @@ export class IssueFiscalDocumentForSaleService {
       const document = fiscalDocumentRepository.findBySaleId(mirrored.mirroredSale.sale.id);
 
       if (document) {
+        if (response.xmlSigned) {
+          fiscalEventRepository.create({
+            fiscalDocumentId: document.id,
+            eventType: FiscalEventTypes.XML_SIGNED,
+            payload: {
+              legacySaleId,
+              accessKey: response.accessKey,
+              provider: response.provider,
+            },
+            status: FiscalDocumentStatuses.SIGNING,
+          });
+        }
+
         fiscalEventRepository.create({
           fiscalDocumentId: document.id,
           eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
@@ -132,6 +145,26 @@ export class IssueFiscalDocumentForSaleService {
           response,
           status: response.status,
         });
+
+        if (response.status === 'AUTHORIZED') {
+          fiscalEventRepository.create({
+            fiscalDocumentId: document.id,
+            eventType: FiscalEventTypes.AUTHORIZED,
+            payload: { legacySaleId, accessKey: response.accessKey },
+            response,
+            status: FiscalDocumentStatuses.AUTHORIZED,
+          });
+        }
+
+        if (response.status === 'REJECTED') {
+          fiscalEventRepository.create({
+            fiscalDocumentId: document.id,
+            eventType: FiscalEventTypes.REJECTED,
+            payload: { legacySaleId, accessKey: response.accessKey },
+            response,
+            status: FiscalDocumentStatuses.REJECTED,
+          });
+        }
       }
 
       return {
@@ -160,7 +193,7 @@ export class IssueFiscalDocumentForSaleService {
       if (document) {
         fiscalEventRepository.create({
           fiscalDocumentId: document.id,
-          eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
+          eventType: FiscalEventTypes.PROVIDER_ERROR,
           payload: { legacySaleId },
           response: {
             status: 'ERROR',

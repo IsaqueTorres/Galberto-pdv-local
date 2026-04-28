@@ -95,6 +95,9 @@ export class DefaultFiscalService implements FiscalService {
       accessKey: builtXml.accessKey,
       xmlBuilt: builtXml.xml,
     });
+    request.accessKey = builtXml.accessKey;
+    request.xmlBuilt = builtXml.xml;
+    request.qrCodeUrl = builtXml.qrCodeUrl ?? null;
 
     try {
       await this.certificateService.assertCertificateReady(config);
@@ -105,6 +108,7 @@ export class DefaultFiscalService implements FiscalService {
         issuedAt: response.issuedAt ?? request.issuedAt,
         accessKey: builtXml.accessKey,
         xmlBuilt: response.xmlBuilt ?? builtXml.xml,
+        qrCodeUrl: response.qrCodeUrl ?? builtXml.qrCodeUrl ?? null,
       };
 
       if (enrichedResponse.status === 'AUTHORIZED') {

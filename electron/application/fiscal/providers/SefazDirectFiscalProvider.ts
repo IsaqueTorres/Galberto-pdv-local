@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as https from 'node:https';
+import { logger } from '../../../logger/logger';
 import type { FiscalProvider } from '../contracts/FiscalProvider';
 import { FiscalError } from '../errors/FiscalError';
 import type {
@@ -12,6 +13,7 @@ import type {
   FiscalProviderConfig,
   FiscalStatusServiceTestResult,
 } from '../types/fiscal.types';
+import { nfceXmlSigningService } from '../services/NfceXmlSigningService';
 
 const SP_NFCE_ENDPOINTS = {
   homologation: {
@@ -34,15 +36,7 @@ function resolveUf(config: FiscalProviderConfig): string {
   return (config.uf ?? 'SP').trim().toUpperCase();
 }
 
-function resolveStatusServicoUrl(config: FiscalProviderConfig): string {
-  const configuredBaseUrl = config.sefazBaseUrl?.trim();
-  if (configuredBaseUrl) {
-    if (configuredBaseUrl.endsWith('.asmx')) {
-      return configuredBaseUrl;
-    }
-    return `${configuredBaseUrl.replace(/\/+$/, '')}/NFeStatusServico4.asmx`;
-  }
-
+function assertSpNfce(config: FiscalProviderConfig): void {
   const uf = resolveUf(config);
   if (uf !== 'SP') {
     throw new FiscalError({
@@ -51,8 +45,53 @@ function resolveStatusServicoUrl(config: FiscalProviderConfig): string {
       category: 'CONFIGURATION',
     });
   }
+}
 
-  return SP_NFCE_ENDPOINTS[config.environment].statusServico;
+function resolveSpNfceServiceUrl(
+  config: FiscalProviderConfig,
+  service: 'statusServico' | 'autorizacao' | 'retAutorizacao'
+): string {
+  assertSpNfce(config);
+  const configuredBaseUrl = config.sefazBaseUrl?.trim();
+  const defaultUrl = SP_NFCE_ENDPOINTS[config.environment][service];
+
+  if (!configuredBaseUrl) {
+    return defaultUrl;
+  }
+
+  let normalized = configuredBaseUrl
+    .replace(/homologacao\.nfe\.fazenda\.sp\.gov\.br/gi, 'homologacao.nfce.fazenda.sp.gov.br')
+    .replace(/\/\/nfe\.fazenda\.sp\.gov\.br/gi, '//nfce.fazenda.sp.gov.br');
+
+  if (!/nfce\.fazenda\.sp\.gov\.br/i.test(normalized)) {
+    return defaultUrl;
+  }
+
+  const serviceFileByName = {
+    statusServico: 'NFeStatusServico4.asmx',
+    autorizacao: 'NFeAutorizacao4.asmx',
+    retAutorizacao: 'NFeRetAutorizacao4.asmx',
+  } as const;
+
+  if (normalized.endsWith('.asmx')) {
+    normalized = normalized.replace(/NFe(?:StatusServico|Autorizacao|RetAutorizacao)4\.asmx$/i, serviceFileByName[service]);
+    normalized = normalized.replace(/nfe(?:statusservico|autorizacao|retautorizacao)4\.asmx$/i, serviceFileByName[service]);
+    return normalized;
+  }
+
+  return `${normalized.replace(/\/+$/, '')}/${serviceFileByName[service]}`;
+}
+
+function resolveStatusServicoUrl(config: FiscalProviderConfig): string {
+  return resolveSpNfceServiceUrl(config, 'statusServico');
+}
+
+function resolveAutorizacaoUrl(config: FiscalProviderConfig): string {
+  return resolveSpNfceServiceUrl(config, 'autorizacao');
+}
+
+function resolveRetAutorizacaoUrl(config: FiscalProviderConfig): string {
+  return resolveSpNfceServiceUrl(config, 'retAutorizacao');
 }
 
 function validateSefazDirectConfig(config: FiscalProviderConfig) {
@@ -154,6 +193,14 @@ type SoapPostResult = {
   warning: string | null;
 };
 
+type SoapAction = 'status' | 'autorizacao' | 'retAutorizacao';
+
+const SOAP_ACTIONS: Record<SoapAction, string> = {
+  status: 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF',
+  autorizacao: 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4/nfeAutorizacaoLote',
+  retAutorizacao: 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4/nfeRetAutorizacaoLote',
+};
+
 function isLocalIssuerCertificateError(error: unknown): boolean {
   if (!(error instanceof FiscalError)) return false;
   const details = error.details as { originalCode?: string; originalMessage?: string } | undefined;
@@ -169,10 +216,12 @@ function postSoapWithCertificate(
   url: string,
   body: string,
   config: FiscalProviderConfig,
-  options: { allowUnauthorizedServerCertificate?: boolean } = {}
+  options: { allowUnauthorizedServerCertificate?: boolean; action?: SoapAction; serviceName?: string } = {}
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const startedAt = Date.now();
+    const soapAction = SOAP_ACTIONS[options.action ?? 'status'];
+    const serviceName = options.serviceName ?? 'SEFAZ';
     const request = https.request(
       url,
       {
@@ -182,9 +231,9 @@ function postSoapWithCertificate(
         ca: config.caBundlePath ? fs.readFileSync(config.caBundlePath) : undefined,
         rejectUnauthorized: options.allowUnauthorizedServerCertificate !== true,
         headers: {
-          'content-type': 'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF"',
+          'content-type': `application/soap+xml; charset=utf-8; action="${soapAction}"`,
           'content-length': Buffer.byteLength(body, 'utf8'),
-          soapaction: 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF',
+          soapaction: soapAction,
         },
         timeout: 30_000,
       },
@@ -196,9 +245,13 @@ function postSoapWithCertificate(
         });
         response.on('end', () => {
           if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+            const sefazMessage = data
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
             reject(new FiscalError({
               code: 'SEFAZ_HTTP_ERROR',
-              message: `SEFAZ retornou HTTP ${response.statusCode ?? 'sem status'} em ${Date.now() - startedAt}ms.`,
+              message: `SEFAZ retornou HTTP ${response.statusCode ?? 'sem status'} em ${Date.now() - startedAt}ms.${sefazMessage ? ` Corpo: ${sefazMessage.slice(0, 500)}` : ''}`,
               category: 'SEFAZ',
               retryable: true,
               details: {
@@ -217,7 +270,7 @@ function postSoapWithCertificate(
     );
 
     request.on('timeout', () => {
-      request.destroy(new Error('Timeout de 30000ms ao chamar NFeStatusServico4.'));
+      request.destroy(new Error(`Timeout de 30000ms ao chamar ${serviceName}.`));
     });
 
     request.on('error', (error) => {
@@ -243,7 +296,10 @@ function postSoapWithCertificate(
 async function postStatusServicoSoap(url: string, body: string, config: FiscalProviderConfig): Promise<SoapPostResult> {
   try {
     return {
-      rawResponse: await postSoapWithCertificate(url, body, config),
+      rawResponse: await postSoapWithCertificate(url, body, config, {
+        action: 'status',
+        serviceName: 'NFeStatusServico4',
+      }),
       tlsValidation: 'verified',
       warning: null,
     };
@@ -251,6 +307,8 @@ async function postStatusServicoSoap(url: string, body: string, config: FiscalPr
     if (config.environment === 'homologation' && isLocalIssuerCertificateError(error)) {
       return {
         rawResponse: await postSoapWithCertificate(url, body, config, {
+          action: 'status',
+          serviceName: 'NFeStatusServico4',
           allowUnauthorizedServerCertificate: true,
         }),
         tlsValidation: 'bypassed-homologation',
@@ -262,20 +320,215 @@ async function postStatusServicoSoap(url: string, body: string, config: FiscalPr
   }
 }
 
+async function postSefazSoap(url: string, body: string, config: FiscalProviderConfig, action: SoapAction): Promise<SoapPostResult> {
+  const serviceName = action === 'autorizacao'
+    ? 'NFeAutorizacao4'
+    : action === 'retAutorizacao'
+      ? 'NFeRetAutorizacao4'
+      : 'NFeStatusServico4';
+
+  try {
+    return {
+      rawResponse: await postSoapWithCertificate(url, body, config, { action, serviceName }),
+      tlsValidation: 'verified',
+      warning: null,
+    };
+  } catch (error) {
+    if (config.environment === 'homologation' && isLocalIssuerCertificateError(error)) {
+      return {
+        rawResponse: await postSoapWithCertificate(url, body, config, {
+          action,
+          serviceName,
+          allowUnauthorizedServerCertificate: true,
+        }),
+        tlsValidation: 'bypassed-homologation',
+        warning: 'A cadeia TLS do servidor da SEFAZ nao foi validada pelo Node/Electron. A chamada foi repetida em homologacao sem validar o certificado do servidor.',
+      };
+    }
+    throw error;
+  }
+}
+
 function extractXmlTag(xml: string, tagName: string): string | null {
   const match = xml.match(new RegExp(`<[^:>]*:?${tagName}[^>]*>([^<]*)</[^:>]*:?${tagName}>`, 'i'));
   return match?.[1]?.trim() ?? null;
 }
 
+function extractXmlBlock(xml: string, tagName: string): string | null {
+  const match = xml.match(new RegExp(`(<[^:>]*:?${tagName}[^>]*>[\\s\\S]*?</[^:>]*:?${tagName}>)`, 'i'));
+  return match?.[1] ?? null;
+}
+
+function stripXmlDeclaration(xml: string): string {
+  return xml.replace(/^\s*<\?xml[^?]*\?>\s*/i, '').trim();
+}
+
+function compactXml(xml: string): string {
+  return xml.replace(/>\s+</g, '><').trim();
+}
+
+function buildAutorizacaoSoap(signedXml: string): string {
+  const idLote = String(Date.now()).slice(-15).padStart(15, '0');
+  const nfeXml = compactXml(stripXmlDeclaration(signedXml));
+  return compactXml(`<?xml version="1.0" encoding="utf-8"?>` +
+    `<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">` +
+    `<soap12:Body>` +
+    `<nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4">` +
+    `<enviNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">` +
+    `<idLote>${idLote}</idLote>` +
+    `<indSinc>1</indSinc>` +
+    nfeXml +
+    `</enviNFe>` +
+    `</nfeDadosMsg>` +
+    `</soap12:Body>` +
+    `</soap12:Envelope>`);
+}
+
+function buildAuthorizedXml(signedXml: string, protocolXml: string | null): string | null {
+  if (!protocolXml) return null;
+  return compactXml(`<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">${stripXmlDeclaration(signedXml)}${protocolXml}</nfeProc>`);
+}
+
+function buildRetAutorizacaoSoap(config: FiscalProviderConfig, receiptNumber: string): string {
+  const tpAmb = config.environment === 'production' ? '1' : '2';
+  return compactXml(`<?xml version="1.0" encoding="utf-8"?>` +
+    `<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">` +
+    `<soap12:Body>` +
+    `<nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4">` +
+    `<consReciNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">` +
+    `<tpAmb>${tpAmb}</tpAmb>` +
+    `<nRec>${receiptNumber}</nRec>` +
+    `</consReciNFe>` +
+    `</nfeDadosMsg>` +
+    `</soap12:Body>` +
+    `</soap12:Envelope>`);
+}
+
+function mapAuthorizationResponse(
+  request: AuthorizeNfceRequest,
+  signedXml: string,
+  rawResponse: string,
+  providerWarning?: string | null
+): AuthorizeNfceResponse {
+  const loteStatus = extractXmlTag(rawResponse, 'cStat');
+  const statusMessage = extractXmlTag(rawResponse, 'xMotivo') ?? 'Resposta de autorizacao recebida sem xMotivo.';
+  const protocolXml = extractXmlBlock(rawResponse, 'protNFe');
+  const protocolStatus = protocolXml ? extractXmlTag(protocolXml, 'cStat') : null;
+  const effectiveStatus = protocolStatus ?? loteStatus;
+  const effectiveMessage = protocolXml ? (extractXmlTag(protocolXml, 'xMotivo') ?? statusMessage) : statusMessage;
+  const receiptNumber = extractXmlTag(rawResponse, 'nRec');
+  const protocol = protocolXml ? extractXmlTag(protocolXml, 'nProt') : null;
+  const authorizedAt = protocolXml ? extractXmlTag(protocolXml, 'dhRecbto') : null;
+  const accessKey = protocolXml ? extractXmlTag(protocolXml, 'chNFe') : request.accessKey;
+
+  if (effectiveStatus === '100' || effectiveStatus === '150') {
+    const xmlAuthorized = buildAuthorizedXml(signedXml, protocolXml);
+    return {
+      status: 'AUTHORIZED',
+      provider: 'sefaz-direct',
+      accessKey,
+      protocol,
+      receiptNumber,
+      statusCode: effectiveStatus,
+      statusMessage: effectiveMessage,
+      authorizedAt,
+      issuedAt: request.issuedAt,
+      xmlBuilt: request.xmlBuilt ?? null,
+      xmlSigned: signedXml,
+      xmlSent: signedXml,
+      xmlAuthorized,
+      qrCodeUrl: request.qrCodeUrl ?? null,
+      rawResponse: { rawResponse, warning: providerWarning ?? null },
+    };
+  }
+
+  if (loteStatus === '103' || loteStatus === '105') {
+    return {
+      status: 'PENDING',
+      provider: 'sefaz-direct',
+      accessKey: request.accessKey,
+      receiptNumber,
+      statusCode: loteStatus,
+      statusMessage,
+      issuedAt: request.issuedAt,
+      xmlBuilt: request.xmlBuilt ?? null,
+      xmlSigned: signedXml,
+      xmlSent: signedXml,
+      qrCodeUrl: request.qrCodeUrl ?? null,
+      rawResponse: { rawResponse, warning: providerWarning ?? null },
+    };
+  }
+
+  return {
+    status: 'REJECTED',
+    provider: 'sefaz-direct',
+    accessKey: request.accessKey,
+    receiptNumber,
+    protocol,
+    statusCode: effectiveStatus ?? 'SEFAZ_AUTHORIZATION_REJECTED',
+    statusMessage: effectiveMessage,
+    issuedAt: request.issuedAt,
+    xmlBuilt: request.xmlBuilt ?? null,
+    xmlSigned: signedXml,
+    xmlSent: signedXml,
+    qrCodeUrl: request.qrCodeUrl ?? null,
+    rawResponse: { rawResponse, warning: providerWarning ?? null },
+  };
+}
+
 export class SefazDirectFiscalProvider implements FiscalProvider {
   readonly providerId = 'sefaz-direct' as const;
 
-  async authorizeNfce(_request: AuthorizeNfceRequest, _config: FiscalProviderConfig): Promise<AuthorizeNfceResponse> {
-    throw new FiscalError({
-      code: 'SEFAZ_DIRECT_NOT_IMPLEMENTED',
-      message: 'Provider SEFAZ direto ainda não implementado.',
-      category: 'PROVIDER',
-    });
+  async authorizeNfce(request: AuthorizeNfceRequest, config: FiscalProviderConfig): Promise<AuthorizeNfceResponse> {
+    validateSefazDirectConfig(config);
+    if (!request.xmlBuilt) {
+      throw new FiscalError({
+        code: 'NFCE_XML_NOT_BUILT',
+        message: 'XML NFC-e gerado nao foi informado ao provider SEFAZ.',
+        category: 'VALIDATION',
+      });
+    }
+
+    const url = resolveAutorizacaoUrl(config);
+    const startedAt = Date.now();
+    logger.info(`[SEFAZ_DIRECT] Iniciando autorizacao NFC-e. saleId=${request.saleId} accessKey=${request.accessKey ?? 'sem-chave'} ambiente=${config.environment} endpoint=${url}`);
+
+    logger.info(`[SEFAZ_DIRECT] Assinando XML NFC-e. saleId=${request.saleId}`);
+    const signedXml = nfceXmlSigningService.sign(request.xmlBuilt, config);
+    logger.info(`[SEFAZ_DIRECT] XML NFC-e assinado. saleId=${request.saleId}`);
+
+    const soapRequest = buildAutorizacaoSoap(signedXml);
+    logger.info(`[SEFAZ_DIRECT] Enviando lote NFeAutorizacao4. saleId=${request.saleId} endpoint=${url}`);
+    const response = await postSefazSoap(url, soapRequest, config, 'autorizacao');
+    const result = mapAuthorizationResponse(request, signedXml, response.rawResponse, response.warning);
+    logger.info(`[SEFAZ_DIRECT] Resposta NFeAutorizacao4. saleId=${request.saleId} cStat=${result.statusCode ?? 'sem-cStat'} status=${result.status} motivo=${result.statusMessage}`);
+
+    if (result.status === 'PENDING' && result.receiptNumber) {
+      const retUrl = resolveRetAutorizacaoUrl(config);
+      const retRequest = buildRetAutorizacaoSoap(config, result.receiptNumber);
+      logger.info(`[SEFAZ_DIRECT] Consultando NFeRetAutorizacao4. saleId=${request.saleId} nRec=${result.receiptNumber} endpoint=${retUrl}`);
+      const retResponse = await postSefazSoap(retUrl, retRequest, config, 'retAutorizacao');
+      const retResult = mapAuthorizationResponse(request, signedXml, retResponse.rawResponse, retResponse.warning ?? response.warning);
+      logger.info(`[SEFAZ_DIRECT] Resposta NFeRetAutorizacao4. saleId=${request.saleId} cStat=${retResult.statusCode ?? 'sem-cStat'} status=${retResult.status} motivo=${retResult.statusMessage}`);
+      return {
+        ...retResult,
+        rawResponse: {
+          ...(typeof retResult.rawResponse === 'object' && retResult.rawResponse ? retResult.rawResponse : {}),
+          authorizationUrl: url,
+          retAutorizacaoUrl: retUrl,
+          responseTimeMs: Date.now() - startedAt,
+        },
+      };
+    }
+
+    return {
+      ...result,
+      rawResponse: {
+        ...(typeof result.rawResponse === 'object' && result.rawResponse ? result.rawResponse : {}),
+        url,
+        responseTimeMs: Date.now() - startedAt,
+      },
+    };
   }
 
   async cancelNfce(_request: CancelNfceRequest, _config: FiscalProviderConfig): Promise<CancelNfceResponse> {

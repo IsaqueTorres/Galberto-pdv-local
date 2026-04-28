@@ -1291,14 +1291,14 @@ export function salvarVendaPendente(
       db.prepare(`
         UPDATE vendas
         SET
-          data_movimento = datetime('now'),
+          data_movimento = datetime('now', 'localtime'),
           status = ?,
           cpf_cliente = ?,
           cliente_nome = ?,
           valor_produtos = ?,
           valor_desconto = ?,
           valor_total = ?,
-          updated_at = datetime('now')
+          updated_at = datetime('now', 'localtime')
         WHERE id = ?
       `).run(
         status,
@@ -1315,7 +1315,7 @@ export function salvarVendaPendente(
           data_emissao, data_movimento, status, natureza_operacao, modelo_documento,
           serie, numero, ambiente, cliente_nome, cpf_cliente, valor_produtos, valor_desconto, valor_total
         )
-        VALUES(datetime('now'), datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES(datetime('now', 'localtime'), datetime('now', 'localtime'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         status,
         saleDefaults.naturezaOperacao,
@@ -1461,7 +1461,7 @@ export function cancelarVenda(venda: any) {
           data_emissao, data_movimento, status, natureza_operacao, modelo_documento,
           serie, numero, ambiente, valor_produtos, valor_desconto, valor_total
         )
-        VALUES(datetime('now'), datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES(datetime('now', 'localtime'), datetime('now', 'localtime'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .run(
         'CANCELADA',

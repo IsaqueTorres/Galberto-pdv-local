@@ -12,7 +12,7 @@ import * as path$1 from "node:path";
 import path__default from "node:path";
 import Database from "better-sqlite3";
 import { execFileSync } from "node:child_process";
-import crypto$1, { X509Certificate } from "node:crypto";
+import crypto$1, { X509Certificate, createHash, createSign } from "node:crypto";
 import * as https from "node:https";
 import http from "node:http";
 import { URL as URL$1 } from "node:url";
@@ -47,7 +47,7 @@ function dim(text) {
   return supportsAnsi() ? `\x1B[2m${text}\x1B[0m` : text;
 }
 const LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
-function parse(src) {
+function parse$1(src) {
   const obj = {};
   let lines = src.toString();
   lines = lines.replace(/\r\n?/mg, "\n");
@@ -319,7 +319,7 @@ const DotenvModule = {
   _parseVault,
   config,
   decrypt,
-  parse,
+  parse: parse$1,
   populate
 };
 main.exports.configDotenv = DotenvModule.configDotenv;
@@ -2243,14 +2243,14 @@ function salvarVendaPendente(venda, status, vendaId) {
       db.prepare(`
         UPDATE vendas
         SET
-          data_movimento = datetime('now'),
+          data_movimento = datetime('now', 'localtime'),
           status = ?,
           cpf_cliente = ?,
           cliente_nome = ?,
           valor_produtos = ?,
           valor_desconto = ?,
           valor_total = ?,
-          updated_at = datetime('now')
+          updated_at = datetime('now', 'localtime')
         WHERE id = ?
       `).run(
         status,
@@ -2267,7 +2267,7 @@ function salvarVendaPendente(venda, status, vendaId) {
           data_emissao, data_movimento, status, natureza_operacao, modelo_documento,
           serie, numero, ambiente, cliente_nome, cpf_cliente, valor_produtos, valor_desconto, valor_total
         )
-        VALUES(datetime('now'), datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES(datetime('now', 'localtime'), datetime('now', 'localtime'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         status,
         saleDefaults.naturezaOperacao,
@@ -2380,7 +2380,7 @@ function cancelarVenda(venda) {
           data_emissao, data_movimento, status, natureza_operacao, modelo_documento,
           serie, numero, ambiente, valor_produtos, valor_desconto, valor_total
         )
-        VALUES(datetime('now'), datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES(datetime('now', 'localtime'), datetime('now', 'localtime'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
       "CANCELADA",
       saleDefaults.naturezaOperacao,
@@ -4478,6 +4478,10 @@ class SqliteFiscalRepository {
       UPDATE fiscal_documents
       SET
         status = ?,
+        access_key = COALESCE(?, access_key),
+        protocol = COALESCE(?, protocol),
+        receipt_number = COALESCE(?, receipt_number),
+        qr_code_url = COALESCE(?, qr_code_url),
         issued_datetime = COALESCE(?, issued_datetime),
         xml = COALESCE(?, xml),
         xml_signed = COALESCE(?, xml_signed),
@@ -4489,6 +4493,10 @@ class SqliteFiscalRepository {
       WHERE id = ?
     `).run(
       response.status,
+      response.accessKey ?? null,
+      response.protocol ?? null,
+      response.receiptNumber ?? null,
+      response.qrCodeUrl ?? null,
       response.issuedAt ?? null,
       response.xmlBuilt ?? response.xmlSent ?? null,
       response.xmlSigned ?? null,
@@ -4886,6 +4894,4669 @@ class MockFiscalProvider {
     };
   }
 }
+var dom$1 = {};
+var conventions$2 = {};
+function find$1(list, predicate, ac) {
+  if (ac === void 0) {
+    ac = Array.prototype;
+  }
+  if (list && typeof ac.find === "function") {
+    return ac.find.call(list, predicate);
+  }
+  for (var i = 0; i < list.length; i++) {
+    if (Object.prototype.hasOwnProperty.call(list, i)) {
+      var item = list[i];
+      if (predicate.call(void 0, item, i, list)) {
+        return item;
+      }
+    }
+  }
+}
+function freeze(object, oc) {
+  if (oc === void 0) {
+    oc = Object;
+  }
+  return oc && typeof oc.freeze === "function" ? oc.freeze(object) : object;
+}
+function assign(target, source) {
+  if (target === null || typeof target !== "object") {
+    throw new TypeError("target is not an object");
+  }
+  for (var key in source) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      target[key] = source[key];
+    }
+  }
+  return target;
+}
+var MIME_TYPE = freeze({
+  /**
+   * `text/html`, the only mime type that triggers treating an XML document as HTML.
+   *
+   * @see DOMParser.SupportedType.isHTML
+   * @see https://www.iana.org/assignments/media-types/text/html IANA MimeType registration
+   * @see https://en.wikipedia.org/wiki/HTML Wikipedia
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/DOMParser/parseFromString MDN
+   * @see https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html#dom-domparser-parsefromstring WHATWG HTML Spec
+   */
+  HTML: "text/html",
+  /**
+   * Helper method to check a mime type if it indicates an HTML document
+   *
+   * @param {string} [value]
+   * @returns {boolean}
+   *
+   * @see https://www.iana.org/assignments/media-types/text/html IANA MimeType registration
+   * @see https://en.wikipedia.org/wiki/HTML Wikipedia
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/DOMParser/parseFromString MDN
+   * @see https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html#dom-domparser-parsefromstring 	 */
+  isHTML: function(value) {
+    return value === MIME_TYPE.HTML;
+  },
+  /**
+   * `application/xml`, the standard mime type for XML documents.
+   *
+   * @see https://www.iana.org/assignments/media-types/application/xml IANA MimeType registration
+   * @see https://tools.ietf.org/html/rfc7303#section-9.1 RFC 7303
+   * @see https://en.wikipedia.org/wiki/XML_and_MIME Wikipedia
+   */
+  XML_APPLICATION: "application/xml",
+  /**
+   * `text/html`, an alias for `application/xml`.
+   *
+   * @see https://tools.ietf.org/html/rfc7303#section-9.2 RFC 7303
+   * @see https://www.iana.org/assignments/media-types/text/xml IANA MimeType registration
+   * @see https://en.wikipedia.org/wiki/XML_and_MIME Wikipedia
+   */
+  XML_TEXT: "text/xml",
+  /**
+   * `application/xhtml+xml`, indicates an XML document that has the default HTML namespace,
+   * but is parsed as an XML document.
+   *
+   * @see https://www.iana.org/assignments/media-types/application/xhtml+xml IANA MimeType registration
+   * @see https://dom.spec.whatwg.org/#dom-domimplementation-createdocument WHATWG DOM Spec
+   * @see https://en.wikipedia.org/wiki/XHTML Wikipedia
+   */
+  XML_XHTML_APPLICATION: "application/xhtml+xml",
+  /**
+   * `image/svg+xml`,
+   *
+   * @see https://www.iana.org/assignments/media-types/image/svg+xml IANA MimeType registration
+   * @see https://www.w3.org/TR/SVG11/ W3C SVG 1.1
+   * @see https://en.wikipedia.org/wiki/Scalable_Vector_Graphics Wikipedia
+   */
+  XML_SVG_IMAGE: "image/svg+xml"
+});
+var NAMESPACE$3 = freeze({
+  /**
+   * The XHTML namespace.
+   *
+   * @see http://www.w3.org/1999/xhtml
+   */
+  HTML: "http://www.w3.org/1999/xhtml",
+  /**
+   * Checks if `uri` equals `NAMESPACE.HTML`.
+   *
+   * @param {string} [uri]
+   *
+   * @see NAMESPACE.HTML
+   */
+  isHTML: function(uri) {
+    return uri === NAMESPACE$3.HTML;
+  },
+  /**
+   * The SVG namespace.
+   *
+   * @see http://www.w3.org/2000/svg
+   */
+  SVG: "http://www.w3.org/2000/svg",
+  /**
+   * The `xml:` namespace.
+   *
+   * @see http://www.w3.org/XML/1998/namespace
+   */
+  XML: "http://www.w3.org/XML/1998/namespace",
+  /**
+   * The `xmlns:` namespace
+   *
+   * @see https://www.w3.org/2000/xmlns/
+   */
+  XMLNS: "http://www.w3.org/2000/xmlns/"
+});
+conventions$2.assign = assign;
+conventions$2.find = find$1;
+conventions$2.freeze = freeze;
+conventions$2.MIME_TYPE = MIME_TYPE;
+conventions$2.NAMESPACE = NAMESPACE$3;
+var conventions$1 = conventions$2;
+var find = conventions$1.find;
+var NAMESPACE$2 = conventions$1.NAMESPACE;
+function notEmptyString(input) {
+  return input !== "";
+}
+function splitOnASCIIWhitespace(input) {
+  return input ? input.split(/[\t\n\f\r ]+/).filter(notEmptyString) : [];
+}
+function orderedSetReducer(current, element) {
+  if (!current.hasOwnProperty(element)) {
+    current[element] = true;
+  }
+  return current;
+}
+function toOrderedSet(input) {
+  if (!input) return [];
+  var list = splitOnASCIIWhitespace(input);
+  return Object.keys(list.reduce(orderedSetReducer, {}));
+}
+function arrayIncludes(list) {
+  return function(element) {
+    return list && list.indexOf(element) !== -1;
+  };
+}
+function copy(src, dest) {
+  for (var p in src) {
+    if (Object.prototype.hasOwnProperty.call(src, p)) {
+      dest[p] = src[p];
+    }
+  }
+}
+function _extends(Class, Super) {
+  var pt = Class.prototype;
+  if (!(pt instanceof Super)) {
+    let t = function() {
+    };
+    t.prototype = Super.prototype;
+    t = new t();
+    copy(pt, t);
+    Class.prototype = pt = t;
+  }
+  if (pt.constructor != Class) {
+    if (typeof Class != "function") {
+      console.error("unknown Class:" + Class);
+    }
+    pt.constructor = Class;
+  }
+}
+var NodeType = {};
+var ELEMENT_NODE = NodeType.ELEMENT_NODE = 1;
+var ATTRIBUTE_NODE = NodeType.ATTRIBUTE_NODE = 2;
+var TEXT_NODE = NodeType.TEXT_NODE = 3;
+var CDATA_SECTION_NODE = NodeType.CDATA_SECTION_NODE = 4;
+var ENTITY_REFERENCE_NODE = NodeType.ENTITY_REFERENCE_NODE = 5;
+var ENTITY_NODE = NodeType.ENTITY_NODE = 6;
+var PROCESSING_INSTRUCTION_NODE = NodeType.PROCESSING_INSTRUCTION_NODE = 7;
+var COMMENT_NODE = NodeType.COMMENT_NODE = 8;
+var DOCUMENT_NODE = NodeType.DOCUMENT_NODE = 9;
+var DOCUMENT_TYPE_NODE = NodeType.DOCUMENT_TYPE_NODE = 10;
+var DOCUMENT_FRAGMENT_NODE = NodeType.DOCUMENT_FRAGMENT_NODE = 11;
+var NOTATION_NODE = NodeType.NOTATION_NODE = 12;
+var ExceptionCode = {};
+var ExceptionMessage = {};
+ExceptionCode.INDEX_SIZE_ERR = (ExceptionMessage[1] = "Index size error", 1);
+ExceptionCode.DOMSTRING_SIZE_ERR = (ExceptionMessage[2] = "DOMString size error", 2);
+var HIERARCHY_REQUEST_ERR = ExceptionCode.HIERARCHY_REQUEST_ERR = (ExceptionMessage[3] = "Hierarchy request error", 3);
+ExceptionCode.WRONG_DOCUMENT_ERR = (ExceptionMessage[4] = "Wrong document", 4);
+ExceptionCode.INVALID_CHARACTER_ERR = (ExceptionMessage[5] = "Invalid character", 5);
+ExceptionCode.NO_DATA_ALLOWED_ERR = (ExceptionMessage[6] = "No data allowed", 6);
+ExceptionCode.NO_MODIFICATION_ALLOWED_ERR = (ExceptionMessage[7] = "No modification allowed", 7);
+var NOT_FOUND_ERR = ExceptionCode.NOT_FOUND_ERR = (ExceptionMessage[8] = "Not found", 8);
+ExceptionCode.NOT_SUPPORTED_ERR = (ExceptionMessage[9] = "Not supported", 9);
+var INUSE_ATTRIBUTE_ERR = ExceptionCode.INUSE_ATTRIBUTE_ERR = (ExceptionMessage[10] = "Attribute in use", 10);
+ExceptionCode.INVALID_STATE_ERR = (ExceptionMessage[11] = "Invalid state", 11);
+ExceptionCode.SYNTAX_ERR = (ExceptionMessage[12] = "Syntax error", 12);
+ExceptionCode.INVALID_MODIFICATION_ERR = (ExceptionMessage[13] = "Invalid modification", 13);
+ExceptionCode.NAMESPACE_ERR = (ExceptionMessage[14] = "Invalid namespace", 14);
+ExceptionCode.INVALID_ACCESS_ERR = (ExceptionMessage[15] = "Invalid access", 15);
+function DOMException(code, message) {
+  if (message instanceof Error) {
+    var error = message;
+  } else {
+    error = this;
+    Error.call(this, ExceptionMessage[code]);
+    this.message = ExceptionMessage[code];
+    if (Error.captureStackTrace) Error.captureStackTrace(this, DOMException);
+  }
+  error.code = code;
+  if (message) this.message = this.message + ": " + message;
+  return error;
+}
+DOMException.prototype = Error.prototype;
+copy(ExceptionCode, DOMException);
+function NodeList() {
+}
+NodeList.prototype = {
+  /**
+   * The number of nodes in the list. The range of valid child node indices is 0 to length-1 inclusive.
+   * @standard level1
+   */
+  length: 0,
+  /**
+   * Returns the indexth item in the collection. If index is greater than or equal to the number of nodes in the list, this returns null.
+   * @standard level1
+   * @param index  unsigned long
+   *   Index into the collection.
+   * @return Node
+   * 	The node at the indexth position in the NodeList, or null if that is not a valid index.
+   */
+  item: function(index) {
+    return index >= 0 && index < this.length ? this[index] : null;
+  },
+  toString: function(isHTML, nodeFilter) {
+    for (var buf = [], i = 0; i < this.length; i++) {
+      serializeToString(this[i], buf, isHTML, nodeFilter);
+    }
+    return buf.join("");
+  },
+  /**
+   * @private
+   * @param {function (Node):boolean} predicate
+   * @returns {Node[]}
+   */
+  filter: function(predicate) {
+    return Array.prototype.filter.call(this, predicate);
+  },
+  /**
+   * @private
+   * @param {Node} item
+   * @returns {number}
+   */
+  indexOf: function(item) {
+    return Array.prototype.indexOf.call(this, item);
+  }
+};
+function LiveNodeList(node, refresh) {
+  this._node = node;
+  this._refresh = refresh;
+  _updateLiveList(this);
+}
+function _updateLiveList(list) {
+  var inc = list._node._inc || list._node.ownerDocument._inc;
+  if (list._inc !== inc) {
+    var ls = list._refresh(list._node);
+    __set__(list, "length", ls.length);
+    if (!list.$$length || ls.length < list.$$length) {
+      for (var i = ls.length; i in list; i++) {
+        if (Object.prototype.hasOwnProperty.call(list, i)) {
+          delete list[i];
+        }
+      }
+    }
+    copy(ls, list);
+    list._inc = inc;
+  }
+}
+LiveNodeList.prototype.item = function(i) {
+  _updateLiveList(this);
+  return this[i] || null;
+};
+_extends(LiveNodeList, NodeList);
+function NamedNodeMap() {
+}
+function _findNodeIndex(list, node) {
+  var i = list.length;
+  while (i--) {
+    if (list[i] === node) {
+      return i;
+    }
+  }
+}
+function _addNamedNode(el, list, newAttr, oldAttr) {
+  if (oldAttr) {
+    list[_findNodeIndex(list, oldAttr)] = newAttr;
+  } else {
+    list[list.length++] = newAttr;
+  }
+  if (el) {
+    newAttr.ownerElement = el;
+    var doc = el.ownerDocument;
+    if (doc) {
+      oldAttr && _onRemoveAttribute(doc, el, oldAttr);
+      _onAddAttribute(doc, el, newAttr);
+    }
+  }
+}
+function _removeNamedNode(el, list, attr) {
+  var i = _findNodeIndex(list, attr);
+  if (i >= 0) {
+    var lastIndex = list.length - 1;
+    while (i < lastIndex) {
+      list[i] = list[++i];
+    }
+    list.length = lastIndex;
+    if (el) {
+      var doc = el.ownerDocument;
+      if (doc) {
+        _onRemoveAttribute(doc, el, attr);
+        attr.ownerElement = null;
+      }
+    }
+  } else {
+    throw new DOMException(NOT_FOUND_ERR, new Error(el.tagName + "@" + attr));
+  }
+}
+NamedNodeMap.prototype = {
+  length: 0,
+  item: NodeList.prototype.item,
+  getNamedItem: function(key) {
+    var i = this.length;
+    while (i--) {
+      var attr = this[i];
+      if (attr.nodeName == key) {
+        return attr;
+      }
+    }
+  },
+  setNamedItem: function(attr) {
+    var el = attr.ownerElement;
+    if (el && el != this._ownerElement) {
+      throw new DOMException(INUSE_ATTRIBUTE_ERR);
+    }
+    var oldAttr = this.getNamedItem(attr.nodeName);
+    _addNamedNode(this._ownerElement, this, attr, oldAttr);
+    return oldAttr;
+  },
+  /* returns Node */
+  setNamedItemNS: function(attr) {
+    var el = attr.ownerElement, oldAttr;
+    if (el && el != this._ownerElement) {
+      throw new DOMException(INUSE_ATTRIBUTE_ERR);
+    }
+    oldAttr = this.getNamedItemNS(attr.namespaceURI, attr.localName);
+    _addNamedNode(this._ownerElement, this, attr, oldAttr);
+    return oldAttr;
+  },
+  /* returns Node */
+  removeNamedItem: function(key) {
+    var attr = this.getNamedItem(key);
+    _removeNamedNode(this._ownerElement, this, attr);
+    return attr;
+  },
+  // raises: NOT_FOUND_ERR,NO_MODIFICATION_ALLOWED_ERR
+  //for level2
+  removeNamedItemNS: function(namespaceURI, localName2) {
+    var attr = this.getNamedItemNS(namespaceURI, localName2);
+    _removeNamedNode(this._ownerElement, this, attr);
+    return attr;
+  },
+  getNamedItemNS: function(namespaceURI, localName2) {
+    var i = this.length;
+    while (i--) {
+      var node = this[i];
+      if (node.localName == localName2 && node.namespaceURI == namespaceURI) {
+        return node;
+      }
+    }
+    return null;
+  }
+};
+function DOMImplementation$1() {
+}
+DOMImplementation$1.prototype = {
+  /**
+   * The DOMImplementation.hasFeature() method returns a Boolean flag indicating if a given feature is supported.
+   * The different implementations fairly diverged in what kind of features were reported.
+   * The latest version of the spec settled to force this method to always return true, where the functionality was accurate and in use.
+   *
+   * @deprecated It is deprecated and modern browsers return true in all cases.
+   *
+   * @param {string} feature
+   * @param {string} [version]
+   * @returns {boolean} always true
+   *
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/DOMImplementation/hasFeature MDN
+   * @see https://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html#ID-5CED94D7 DOM Level 1 Core
+   * @see https://dom.spec.whatwg.org/#dom-domimplementation-hasfeature DOM Living Standard
+   */
+  hasFeature: function(feature, version) {
+    return true;
+  },
+  /**
+   * Creates an XML Document object of the specified type with its document element.
+   *
+   * __It behaves slightly different from the description in the living standard__:
+   * - There is no interface/class `XMLDocument`, it returns a `Document` instance.
+   * - `contentType`, `encoding`, `mode`, `origin`, `url` fields are currently not declared.
+   * - this implementation is not validating names or qualified names
+   *   (when parsing XML strings, the SAX parser takes care of that)
+   *
+   * @param {string|null} namespaceURI
+   * @param {string} qualifiedName
+   * @param {DocumentType=null} doctype
+   * @returns {Document}
+   *
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/DOMImplementation/createDocument MDN
+   * @see https://www.w3.org/TR/DOM-Level-2-Core/core.html#Level-2-Core-DOM-createDocument DOM Level 2 Core (initial)
+   * @see https://dom.spec.whatwg.org/#dom-domimplementation-createdocument  DOM Level 2 Core
+   *
+   * @see https://dom.spec.whatwg.org/#validate-and-extract DOM: Validate and extract
+   * @see https://www.w3.org/TR/xml/#NT-NameStartChar XML Spec: Names
+   * @see https://www.w3.org/TR/xml-names/#ns-qualnames XML Namespaces: Qualified names
+   */
+  createDocument: function(namespaceURI, qualifiedName, doctype) {
+    var doc = new Document();
+    doc.implementation = this;
+    doc.childNodes = new NodeList();
+    doc.doctype = doctype || null;
+    if (doctype) {
+      doc.appendChild(doctype);
+    }
+    if (qualifiedName) {
+      var root = doc.createElementNS(namespaceURI, qualifiedName);
+      doc.appendChild(root);
+    }
+    return doc;
+  },
+  /**
+   * Returns a doctype, with the given `qualifiedName`, `publicId`, and `systemId`.
+   *
+   * __This behavior is slightly different from the in the specs__:
+   * - this implementation is not validating names or qualified names
+   *   (when parsing XML strings, the SAX parser takes care of that)
+   *
+   * @param {string} qualifiedName
+   * @param {string} [publicId]
+   * @param {string} [systemId]
+   * @returns {DocumentType} which can either be used with `DOMImplementation.createDocument` upon document creation
+   * 				  or can be put into the document via methods like `Node.insertBefore()` or `Node.replaceChild()`
+   *
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/DOMImplementation/createDocumentType MDN
+   * @see https://www.w3.org/TR/DOM-Level-2-Core/core.html#Level-2-Core-DOM-createDocType DOM Level 2 Core
+   * @see https://dom.spec.whatwg.org/#dom-domimplementation-createdocumenttype DOM Living Standard
+   *
+   * @see https://dom.spec.whatwg.org/#validate-and-extract DOM: Validate and extract
+   * @see https://www.w3.org/TR/xml/#NT-NameStartChar XML Spec: Names
+   * @see https://www.w3.org/TR/xml-names/#ns-qualnames XML Namespaces: Qualified names
+   */
+  createDocumentType: function(qualifiedName, publicId, systemId) {
+    var node = new DocumentType();
+    node.name = qualifiedName;
+    node.nodeName = qualifiedName;
+    node.publicId = publicId || "";
+    node.systemId = systemId || "";
+    return node;
+  }
+};
+function Node() {
+}
+Node.prototype = {
+  firstChild: null,
+  lastChild: null,
+  previousSibling: null,
+  nextSibling: null,
+  attributes: null,
+  parentNode: null,
+  childNodes: null,
+  ownerDocument: null,
+  nodeValue: null,
+  namespaceURI: null,
+  prefix: null,
+  localName: null,
+  // Modified in DOM Level 2:
+  insertBefore: function(newChild, refChild) {
+    return _insertBefore(this, newChild, refChild);
+  },
+  replaceChild: function(newChild, oldChild) {
+    _insertBefore(this, newChild, oldChild, assertPreReplacementValidityInDocument);
+    if (oldChild) {
+      this.removeChild(oldChild);
+    }
+  },
+  removeChild: function(oldChild) {
+    return _removeChild(this, oldChild);
+  },
+  appendChild: function(newChild) {
+    return this.insertBefore(newChild, null);
+  },
+  hasChildNodes: function() {
+    return this.firstChild != null;
+  },
+  cloneNode: function(deep) {
+    return cloneNode(this.ownerDocument || this, this, deep);
+  },
+  // Modified in DOM Level 2:
+  normalize: function() {
+    var child = this.firstChild;
+    while (child) {
+      var next = child.nextSibling;
+      if (next && next.nodeType == TEXT_NODE && child.nodeType == TEXT_NODE) {
+        this.removeChild(next);
+        child.appendData(next.data);
+      } else {
+        child.normalize();
+        child = next;
+      }
+    }
+  },
+  // Introduced in DOM Level 2:
+  isSupported: function(feature, version) {
+    return this.ownerDocument.implementation.hasFeature(feature, version);
+  },
+  // Introduced in DOM Level 2:
+  hasAttributes: function() {
+    return this.attributes.length > 0;
+  },
+  /**
+   * Look up the prefix associated to the given namespace URI, starting from this node.
+   * **The default namespace declarations are ignored by this method.**
+   * See Namespace Prefix Lookup for details on the algorithm used by this method.
+   *
+   * _Note: The implementation seems to be incomplete when compared to the algorithm described in the specs._
+   *
+   * @param {string | null} namespaceURI
+   * @returns {string | null}
+   * @see https://www.w3.org/TR/DOM-Level-3-Core/core.html#Node3-lookupNamespacePrefix
+   * @see https://www.w3.org/TR/DOM-Level-3-Core/namespaces-algorithms.html#lookupNamespacePrefixAlgo
+   * @see https://dom.spec.whatwg.org/#dom-node-lookupprefix
+   * @see https://github.com/xmldom/xmldom/issues/322
+   */
+  lookupPrefix: function(namespaceURI) {
+    var el = this;
+    while (el) {
+      var map = el._nsMap;
+      if (map) {
+        for (var n in map) {
+          if (Object.prototype.hasOwnProperty.call(map, n) && map[n] === namespaceURI) {
+            return n;
+          }
+        }
+      }
+      el = el.nodeType == ATTRIBUTE_NODE ? el.ownerDocument : el.parentNode;
+    }
+    return null;
+  },
+  // Introduced in DOM Level 3:
+  lookupNamespaceURI: function(prefix) {
+    var el = this;
+    while (el) {
+      var map = el._nsMap;
+      if (map) {
+        if (Object.prototype.hasOwnProperty.call(map, prefix)) {
+          return map[prefix];
+        }
+      }
+      el = el.nodeType == ATTRIBUTE_NODE ? el.ownerDocument : el.parentNode;
+    }
+    return null;
+  },
+  // Introduced in DOM Level 3:
+  isDefaultNamespace: function(namespaceURI) {
+    var prefix = this.lookupPrefix(namespaceURI);
+    return prefix == null;
+  }
+};
+function _xmlEncoder(c) {
+  return c == "<" && "&lt;" || c == ">" && "&gt;" || c == "&" && "&amp;" || c == '"' && "&quot;" || "&#" + c.charCodeAt() + ";";
+}
+copy(NodeType, Node);
+copy(NodeType, Node.prototype);
+function _visitNode(node, callback) {
+  if (callback(node)) {
+    return true;
+  }
+  if (node = node.firstChild) {
+    do {
+      if (_visitNode(node, callback)) {
+        return true;
+      }
+    } while (node = node.nextSibling);
+  }
+}
+function Document() {
+  this.ownerDocument = this;
+}
+function _onAddAttribute(doc, el, newAttr) {
+  doc && doc._inc++;
+  var ns = newAttr.namespaceURI;
+  if (ns === NAMESPACE$2.XMLNS) {
+    el._nsMap[newAttr.prefix ? newAttr.localName : ""] = newAttr.value;
+  }
+}
+function _onRemoveAttribute(doc, el, newAttr, remove) {
+  doc && doc._inc++;
+  var ns = newAttr.namespaceURI;
+  if (ns === NAMESPACE$2.XMLNS) {
+    delete el._nsMap[newAttr.prefix ? newAttr.localName : ""];
+  }
+}
+function _onUpdateChild(doc, el, newChild) {
+  if (doc && doc._inc) {
+    doc._inc++;
+    var cs = el.childNodes;
+    if (newChild) {
+      cs[cs.length++] = newChild;
+    } else {
+      var child = el.firstChild;
+      var i = 0;
+      while (child) {
+        cs[i++] = child;
+        child = child.nextSibling;
+      }
+      cs.length = i;
+      delete cs[cs.length];
+    }
+  }
+}
+function _removeChild(parentNode, child) {
+  var previous = child.previousSibling;
+  var next = child.nextSibling;
+  if (previous) {
+    previous.nextSibling = next;
+  } else {
+    parentNode.firstChild = next;
+  }
+  if (next) {
+    next.previousSibling = previous;
+  } else {
+    parentNode.lastChild = previous;
+  }
+  child.parentNode = null;
+  child.previousSibling = null;
+  child.nextSibling = null;
+  _onUpdateChild(parentNode.ownerDocument, parentNode);
+  return child;
+}
+function hasValidParentNodeType(node) {
+  return node && (node.nodeType === Node.DOCUMENT_NODE || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE || node.nodeType === Node.ELEMENT_NODE);
+}
+function hasInsertableNodeType(node) {
+  return node && (isElementNode(node) || isTextNode(node) || isDocTypeNode(node) || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE || node.nodeType === Node.COMMENT_NODE || node.nodeType === Node.PROCESSING_INSTRUCTION_NODE);
+}
+function isDocTypeNode(node) {
+  return node && node.nodeType === Node.DOCUMENT_TYPE_NODE;
+}
+function isElementNode(node) {
+  return node && node.nodeType === Node.ELEMENT_NODE;
+}
+function isTextNode(node) {
+  return node && node.nodeType === Node.TEXT_NODE;
+}
+function isElementInsertionPossible(doc, child) {
+  var parentChildNodes = doc.childNodes || [];
+  if (find(parentChildNodes, isElementNode) || isDocTypeNode(child)) {
+    return false;
+  }
+  var docTypeNode = find(parentChildNodes, isDocTypeNode);
+  return !(child && docTypeNode && parentChildNodes.indexOf(docTypeNode) > parentChildNodes.indexOf(child));
+}
+function isElementReplacementPossible(doc, child) {
+  var parentChildNodes = doc.childNodes || [];
+  function hasElementChildThatIsNotChild(node) {
+    return isElementNode(node) && node !== child;
+  }
+  if (find(parentChildNodes, hasElementChildThatIsNotChild)) {
+    return false;
+  }
+  var docTypeNode = find(parentChildNodes, isDocTypeNode);
+  return !(child && docTypeNode && parentChildNodes.indexOf(docTypeNode) > parentChildNodes.indexOf(child));
+}
+function assertPreInsertionValidity1to5(parent, node, child) {
+  if (!hasValidParentNodeType(parent)) {
+    throw new DOMException(HIERARCHY_REQUEST_ERR, "Unexpected parent node type " + parent.nodeType);
+  }
+  if (child && child.parentNode !== parent) {
+    throw new DOMException(NOT_FOUND_ERR, "child not in parent");
+  }
+  if (
+    // 4. If `node` is not a DocumentFragment, DocumentType, Element, or CharacterData node, then throw a "HierarchyRequestError" DOMException.
+    !hasInsertableNodeType(node) || // 5. If either `node` is a Text node and `parent` is a document,
+    // the sax parser currently adds top level text nodes, this will be fixed in 0.9.0
+    // || (node.nodeType === Node.TEXT_NODE && parent.nodeType === Node.DOCUMENT_NODE)
+    // or `node` is a doctype and `parent` is not a document, then throw a "HierarchyRequestError" DOMException.
+    isDocTypeNode(node) && parent.nodeType !== Node.DOCUMENT_NODE
+  ) {
+    throw new DOMException(
+      HIERARCHY_REQUEST_ERR,
+      "Unexpected node type " + node.nodeType + " for parent node type " + parent.nodeType
+    );
+  }
+}
+function assertPreInsertionValidityInDocument(parent, node, child) {
+  var parentChildNodes = parent.childNodes || [];
+  var nodeChildNodes = node.childNodes || [];
+  if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+    var nodeChildElements = nodeChildNodes.filter(isElementNode);
+    if (nodeChildElements.length > 1 || find(nodeChildNodes, isTextNode)) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "More than one element or text in fragment");
+    }
+    if (nodeChildElements.length === 1 && !isElementInsertionPossible(parent, child)) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "Element in fragment can not be inserted before doctype");
+    }
+  }
+  if (isElementNode(node)) {
+    if (!isElementInsertionPossible(parent, child)) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "Only one element can be added and only after doctype");
+    }
+  }
+  if (isDocTypeNode(node)) {
+    if (find(parentChildNodes, isDocTypeNode)) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "Only one doctype is allowed");
+    }
+    var parentElementChild = find(parentChildNodes, isElementNode);
+    if (child && parentChildNodes.indexOf(parentElementChild) < parentChildNodes.indexOf(child)) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "Doctype can only be inserted before an element");
+    }
+    if (!child && parentElementChild) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "Doctype can not be appended since element is present");
+    }
+  }
+}
+function assertPreReplacementValidityInDocument(parent, node, child) {
+  var parentChildNodes = parent.childNodes || [];
+  var nodeChildNodes = node.childNodes || [];
+  if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+    var nodeChildElements = nodeChildNodes.filter(isElementNode);
+    if (nodeChildElements.length > 1 || find(nodeChildNodes, isTextNode)) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "More than one element or text in fragment");
+    }
+    if (nodeChildElements.length === 1 && !isElementReplacementPossible(parent, child)) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "Element in fragment can not be inserted before doctype");
+    }
+  }
+  if (isElementNode(node)) {
+    if (!isElementReplacementPossible(parent, child)) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "Only one element can be added and only after doctype");
+    }
+  }
+  if (isDocTypeNode(node)) {
+    let hasDoctypeChildThatIsNotChild = function(node2) {
+      return isDocTypeNode(node2) && node2 !== child;
+    };
+    if (find(parentChildNodes, hasDoctypeChildThatIsNotChild)) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "Only one doctype is allowed");
+    }
+    var parentElementChild = find(parentChildNodes, isElementNode);
+    if (child && parentChildNodes.indexOf(parentElementChild) < parentChildNodes.indexOf(child)) {
+      throw new DOMException(HIERARCHY_REQUEST_ERR, "Doctype can only be inserted before an element");
+    }
+  }
+}
+function _insertBefore(parent, node, child, _inDocumentAssertion) {
+  assertPreInsertionValidity1to5(parent, node, child);
+  if (parent.nodeType === Node.DOCUMENT_NODE) {
+    (_inDocumentAssertion || assertPreInsertionValidityInDocument)(parent, node, child);
+  }
+  var cp = node.parentNode;
+  if (cp) {
+    cp.removeChild(node);
+  }
+  if (node.nodeType === DOCUMENT_FRAGMENT_NODE) {
+    var newFirst = node.firstChild;
+    if (newFirst == null) {
+      return node;
+    }
+    var newLast = node.lastChild;
+  } else {
+    newFirst = newLast = node;
+  }
+  var pre = child ? child.previousSibling : parent.lastChild;
+  newFirst.previousSibling = pre;
+  newLast.nextSibling = child;
+  if (pre) {
+    pre.nextSibling = newFirst;
+  } else {
+    parent.firstChild = newFirst;
+  }
+  if (child == null) {
+    parent.lastChild = newLast;
+  } else {
+    child.previousSibling = newLast;
+  }
+  do {
+    newFirst.parentNode = parent;
+    var targetDoc = parent.ownerDocument || parent;
+    _updateOwnerDocument(newFirst, targetDoc);
+  } while (newFirst !== newLast && (newFirst = newFirst.nextSibling));
+  _onUpdateChild(parent.ownerDocument || parent, parent);
+  if (node.nodeType == DOCUMENT_FRAGMENT_NODE) {
+    node.firstChild = node.lastChild = null;
+  }
+  return node;
+}
+function _updateOwnerDocument(node, newOwnerDocument) {
+  if (node.ownerDocument === newOwnerDocument) {
+    return;
+  }
+  node.ownerDocument = newOwnerDocument;
+  if (node.nodeType === ELEMENT_NODE && node.attributes) {
+    for (var i = 0; i < node.attributes.length; i++) {
+      var attr = node.attributes.item(i);
+      if (attr) {
+        attr.ownerDocument = newOwnerDocument;
+      }
+    }
+  }
+  var child = node.firstChild;
+  while (child) {
+    _updateOwnerDocument(child, newOwnerDocument);
+    child = child.nextSibling;
+  }
+}
+function _appendSingleChild(parentNode, newChild) {
+  if (newChild.parentNode) {
+    newChild.parentNode.removeChild(newChild);
+  }
+  newChild.parentNode = parentNode;
+  newChild.previousSibling = parentNode.lastChild;
+  newChild.nextSibling = null;
+  if (newChild.previousSibling) {
+    newChild.previousSibling.nextSibling = newChild;
+  } else {
+    parentNode.firstChild = newChild;
+  }
+  parentNode.lastChild = newChild;
+  _onUpdateChild(parentNode.ownerDocument, parentNode, newChild);
+  var targetDoc = parentNode.ownerDocument || parentNode;
+  _updateOwnerDocument(newChild, targetDoc);
+  return newChild;
+}
+Document.prototype = {
+  //implementation : null,
+  nodeName: "#document",
+  nodeType: DOCUMENT_NODE,
+  /**
+   * The DocumentType node of the document.
+   *
+   * @readonly
+   * @type DocumentType
+   */
+  doctype: null,
+  documentElement: null,
+  _inc: 1,
+  insertBefore: function(newChild, refChild) {
+    if (newChild.nodeType == DOCUMENT_FRAGMENT_NODE) {
+      var child = newChild.firstChild;
+      while (child) {
+        var next = child.nextSibling;
+        this.insertBefore(child, refChild);
+        child = next;
+      }
+      return newChild;
+    }
+    _insertBefore(this, newChild, refChild);
+    _updateOwnerDocument(newChild, this);
+    if (this.documentElement === null && newChild.nodeType === ELEMENT_NODE) {
+      this.documentElement = newChild;
+    }
+    return newChild;
+  },
+  removeChild: function(oldChild) {
+    if (this.documentElement == oldChild) {
+      this.documentElement = null;
+    }
+    return _removeChild(this, oldChild);
+  },
+  replaceChild: function(newChild, oldChild) {
+    _insertBefore(this, newChild, oldChild, assertPreReplacementValidityInDocument);
+    _updateOwnerDocument(newChild, this);
+    if (oldChild) {
+      this.removeChild(oldChild);
+    }
+    if (isElementNode(newChild)) {
+      this.documentElement = newChild;
+    }
+  },
+  // Introduced in DOM Level 2:
+  importNode: function(importedNode, deep) {
+    return importNode(this, importedNode, deep);
+  },
+  // Introduced in DOM Level 2:
+  getElementById: function(id) {
+    var rtv = null;
+    _visitNode(this.documentElement, function(node) {
+      if (node.nodeType == ELEMENT_NODE) {
+        if (node.getAttribute("id") == id) {
+          rtv = node;
+          return true;
+        }
+      }
+    });
+    return rtv;
+  },
+  /**
+   * The `getElementsByClassName` method of `Document` interface returns an array-like object
+   * of all child elements which have **all** of the given class name(s).
+   *
+   * Returns an empty list if `classeNames` is an empty string or only contains HTML white space characters.
+   *
+   *
+   * Warning: This is a live LiveNodeList.
+   * Changes in the DOM will reflect in the array as the changes occur.
+   * If an element selected by this array no longer qualifies for the selector,
+   * it will automatically be removed. Be aware of this for iteration purposes.
+   *
+   * @param {string} classNames is a string representing the class name(s) to match; multiple class names are separated by (ASCII-)whitespace
+   *
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/Document/getElementsByClassName
+   * @see https://dom.spec.whatwg.org/#concept-getelementsbyclassname
+   */
+  getElementsByClassName: function(classNames) {
+    var classNamesSet = toOrderedSet(classNames);
+    return new LiveNodeList(this, function(base) {
+      var ls = [];
+      if (classNamesSet.length > 0) {
+        _visitNode(base.documentElement, function(node) {
+          if (node !== base && node.nodeType === ELEMENT_NODE) {
+            var nodeClassNames = node.getAttribute("class");
+            if (nodeClassNames) {
+              var matches = classNames === nodeClassNames;
+              if (!matches) {
+                var nodeClassNamesSet = toOrderedSet(nodeClassNames);
+                matches = classNamesSet.every(arrayIncludes(nodeClassNamesSet));
+              }
+              if (matches) {
+                ls.push(node);
+              }
+            }
+          }
+        });
+      }
+      return ls;
+    });
+  },
+  //document factory method:
+  createElement: function(tagName) {
+    var node = new Element();
+    node.ownerDocument = this;
+    node.nodeName = tagName;
+    node.tagName = tagName;
+    node.localName = tagName;
+    node.childNodes = new NodeList();
+    var attrs = node.attributes = new NamedNodeMap();
+    attrs._ownerElement = node;
+    return node;
+  },
+  createDocumentFragment: function() {
+    var node = new DocumentFragment();
+    node.ownerDocument = this;
+    node.childNodes = new NodeList();
+    return node;
+  },
+  createTextNode: function(data) {
+    var node = new Text();
+    node.ownerDocument = this;
+    node.appendData(data);
+    return node;
+  },
+  createComment: function(data) {
+    var node = new Comment();
+    node.ownerDocument = this;
+    node.appendData(data);
+    return node;
+  },
+  createCDATASection: function(data) {
+    var node = new CDATASection();
+    node.ownerDocument = this;
+    node.appendData(data);
+    return node;
+  },
+  createProcessingInstruction: function(target, data) {
+    var node = new ProcessingInstruction();
+    node.ownerDocument = this;
+    node.tagName = node.nodeName = node.target = target;
+    node.nodeValue = node.data = data;
+    return node;
+  },
+  createAttribute: function(name) {
+    var node = new Attr();
+    node.ownerDocument = this;
+    node.name = name;
+    node.nodeName = name;
+    node.localName = name;
+    node.specified = true;
+    return node;
+  },
+  createEntityReference: function(name) {
+    var node = new EntityReference();
+    node.ownerDocument = this;
+    node.nodeName = name;
+    return node;
+  },
+  // Introduced in DOM Level 2:
+  createElementNS: function(namespaceURI, qualifiedName) {
+    var node = new Element();
+    var pl = qualifiedName.split(":");
+    var attrs = node.attributes = new NamedNodeMap();
+    node.childNodes = new NodeList();
+    node.ownerDocument = this;
+    node.nodeName = qualifiedName;
+    node.tagName = qualifiedName;
+    node.namespaceURI = namespaceURI;
+    if (pl.length == 2) {
+      node.prefix = pl[0];
+      node.localName = pl[1];
+    } else {
+      node.localName = qualifiedName;
+    }
+    attrs._ownerElement = node;
+    return node;
+  },
+  // Introduced in DOM Level 2:
+  createAttributeNS: function(namespaceURI, qualifiedName) {
+    var node = new Attr();
+    var pl = qualifiedName.split(":");
+    node.ownerDocument = this;
+    node.nodeName = qualifiedName;
+    node.name = qualifiedName;
+    node.namespaceURI = namespaceURI;
+    node.specified = true;
+    if (pl.length == 2) {
+      node.prefix = pl[0];
+      node.localName = pl[1];
+    } else {
+      node.localName = qualifiedName;
+    }
+    return node;
+  }
+};
+_extends(Document, Node);
+function Element() {
+  this._nsMap = {};
+}
+Element.prototype = {
+  nodeType: ELEMENT_NODE,
+  hasAttribute: function(name) {
+    return this.getAttributeNode(name) != null;
+  },
+  getAttribute: function(name) {
+    var attr = this.getAttributeNode(name);
+    return attr && attr.value || "";
+  },
+  getAttributeNode: function(name) {
+    return this.attributes.getNamedItem(name);
+  },
+  setAttribute: function(name, value) {
+    var attr = this.ownerDocument.createAttribute(name);
+    attr.value = attr.nodeValue = "" + value;
+    this.setAttributeNode(attr);
+  },
+  removeAttribute: function(name) {
+    var attr = this.getAttributeNode(name);
+    attr && this.removeAttributeNode(attr);
+  },
+  //four real opeartion method
+  appendChild: function(newChild) {
+    if (newChild.nodeType === DOCUMENT_FRAGMENT_NODE) {
+      return this.insertBefore(newChild, null);
+    } else {
+      return _appendSingleChild(this, newChild);
+    }
+  },
+  setAttributeNode: function(newAttr) {
+    return this.attributes.setNamedItem(newAttr);
+  },
+  setAttributeNodeNS: function(newAttr) {
+    return this.attributes.setNamedItemNS(newAttr);
+  },
+  removeAttributeNode: function(oldAttr) {
+    return this.attributes.removeNamedItem(oldAttr.nodeName);
+  },
+  //get real attribute name,and remove it by removeAttributeNode
+  removeAttributeNS: function(namespaceURI, localName2) {
+    var old = this.getAttributeNodeNS(namespaceURI, localName2);
+    old && this.removeAttributeNode(old);
+  },
+  hasAttributeNS: function(namespaceURI, localName2) {
+    return this.getAttributeNodeNS(namespaceURI, localName2) != null;
+  },
+  getAttributeNS: function(namespaceURI, localName2) {
+    var attr = this.getAttributeNodeNS(namespaceURI, localName2);
+    return attr && attr.value || "";
+  },
+  setAttributeNS: function(namespaceURI, qualifiedName, value) {
+    var attr = this.ownerDocument.createAttributeNS(namespaceURI, qualifiedName);
+    attr.value = attr.nodeValue = "" + value;
+    this.setAttributeNode(attr);
+  },
+  getAttributeNodeNS: function(namespaceURI, localName2) {
+    return this.attributes.getNamedItemNS(namespaceURI, localName2);
+  },
+  getElementsByTagName: function(tagName) {
+    return new LiveNodeList(this, function(base) {
+      var ls = [];
+      _visitNode(base, function(node) {
+        if (node !== base && node.nodeType == ELEMENT_NODE && (tagName === "*" || node.tagName == tagName)) {
+          ls.push(node);
+        }
+      });
+      return ls;
+    });
+  },
+  getElementsByTagNameNS: function(namespaceURI, localName2) {
+    return new LiveNodeList(this, function(base) {
+      var ls = [];
+      _visitNode(base, function(node) {
+        if (node !== base && node.nodeType === ELEMENT_NODE && (namespaceURI === "*" || node.namespaceURI === namespaceURI) && (localName2 === "*" || node.localName == localName2)) {
+          ls.push(node);
+        }
+      });
+      return ls;
+    });
+  }
+};
+Document.prototype.getElementsByTagName = Element.prototype.getElementsByTagName;
+Document.prototype.getElementsByTagNameNS = Element.prototype.getElementsByTagNameNS;
+_extends(Element, Node);
+function Attr() {
+}
+Attr.prototype.nodeType = ATTRIBUTE_NODE;
+_extends(Attr, Node);
+function CharacterData() {
+}
+CharacterData.prototype = {
+  data: "",
+  substringData: function(offset, count) {
+    return this.data.substring(offset, offset + count);
+  },
+  appendData: function(text) {
+    text = this.data + text;
+    this.nodeValue = this.data = text;
+    this.length = text.length;
+  },
+  insertData: function(offset, text) {
+    this.replaceData(offset, 0, text);
+  },
+  appendChild: function(newChild) {
+    throw new Error(ExceptionMessage[HIERARCHY_REQUEST_ERR]);
+  },
+  deleteData: function(offset, count) {
+    this.replaceData(offset, count, "");
+  },
+  replaceData: function(offset, count, text) {
+    var start = this.data.substring(0, offset);
+    var end = this.data.substring(offset + count);
+    text = start + text + end;
+    this.nodeValue = this.data = text;
+    this.length = text.length;
+  }
+};
+_extends(CharacterData, Node);
+function Text() {
+}
+Text.prototype = {
+  nodeName: "#text",
+  nodeType: TEXT_NODE,
+  splitText: function(offset) {
+    var text = this.data;
+    var newText = text.substring(offset);
+    text = text.substring(0, offset);
+    this.data = this.nodeValue = text;
+    this.length = text.length;
+    var newNode = this.ownerDocument.createTextNode(newText);
+    if (this.parentNode) {
+      this.parentNode.insertBefore(newNode, this.nextSibling);
+    }
+    return newNode;
+  }
+};
+_extends(Text, CharacterData);
+function Comment() {
+}
+Comment.prototype = {
+  nodeName: "#comment",
+  nodeType: COMMENT_NODE
+};
+_extends(Comment, CharacterData);
+function CDATASection() {
+}
+CDATASection.prototype = {
+  nodeName: "#cdata-section",
+  nodeType: CDATA_SECTION_NODE
+};
+_extends(CDATASection, CharacterData);
+function DocumentType() {
+}
+DocumentType.prototype.nodeType = DOCUMENT_TYPE_NODE;
+_extends(DocumentType, Node);
+function Notation() {
+}
+Notation.prototype.nodeType = NOTATION_NODE;
+_extends(Notation, Node);
+function Entity() {
+}
+Entity.prototype.nodeType = ENTITY_NODE;
+_extends(Entity, Node);
+function EntityReference() {
+}
+EntityReference.prototype.nodeType = ENTITY_REFERENCE_NODE;
+_extends(EntityReference, Node);
+function DocumentFragment() {
+}
+DocumentFragment.prototype.nodeName = "#document-fragment";
+DocumentFragment.prototype.nodeType = DOCUMENT_FRAGMENT_NODE;
+_extends(DocumentFragment, Node);
+function ProcessingInstruction() {
+}
+ProcessingInstruction.prototype.nodeType = PROCESSING_INSTRUCTION_NODE;
+_extends(ProcessingInstruction, Node);
+function XMLSerializer() {
+}
+XMLSerializer.prototype.serializeToString = function(node, isHtml, nodeFilter) {
+  return nodeSerializeToString.call(node, isHtml, nodeFilter);
+};
+Node.prototype.toString = nodeSerializeToString;
+function nodeSerializeToString(isHtml, nodeFilter) {
+  var buf = [];
+  var refNode = this.nodeType == 9 && this.documentElement || this;
+  var prefix = refNode.prefix;
+  var uri = refNode.namespaceURI;
+  if (uri && prefix == null) {
+    var prefix = refNode.lookupPrefix(uri);
+    if (prefix == null) {
+      var visibleNamespaces = [
+        { namespace: uri, prefix: null }
+        //{namespace:uri,prefix:''}
+      ];
+    }
+  }
+  serializeToString(this, buf, isHtml, nodeFilter, visibleNamespaces);
+  return buf.join("");
+}
+function needNamespaceDefine(node, isHTML, visibleNamespaces) {
+  var prefix = node.prefix || "";
+  var uri = node.namespaceURI;
+  if (!uri) {
+    return false;
+  }
+  if (prefix === "xml" && uri === NAMESPACE$2.XML || uri === NAMESPACE$2.XMLNS) {
+    return false;
+  }
+  var i = visibleNamespaces.length;
+  while (i--) {
+    var ns = visibleNamespaces[i];
+    if (ns.prefix === prefix) {
+      return ns.namespace !== uri;
+    }
+  }
+  return true;
+}
+function addSerializedAttribute(buf, qualifiedName, value) {
+  buf.push(" ", qualifiedName, '="', value.replace(/[<>&"\t\n\r]/g, _xmlEncoder), '"');
+}
+function serializeToString(node, buf, isHTML, nodeFilter, visibleNamespaces) {
+  if (!visibleNamespaces) {
+    visibleNamespaces = [];
+  }
+  if (nodeFilter) {
+    node = nodeFilter(node);
+    if (node) {
+      if (typeof node == "string") {
+        buf.push(node);
+        return;
+      }
+    } else {
+      return;
+    }
+  }
+  switch (node.nodeType) {
+    case ELEMENT_NODE:
+      var attrs = node.attributes;
+      var len = attrs.length;
+      var child = node.firstChild;
+      var nodeName = node.tagName;
+      isHTML = NAMESPACE$2.isHTML(node.namespaceURI) || isHTML;
+      var prefixedNodeName = nodeName;
+      if (!isHTML && !node.prefix && node.namespaceURI) {
+        var defaultNS;
+        for (var ai = 0; ai < attrs.length; ai++) {
+          if (attrs.item(ai).name === "xmlns") {
+            defaultNS = attrs.item(ai).value;
+            break;
+          }
+        }
+        if (!defaultNS) {
+          for (var nsi = visibleNamespaces.length - 1; nsi >= 0; nsi--) {
+            var namespace = visibleNamespaces[nsi];
+            if (namespace.prefix === "" && namespace.namespace === node.namespaceURI) {
+              defaultNS = namespace.namespace;
+              break;
+            }
+          }
+        }
+        if (defaultNS !== node.namespaceURI) {
+          for (var nsi = visibleNamespaces.length - 1; nsi >= 0; nsi--) {
+            var namespace = visibleNamespaces[nsi];
+            if (namespace.namespace === node.namespaceURI) {
+              if (namespace.prefix) {
+                prefixedNodeName = namespace.prefix + ":" + nodeName;
+              }
+              break;
+            }
+          }
+        }
+      }
+      buf.push("<", prefixedNodeName);
+      for (var i = 0; i < len; i++) {
+        var attr = attrs.item(i);
+        if (attr.prefix == "xmlns") {
+          visibleNamespaces.push({ prefix: attr.localName, namespace: attr.value });
+        } else if (attr.nodeName == "xmlns") {
+          visibleNamespaces.push({ prefix: "", namespace: attr.value });
+        }
+      }
+      for (var i = 0; i < len; i++) {
+        var attr = attrs.item(i);
+        if (needNamespaceDefine(attr, isHTML, visibleNamespaces)) {
+          var prefix = attr.prefix || "";
+          var uri = attr.namespaceURI;
+          addSerializedAttribute(buf, prefix ? "xmlns:" + prefix : "xmlns", uri);
+          visibleNamespaces.push({ prefix, namespace: uri });
+        }
+        serializeToString(attr, buf, isHTML, nodeFilter, visibleNamespaces);
+      }
+      if (nodeName === prefixedNodeName && needNamespaceDefine(node, isHTML, visibleNamespaces)) {
+        var prefix = node.prefix || "";
+        var uri = node.namespaceURI;
+        addSerializedAttribute(buf, prefix ? "xmlns:" + prefix : "xmlns", uri);
+        visibleNamespaces.push({ prefix, namespace: uri });
+      }
+      if (child || isHTML && !/^(?:meta|link|img|br|hr|input)$/i.test(nodeName)) {
+        buf.push(">");
+        if (isHTML && /^script$/i.test(nodeName)) {
+          while (child) {
+            if (child.data) {
+              buf.push(child.data);
+            } else {
+              serializeToString(child, buf, isHTML, nodeFilter, visibleNamespaces.slice());
+            }
+            child = child.nextSibling;
+          }
+        } else {
+          while (child) {
+            serializeToString(child, buf, isHTML, nodeFilter, visibleNamespaces.slice());
+            child = child.nextSibling;
+          }
+        }
+        buf.push("</", prefixedNodeName, ">");
+      } else {
+        buf.push("/>");
+      }
+      return;
+    case DOCUMENT_NODE:
+    case DOCUMENT_FRAGMENT_NODE:
+      var child = node.firstChild;
+      while (child) {
+        serializeToString(child, buf, isHTML, nodeFilter, visibleNamespaces.slice());
+        child = child.nextSibling;
+      }
+      return;
+    case ATTRIBUTE_NODE:
+      return addSerializedAttribute(buf, node.name, node.value);
+    case TEXT_NODE:
+      return buf.push(
+        node.data.replace(/[<&>]/g, _xmlEncoder)
+      );
+    case CDATA_SECTION_NODE:
+      return buf.push("<![CDATA[", node.data, "]]>");
+    case COMMENT_NODE:
+      return buf.push("<!--", node.data, "-->");
+    case DOCUMENT_TYPE_NODE:
+      var pubid = node.publicId;
+      var sysid = node.systemId;
+      buf.push("<!DOCTYPE ", node.name);
+      if (pubid) {
+        buf.push(" PUBLIC ", pubid);
+        if (sysid && sysid != ".") {
+          buf.push(" ", sysid);
+        }
+        buf.push(">");
+      } else if (sysid && sysid != ".") {
+        buf.push(" SYSTEM ", sysid, ">");
+      } else {
+        var sub = node.internalSubset;
+        if (sub) {
+          buf.push(" [", sub, "]");
+        }
+        buf.push(">");
+      }
+      return;
+    case PROCESSING_INSTRUCTION_NODE:
+      return buf.push("<?", node.target, " ", node.data, "?>");
+    case ENTITY_REFERENCE_NODE:
+      return buf.push("&", node.nodeName, ";");
+    default:
+      buf.push("??", node.nodeName);
+  }
+}
+function importNode(doc, node, deep) {
+  var node2;
+  switch (node.nodeType) {
+    case ELEMENT_NODE:
+      node2 = node.cloneNode(false);
+      node2.ownerDocument = doc;
+    case DOCUMENT_FRAGMENT_NODE:
+      break;
+    case ATTRIBUTE_NODE:
+      deep = true;
+      break;
+  }
+  if (!node2) {
+    node2 = node.cloneNode(false);
+  }
+  node2.ownerDocument = doc;
+  node2.parentNode = null;
+  if (deep) {
+    var child = node.firstChild;
+    while (child) {
+      node2.appendChild(importNode(doc, child, deep));
+      child = child.nextSibling;
+    }
+  }
+  return node2;
+}
+function cloneNode(doc, node, deep) {
+  var node2 = new node.constructor();
+  for (var n in node) {
+    if (Object.prototype.hasOwnProperty.call(node, n)) {
+      var v = node[n];
+      if (typeof v != "object") {
+        if (v != node2[n]) {
+          node2[n] = v;
+        }
+      }
+    }
+  }
+  if (node.childNodes) {
+    node2.childNodes = new NodeList();
+  }
+  node2.ownerDocument = doc;
+  switch (node2.nodeType) {
+    case ELEMENT_NODE:
+      var attrs = node.attributes;
+      var attrs2 = node2.attributes = new NamedNodeMap();
+      var len = attrs.length;
+      attrs2._ownerElement = node2;
+      for (var i = 0; i < len; i++) {
+        node2.setAttributeNode(cloneNode(doc, attrs.item(i), true));
+      }
+      break;
+    case ATTRIBUTE_NODE:
+      deep = true;
+  }
+  if (deep) {
+    var child = node.firstChild;
+    while (child) {
+      node2.appendChild(cloneNode(doc, child, deep));
+      child = child.nextSibling;
+    }
+  }
+  return node2;
+}
+function __set__(object, key, value) {
+  object[key] = value;
+}
+try {
+  if (Object.defineProperty) {
+    let getTextContent = function(node) {
+      switch (node.nodeType) {
+        case ELEMENT_NODE:
+        case DOCUMENT_FRAGMENT_NODE:
+          var buf = [];
+          node = node.firstChild;
+          while (node) {
+            if (node.nodeType !== 7 && node.nodeType !== 8) {
+              buf.push(getTextContent(node));
+            }
+            node = node.nextSibling;
+          }
+          return buf.join("");
+        default:
+          return node.nodeValue;
+      }
+    };
+    Object.defineProperty(LiveNodeList.prototype, "length", {
+      get: function() {
+        _updateLiveList(this);
+        return this.$$length;
+      }
+    });
+    Object.defineProperty(Node.prototype, "textContent", {
+      get: function() {
+        return getTextContent(this);
+      },
+      set: function(data) {
+        switch (this.nodeType) {
+          case ELEMENT_NODE:
+          case DOCUMENT_FRAGMENT_NODE:
+            while (this.firstChild) {
+              this.removeChild(this.firstChild);
+            }
+            if (data || String(data)) {
+              this.appendChild(this.ownerDocument.createTextNode(data));
+            }
+            break;
+          default:
+            this.data = data;
+            this.value = data;
+            this.nodeValue = data;
+        }
+      }
+    });
+    __set__ = function(object, key, value) {
+      object["$$" + key] = value;
+    };
+  }
+} catch (e) {
+}
+dom$1.DocumentType = DocumentType;
+dom$1.DOMException = DOMException;
+dom$1.DOMImplementation = DOMImplementation$1;
+dom$1.Element = Element;
+dom$1.Node = Node;
+dom$1.NodeList = NodeList;
+dom$1.XMLSerializer = XMLSerializer;
+var domParser = {};
+var entities$1 = {};
+(function(exports$1) {
+  var freeze2 = conventions$2.freeze;
+  exports$1.XML_ENTITIES = freeze2({
+    amp: "&",
+    apos: "'",
+    gt: ">",
+    lt: "<",
+    quot: '"'
+  });
+  exports$1.HTML_ENTITIES = freeze2({
+    Aacute: "Á",
+    aacute: "á",
+    Abreve: "Ă",
+    abreve: "ă",
+    ac: "∾",
+    acd: "∿",
+    acE: "∾̳",
+    Acirc: "Â",
+    acirc: "â",
+    acute: "´",
+    Acy: "А",
+    acy: "а",
+    AElig: "Æ",
+    aelig: "æ",
+    af: "⁡",
+    Afr: "𝔄",
+    afr: "𝔞",
+    Agrave: "À",
+    agrave: "à",
+    alefsym: "ℵ",
+    aleph: "ℵ",
+    Alpha: "Α",
+    alpha: "α",
+    Amacr: "Ā",
+    amacr: "ā",
+    amalg: "⨿",
+    AMP: "&",
+    amp: "&",
+    And: "⩓",
+    and: "∧",
+    andand: "⩕",
+    andd: "⩜",
+    andslope: "⩘",
+    andv: "⩚",
+    ang: "∠",
+    ange: "⦤",
+    angle: "∠",
+    angmsd: "∡",
+    angmsdaa: "⦨",
+    angmsdab: "⦩",
+    angmsdac: "⦪",
+    angmsdad: "⦫",
+    angmsdae: "⦬",
+    angmsdaf: "⦭",
+    angmsdag: "⦮",
+    angmsdah: "⦯",
+    angrt: "∟",
+    angrtvb: "⊾",
+    angrtvbd: "⦝",
+    angsph: "∢",
+    angst: "Å",
+    angzarr: "⍼",
+    Aogon: "Ą",
+    aogon: "ą",
+    Aopf: "𝔸",
+    aopf: "𝕒",
+    ap: "≈",
+    apacir: "⩯",
+    apE: "⩰",
+    ape: "≊",
+    apid: "≋",
+    apos: "'",
+    ApplyFunction: "⁡",
+    approx: "≈",
+    approxeq: "≊",
+    Aring: "Å",
+    aring: "å",
+    Ascr: "𝒜",
+    ascr: "𝒶",
+    Assign: "≔",
+    ast: "*",
+    asymp: "≈",
+    asympeq: "≍",
+    Atilde: "Ã",
+    atilde: "ã",
+    Auml: "Ä",
+    auml: "ä",
+    awconint: "∳",
+    awint: "⨑",
+    backcong: "≌",
+    backepsilon: "϶",
+    backprime: "‵",
+    backsim: "∽",
+    backsimeq: "⋍",
+    Backslash: "∖",
+    Barv: "⫧",
+    barvee: "⊽",
+    Barwed: "⌆",
+    barwed: "⌅",
+    barwedge: "⌅",
+    bbrk: "⎵",
+    bbrktbrk: "⎶",
+    bcong: "≌",
+    Bcy: "Б",
+    bcy: "б",
+    bdquo: "„",
+    becaus: "∵",
+    Because: "∵",
+    because: "∵",
+    bemptyv: "⦰",
+    bepsi: "϶",
+    bernou: "ℬ",
+    Bernoullis: "ℬ",
+    Beta: "Β",
+    beta: "β",
+    beth: "ℶ",
+    between: "≬",
+    Bfr: "𝔅",
+    bfr: "𝔟",
+    bigcap: "⋂",
+    bigcirc: "◯",
+    bigcup: "⋃",
+    bigodot: "⨀",
+    bigoplus: "⨁",
+    bigotimes: "⨂",
+    bigsqcup: "⨆",
+    bigstar: "★",
+    bigtriangledown: "▽",
+    bigtriangleup: "△",
+    biguplus: "⨄",
+    bigvee: "⋁",
+    bigwedge: "⋀",
+    bkarow: "⤍",
+    blacklozenge: "⧫",
+    blacksquare: "▪",
+    blacktriangle: "▴",
+    blacktriangledown: "▾",
+    blacktriangleleft: "◂",
+    blacktriangleright: "▸",
+    blank: "␣",
+    blk12: "▒",
+    blk14: "░",
+    blk34: "▓",
+    block: "█",
+    bne: "=⃥",
+    bnequiv: "≡⃥",
+    bNot: "⫭",
+    bnot: "⌐",
+    Bopf: "𝔹",
+    bopf: "𝕓",
+    bot: "⊥",
+    bottom: "⊥",
+    bowtie: "⋈",
+    boxbox: "⧉",
+    boxDL: "╗",
+    boxDl: "╖",
+    boxdL: "╕",
+    boxdl: "┐",
+    boxDR: "╔",
+    boxDr: "╓",
+    boxdR: "╒",
+    boxdr: "┌",
+    boxH: "═",
+    boxh: "─",
+    boxHD: "╦",
+    boxHd: "╤",
+    boxhD: "╥",
+    boxhd: "┬",
+    boxHU: "╩",
+    boxHu: "╧",
+    boxhU: "╨",
+    boxhu: "┴",
+    boxminus: "⊟",
+    boxplus: "⊞",
+    boxtimes: "⊠",
+    boxUL: "╝",
+    boxUl: "╜",
+    boxuL: "╛",
+    boxul: "┘",
+    boxUR: "╚",
+    boxUr: "╙",
+    boxuR: "╘",
+    boxur: "└",
+    boxV: "║",
+    boxv: "│",
+    boxVH: "╬",
+    boxVh: "╫",
+    boxvH: "╪",
+    boxvh: "┼",
+    boxVL: "╣",
+    boxVl: "╢",
+    boxvL: "╡",
+    boxvl: "┤",
+    boxVR: "╠",
+    boxVr: "╟",
+    boxvR: "╞",
+    boxvr: "├",
+    bprime: "‵",
+    Breve: "˘",
+    breve: "˘",
+    brvbar: "¦",
+    Bscr: "ℬ",
+    bscr: "𝒷",
+    bsemi: "⁏",
+    bsim: "∽",
+    bsime: "⋍",
+    bsol: "\\",
+    bsolb: "⧅",
+    bsolhsub: "⟈",
+    bull: "•",
+    bullet: "•",
+    bump: "≎",
+    bumpE: "⪮",
+    bumpe: "≏",
+    Bumpeq: "≎",
+    bumpeq: "≏",
+    Cacute: "Ć",
+    cacute: "ć",
+    Cap: "⋒",
+    cap: "∩",
+    capand: "⩄",
+    capbrcup: "⩉",
+    capcap: "⩋",
+    capcup: "⩇",
+    capdot: "⩀",
+    CapitalDifferentialD: "ⅅ",
+    caps: "∩︀",
+    caret: "⁁",
+    caron: "ˇ",
+    Cayleys: "ℭ",
+    ccaps: "⩍",
+    Ccaron: "Č",
+    ccaron: "č",
+    Ccedil: "Ç",
+    ccedil: "ç",
+    Ccirc: "Ĉ",
+    ccirc: "ĉ",
+    Cconint: "∰",
+    ccups: "⩌",
+    ccupssm: "⩐",
+    Cdot: "Ċ",
+    cdot: "ċ",
+    cedil: "¸",
+    Cedilla: "¸",
+    cemptyv: "⦲",
+    cent: "¢",
+    CenterDot: "·",
+    centerdot: "·",
+    Cfr: "ℭ",
+    cfr: "𝔠",
+    CHcy: "Ч",
+    chcy: "ч",
+    check: "✓",
+    checkmark: "✓",
+    Chi: "Χ",
+    chi: "χ",
+    cir: "○",
+    circ: "ˆ",
+    circeq: "≗",
+    circlearrowleft: "↺",
+    circlearrowright: "↻",
+    circledast: "⊛",
+    circledcirc: "⊚",
+    circleddash: "⊝",
+    CircleDot: "⊙",
+    circledR: "®",
+    circledS: "Ⓢ",
+    CircleMinus: "⊖",
+    CirclePlus: "⊕",
+    CircleTimes: "⊗",
+    cirE: "⧃",
+    cire: "≗",
+    cirfnint: "⨐",
+    cirmid: "⫯",
+    cirscir: "⧂",
+    ClockwiseContourIntegral: "∲",
+    CloseCurlyDoubleQuote: "”",
+    CloseCurlyQuote: "’",
+    clubs: "♣",
+    clubsuit: "♣",
+    Colon: "∷",
+    colon: ":",
+    Colone: "⩴",
+    colone: "≔",
+    coloneq: "≔",
+    comma: ",",
+    commat: "@",
+    comp: "∁",
+    compfn: "∘",
+    complement: "∁",
+    complexes: "ℂ",
+    cong: "≅",
+    congdot: "⩭",
+    Congruent: "≡",
+    Conint: "∯",
+    conint: "∮",
+    ContourIntegral: "∮",
+    Copf: "ℂ",
+    copf: "𝕔",
+    coprod: "∐",
+    Coproduct: "∐",
+    COPY: "©",
+    copy: "©",
+    copysr: "℗",
+    CounterClockwiseContourIntegral: "∳",
+    crarr: "↵",
+    Cross: "⨯",
+    cross: "✗",
+    Cscr: "𝒞",
+    cscr: "𝒸",
+    csub: "⫏",
+    csube: "⫑",
+    csup: "⫐",
+    csupe: "⫒",
+    ctdot: "⋯",
+    cudarrl: "⤸",
+    cudarrr: "⤵",
+    cuepr: "⋞",
+    cuesc: "⋟",
+    cularr: "↶",
+    cularrp: "⤽",
+    Cup: "⋓",
+    cup: "∪",
+    cupbrcap: "⩈",
+    CupCap: "≍",
+    cupcap: "⩆",
+    cupcup: "⩊",
+    cupdot: "⊍",
+    cupor: "⩅",
+    cups: "∪︀",
+    curarr: "↷",
+    curarrm: "⤼",
+    curlyeqprec: "⋞",
+    curlyeqsucc: "⋟",
+    curlyvee: "⋎",
+    curlywedge: "⋏",
+    curren: "¤",
+    curvearrowleft: "↶",
+    curvearrowright: "↷",
+    cuvee: "⋎",
+    cuwed: "⋏",
+    cwconint: "∲",
+    cwint: "∱",
+    cylcty: "⌭",
+    Dagger: "‡",
+    dagger: "†",
+    daleth: "ℸ",
+    Darr: "↡",
+    dArr: "⇓",
+    darr: "↓",
+    dash: "‐",
+    Dashv: "⫤",
+    dashv: "⊣",
+    dbkarow: "⤏",
+    dblac: "˝",
+    Dcaron: "Ď",
+    dcaron: "ď",
+    Dcy: "Д",
+    dcy: "д",
+    DD: "ⅅ",
+    dd: "ⅆ",
+    ddagger: "‡",
+    ddarr: "⇊",
+    DDotrahd: "⤑",
+    ddotseq: "⩷",
+    deg: "°",
+    Del: "∇",
+    Delta: "Δ",
+    delta: "δ",
+    demptyv: "⦱",
+    dfisht: "⥿",
+    Dfr: "𝔇",
+    dfr: "𝔡",
+    dHar: "⥥",
+    dharl: "⇃",
+    dharr: "⇂",
+    DiacriticalAcute: "´",
+    DiacriticalDot: "˙",
+    DiacriticalDoubleAcute: "˝",
+    DiacriticalGrave: "`",
+    DiacriticalTilde: "˜",
+    diam: "⋄",
+    Diamond: "⋄",
+    diamond: "⋄",
+    diamondsuit: "♦",
+    diams: "♦",
+    die: "¨",
+    DifferentialD: "ⅆ",
+    digamma: "ϝ",
+    disin: "⋲",
+    div: "÷",
+    divide: "÷",
+    divideontimes: "⋇",
+    divonx: "⋇",
+    DJcy: "Ђ",
+    djcy: "ђ",
+    dlcorn: "⌞",
+    dlcrop: "⌍",
+    dollar: "$",
+    Dopf: "𝔻",
+    dopf: "𝕕",
+    Dot: "¨",
+    dot: "˙",
+    DotDot: "⃜",
+    doteq: "≐",
+    doteqdot: "≑",
+    DotEqual: "≐",
+    dotminus: "∸",
+    dotplus: "∔",
+    dotsquare: "⊡",
+    doublebarwedge: "⌆",
+    DoubleContourIntegral: "∯",
+    DoubleDot: "¨",
+    DoubleDownArrow: "⇓",
+    DoubleLeftArrow: "⇐",
+    DoubleLeftRightArrow: "⇔",
+    DoubleLeftTee: "⫤",
+    DoubleLongLeftArrow: "⟸",
+    DoubleLongLeftRightArrow: "⟺",
+    DoubleLongRightArrow: "⟹",
+    DoubleRightArrow: "⇒",
+    DoubleRightTee: "⊨",
+    DoubleUpArrow: "⇑",
+    DoubleUpDownArrow: "⇕",
+    DoubleVerticalBar: "∥",
+    DownArrow: "↓",
+    Downarrow: "⇓",
+    downarrow: "↓",
+    DownArrowBar: "⤓",
+    DownArrowUpArrow: "⇵",
+    DownBreve: "̑",
+    downdownarrows: "⇊",
+    downharpoonleft: "⇃",
+    downharpoonright: "⇂",
+    DownLeftRightVector: "⥐",
+    DownLeftTeeVector: "⥞",
+    DownLeftVector: "↽",
+    DownLeftVectorBar: "⥖",
+    DownRightTeeVector: "⥟",
+    DownRightVector: "⇁",
+    DownRightVectorBar: "⥗",
+    DownTee: "⊤",
+    DownTeeArrow: "↧",
+    drbkarow: "⤐",
+    drcorn: "⌟",
+    drcrop: "⌌",
+    Dscr: "𝒟",
+    dscr: "𝒹",
+    DScy: "Ѕ",
+    dscy: "ѕ",
+    dsol: "⧶",
+    Dstrok: "Đ",
+    dstrok: "đ",
+    dtdot: "⋱",
+    dtri: "▿",
+    dtrif: "▾",
+    duarr: "⇵",
+    duhar: "⥯",
+    dwangle: "⦦",
+    DZcy: "Џ",
+    dzcy: "џ",
+    dzigrarr: "⟿",
+    Eacute: "É",
+    eacute: "é",
+    easter: "⩮",
+    Ecaron: "Ě",
+    ecaron: "ě",
+    ecir: "≖",
+    Ecirc: "Ê",
+    ecirc: "ê",
+    ecolon: "≕",
+    Ecy: "Э",
+    ecy: "э",
+    eDDot: "⩷",
+    Edot: "Ė",
+    eDot: "≑",
+    edot: "ė",
+    ee: "ⅇ",
+    efDot: "≒",
+    Efr: "𝔈",
+    efr: "𝔢",
+    eg: "⪚",
+    Egrave: "È",
+    egrave: "è",
+    egs: "⪖",
+    egsdot: "⪘",
+    el: "⪙",
+    Element: "∈",
+    elinters: "⏧",
+    ell: "ℓ",
+    els: "⪕",
+    elsdot: "⪗",
+    Emacr: "Ē",
+    emacr: "ē",
+    empty: "∅",
+    emptyset: "∅",
+    EmptySmallSquare: "◻",
+    emptyv: "∅",
+    EmptyVerySmallSquare: "▫",
+    emsp: " ",
+    emsp13: " ",
+    emsp14: " ",
+    ENG: "Ŋ",
+    eng: "ŋ",
+    ensp: " ",
+    Eogon: "Ę",
+    eogon: "ę",
+    Eopf: "𝔼",
+    eopf: "𝕖",
+    epar: "⋕",
+    eparsl: "⧣",
+    eplus: "⩱",
+    epsi: "ε",
+    Epsilon: "Ε",
+    epsilon: "ε",
+    epsiv: "ϵ",
+    eqcirc: "≖",
+    eqcolon: "≕",
+    eqsim: "≂",
+    eqslantgtr: "⪖",
+    eqslantless: "⪕",
+    Equal: "⩵",
+    equals: "=",
+    EqualTilde: "≂",
+    equest: "≟",
+    Equilibrium: "⇌",
+    equiv: "≡",
+    equivDD: "⩸",
+    eqvparsl: "⧥",
+    erarr: "⥱",
+    erDot: "≓",
+    Escr: "ℰ",
+    escr: "ℯ",
+    esdot: "≐",
+    Esim: "⩳",
+    esim: "≂",
+    Eta: "Η",
+    eta: "η",
+    ETH: "Ð",
+    eth: "ð",
+    Euml: "Ë",
+    euml: "ë",
+    euro: "€",
+    excl: "!",
+    exist: "∃",
+    Exists: "∃",
+    expectation: "ℰ",
+    ExponentialE: "ⅇ",
+    exponentiale: "ⅇ",
+    fallingdotseq: "≒",
+    Fcy: "Ф",
+    fcy: "ф",
+    female: "♀",
+    ffilig: "ﬃ",
+    fflig: "ﬀ",
+    ffllig: "ﬄ",
+    Ffr: "𝔉",
+    ffr: "𝔣",
+    filig: "ﬁ",
+    FilledSmallSquare: "◼",
+    FilledVerySmallSquare: "▪",
+    fjlig: "fj",
+    flat: "♭",
+    fllig: "ﬂ",
+    fltns: "▱",
+    fnof: "ƒ",
+    Fopf: "𝔽",
+    fopf: "𝕗",
+    ForAll: "∀",
+    forall: "∀",
+    fork: "⋔",
+    forkv: "⫙",
+    Fouriertrf: "ℱ",
+    fpartint: "⨍",
+    frac12: "½",
+    frac13: "⅓",
+    frac14: "¼",
+    frac15: "⅕",
+    frac16: "⅙",
+    frac18: "⅛",
+    frac23: "⅔",
+    frac25: "⅖",
+    frac34: "¾",
+    frac35: "⅗",
+    frac38: "⅜",
+    frac45: "⅘",
+    frac56: "⅚",
+    frac58: "⅝",
+    frac78: "⅞",
+    frasl: "⁄",
+    frown: "⌢",
+    Fscr: "ℱ",
+    fscr: "𝒻",
+    gacute: "ǵ",
+    Gamma: "Γ",
+    gamma: "γ",
+    Gammad: "Ϝ",
+    gammad: "ϝ",
+    gap: "⪆",
+    Gbreve: "Ğ",
+    gbreve: "ğ",
+    Gcedil: "Ģ",
+    Gcirc: "Ĝ",
+    gcirc: "ĝ",
+    Gcy: "Г",
+    gcy: "г",
+    Gdot: "Ġ",
+    gdot: "ġ",
+    gE: "≧",
+    ge: "≥",
+    gEl: "⪌",
+    gel: "⋛",
+    geq: "≥",
+    geqq: "≧",
+    geqslant: "⩾",
+    ges: "⩾",
+    gescc: "⪩",
+    gesdot: "⪀",
+    gesdoto: "⪂",
+    gesdotol: "⪄",
+    gesl: "⋛︀",
+    gesles: "⪔",
+    Gfr: "𝔊",
+    gfr: "𝔤",
+    Gg: "⋙",
+    gg: "≫",
+    ggg: "⋙",
+    gimel: "ℷ",
+    GJcy: "Ѓ",
+    gjcy: "ѓ",
+    gl: "≷",
+    gla: "⪥",
+    glE: "⪒",
+    glj: "⪤",
+    gnap: "⪊",
+    gnapprox: "⪊",
+    gnE: "≩",
+    gne: "⪈",
+    gneq: "⪈",
+    gneqq: "≩",
+    gnsim: "⋧",
+    Gopf: "𝔾",
+    gopf: "𝕘",
+    grave: "`",
+    GreaterEqual: "≥",
+    GreaterEqualLess: "⋛",
+    GreaterFullEqual: "≧",
+    GreaterGreater: "⪢",
+    GreaterLess: "≷",
+    GreaterSlantEqual: "⩾",
+    GreaterTilde: "≳",
+    Gscr: "𝒢",
+    gscr: "ℊ",
+    gsim: "≳",
+    gsime: "⪎",
+    gsiml: "⪐",
+    Gt: "≫",
+    GT: ">",
+    gt: ">",
+    gtcc: "⪧",
+    gtcir: "⩺",
+    gtdot: "⋗",
+    gtlPar: "⦕",
+    gtquest: "⩼",
+    gtrapprox: "⪆",
+    gtrarr: "⥸",
+    gtrdot: "⋗",
+    gtreqless: "⋛",
+    gtreqqless: "⪌",
+    gtrless: "≷",
+    gtrsim: "≳",
+    gvertneqq: "≩︀",
+    gvnE: "≩︀",
+    Hacek: "ˇ",
+    hairsp: " ",
+    half: "½",
+    hamilt: "ℋ",
+    HARDcy: "Ъ",
+    hardcy: "ъ",
+    hArr: "⇔",
+    harr: "↔",
+    harrcir: "⥈",
+    harrw: "↭",
+    Hat: "^",
+    hbar: "ℏ",
+    Hcirc: "Ĥ",
+    hcirc: "ĥ",
+    hearts: "♥",
+    heartsuit: "♥",
+    hellip: "…",
+    hercon: "⊹",
+    Hfr: "ℌ",
+    hfr: "𝔥",
+    HilbertSpace: "ℋ",
+    hksearow: "⤥",
+    hkswarow: "⤦",
+    hoarr: "⇿",
+    homtht: "∻",
+    hookleftarrow: "↩",
+    hookrightarrow: "↪",
+    Hopf: "ℍ",
+    hopf: "𝕙",
+    horbar: "―",
+    HorizontalLine: "─",
+    Hscr: "ℋ",
+    hscr: "𝒽",
+    hslash: "ℏ",
+    Hstrok: "Ħ",
+    hstrok: "ħ",
+    HumpDownHump: "≎",
+    HumpEqual: "≏",
+    hybull: "⁃",
+    hyphen: "‐",
+    Iacute: "Í",
+    iacute: "í",
+    ic: "⁣",
+    Icirc: "Î",
+    icirc: "î",
+    Icy: "И",
+    icy: "и",
+    Idot: "İ",
+    IEcy: "Е",
+    iecy: "е",
+    iexcl: "¡",
+    iff: "⇔",
+    Ifr: "ℑ",
+    ifr: "𝔦",
+    Igrave: "Ì",
+    igrave: "ì",
+    ii: "ⅈ",
+    iiiint: "⨌",
+    iiint: "∭",
+    iinfin: "⧜",
+    iiota: "℩",
+    IJlig: "Ĳ",
+    ijlig: "ĳ",
+    Im: "ℑ",
+    Imacr: "Ī",
+    imacr: "ī",
+    image: "ℑ",
+    ImaginaryI: "ⅈ",
+    imagline: "ℐ",
+    imagpart: "ℑ",
+    imath: "ı",
+    imof: "⊷",
+    imped: "Ƶ",
+    Implies: "⇒",
+    in: "∈",
+    incare: "℅",
+    infin: "∞",
+    infintie: "⧝",
+    inodot: "ı",
+    Int: "∬",
+    int: "∫",
+    intcal: "⊺",
+    integers: "ℤ",
+    Integral: "∫",
+    intercal: "⊺",
+    Intersection: "⋂",
+    intlarhk: "⨗",
+    intprod: "⨼",
+    InvisibleComma: "⁣",
+    InvisibleTimes: "⁢",
+    IOcy: "Ё",
+    iocy: "ё",
+    Iogon: "Į",
+    iogon: "į",
+    Iopf: "𝕀",
+    iopf: "𝕚",
+    Iota: "Ι",
+    iota: "ι",
+    iprod: "⨼",
+    iquest: "¿",
+    Iscr: "ℐ",
+    iscr: "𝒾",
+    isin: "∈",
+    isindot: "⋵",
+    isinE: "⋹",
+    isins: "⋴",
+    isinsv: "⋳",
+    isinv: "∈",
+    it: "⁢",
+    Itilde: "Ĩ",
+    itilde: "ĩ",
+    Iukcy: "І",
+    iukcy: "і",
+    Iuml: "Ï",
+    iuml: "ï",
+    Jcirc: "Ĵ",
+    jcirc: "ĵ",
+    Jcy: "Й",
+    jcy: "й",
+    Jfr: "𝔍",
+    jfr: "𝔧",
+    jmath: "ȷ",
+    Jopf: "𝕁",
+    jopf: "𝕛",
+    Jscr: "𝒥",
+    jscr: "𝒿",
+    Jsercy: "Ј",
+    jsercy: "ј",
+    Jukcy: "Є",
+    jukcy: "є",
+    Kappa: "Κ",
+    kappa: "κ",
+    kappav: "ϰ",
+    Kcedil: "Ķ",
+    kcedil: "ķ",
+    Kcy: "К",
+    kcy: "к",
+    Kfr: "𝔎",
+    kfr: "𝔨",
+    kgreen: "ĸ",
+    KHcy: "Х",
+    khcy: "х",
+    KJcy: "Ќ",
+    kjcy: "ќ",
+    Kopf: "𝕂",
+    kopf: "𝕜",
+    Kscr: "𝒦",
+    kscr: "𝓀",
+    lAarr: "⇚",
+    Lacute: "Ĺ",
+    lacute: "ĺ",
+    laemptyv: "⦴",
+    lagran: "ℒ",
+    Lambda: "Λ",
+    lambda: "λ",
+    Lang: "⟪",
+    lang: "⟨",
+    langd: "⦑",
+    langle: "⟨",
+    lap: "⪅",
+    Laplacetrf: "ℒ",
+    laquo: "«",
+    Larr: "↞",
+    lArr: "⇐",
+    larr: "←",
+    larrb: "⇤",
+    larrbfs: "⤟",
+    larrfs: "⤝",
+    larrhk: "↩",
+    larrlp: "↫",
+    larrpl: "⤹",
+    larrsim: "⥳",
+    larrtl: "↢",
+    lat: "⪫",
+    lAtail: "⤛",
+    latail: "⤙",
+    late: "⪭",
+    lates: "⪭︀",
+    lBarr: "⤎",
+    lbarr: "⤌",
+    lbbrk: "❲",
+    lbrace: "{",
+    lbrack: "[",
+    lbrke: "⦋",
+    lbrksld: "⦏",
+    lbrkslu: "⦍",
+    Lcaron: "Ľ",
+    lcaron: "ľ",
+    Lcedil: "Ļ",
+    lcedil: "ļ",
+    lceil: "⌈",
+    lcub: "{",
+    Lcy: "Л",
+    lcy: "л",
+    ldca: "⤶",
+    ldquo: "“",
+    ldquor: "„",
+    ldrdhar: "⥧",
+    ldrushar: "⥋",
+    ldsh: "↲",
+    lE: "≦",
+    le: "≤",
+    LeftAngleBracket: "⟨",
+    LeftArrow: "←",
+    Leftarrow: "⇐",
+    leftarrow: "←",
+    LeftArrowBar: "⇤",
+    LeftArrowRightArrow: "⇆",
+    leftarrowtail: "↢",
+    LeftCeiling: "⌈",
+    LeftDoubleBracket: "⟦",
+    LeftDownTeeVector: "⥡",
+    LeftDownVector: "⇃",
+    LeftDownVectorBar: "⥙",
+    LeftFloor: "⌊",
+    leftharpoondown: "↽",
+    leftharpoonup: "↼",
+    leftleftarrows: "⇇",
+    LeftRightArrow: "↔",
+    Leftrightarrow: "⇔",
+    leftrightarrow: "↔",
+    leftrightarrows: "⇆",
+    leftrightharpoons: "⇋",
+    leftrightsquigarrow: "↭",
+    LeftRightVector: "⥎",
+    LeftTee: "⊣",
+    LeftTeeArrow: "↤",
+    LeftTeeVector: "⥚",
+    leftthreetimes: "⋋",
+    LeftTriangle: "⊲",
+    LeftTriangleBar: "⧏",
+    LeftTriangleEqual: "⊴",
+    LeftUpDownVector: "⥑",
+    LeftUpTeeVector: "⥠",
+    LeftUpVector: "↿",
+    LeftUpVectorBar: "⥘",
+    LeftVector: "↼",
+    LeftVectorBar: "⥒",
+    lEg: "⪋",
+    leg: "⋚",
+    leq: "≤",
+    leqq: "≦",
+    leqslant: "⩽",
+    les: "⩽",
+    lescc: "⪨",
+    lesdot: "⩿",
+    lesdoto: "⪁",
+    lesdotor: "⪃",
+    lesg: "⋚︀",
+    lesges: "⪓",
+    lessapprox: "⪅",
+    lessdot: "⋖",
+    lesseqgtr: "⋚",
+    lesseqqgtr: "⪋",
+    LessEqualGreater: "⋚",
+    LessFullEqual: "≦",
+    LessGreater: "≶",
+    lessgtr: "≶",
+    LessLess: "⪡",
+    lesssim: "≲",
+    LessSlantEqual: "⩽",
+    LessTilde: "≲",
+    lfisht: "⥼",
+    lfloor: "⌊",
+    Lfr: "𝔏",
+    lfr: "𝔩",
+    lg: "≶",
+    lgE: "⪑",
+    lHar: "⥢",
+    lhard: "↽",
+    lharu: "↼",
+    lharul: "⥪",
+    lhblk: "▄",
+    LJcy: "Љ",
+    ljcy: "љ",
+    Ll: "⋘",
+    ll: "≪",
+    llarr: "⇇",
+    llcorner: "⌞",
+    Lleftarrow: "⇚",
+    llhard: "⥫",
+    lltri: "◺",
+    Lmidot: "Ŀ",
+    lmidot: "ŀ",
+    lmoust: "⎰",
+    lmoustache: "⎰",
+    lnap: "⪉",
+    lnapprox: "⪉",
+    lnE: "≨",
+    lne: "⪇",
+    lneq: "⪇",
+    lneqq: "≨",
+    lnsim: "⋦",
+    loang: "⟬",
+    loarr: "⇽",
+    lobrk: "⟦",
+    LongLeftArrow: "⟵",
+    Longleftarrow: "⟸",
+    longleftarrow: "⟵",
+    LongLeftRightArrow: "⟷",
+    Longleftrightarrow: "⟺",
+    longleftrightarrow: "⟷",
+    longmapsto: "⟼",
+    LongRightArrow: "⟶",
+    Longrightarrow: "⟹",
+    longrightarrow: "⟶",
+    looparrowleft: "↫",
+    looparrowright: "↬",
+    lopar: "⦅",
+    Lopf: "𝕃",
+    lopf: "𝕝",
+    loplus: "⨭",
+    lotimes: "⨴",
+    lowast: "∗",
+    lowbar: "_",
+    LowerLeftArrow: "↙",
+    LowerRightArrow: "↘",
+    loz: "◊",
+    lozenge: "◊",
+    lozf: "⧫",
+    lpar: "(",
+    lparlt: "⦓",
+    lrarr: "⇆",
+    lrcorner: "⌟",
+    lrhar: "⇋",
+    lrhard: "⥭",
+    lrm: "‎",
+    lrtri: "⊿",
+    lsaquo: "‹",
+    Lscr: "ℒ",
+    lscr: "𝓁",
+    Lsh: "↰",
+    lsh: "↰",
+    lsim: "≲",
+    lsime: "⪍",
+    lsimg: "⪏",
+    lsqb: "[",
+    lsquo: "‘",
+    lsquor: "‚",
+    Lstrok: "Ł",
+    lstrok: "ł",
+    Lt: "≪",
+    LT: "<",
+    lt: "<",
+    ltcc: "⪦",
+    ltcir: "⩹",
+    ltdot: "⋖",
+    lthree: "⋋",
+    ltimes: "⋉",
+    ltlarr: "⥶",
+    ltquest: "⩻",
+    ltri: "◃",
+    ltrie: "⊴",
+    ltrif: "◂",
+    ltrPar: "⦖",
+    lurdshar: "⥊",
+    luruhar: "⥦",
+    lvertneqq: "≨︀",
+    lvnE: "≨︀",
+    macr: "¯",
+    male: "♂",
+    malt: "✠",
+    maltese: "✠",
+    Map: "⤅",
+    map: "↦",
+    mapsto: "↦",
+    mapstodown: "↧",
+    mapstoleft: "↤",
+    mapstoup: "↥",
+    marker: "▮",
+    mcomma: "⨩",
+    Mcy: "М",
+    mcy: "м",
+    mdash: "—",
+    mDDot: "∺",
+    measuredangle: "∡",
+    MediumSpace: " ",
+    Mellintrf: "ℳ",
+    Mfr: "𝔐",
+    mfr: "𝔪",
+    mho: "℧",
+    micro: "µ",
+    mid: "∣",
+    midast: "*",
+    midcir: "⫰",
+    middot: "·",
+    minus: "−",
+    minusb: "⊟",
+    minusd: "∸",
+    minusdu: "⨪",
+    MinusPlus: "∓",
+    mlcp: "⫛",
+    mldr: "…",
+    mnplus: "∓",
+    models: "⊧",
+    Mopf: "𝕄",
+    mopf: "𝕞",
+    mp: "∓",
+    Mscr: "ℳ",
+    mscr: "𝓂",
+    mstpos: "∾",
+    Mu: "Μ",
+    mu: "μ",
+    multimap: "⊸",
+    mumap: "⊸",
+    nabla: "∇",
+    Nacute: "Ń",
+    nacute: "ń",
+    nang: "∠⃒",
+    nap: "≉",
+    napE: "⩰̸",
+    napid: "≋̸",
+    napos: "ŉ",
+    napprox: "≉",
+    natur: "♮",
+    natural: "♮",
+    naturals: "ℕ",
+    nbsp: " ",
+    nbump: "≎̸",
+    nbumpe: "≏̸",
+    ncap: "⩃",
+    Ncaron: "Ň",
+    ncaron: "ň",
+    Ncedil: "Ņ",
+    ncedil: "ņ",
+    ncong: "≇",
+    ncongdot: "⩭̸",
+    ncup: "⩂",
+    Ncy: "Н",
+    ncy: "н",
+    ndash: "–",
+    ne: "≠",
+    nearhk: "⤤",
+    neArr: "⇗",
+    nearr: "↗",
+    nearrow: "↗",
+    nedot: "≐̸",
+    NegativeMediumSpace: "​",
+    NegativeThickSpace: "​",
+    NegativeThinSpace: "​",
+    NegativeVeryThinSpace: "​",
+    nequiv: "≢",
+    nesear: "⤨",
+    nesim: "≂̸",
+    NestedGreaterGreater: "≫",
+    NestedLessLess: "≪",
+    NewLine: "\n",
+    nexist: "∄",
+    nexists: "∄",
+    Nfr: "𝔑",
+    nfr: "𝔫",
+    ngE: "≧̸",
+    nge: "≱",
+    ngeq: "≱",
+    ngeqq: "≧̸",
+    ngeqslant: "⩾̸",
+    nges: "⩾̸",
+    nGg: "⋙̸",
+    ngsim: "≵",
+    nGt: "≫⃒",
+    ngt: "≯",
+    ngtr: "≯",
+    nGtv: "≫̸",
+    nhArr: "⇎",
+    nharr: "↮",
+    nhpar: "⫲",
+    ni: "∋",
+    nis: "⋼",
+    nisd: "⋺",
+    niv: "∋",
+    NJcy: "Њ",
+    njcy: "њ",
+    nlArr: "⇍",
+    nlarr: "↚",
+    nldr: "‥",
+    nlE: "≦̸",
+    nle: "≰",
+    nLeftarrow: "⇍",
+    nleftarrow: "↚",
+    nLeftrightarrow: "⇎",
+    nleftrightarrow: "↮",
+    nleq: "≰",
+    nleqq: "≦̸",
+    nleqslant: "⩽̸",
+    nles: "⩽̸",
+    nless: "≮",
+    nLl: "⋘̸",
+    nlsim: "≴",
+    nLt: "≪⃒",
+    nlt: "≮",
+    nltri: "⋪",
+    nltrie: "⋬",
+    nLtv: "≪̸",
+    nmid: "∤",
+    NoBreak: "⁠",
+    NonBreakingSpace: " ",
+    Nopf: "ℕ",
+    nopf: "𝕟",
+    Not: "⫬",
+    not: "¬",
+    NotCongruent: "≢",
+    NotCupCap: "≭",
+    NotDoubleVerticalBar: "∦",
+    NotElement: "∉",
+    NotEqual: "≠",
+    NotEqualTilde: "≂̸",
+    NotExists: "∄",
+    NotGreater: "≯",
+    NotGreaterEqual: "≱",
+    NotGreaterFullEqual: "≧̸",
+    NotGreaterGreater: "≫̸",
+    NotGreaterLess: "≹",
+    NotGreaterSlantEqual: "⩾̸",
+    NotGreaterTilde: "≵",
+    NotHumpDownHump: "≎̸",
+    NotHumpEqual: "≏̸",
+    notin: "∉",
+    notindot: "⋵̸",
+    notinE: "⋹̸",
+    notinva: "∉",
+    notinvb: "⋷",
+    notinvc: "⋶",
+    NotLeftTriangle: "⋪",
+    NotLeftTriangleBar: "⧏̸",
+    NotLeftTriangleEqual: "⋬",
+    NotLess: "≮",
+    NotLessEqual: "≰",
+    NotLessGreater: "≸",
+    NotLessLess: "≪̸",
+    NotLessSlantEqual: "⩽̸",
+    NotLessTilde: "≴",
+    NotNestedGreaterGreater: "⪢̸",
+    NotNestedLessLess: "⪡̸",
+    notni: "∌",
+    notniva: "∌",
+    notnivb: "⋾",
+    notnivc: "⋽",
+    NotPrecedes: "⊀",
+    NotPrecedesEqual: "⪯̸",
+    NotPrecedesSlantEqual: "⋠",
+    NotReverseElement: "∌",
+    NotRightTriangle: "⋫",
+    NotRightTriangleBar: "⧐̸",
+    NotRightTriangleEqual: "⋭",
+    NotSquareSubset: "⊏̸",
+    NotSquareSubsetEqual: "⋢",
+    NotSquareSuperset: "⊐̸",
+    NotSquareSupersetEqual: "⋣",
+    NotSubset: "⊂⃒",
+    NotSubsetEqual: "⊈",
+    NotSucceeds: "⊁",
+    NotSucceedsEqual: "⪰̸",
+    NotSucceedsSlantEqual: "⋡",
+    NotSucceedsTilde: "≿̸",
+    NotSuperset: "⊃⃒",
+    NotSupersetEqual: "⊉",
+    NotTilde: "≁",
+    NotTildeEqual: "≄",
+    NotTildeFullEqual: "≇",
+    NotTildeTilde: "≉",
+    NotVerticalBar: "∤",
+    npar: "∦",
+    nparallel: "∦",
+    nparsl: "⫽⃥",
+    npart: "∂̸",
+    npolint: "⨔",
+    npr: "⊀",
+    nprcue: "⋠",
+    npre: "⪯̸",
+    nprec: "⊀",
+    npreceq: "⪯̸",
+    nrArr: "⇏",
+    nrarr: "↛",
+    nrarrc: "⤳̸",
+    nrarrw: "↝̸",
+    nRightarrow: "⇏",
+    nrightarrow: "↛",
+    nrtri: "⋫",
+    nrtrie: "⋭",
+    nsc: "⊁",
+    nsccue: "⋡",
+    nsce: "⪰̸",
+    Nscr: "𝒩",
+    nscr: "𝓃",
+    nshortmid: "∤",
+    nshortparallel: "∦",
+    nsim: "≁",
+    nsime: "≄",
+    nsimeq: "≄",
+    nsmid: "∤",
+    nspar: "∦",
+    nsqsube: "⋢",
+    nsqsupe: "⋣",
+    nsub: "⊄",
+    nsubE: "⫅̸",
+    nsube: "⊈",
+    nsubset: "⊂⃒",
+    nsubseteq: "⊈",
+    nsubseteqq: "⫅̸",
+    nsucc: "⊁",
+    nsucceq: "⪰̸",
+    nsup: "⊅",
+    nsupE: "⫆̸",
+    nsupe: "⊉",
+    nsupset: "⊃⃒",
+    nsupseteq: "⊉",
+    nsupseteqq: "⫆̸",
+    ntgl: "≹",
+    Ntilde: "Ñ",
+    ntilde: "ñ",
+    ntlg: "≸",
+    ntriangleleft: "⋪",
+    ntrianglelefteq: "⋬",
+    ntriangleright: "⋫",
+    ntrianglerighteq: "⋭",
+    Nu: "Ν",
+    nu: "ν",
+    num: "#",
+    numero: "№",
+    numsp: " ",
+    nvap: "≍⃒",
+    nVDash: "⊯",
+    nVdash: "⊮",
+    nvDash: "⊭",
+    nvdash: "⊬",
+    nvge: "≥⃒",
+    nvgt: ">⃒",
+    nvHarr: "⤄",
+    nvinfin: "⧞",
+    nvlArr: "⤂",
+    nvle: "≤⃒",
+    nvlt: "<⃒",
+    nvltrie: "⊴⃒",
+    nvrArr: "⤃",
+    nvrtrie: "⊵⃒",
+    nvsim: "∼⃒",
+    nwarhk: "⤣",
+    nwArr: "⇖",
+    nwarr: "↖",
+    nwarrow: "↖",
+    nwnear: "⤧",
+    Oacute: "Ó",
+    oacute: "ó",
+    oast: "⊛",
+    ocir: "⊚",
+    Ocirc: "Ô",
+    ocirc: "ô",
+    Ocy: "О",
+    ocy: "о",
+    odash: "⊝",
+    Odblac: "Ő",
+    odblac: "ő",
+    odiv: "⨸",
+    odot: "⊙",
+    odsold: "⦼",
+    OElig: "Œ",
+    oelig: "œ",
+    ofcir: "⦿",
+    Ofr: "𝔒",
+    ofr: "𝔬",
+    ogon: "˛",
+    Ograve: "Ò",
+    ograve: "ò",
+    ogt: "⧁",
+    ohbar: "⦵",
+    ohm: "Ω",
+    oint: "∮",
+    olarr: "↺",
+    olcir: "⦾",
+    olcross: "⦻",
+    oline: "‾",
+    olt: "⧀",
+    Omacr: "Ō",
+    omacr: "ō",
+    Omega: "Ω",
+    omega: "ω",
+    Omicron: "Ο",
+    omicron: "ο",
+    omid: "⦶",
+    ominus: "⊖",
+    Oopf: "𝕆",
+    oopf: "𝕠",
+    opar: "⦷",
+    OpenCurlyDoubleQuote: "“",
+    OpenCurlyQuote: "‘",
+    operp: "⦹",
+    oplus: "⊕",
+    Or: "⩔",
+    or: "∨",
+    orarr: "↻",
+    ord: "⩝",
+    order: "ℴ",
+    orderof: "ℴ",
+    ordf: "ª",
+    ordm: "º",
+    origof: "⊶",
+    oror: "⩖",
+    orslope: "⩗",
+    orv: "⩛",
+    oS: "Ⓢ",
+    Oscr: "𝒪",
+    oscr: "ℴ",
+    Oslash: "Ø",
+    oslash: "ø",
+    osol: "⊘",
+    Otilde: "Õ",
+    otilde: "õ",
+    Otimes: "⨷",
+    otimes: "⊗",
+    otimesas: "⨶",
+    Ouml: "Ö",
+    ouml: "ö",
+    ovbar: "⌽",
+    OverBar: "‾",
+    OverBrace: "⏞",
+    OverBracket: "⎴",
+    OverParenthesis: "⏜",
+    par: "∥",
+    para: "¶",
+    parallel: "∥",
+    parsim: "⫳",
+    parsl: "⫽",
+    part: "∂",
+    PartialD: "∂",
+    Pcy: "П",
+    pcy: "п",
+    percnt: "%",
+    period: ".",
+    permil: "‰",
+    perp: "⊥",
+    pertenk: "‱",
+    Pfr: "𝔓",
+    pfr: "𝔭",
+    Phi: "Φ",
+    phi: "φ",
+    phiv: "ϕ",
+    phmmat: "ℳ",
+    phone: "☎",
+    Pi: "Π",
+    pi: "π",
+    pitchfork: "⋔",
+    piv: "ϖ",
+    planck: "ℏ",
+    planckh: "ℎ",
+    plankv: "ℏ",
+    plus: "+",
+    plusacir: "⨣",
+    plusb: "⊞",
+    pluscir: "⨢",
+    plusdo: "∔",
+    plusdu: "⨥",
+    pluse: "⩲",
+    PlusMinus: "±",
+    plusmn: "±",
+    plussim: "⨦",
+    plustwo: "⨧",
+    pm: "±",
+    Poincareplane: "ℌ",
+    pointint: "⨕",
+    Popf: "ℙ",
+    popf: "𝕡",
+    pound: "£",
+    Pr: "⪻",
+    pr: "≺",
+    prap: "⪷",
+    prcue: "≼",
+    prE: "⪳",
+    pre: "⪯",
+    prec: "≺",
+    precapprox: "⪷",
+    preccurlyeq: "≼",
+    Precedes: "≺",
+    PrecedesEqual: "⪯",
+    PrecedesSlantEqual: "≼",
+    PrecedesTilde: "≾",
+    preceq: "⪯",
+    precnapprox: "⪹",
+    precneqq: "⪵",
+    precnsim: "⋨",
+    precsim: "≾",
+    Prime: "″",
+    prime: "′",
+    primes: "ℙ",
+    prnap: "⪹",
+    prnE: "⪵",
+    prnsim: "⋨",
+    prod: "∏",
+    Product: "∏",
+    profalar: "⌮",
+    profline: "⌒",
+    profsurf: "⌓",
+    prop: "∝",
+    Proportion: "∷",
+    Proportional: "∝",
+    propto: "∝",
+    prsim: "≾",
+    prurel: "⊰",
+    Pscr: "𝒫",
+    pscr: "𝓅",
+    Psi: "Ψ",
+    psi: "ψ",
+    puncsp: " ",
+    Qfr: "𝔔",
+    qfr: "𝔮",
+    qint: "⨌",
+    Qopf: "ℚ",
+    qopf: "𝕢",
+    qprime: "⁗",
+    Qscr: "𝒬",
+    qscr: "𝓆",
+    quaternions: "ℍ",
+    quatint: "⨖",
+    quest: "?",
+    questeq: "≟",
+    QUOT: '"',
+    quot: '"',
+    rAarr: "⇛",
+    race: "∽̱",
+    Racute: "Ŕ",
+    racute: "ŕ",
+    radic: "√",
+    raemptyv: "⦳",
+    Rang: "⟫",
+    rang: "⟩",
+    rangd: "⦒",
+    range: "⦥",
+    rangle: "⟩",
+    raquo: "»",
+    Rarr: "↠",
+    rArr: "⇒",
+    rarr: "→",
+    rarrap: "⥵",
+    rarrb: "⇥",
+    rarrbfs: "⤠",
+    rarrc: "⤳",
+    rarrfs: "⤞",
+    rarrhk: "↪",
+    rarrlp: "↬",
+    rarrpl: "⥅",
+    rarrsim: "⥴",
+    Rarrtl: "⤖",
+    rarrtl: "↣",
+    rarrw: "↝",
+    rAtail: "⤜",
+    ratail: "⤚",
+    ratio: "∶",
+    rationals: "ℚ",
+    RBarr: "⤐",
+    rBarr: "⤏",
+    rbarr: "⤍",
+    rbbrk: "❳",
+    rbrace: "}",
+    rbrack: "]",
+    rbrke: "⦌",
+    rbrksld: "⦎",
+    rbrkslu: "⦐",
+    Rcaron: "Ř",
+    rcaron: "ř",
+    Rcedil: "Ŗ",
+    rcedil: "ŗ",
+    rceil: "⌉",
+    rcub: "}",
+    Rcy: "Р",
+    rcy: "р",
+    rdca: "⤷",
+    rdldhar: "⥩",
+    rdquo: "”",
+    rdquor: "”",
+    rdsh: "↳",
+    Re: "ℜ",
+    real: "ℜ",
+    realine: "ℛ",
+    realpart: "ℜ",
+    reals: "ℝ",
+    rect: "▭",
+    REG: "®",
+    reg: "®",
+    ReverseElement: "∋",
+    ReverseEquilibrium: "⇋",
+    ReverseUpEquilibrium: "⥯",
+    rfisht: "⥽",
+    rfloor: "⌋",
+    Rfr: "ℜ",
+    rfr: "𝔯",
+    rHar: "⥤",
+    rhard: "⇁",
+    rharu: "⇀",
+    rharul: "⥬",
+    Rho: "Ρ",
+    rho: "ρ",
+    rhov: "ϱ",
+    RightAngleBracket: "⟩",
+    RightArrow: "→",
+    Rightarrow: "⇒",
+    rightarrow: "→",
+    RightArrowBar: "⇥",
+    RightArrowLeftArrow: "⇄",
+    rightarrowtail: "↣",
+    RightCeiling: "⌉",
+    RightDoubleBracket: "⟧",
+    RightDownTeeVector: "⥝",
+    RightDownVector: "⇂",
+    RightDownVectorBar: "⥕",
+    RightFloor: "⌋",
+    rightharpoondown: "⇁",
+    rightharpoonup: "⇀",
+    rightleftarrows: "⇄",
+    rightleftharpoons: "⇌",
+    rightrightarrows: "⇉",
+    rightsquigarrow: "↝",
+    RightTee: "⊢",
+    RightTeeArrow: "↦",
+    RightTeeVector: "⥛",
+    rightthreetimes: "⋌",
+    RightTriangle: "⊳",
+    RightTriangleBar: "⧐",
+    RightTriangleEqual: "⊵",
+    RightUpDownVector: "⥏",
+    RightUpTeeVector: "⥜",
+    RightUpVector: "↾",
+    RightUpVectorBar: "⥔",
+    RightVector: "⇀",
+    RightVectorBar: "⥓",
+    ring: "˚",
+    risingdotseq: "≓",
+    rlarr: "⇄",
+    rlhar: "⇌",
+    rlm: "‏",
+    rmoust: "⎱",
+    rmoustache: "⎱",
+    rnmid: "⫮",
+    roang: "⟭",
+    roarr: "⇾",
+    robrk: "⟧",
+    ropar: "⦆",
+    Ropf: "ℝ",
+    ropf: "𝕣",
+    roplus: "⨮",
+    rotimes: "⨵",
+    RoundImplies: "⥰",
+    rpar: ")",
+    rpargt: "⦔",
+    rppolint: "⨒",
+    rrarr: "⇉",
+    Rrightarrow: "⇛",
+    rsaquo: "›",
+    Rscr: "ℛ",
+    rscr: "𝓇",
+    Rsh: "↱",
+    rsh: "↱",
+    rsqb: "]",
+    rsquo: "’",
+    rsquor: "’",
+    rthree: "⋌",
+    rtimes: "⋊",
+    rtri: "▹",
+    rtrie: "⊵",
+    rtrif: "▸",
+    rtriltri: "⧎",
+    RuleDelayed: "⧴",
+    ruluhar: "⥨",
+    rx: "℞",
+    Sacute: "Ś",
+    sacute: "ś",
+    sbquo: "‚",
+    Sc: "⪼",
+    sc: "≻",
+    scap: "⪸",
+    Scaron: "Š",
+    scaron: "š",
+    sccue: "≽",
+    scE: "⪴",
+    sce: "⪰",
+    Scedil: "Ş",
+    scedil: "ş",
+    Scirc: "Ŝ",
+    scirc: "ŝ",
+    scnap: "⪺",
+    scnE: "⪶",
+    scnsim: "⋩",
+    scpolint: "⨓",
+    scsim: "≿",
+    Scy: "С",
+    scy: "с",
+    sdot: "⋅",
+    sdotb: "⊡",
+    sdote: "⩦",
+    searhk: "⤥",
+    seArr: "⇘",
+    searr: "↘",
+    searrow: "↘",
+    sect: "§",
+    semi: ";",
+    seswar: "⤩",
+    setminus: "∖",
+    setmn: "∖",
+    sext: "✶",
+    Sfr: "𝔖",
+    sfr: "𝔰",
+    sfrown: "⌢",
+    sharp: "♯",
+    SHCHcy: "Щ",
+    shchcy: "щ",
+    SHcy: "Ш",
+    shcy: "ш",
+    ShortDownArrow: "↓",
+    ShortLeftArrow: "←",
+    shortmid: "∣",
+    shortparallel: "∥",
+    ShortRightArrow: "→",
+    ShortUpArrow: "↑",
+    shy: "­",
+    Sigma: "Σ",
+    sigma: "σ",
+    sigmaf: "ς",
+    sigmav: "ς",
+    sim: "∼",
+    simdot: "⩪",
+    sime: "≃",
+    simeq: "≃",
+    simg: "⪞",
+    simgE: "⪠",
+    siml: "⪝",
+    simlE: "⪟",
+    simne: "≆",
+    simplus: "⨤",
+    simrarr: "⥲",
+    slarr: "←",
+    SmallCircle: "∘",
+    smallsetminus: "∖",
+    smashp: "⨳",
+    smeparsl: "⧤",
+    smid: "∣",
+    smile: "⌣",
+    smt: "⪪",
+    smte: "⪬",
+    smtes: "⪬︀",
+    SOFTcy: "Ь",
+    softcy: "ь",
+    sol: "/",
+    solb: "⧄",
+    solbar: "⌿",
+    Sopf: "𝕊",
+    sopf: "𝕤",
+    spades: "♠",
+    spadesuit: "♠",
+    spar: "∥",
+    sqcap: "⊓",
+    sqcaps: "⊓︀",
+    sqcup: "⊔",
+    sqcups: "⊔︀",
+    Sqrt: "√",
+    sqsub: "⊏",
+    sqsube: "⊑",
+    sqsubset: "⊏",
+    sqsubseteq: "⊑",
+    sqsup: "⊐",
+    sqsupe: "⊒",
+    sqsupset: "⊐",
+    sqsupseteq: "⊒",
+    squ: "□",
+    Square: "□",
+    square: "□",
+    SquareIntersection: "⊓",
+    SquareSubset: "⊏",
+    SquareSubsetEqual: "⊑",
+    SquareSuperset: "⊐",
+    SquareSupersetEqual: "⊒",
+    SquareUnion: "⊔",
+    squarf: "▪",
+    squf: "▪",
+    srarr: "→",
+    Sscr: "𝒮",
+    sscr: "𝓈",
+    ssetmn: "∖",
+    ssmile: "⌣",
+    sstarf: "⋆",
+    Star: "⋆",
+    star: "☆",
+    starf: "★",
+    straightepsilon: "ϵ",
+    straightphi: "ϕ",
+    strns: "¯",
+    Sub: "⋐",
+    sub: "⊂",
+    subdot: "⪽",
+    subE: "⫅",
+    sube: "⊆",
+    subedot: "⫃",
+    submult: "⫁",
+    subnE: "⫋",
+    subne: "⊊",
+    subplus: "⪿",
+    subrarr: "⥹",
+    Subset: "⋐",
+    subset: "⊂",
+    subseteq: "⊆",
+    subseteqq: "⫅",
+    SubsetEqual: "⊆",
+    subsetneq: "⊊",
+    subsetneqq: "⫋",
+    subsim: "⫇",
+    subsub: "⫕",
+    subsup: "⫓",
+    succ: "≻",
+    succapprox: "⪸",
+    succcurlyeq: "≽",
+    Succeeds: "≻",
+    SucceedsEqual: "⪰",
+    SucceedsSlantEqual: "≽",
+    SucceedsTilde: "≿",
+    succeq: "⪰",
+    succnapprox: "⪺",
+    succneqq: "⪶",
+    succnsim: "⋩",
+    succsim: "≿",
+    SuchThat: "∋",
+    Sum: "∑",
+    sum: "∑",
+    sung: "♪",
+    Sup: "⋑",
+    sup: "⊃",
+    sup1: "¹",
+    sup2: "²",
+    sup3: "³",
+    supdot: "⪾",
+    supdsub: "⫘",
+    supE: "⫆",
+    supe: "⊇",
+    supedot: "⫄",
+    Superset: "⊃",
+    SupersetEqual: "⊇",
+    suphsol: "⟉",
+    suphsub: "⫗",
+    suplarr: "⥻",
+    supmult: "⫂",
+    supnE: "⫌",
+    supne: "⊋",
+    supplus: "⫀",
+    Supset: "⋑",
+    supset: "⊃",
+    supseteq: "⊇",
+    supseteqq: "⫆",
+    supsetneq: "⊋",
+    supsetneqq: "⫌",
+    supsim: "⫈",
+    supsub: "⫔",
+    supsup: "⫖",
+    swarhk: "⤦",
+    swArr: "⇙",
+    swarr: "↙",
+    swarrow: "↙",
+    swnwar: "⤪",
+    szlig: "ß",
+    Tab: "	",
+    target: "⌖",
+    Tau: "Τ",
+    tau: "τ",
+    tbrk: "⎴",
+    Tcaron: "Ť",
+    tcaron: "ť",
+    Tcedil: "Ţ",
+    tcedil: "ţ",
+    Tcy: "Т",
+    tcy: "т",
+    tdot: "⃛",
+    telrec: "⌕",
+    Tfr: "𝔗",
+    tfr: "𝔱",
+    there4: "∴",
+    Therefore: "∴",
+    therefore: "∴",
+    Theta: "Θ",
+    theta: "θ",
+    thetasym: "ϑ",
+    thetav: "ϑ",
+    thickapprox: "≈",
+    thicksim: "∼",
+    ThickSpace: "  ",
+    thinsp: " ",
+    ThinSpace: " ",
+    thkap: "≈",
+    thksim: "∼",
+    THORN: "Þ",
+    thorn: "þ",
+    Tilde: "∼",
+    tilde: "˜",
+    TildeEqual: "≃",
+    TildeFullEqual: "≅",
+    TildeTilde: "≈",
+    times: "×",
+    timesb: "⊠",
+    timesbar: "⨱",
+    timesd: "⨰",
+    tint: "∭",
+    toea: "⤨",
+    top: "⊤",
+    topbot: "⌶",
+    topcir: "⫱",
+    Topf: "𝕋",
+    topf: "𝕥",
+    topfork: "⫚",
+    tosa: "⤩",
+    tprime: "‴",
+    TRADE: "™",
+    trade: "™",
+    triangle: "▵",
+    triangledown: "▿",
+    triangleleft: "◃",
+    trianglelefteq: "⊴",
+    triangleq: "≜",
+    triangleright: "▹",
+    trianglerighteq: "⊵",
+    tridot: "◬",
+    trie: "≜",
+    triminus: "⨺",
+    TripleDot: "⃛",
+    triplus: "⨹",
+    trisb: "⧍",
+    tritime: "⨻",
+    trpezium: "⏢",
+    Tscr: "𝒯",
+    tscr: "𝓉",
+    TScy: "Ц",
+    tscy: "ц",
+    TSHcy: "Ћ",
+    tshcy: "ћ",
+    Tstrok: "Ŧ",
+    tstrok: "ŧ",
+    twixt: "≬",
+    twoheadleftarrow: "↞",
+    twoheadrightarrow: "↠",
+    Uacute: "Ú",
+    uacute: "ú",
+    Uarr: "↟",
+    uArr: "⇑",
+    uarr: "↑",
+    Uarrocir: "⥉",
+    Ubrcy: "Ў",
+    ubrcy: "ў",
+    Ubreve: "Ŭ",
+    ubreve: "ŭ",
+    Ucirc: "Û",
+    ucirc: "û",
+    Ucy: "У",
+    ucy: "у",
+    udarr: "⇅",
+    Udblac: "Ű",
+    udblac: "ű",
+    udhar: "⥮",
+    ufisht: "⥾",
+    Ufr: "𝔘",
+    ufr: "𝔲",
+    Ugrave: "Ù",
+    ugrave: "ù",
+    uHar: "⥣",
+    uharl: "↿",
+    uharr: "↾",
+    uhblk: "▀",
+    ulcorn: "⌜",
+    ulcorner: "⌜",
+    ulcrop: "⌏",
+    ultri: "◸",
+    Umacr: "Ū",
+    umacr: "ū",
+    uml: "¨",
+    UnderBar: "_",
+    UnderBrace: "⏟",
+    UnderBracket: "⎵",
+    UnderParenthesis: "⏝",
+    Union: "⋃",
+    UnionPlus: "⊎",
+    Uogon: "Ų",
+    uogon: "ų",
+    Uopf: "𝕌",
+    uopf: "𝕦",
+    UpArrow: "↑",
+    Uparrow: "⇑",
+    uparrow: "↑",
+    UpArrowBar: "⤒",
+    UpArrowDownArrow: "⇅",
+    UpDownArrow: "↕",
+    Updownarrow: "⇕",
+    updownarrow: "↕",
+    UpEquilibrium: "⥮",
+    upharpoonleft: "↿",
+    upharpoonright: "↾",
+    uplus: "⊎",
+    UpperLeftArrow: "↖",
+    UpperRightArrow: "↗",
+    Upsi: "ϒ",
+    upsi: "υ",
+    upsih: "ϒ",
+    Upsilon: "Υ",
+    upsilon: "υ",
+    UpTee: "⊥",
+    UpTeeArrow: "↥",
+    upuparrows: "⇈",
+    urcorn: "⌝",
+    urcorner: "⌝",
+    urcrop: "⌎",
+    Uring: "Ů",
+    uring: "ů",
+    urtri: "◹",
+    Uscr: "𝒰",
+    uscr: "𝓊",
+    utdot: "⋰",
+    Utilde: "Ũ",
+    utilde: "ũ",
+    utri: "▵",
+    utrif: "▴",
+    uuarr: "⇈",
+    Uuml: "Ü",
+    uuml: "ü",
+    uwangle: "⦧",
+    vangrt: "⦜",
+    varepsilon: "ϵ",
+    varkappa: "ϰ",
+    varnothing: "∅",
+    varphi: "ϕ",
+    varpi: "ϖ",
+    varpropto: "∝",
+    vArr: "⇕",
+    varr: "↕",
+    varrho: "ϱ",
+    varsigma: "ς",
+    varsubsetneq: "⊊︀",
+    varsubsetneqq: "⫋︀",
+    varsupsetneq: "⊋︀",
+    varsupsetneqq: "⫌︀",
+    vartheta: "ϑ",
+    vartriangleleft: "⊲",
+    vartriangleright: "⊳",
+    Vbar: "⫫",
+    vBar: "⫨",
+    vBarv: "⫩",
+    Vcy: "В",
+    vcy: "в",
+    VDash: "⊫",
+    Vdash: "⊩",
+    vDash: "⊨",
+    vdash: "⊢",
+    Vdashl: "⫦",
+    Vee: "⋁",
+    vee: "∨",
+    veebar: "⊻",
+    veeeq: "≚",
+    vellip: "⋮",
+    Verbar: "‖",
+    verbar: "|",
+    Vert: "‖",
+    vert: "|",
+    VerticalBar: "∣",
+    VerticalLine: "|",
+    VerticalSeparator: "❘",
+    VerticalTilde: "≀",
+    VeryThinSpace: " ",
+    Vfr: "𝔙",
+    vfr: "𝔳",
+    vltri: "⊲",
+    vnsub: "⊂⃒",
+    vnsup: "⊃⃒",
+    Vopf: "𝕍",
+    vopf: "𝕧",
+    vprop: "∝",
+    vrtri: "⊳",
+    Vscr: "𝒱",
+    vscr: "𝓋",
+    vsubnE: "⫋︀",
+    vsubne: "⊊︀",
+    vsupnE: "⫌︀",
+    vsupne: "⊋︀",
+    Vvdash: "⊪",
+    vzigzag: "⦚",
+    Wcirc: "Ŵ",
+    wcirc: "ŵ",
+    wedbar: "⩟",
+    Wedge: "⋀",
+    wedge: "∧",
+    wedgeq: "≙",
+    weierp: "℘",
+    Wfr: "𝔚",
+    wfr: "𝔴",
+    Wopf: "𝕎",
+    wopf: "𝕨",
+    wp: "℘",
+    wr: "≀",
+    wreath: "≀",
+    Wscr: "𝒲",
+    wscr: "𝓌",
+    xcap: "⋂",
+    xcirc: "◯",
+    xcup: "⋃",
+    xdtri: "▽",
+    Xfr: "𝔛",
+    xfr: "𝔵",
+    xhArr: "⟺",
+    xharr: "⟷",
+    Xi: "Ξ",
+    xi: "ξ",
+    xlArr: "⟸",
+    xlarr: "⟵",
+    xmap: "⟼",
+    xnis: "⋻",
+    xodot: "⨀",
+    Xopf: "𝕏",
+    xopf: "𝕩",
+    xoplus: "⨁",
+    xotime: "⨂",
+    xrArr: "⟹",
+    xrarr: "⟶",
+    Xscr: "𝒳",
+    xscr: "𝓍",
+    xsqcup: "⨆",
+    xuplus: "⨄",
+    xutri: "△",
+    xvee: "⋁",
+    xwedge: "⋀",
+    Yacute: "Ý",
+    yacute: "ý",
+    YAcy: "Я",
+    yacy: "я",
+    Ycirc: "Ŷ",
+    ycirc: "ŷ",
+    Ycy: "Ы",
+    ycy: "ы",
+    yen: "¥",
+    Yfr: "𝔜",
+    yfr: "𝔶",
+    YIcy: "Ї",
+    yicy: "ї",
+    Yopf: "𝕐",
+    yopf: "𝕪",
+    Yscr: "𝒴",
+    yscr: "𝓎",
+    YUcy: "Ю",
+    yucy: "ю",
+    Yuml: "Ÿ",
+    yuml: "ÿ",
+    Zacute: "Ź",
+    zacute: "ź",
+    Zcaron: "Ž",
+    zcaron: "ž",
+    Zcy: "З",
+    zcy: "з",
+    Zdot: "Ż",
+    zdot: "ż",
+    zeetrf: "ℨ",
+    ZeroWidthSpace: "​",
+    Zeta: "Ζ",
+    zeta: "ζ",
+    Zfr: "ℨ",
+    zfr: "𝔷",
+    ZHcy: "Ж",
+    zhcy: "ж",
+    zigrarr: "⇝",
+    Zopf: "ℤ",
+    zopf: "𝕫",
+    Zscr: "𝒵",
+    zscr: "𝓏",
+    zwj: "‍",
+    zwnj: "‌"
+  });
+  exports$1.entityMap = exports$1.HTML_ENTITIES;
+})(entities$1);
+var sax$1 = {};
+var NAMESPACE$1 = conventions$2.NAMESPACE;
+var nameStartChar = /[A-Z_a-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]/;
+var nameChar = new RegExp("[\\-\\.0-9" + nameStartChar.source.slice(1, -1) + "\\u00B7\\u0300-\\u036F\\u203F-\\u2040]");
+var tagNamePattern = new RegExp("^" + nameStartChar.source + nameChar.source + "*(?::" + nameStartChar.source + nameChar.source + "*)?$");
+var S_TAG = 0;
+var S_ATTR = 1;
+var S_ATTR_SPACE = 2;
+var S_EQ = 3;
+var S_ATTR_NOQUOT_VALUE = 4;
+var S_ATTR_END = 5;
+var S_TAG_SPACE = 6;
+var S_TAG_CLOSE = 7;
+function ParseError$1(message, locator) {
+  this.message = message;
+  this.locator = locator;
+  if (Error.captureStackTrace) Error.captureStackTrace(this, ParseError$1);
+}
+ParseError$1.prototype = new Error();
+ParseError$1.prototype.name = ParseError$1.name;
+function XMLReader$1() {
+}
+XMLReader$1.prototype = {
+  parse: function(source, defaultNSMap, entityMap) {
+    var domBuilder = this.domBuilder;
+    domBuilder.startDocument();
+    _copy(defaultNSMap, defaultNSMap = {});
+    parse(
+      source,
+      defaultNSMap,
+      entityMap,
+      domBuilder,
+      this.errorHandler
+    );
+    domBuilder.endDocument();
+  }
+};
+function parse(source, defaultNSMapCopy, entityMap, domBuilder, errorHandler) {
+  function fixedFromCharCode(code) {
+    if (code > 65535) {
+      code -= 65536;
+      var surrogate1 = 55296 + (code >> 10), surrogate2 = 56320 + (code & 1023);
+      return String.fromCharCode(surrogate1, surrogate2);
+    } else {
+      return String.fromCharCode(code);
+    }
+  }
+  function entityReplacer(a2) {
+    var k = a2.slice(1, -1);
+    if (Object.hasOwnProperty.call(entityMap, k)) {
+      return entityMap[k];
+    } else if (k.charAt(0) === "#") {
+      return fixedFromCharCode(parseInt(k.substr(1).replace("x", "0x")));
+    } else {
+      errorHandler.error("entity not found:" + a2);
+      return a2;
+    }
+  }
+  function appendText(end2) {
+    if (end2 > start) {
+      var xt = source.substring(start, end2).replace(/&#?\w+;/g, entityReplacer);
+      locator && position2(start);
+      domBuilder.characters(xt, 0, end2 - start);
+      start = end2;
+    }
+  }
+  function position2(p, m) {
+    while (p >= lineEnd && (m = linePattern.exec(source))) {
+      lineStart = m.index;
+      lineEnd = lineStart + m[0].length;
+      locator.lineNumber++;
+    }
+    locator.columnNumber = p - lineStart + 1;
+  }
+  var lineStart = 0;
+  var lineEnd = 0;
+  var linePattern = /.*(?:\r\n?|\n)|.*$/g;
+  var locator = domBuilder.locator;
+  var parseStack = [{ currentNSMap: defaultNSMapCopy }];
+  var closeMap = {};
+  var start = 0;
+  while (true) {
+    try {
+      var tagStart = source.indexOf("<", start);
+      if (tagStart < 0) {
+        if (!source.substr(start).match(/^\s*$/)) {
+          var doc = domBuilder.doc;
+          var text = doc.createTextNode(source.substr(start));
+          doc.appendChild(text);
+          domBuilder.currentElement = text;
+        }
+        return;
+      }
+      if (tagStart > start) {
+        appendText(tagStart);
+      }
+      switch (source.charAt(tagStart + 1)) {
+        case "/":
+          var end = source.indexOf(">", tagStart + 3);
+          var tagName = source.substring(tagStart + 2, end).replace(/[ \t\n\r]+$/g, "");
+          var config2 = parseStack.pop();
+          if (end < 0) {
+            tagName = source.substring(tagStart + 2).replace(/[\s<].*/, "");
+            errorHandler.error("end tag name: " + tagName + " is not complete:" + config2.tagName);
+            end = tagStart + 1 + tagName.length;
+          } else if (tagName.match(/\s</)) {
+            tagName = tagName.replace(/[\s<].*/, "");
+            errorHandler.error("end tag name: " + tagName + " maybe not complete");
+            end = tagStart + 1 + tagName.length;
+          }
+          var localNSMap = config2.localNSMap;
+          var endMatch = config2.tagName == tagName;
+          var endIgnoreCaseMach = endMatch || config2.tagName && config2.tagName.toLowerCase() == tagName.toLowerCase();
+          if (endIgnoreCaseMach) {
+            domBuilder.endElement(config2.uri, config2.localName, tagName);
+            if (localNSMap) {
+              for (var prefix in localNSMap) {
+                if (Object.prototype.hasOwnProperty.call(localNSMap, prefix)) {
+                  domBuilder.endPrefixMapping(prefix);
+                }
+              }
+            }
+            if (!endMatch) {
+              errorHandler.fatalError("end tag name: " + tagName + " is not match the current start tagName:" + config2.tagName);
+            }
+          } else {
+            parseStack.push(config2);
+          }
+          end++;
+          break;
+        case "?":
+          locator && position2(tagStart);
+          end = parseInstruction(source, tagStart, domBuilder);
+          break;
+        case "!":
+          locator && position2(tagStart);
+          end = parseDCC(source, tagStart, domBuilder, errorHandler);
+          break;
+        default:
+          locator && position2(tagStart);
+          var el = new ElementAttributes();
+          var currentNSMap = parseStack[parseStack.length - 1].currentNSMap;
+          var end = parseElementStartPart(source, tagStart, el, currentNSMap, entityReplacer, errorHandler);
+          var len = el.length;
+          if (!el.closed && fixSelfClosed(source, end, el.tagName, closeMap)) {
+            el.closed = true;
+            if (!entityMap.nbsp) {
+              errorHandler.warning("unclosed xml attribute");
+            }
+          }
+          if (locator && len) {
+            var locator2 = copyLocator(locator, {});
+            for (var i = 0; i < len; i++) {
+              var a = el[i];
+              position2(a.offset);
+              a.locator = copyLocator(locator, {});
+            }
+            domBuilder.locator = locator2;
+            if (appendElement$1(el, domBuilder, currentNSMap)) {
+              parseStack.push(el);
+            }
+            domBuilder.locator = locator;
+          } else {
+            if (appendElement$1(el, domBuilder, currentNSMap)) {
+              parseStack.push(el);
+            }
+          }
+          if (NAMESPACE$1.isHTML(el.uri) && !el.closed) {
+            end = parseHtmlSpecialContent(source, end, el.tagName, entityReplacer, domBuilder);
+          } else {
+            end++;
+          }
+      }
+    } catch (e) {
+      if (e instanceof ParseError$1) {
+        throw e;
+      }
+      errorHandler.error("element parse error: " + e);
+      end = -1;
+    }
+    if (end > start) {
+      start = end;
+    } else {
+      appendText(Math.max(tagStart, start) + 1);
+    }
+  }
+}
+function copyLocator(f, t) {
+  t.lineNumber = f.lineNumber;
+  t.columnNumber = f.columnNumber;
+  return t;
+}
+function parseElementStartPart(source, start, el, currentNSMap, entityReplacer, errorHandler) {
+  function addAttribute(qname, value2, startIndex) {
+    if (el.attributeNames.hasOwnProperty(qname)) {
+      errorHandler.fatalError("Attribute " + qname + " redefined");
+    }
+    el.addValue(
+      qname,
+      // @see https://www.w3.org/TR/xml/#AVNormalize
+      // since the xmldom sax parser does not "interpret" DTD the following is not implemented:
+      // - recursive replacement of (DTD) entity references
+      // - trimming and collapsing multiple spaces into a single one for attributes that are not of type CDATA
+      value2.replace(/[\t\n\r]/g, " ").replace(/&#?\w+;/g, entityReplacer),
+      startIndex
+    );
+  }
+  var attrName;
+  var value;
+  var p = ++start;
+  var s = S_TAG;
+  while (true) {
+    var c = source.charAt(p);
+    switch (c) {
+      case "=":
+        if (s === S_ATTR) {
+          attrName = source.slice(start, p);
+          s = S_EQ;
+        } else if (s === S_ATTR_SPACE) {
+          s = S_EQ;
+        } else {
+          throw new Error("attribute equal must after attrName");
+        }
+        break;
+      case "'":
+      case '"':
+        if (s === S_EQ || s === S_ATTR) {
+          if (s === S_ATTR) {
+            errorHandler.warning('attribute value must after "="');
+            attrName = source.slice(start, p);
+          }
+          start = p + 1;
+          p = source.indexOf(c, start);
+          if (p > 0) {
+            value = source.slice(start, p);
+            addAttribute(attrName, value, start - 1);
+            s = S_ATTR_END;
+          } else {
+            throw new Error("attribute value no end '" + c + "' match");
+          }
+        } else if (s == S_ATTR_NOQUOT_VALUE) {
+          value = source.slice(start, p);
+          addAttribute(attrName, value, start);
+          errorHandler.warning('attribute "' + attrName + '" missed start quot(' + c + ")!!");
+          start = p + 1;
+          s = S_ATTR_END;
+        } else {
+          throw new Error('attribute value must after "="');
+        }
+        break;
+      case "/":
+        switch (s) {
+          case S_TAG:
+            el.setTagName(source.slice(start, p));
+          case S_ATTR_END:
+          case S_TAG_SPACE:
+          case S_TAG_CLOSE:
+            s = S_TAG_CLOSE;
+            el.closed = true;
+          case S_ATTR_NOQUOT_VALUE:
+          case S_ATTR:
+            break;
+          case S_ATTR_SPACE:
+            el.closed = true;
+            break;
+          default:
+            throw new Error("attribute invalid close char('/')");
+        }
+        break;
+      case "":
+        errorHandler.error("unexpected end of input");
+        if (s == S_TAG) {
+          el.setTagName(source.slice(start, p));
+        }
+        return p;
+      case ">":
+        switch (s) {
+          case S_TAG:
+            el.setTagName(source.slice(start, p));
+          case S_ATTR_END:
+          case S_TAG_SPACE:
+          case S_TAG_CLOSE:
+            break;
+          case S_ATTR_NOQUOT_VALUE:
+          case S_ATTR:
+            value = source.slice(start, p);
+            if (value.slice(-1) === "/") {
+              el.closed = true;
+              value = value.slice(0, -1);
+            }
+          case S_ATTR_SPACE:
+            if (s === S_ATTR_SPACE) {
+              value = attrName;
+            }
+            if (s == S_ATTR_NOQUOT_VALUE) {
+              errorHandler.warning('attribute "' + value + '" missed quot(")!');
+              addAttribute(attrName, value, start);
+            } else {
+              if (!NAMESPACE$1.isHTML(currentNSMap[""]) || !value.match(/^(?:disabled|checked|selected)$/i)) {
+                errorHandler.warning('attribute "' + value + '" missed value!! "' + value + '" instead!!');
+              }
+              addAttribute(value, value, start);
+            }
+            break;
+          case S_EQ:
+            throw new Error("attribute value missed!!");
+        }
+        return p;
+      case "":
+        c = " ";
+      default:
+        if (c <= " ") {
+          switch (s) {
+            case S_TAG:
+              el.setTagName(source.slice(start, p));
+              s = S_TAG_SPACE;
+              break;
+            case S_ATTR:
+              attrName = source.slice(start, p);
+              s = S_ATTR_SPACE;
+              break;
+            case S_ATTR_NOQUOT_VALUE:
+              var value = source.slice(start, p);
+              errorHandler.warning('attribute "' + value + '" missed quot(")!!');
+              addAttribute(attrName, value, start);
+            case S_ATTR_END:
+              s = S_TAG_SPACE;
+              break;
+          }
+        } else {
+          switch (s) {
+            case S_ATTR_SPACE:
+              el.tagName;
+              if (!NAMESPACE$1.isHTML(currentNSMap[""]) || !attrName.match(/^(?:disabled|checked|selected)$/i)) {
+                errorHandler.warning('attribute "' + attrName + '" missed value!! "' + attrName + '" instead2!!');
+              }
+              addAttribute(attrName, attrName, start);
+              start = p;
+              s = S_ATTR;
+              break;
+            case S_ATTR_END:
+              errorHandler.warning('attribute space is required"' + attrName + '"!!');
+            case S_TAG_SPACE:
+              s = S_ATTR;
+              start = p;
+              break;
+            case S_EQ:
+              s = S_ATTR_NOQUOT_VALUE;
+              start = p;
+              break;
+            case S_TAG_CLOSE:
+              throw new Error("elements closed character '/' and '>' must be connected to");
+          }
+        }
+    }
+    p++;
+  }
+}
+function appendElement$1(el, domBuilder, currentNSMap) {
+  var tagName = el.tagName;
+  var localNSMap = null;
+  var i = el.length;
+  while (i--) {
+    var a = el[i];
+    var qName = a.qName;
+    var value = a.value;
+    var nsp = qName.indexOf(":");
+    if (nsp > 0) {
+      var prefix = a.prefix = qName.slice(0, nsp);
+      var localName2 = qName.slice(nsp + 1);
+      var nsPrefix = prefix === "xmlns" && localName2;
+    } else {
+      localName2 = qName;
+      prefix = null;
+      nsPrefix = qName === "xmlns" && "";
+    }
+    a.localName = localName2;
+    if (nsPrefix !== false) {
+      if (localNSMap == null) {
+        localNSMap = {};
+        _copy(currentNSMap, currentNSMap = {});
+      }
+      currentNSMap[nsPrefix] = localNSMap[nsPrefix] = value;
+      a.uri = NAMESPACE$1.XMLNS;
+      domBuilder.startPrefixMapping(nsPrefix, value);
+    }
+  }
+  var i = el.length;
+  while (i--) {
+    a = el[i];
+    var prefix = a.prefix;
+    if (prefix) {
+      if (prefix === "xml") {
+        a.uri = NAMESPACE$1.XML;
+      }
+      if (prefix !== "xmlns") {
+        a.uri = currentNSMap[prefix || ""];
+      }
+    }
+  }
+  var nsp = tagName.indexOf(":");
+  if (nsp > 0) {
+    prefix = el.prefix = tagName.slice(0, nsp);
+    localName2 = el.localName = tagName.slice(nsp + 1);
+  } else {
+    prefix = null;
+    localName2 = el.localName = tagName;
+  }
+  var ns = el.uri = currentNSMap[prefix || ""];
+  domBuilder.startElement(ns, localName2, tagName, el);
+  if (el.closed) {
+    domBuilder.endElement(ns, localName2, tagName);
+    if (localNSMap) {
+      for (prefix in localNSMap) {
+        if (Object.prototype.hasOwnProperty.call(localNSMap, prefix)) {
+          domBuilder.endPrefixMapping(prefix);
+        }
+      }
+    }
+  } else {
+    el.currentNSMap = currentNSMap;
+    el.localNSMap = localNSMap;
+    return true;
+  }
+}
+function parseHtmlSpecialContent(source, elStartEnd, tagName, entityReplacer, domBuilder) {
+  if (/^(?:script|textarea)$/i.test(tagName)) {
+    var elEndStart = source.indexOf("</" + tagName + ">", elStartEnd);
+    var text = source.substring(elStartEnd + 1, elEndStart);
+    if (/[&<]/.test(text)) {
+      if (/^script$/i.test(tagName)) {
+        domBuilder.characters(text, 0, text.length);
+        return elEndStart;
+      }
+      text = text.replace(/&#?\w+;/g, entityReplacer);
+      domBuilder.characters(text, 0, text.length);
+      return elEndStart;
+    }
+  }
+  return elStartEnd + 1;
+}
+function fixSelfClosed(source, elStartEnd, tagName, closeMap) {
+  var pos = closeMap[tagName];
+  if (pos == null) {
+    pos = source.lastIndexOf("</" + tagName + ">");
+    if (pos < elStartEnd) {
+      pos = source.lastIndexOf("</" + tagName);
+    }
+    closeMap[tagName] = pos;
+  }
+  return pos < elStartEnd;
+}
+function _copy(source, target) {
+  for (var n in source) {
+    if (Object.prototype.hasOwnProperty.call(source, n)) {
+      target[n] = source[n];
+    }
+  }
+}
+function parseDCC(source, start, domBuilder, errorHandler) {
+  var next = source.charAt(start + 2);
+  switch (next) {
+    case "-":
+      if (source.charAt(start + 3) === "-") {
+        var end = source.indexOf("-->", start + 4);
+        if (end > start) {
+          domBuilder.comment(source, start + 4, end - start - 4);
+          return end + 3;
+        } else {
+          errorHandler.error("Unclosed comment");
+          return -1;
+        }
+      } else {
+        return -1;
+      }
+    default:
+      if (source.substr(start + 3, 6) == "CDATA[") {
+        var end = source.indexOf("]]>", start + 9);
+        domBuilder.startCDATA();
+        domBuilder.characters(source, start + 9, end - start - 9);
+        domBuilder.endCDATA();
+        return end + 3;
+      }
+      var matchs = split(source, start);
+      var len = matchs.length;
+      if (len > 1 && /!doctype/i.test(matchs[0][0])) {
+        var name = matchs[1][0];
+        var pubid = false;
+        var sysid = false;
+        if (len > 3) {
+          if (/^public$/i.test(matchs[2][0])) {
+            pubid = matchs[3][0];
+            sysid = len > 4 && matchs[4][0];
+          } else if (/^system$/i.test(matchs[2][0])) {
+            sysid = matchs[3][0];
+          }
+        }
+        var lastMatch = matchs[len - 1];
+        domBuilder.startDTD(name, pubid, sysid);
+        domBuilder.endDTD();
+        return lastMatch.index + lastMatch[0].length;
+      }
+  }
+  return -1;
+}
+function parseInstruction(source, start, domBuilder) {
+  var end = source.indexOf("?>", start);
+  if (end) {
+    var match = source.substring(start, end).match(/^<\?(\S*)\s*([\s\S]*?)\s*$/);
+    if (match) {
+      match[0].length;
+      domBuilder.processingInstruction(match[1], match[2]);
+      return end + 2;
+    } else {
+      return -1;
+    }
+  }
+  return -1;
+}
+function ElementAttributes() {
+  this.attributeNames = {};
+}
+ElementAttributes.prototype = {
+  setTagName: function(tagName) {
+    if (!tagNamePattern.test(tagName)) {
+      throw new Error("invalid tagName:" + tagName);
+    }
+    this.tagName = tagName;
+  },
+  addValue: function(qName, value, offset) {
+    if (!tagNamePattern.test(qName)) {
+      throw new Error("invalid attribute:" + qName);
+    }
+    this.attributeNames[qName] = this.length;
+    this[this.length++] = { qName, value, offset };
+  },
+  length: 0,
+  getLocalName: function(i) {
+    return this[i].localName;
+  },
+  getLocator: function(i) {
+    return this[i].locator;
+  },
+  getQName: function(i) {
+    return this[i].qName;
+  },
+  getURI: function(i) {
+    return this[i].uri;
+  },
+  getValue: function(i) {
+    return this[i].value;
+  }
+  //	,getIndex:function(uri, localName)){
+  //		if(localName){
+  //
+  //		}else{
+  //			var qName = uri
+  //		}
+  //	},
+  //	getValue:function(){return this.getValue(this.getIndex.apply(this,arguments))},
+  //	getType:function(uri,localName){}
+  //	getType:function(i){},
+};
+function split(source, start) {
+  var match;
+  var buf = [];
+  var reg = /'[^']+'|"[^"]+"|[^\s<>\/=]+=?|(\/?\s*>|<)/g;
+  reg.lastIndex = start;
+  reg.exec(source);
+  while (match = reg.exec(source)) {
+    buf.push(match);
+    if (match[1]) return buf;
+  }
+}
+sax$1.XMLReader = XMLReader$1;
+sax$1.ParseError = ParseError$1;
+var conventions = conventions$2;
+var dom = dom$1;
+var entities = entities$1;
+var sax = sax$1;
+var DOMImplementation = dom.DOMImplementation;
+var NAMESPACE = conventions.NAMESPACE;
+var ParseError = sax.ParseError;
+var XMLReader = sax.XMLReader;
+function normalizeLineEndings(input) {
+  return input.replace(/\r[\n\u0085]/g, "\n").replace(/[\r\u0085\u2028]/g, "\n");
+}
+function DOMParser$1(options2) {
+  this.options = options2 || { locator: {} };
+}
+DOMParser$1.prototype.parseFromString = function(source, mimeType) {
+  var options2 = this.options;
+  var sax2 = new XMLReader();
+  var domBuilder = options2.domBuilder || new DOMHandler();
+  var errorHandler = options2.errorHandler;
+  var locator = options2.locator;
+  var defaultNSMap = options2.xmlns || {};
+  var isHTML = /\/x?html?$/.test(mimeType);
+  var entityMap = isHTML ? entities.HTML_ENTITIES : entities.XML_ENTITIES;
+  if (locator) {
+    domBuilder.setDocumentLocator(locator);
+  }
+  sax2.errorHandler = buildErrorHandler(errorHandler, domBuilder, locator);
+  sax2.domBuilder = options2.domBuilder || domBuilder;
+  if (isHTML) {
+    defaultNSMap[""] = NAMESPACE.HTML;
+  }
+  defaultNSMap.xml = defaultNSMap.xml || NAMESPACE.XML;
+  var normalize = options2.normalizeLineEndings || normalizeLineEndings;
+  if (source && typeof source === "string") {
+    sax2.parse(
+      normalize(source),
+      defaultNSMap,
+      entityMap
+    );
+  } else {
+    sax2.errorHandler.error("invalid doc source");
+  }
+  return domBuilder.doc;
+};
+function buildErrorHandler(errorImpl, domBuilder, locator) {
+  if (!errorImpl) {
+    if (domBuilder instanceof DOMHandler) {
+      return domBuilder;
+    }
+    errorImpl = domBuilder;
+  }
+  var errorHandler = {};
+  var isCallback = errorImpl instanceof Function;
+  locator = locator || {};
+  function build(key) {
+    var fn = errorImpl[key];
+    if (!fn && isCallback) {
+      fn = errorImpl.length == 2 ? function(msg) {
+        errorImpl(key, msg);
+      } : errorImpl;
+    }
+    errorHandler[key] = fn && function(msg) {
+      fn("[xmldom " + key + "]	" + msg + _locator(locator));
+    } || function() {
+    };
+  }
+  build("warning");
+  build("error");
+  build("fatalError");
+  return errorHandler;
+}
+function DOMHandler() {
+  this.cdata = false;
+}
+function position(locator, node) {
+  node.lineNumber = locator.lineNumber;
+  node.columnNumber = locator.columnNumber;
+}
+DOMHandler.prototype = {
+  startDocument: function() {
+    this.doc = new DOMImplementation().createDocument(null, null, null);
+    if (this.locator) {
+      this.doc.documentURI = this.locator.systemId;
+    }
+  },
+  startElement: function(namespaceURI, localName2, qName, attrs) {
+    var doc = this.doc;
+    var el = doc.createElementNS(namespaceURI, qName || localName2);
+    var len = attrs.length;
+    appendElement(this, el);
+    this.currentElement = el;
+    this.locator && position(this.locator, el);
+    for (var i = 0; i < len; i++) {
+      var namespaceURI = attrs.getURI(i);
+      var value = attrs.getValue(i);
+      var qName = attrs.getQName(i);
+      var attr = doc.createAttributeNS(namespaceURI, qName);
+      this.locator && position(attrs.getLocator(i), attr);
+      attr.value = attr.nodeValue = value;
+      el.setAttributeNode(attr);
+    }
+  },
+  endElement: function(namespaceURI, localName2, qName) {
+    var current = this.currentElement;
+    current.tagName;
+    this.currentElement = current.parentNode;
+  },
+  startPrefixMapping: function(prefix, uri) {
+  },
+  endPrefixMapping: function(prefix) {
+  },
+  processingInstruction: function(target, data) {
+    var ins = this.doc.createProcessingInstruction(target, data);
+    this.locator && position(this.locator, ins);
+    appendElement(this, ins);
+  },
+  ignorableWhitespace: function(ch, start, length) {
+  },
+  characters: function(chars, start, length) {
+    chars = _toString.apply(this, arguments);
+    if (chars) {
+      if (this.cdata) {
+        var charNode = this.doc.createCDATASection(chars);
+      } else {
+        var charNode = this.doc.createTextNode(chars);
+      }
+      if (this.currentElement) {
+        this.currentElement.appendChild(charNode);
+      } else if (/^\s*$/.test(chars)) {
+        this.doc.appendChild(charNode);
+      }
+      this.locator && position(this.locator, charNode);
+    }
+  },
+  skippedEntity: function(name) {
+  },
+  endDocument: function() {
+    this.doc.normalize();
+  },
+  setDocumentLocator: function(locator) {
+    if (this.locator = locator) {
+      locator.lineNumber = 0;
+    }
+  },
+  //LexicalHandler
+  comment: function(chars, start, length) {
+    chars = _toString.apply(this, arguments);
+    var comm = this.doc.createComment(chars);
+    this.locator && position(this.locator, comm);
+    appendElement(this, comm);
+  },
+  startCDATA: function() {
+    this.cdata = true;
+  },
+  endCDATA: function() {
+    this.cdata = false;
+  },
+  startDTD: function(name, publicId, systemId) {
+    var impl = this.doc.implementation;
+    if (impl && impl.createDocumentType) {
+      var dt = impl.createDocumentType(name, publicId, systemId);
+      this.locator && position(this.locator, dt);
+      appendElement(this, dt);
+      this.doc.doctype = dt;
+    }
+  },
+  /**
+   * @see org.xml.sax.ErrorHandler
+   * @link http://www.saxproject.org/apidoc/org/xml/sax/ErrorHandler.html
+   */
+  warning: function(error) {
+    console.warn("[xmldom warning]	" + error, _locator(this.locator));
+  },
+  error: function(error) {
+    console.error("[xmldom error]	" + error, _locator(this.locator));
+  },
+  fatalError: function(error) {
+    throw new ParseError(error, this.locator);
+  }
+};
+function _locator(l) {
+  if (l) {
+    return "\n@" + (l.systemId || "") + "#[line:" + l.lineNumber + ",col:" + l.columnNumber + "]";
+  }
+}
+function _toString(chars, start, length) {
+  if (typeof chars == "string") {
+    return chars.substr(start, length);
+  } else {
+    if (chars.length >= start + length || start) {
+      return new java.lang.String(chars, start, length) + "";
+    }
+    return chars;
+  }
+}
+"endDTD,startEntity,endEntity,attributeDecl,elementDecl,externalEntityDecl,internalEntityDecl,resolveEntity,getExternalSubset,notationDecl,unparsedEntityDecl".replace(/\w+/g, function(key) {
+  DOMHandler.prototype[key] = function() {
+    return null;
+  };
+});
+function appendElement(hander, node) {
+  if (!hander.currentElement) {
+    hander.doc.appendChild(node);
+  } else {
+    hander.currentElement.appendChild(node);
+  }
+}
+domParser.__DOMHandler = DOMHandler;
+domParser.normalizeLineEndings = normalizeLineEndings;
+domParser.DOMParser = DOMParser$1;
+var DOMParser = domParser.DOMParser;
+const NFE_NAMESPACE$1 = "http://www.portalfiscal.inf.br/nfe";
+const DSIG_NAMESPACE = "http://www.w3.org/2000/09/xmldsig#";
+function escapeAttr(value) {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/\t/g, "&#x9;").replace(/\n/g, "&#xA;").replace(/\r/g, "&#xD;");
+}
+function escapeText(value) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#xD;");
+}
+function localName(node) {
+  return node.localName || node.nodeName.replace(/^.*:/, "");
+}
+function canonicalize(node) {
+  if (node.nodeType === 3) {
+    return escapeText(node.nodeValue ?? "");
+  }
+  if (node.nodeType !== 1) {
+    return "";
+  }
+  const element = node;
+  const name = element.nodeName;
+  const attrs = [];
+  if (localName(element) === "infNFe" && !element.getAttribute("xmlns")) {
+    attrs.push(`xmlns="${NFE_NAMESPACE$1}"`);
+  }
+  const rawAttrs = [];
+  for (let index = 0; index < element.attributes.length; index += 1) {
+    const attr = element.attributes.item(index);
+    if (!attr) continue;
+    rawAttrs.push({ name: attr.name, value: attr.value });
+  }
+  rawAttrs.sort((left, right) => left.name.localeCompare(right.name)).forEach((attr) => {
+    if (attr.name === "xmlns" && localName(element) === "infNFe") return;
+    attrs.push(`${attr.name}="${escapeAttr(attr.value)}"`);
+  });
+  const open = attrs.length > 0 ? `<${name} ${attrs.join(" ")}>` : `<${name}>`;
+  let children = "";
+  for (let index = 0; index < element.childNodes.length; index += 1) {
+    children += canonicalize(element.childNodes.item(index));
+  }
+  return `${open}${children}</${name}>`;
+}
+function extractPemBody(pem, label) {
+  var _a;
+  const match = pem.match(new RegExp(`-----BEGIN ${label}-----([\\s\\S]*?)-----END ${label}-----`));
+  return ((_a = match == null ? void 0 : match[1]) == null ? void 0 : _a.replace(/\s+/g, "")) ?? "";
+}
+function extractPemBlock(pem, label) {
+  const match = pem.match(new RegExp(`-----BEGIN ${label}-----[\\s\\S]*?-----END ${label}-----`));
+  return (match == null ? void 0 : match[0]) ?? "";
+}
+function extractCertificate(config2) {
+  var _a;
+  const certificatePath = (_a = config2.certificatePath) == null ? void 0 : _a.trim();
+  if (!certificatePath) {
+    throw new FiscalError({
+      code: "CERTIFICATE_NOT_CONFIGURED",
+      message: "Caminho do certificado A1 nao configurado.",
+      category: "CERTIFICATE"
+    });
+  }
+  if (!fs$1.existsSync(certificatePath)) {
+    throw new FiscalError({
+      code: "CERTIFICATE_FILE_NOT_FOUND",
+      message: `Arquivo do certificado nao encontrado: ${certificatePath}`,
+      category: "CERTIFICATE"
+    });
+  }
+  if (!config2.certificatePassword) {
+    throw new FiscalError({
+      code: "CERTIFICATE_PASSWORD_REQUIRED",
+      message: "Senha do certificado A1 nao configurada.",
+      category: "CERTIFICATE"
+    });
+  }
+  const extension = path$1.extname(certificatePath).toLowerCase();
+  if (![".pfx", ".p12"].includes(extension)) {
+    throw new FiscalError({
+      code: "CERTIFICATE_FORMAT_NOT_SUPPORTED",
+      message: "Assinatura NFC-e direta suporta certificado A1 .pfx/.p12.",
+      category: "CERTIFICATE"
+    });
+  }
+  try {
+    const privateKeyPem = execFileSync(
+      "openssl",
+      ["pkcs12", "-in", certificatePath, "-nocerts", "-nodes", "-passin", `pass:${config2.certificatePassword}`],
+      { encoding: "utf8" }
+    );
+    const certificatePem = execFileSync(
+      "openssl",
+      ["pkcs12", "-in", certificatePath, "-clcerts", "-nokeys", "-passin", `pass:${config2.certificatePassword}`],
+      { encoding: "utf8" }
+    );
+    const privateKeyBlock = extractPemBlock(privateKeyPem, "PRIVATE KEY") || extractPemBlock(privateKeyPem, "RSA PRIVATE KEY");
+    const certificateBody = extractPemBody(certificatePem, "CERTIFICATE");
+    if (!privateKeyBlock) {
+      throw new Error("Chave privada nao encontrada no arquivo A1.");
+    }
+    if (!certificateBody) {
+      throw new Error("Certificado publico nao encontrado no arquivo A1.");
+    }
+    return { privateKeyPem: privateKeyBlock, certificateBody };
+  } catch (error) {
+    throw new FiscalError({
+      code: "CERTIFICATE_PKCS12_EXTRACT_FAILED",
+      message: "Falha ao extrair chave/certificado do A1 para assinatura XML.",
+      category: "CERTIFICATE",
+      cause: error
+    });
+  }
+}
+function findInfNFe(xml) {
+  const parserErrors = [];
+  const doc = new DOMParser({
+    errorHandler: {
+      warning: (message) => parserErrors.push(String(message)),
+      error: (message) => parserErrors.push(String(message)),
+      fatalError: (message) => parserErrors.push(String(message))
+    }
+  }).parseFromString(xml, "application/xml");
+  if (parserErrors.length > 0) {
+    throw new FiscalError({
+      code: "NFCE_XML_MALFORMED",
+      message: `XML NFC-e malformado antes da assinatura: ${parserErrors.join(" | ")}`,
+      category: "VALIDATION",
+      details: { parserErrors }
+    });
+  }
+  const infNFe = doc.getElementsByTagName("infNFe").item(0);
+  if (!infNFe) {
+    throw new FiscalError({
+      code: "NFCE_XML_INF_NFE_NOT_FOUND",
+      message: "XML NFC-e nao contem grupo infNFe para assinatura.",
+      category: "VALIDATION"
+    });
+  }
+  return infNFe;
+}
+function canonicalizeXmlFragment(xml) {
+  const parserErrors = [];
+  const doc = new DOMParser({
+    errorHandler: {
+      warning: (message) => parserErrors.push(String(message)),
+      error: (message) => parserErrors.push(String(message)),
+      fatalError: (message) => parserErrors.push(String(message))
+    }
+  }).parseFromString(xml, "application/xml");
+  if (parserErrors.length > 0 || !doc.documentElement) {
+    throw new FiscalError({
+      code: "NFCE_XML_SIGNATURE_FRAGMENT_INVALID",
+      message: `Fragmento XML de assinatura invalido: ${parserErrors.join(" | ")}`,
+      category: "VALIDATION",
+      details: { parserErrors }
+    });
+  }
+  return canonicalize(doc.documentElement);
+}
+function compactXml$2(xml) {
+  return xml.replace(/>\s+</g, "><").trim();
+}
+class NfceXmlSigningService {
+  sign(xml, config2) {
+    const normalizedXml = compactXml$2(xml);
+    const infNFe = findInfNFe(normalizedXml);
+    const id = infNFe.getAttribute("Id");
+    if (!id) {
+      throw new FiscalError({
+        code: "NFCE_XML_ID_NOT_FOUND",
+        message: "infNFe nao possui atributo Id para assinatura.",
+        category: "VALIDATION"
+      });
+    }
+    const { privateKeyPem, certificateBody } = extractCertificate(config2);
+    const canonicalInfNFe = canonicalize(infNFe);
+    const digestValue = createHash("sha1").update(canonicalInfNFe, "utf8").digest("base64");
+    const signedInfo = `<SignedInfo xmlns="${DSIG_NAMESPACE}"><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#${id}"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>${digestValue}</DigestValue></Reference></SignedInfo>`;
+    const canonicalSignedInfo = canonicalizeXmlFragment(signedInfo);
+    const signatureValue = createSign("RSA-SHA1").update(canonicalSignedInfo, "utf8").sign(privateKeyPem, "base64");
+    const signatureXml = `<Signature xmlns="${DSIG_NAMESPACE}">${signedInfo}<SignatureValue>${signatureValue}</SignatureValue><KeyInfo><X509Data><X509Certificate>${certificateBody}</X509Certificate></X509Data></KeyInfo></Signature>`;
+    if (normalizedXml.includes("</infNFeSupl>")) {
+      return normalizedXml.replace("</infNFeSupl>", `</infNFeSupl>${signatureXml}`);
+    }
+    return normalizedXml.replace("</infNFe>", `</infNFe>${signatureXml}`);
+  }
+}
+const nfceXmlSigningService = new NfceXmlSigningService();
 const SP_NFCE_ENDPOINTS = {
   homologation: {
     statusServico: "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeStatusServico4.asmx",
@@ -4904,15 +9575,7 @@ const IBGE_UF_CODES = {
 function resolveUf(config2) {
   return (config2.uf ?? "SP").trim().toUpperCase();
 }
-function resolveStatusServicoUrl(config2) {
-  var _a;
-  const configuredBaseUrl = (_a = config2.sefazBaseUrl) == null ? void 0 : _a.trim();
-  if (configuredBaseUrl) {
-    if (configuredBaseUrl.endsWith(".asmx")) {
-      return configuredBaseUrl;
-    }
-    return `${configuredBaseUrl.replace(/\/+$/, "")}/NFeStatusServico4.asmx`;
-  }
+function assertSpNfce(config2) {
   const uf = resolveUf(config2);
   if (uf !== "SP") {
     throw new FiscalError({
@@ -4921,7 +9584,39 @@ function resolveStatusServicoUrl(config2) {
       category: "CONFIGURATION"
     });
   }
-  return SP_NFCE_ENDPOINTS[config2.environment].statusServico;
+}
+function resolveSpNfceServiceUrl(config2, service) {
+  var _a;
+  assertSpNfce(config2);
+  const configuredBaseUrl = (_a = config2.sefazBaseUrl) == null ? void 0 : _a.trim();
+  const defaultUrl = SP_NFCE_ENDPOINTS[config2.environment][service];
+  if (!configuredBaseUrl) {
+    return defaultUrl;
+  }
+  let normalized = configuredBaseUrl.replace(/homologacao\.nfe\.fazenda\.sp\.gov\.br/gi, "homologacao.nfce.fazenda.sp.gov.br").replace(/\/\/nfe\.fazenda\.sp\.gov\.br/gi, "//nfce.fazenda.sp.gov.br");
+  if (!/nfce\.fazenda\.sp\.gov\.br/i.test(normalized)) {
+    return defaultUrl;
+  }
+  const serviceFileByName = {
+    statusServico: "NFeStatusServico4.asmx",
+    autorizacao: "NFeAutorizacao4.asmx",
+    retAutorizacao: "NFeRetAutorizacao4.asmx"
+  };
+  if (normalized.endsWith(".asmx")) {
+    normalized = normalized.replace(/NFe(?:StatusServico|Autorizacao|RetAutorizacao)4\.asmx$/i, serviceFileByName[service]);
+    normalized = normalized.replace(/nfe(?:statusservico|autorizacao|retautorizacao)4\.asmx$/i, serviceFileByName[service]);
+    return normalized;
+  }
+  return `${normalized.replace(/\/+$/, "")}/${serviceFileByName[service]}`;
+}
+function resolveStatusServicoUrl(config2) {
+  return resolveSpNfceServiceUrl(config2, "statusServico");
+}
+function resolveAutorizacaoUrl(config2) {
+  return resolveSpNfceServiceUrl(config2, "autorizacao");
+}
+function resolveRetAutorizacaoUrl(config2) {
+  return resolveSpNfceServiceUrl(config2, "retAutorizacao");
 }
 function validateSefazDirectConfig(config2) {
   var _a, _b, _c;
@@ -4995,6 +9690,11 @@ function buildStatusServicoSoap(config2) {
   const tpAmb = config2.environment === "production" ? "1" : "2";
   return `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4"><consStatServ xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${tpAmb}</tpAmb><cUF>${cUf}</cUF><xServ>STATUS</xServ></consStatServ></nfeDadosMsg></soap12:Body></soap12:Envelope>`;
 }
+const SOAP_ACTIONS = {
+  status: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF",
+  autorizacao: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4/nfeAutorizacaoLote",
+  retAutorizacao: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4/nfeRetAutorizacaoLote"
+};
 function isLocalIssuerCertificateError(error) {
   if (!(error instanceof FiscalError)) return false;
   const details = error.details;
@@ -5003,6 +9703,8 @@ function isLocalIssuerCertificateError(error) {
 function postSoapWithCertificate(url, body, config2, options2 = {}) {
   return new Promise((resolve, reject) => {
     const startedAt = Date.now();
+    const soapAction = SOAP_ACTIONS[options2.action ?? "status"];
+    const serviceName = options2.serviceName ?? "SEFAZ";
     const request = https.request(
       url,
       {
@@ -5012,9 +9714,9 @@ function postSoapWithCertificate(url, body, config2, options2 = {}) {
         ca: config2.caBundlePath ? fs$1.readFileSync(config2.caBundlePath) : void 0,
         rejectUnauthorized: options2.allowUnauthorizedServerCertificate !== true,
         headers: {
-          "content-type": 'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF"',
+          "content-type": `application/soap+xml; charset=utf-8; action="${soapAction}"`,
           "content-length": Buffer.byteLength(body, "utf8"),
-          soapaction: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF"
+          soapaction: soapAction
         },
         timeout: 3e4
       },
@@ -5026,9 +9728,10 @@ function postSoapWithCertificate(url, body, config2, options2 = {}) {
         });
         response.on("end", () => {
           if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+            const sefazMessage = data.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
             reject(new FiscalError({
               code: "SEFAZ_HTTP_ERROR",
-              message: `SEFAZ retornou HTTP ${response.statusCode ?? "sem status"} em ${Date.now() - startedAt}ms.`,
+              message: `SEFAZ retornou HTTP ${response.statusCode ?? "sem status"} em ${Date.now() - startedAt}ms.${sefazMessage ? ` Corpo: ${sefazMessage.slice(0, 500)}` : ""}`,
               category: "SEFAZ",
               retryable: true,
               details: {
@@ -5045,7 +9748,7 @@ function postSoapWithCertificate(url, body, config2, options2 = {}) {
       }
     );
     request.on("timeout", () => {
-      request.destroy(new Error("Timeout de 30000ms ao chamar NFeStatusServico4."));
+      request.destroy(new Error(`Timeout de 30000ms ao chamar ${serviceName}.`));
     });
     request.on("error", (error) => {
       reject(new FiscalError({
@@ -5068,7 +9771,10 @@ function postSoapWithCertificate(url, body, config2, options2 = {}) {
 async function postStatusServicoSoap(url, body, config2) {
   try {
     return {
-      rawResponse: await postSoapWithCertificate(url, body, config2),
+      rawResponse: await postSoapWithCertificate(url, body, config2, {
+        action: "status",
+        serviceName: "NFeStatusServico4"
+      }),
       tlsValidation: "verified",
       warning: null
     };
@@ -5076,10 +9782,35 @@ async function postStatusServicoSoap(url, body, config2) {
     if (config2.environment === "homologation" && isLocalIssuerCertificateError(error)) {
       return {
         rawResponse: await postSoapWithCertificate(url, body, config2, {
+          action: "status",
+          serviceName: "NFeStatusServico4",
           allowUnauthorizedServerCertificate: true
         }),
         tlsValidation: "bypassed-homologation",
         warning: "A cadeia TLS do servidor da SEFAZ nao foi validada pelo Node/Electron. O diagnostico repetiu a chamada em homologacao sem validar o certificado do servidor. Para producao, configure a cadeia de CA confiavel no ambiente."
+      };
+    }
+    throw error;
+  }
+}
+async function postSefazSoap(url, body, config2, action) {
+  const serviceName = action === "autorizacao" ? "NFeAutorizacao4" : action === "retAutorizacao" ? "NFeRetAutorizacao4" : "NFeStatusServico4";
+  try {
+    return {
+      rawResponse: await postSoapWithCertificate(url, body, config2, { action, serviceName }),
+      tlsValidation: "verified",
+      warning: null
+    };
+  } catch (error) {
+    if (config2.environment === "homologation" && isLocalIssuerCertificateError(error)) {
+      return {
+        rawResponse: await postSoapWithCertificate(url, body, config2, {
+          action,
+          serviceName,
+          allowUnauthorizedServerCertificate: true
+        }),
+        tlsValidation: "bypassed-homologation",
+        warning: "A cadeia TLS do servidor da SEFAZ nao foi validada pelo Node/Electron. A chamada foi repetida em homologacao sem validar o certificado do servidor."
       };
     }
     throw error;
@@ -5090,16 +9821,141 @@ function extractXmlTag(xml, tagName) {
   const match = xml.match(new RegExp(`<[^:>]*:?${tagName}[^>]*>([^<]*)</[^:>]*:?${tagName}>`, "i"));
   return ((_a = match == null ? void 0 : match[1]) == null ? void 0 : _a.trim()) ?? null;
 }
+function extractXmlBlock(xml, tagName) {
+  const match = xml.match(new RegExp(`(<[^:>]*:?${tagName}[^>]*>[\\s\\S]*?</[^:>]*:?${tagName}>)`, "i"));
+  return (match == null ? void 0 : match[1]) ?? null;
+}
+function stripXmlDeclaration(xml) {
+  return xml.replace(/^\s*<\?xml[^?]*\?>\s*/i, "").trim();
+}
+function compactXml$1(xml) {
+  return xml.replace(/>\s+</g, "><").trim();
+}
+function buildAutorizacaoSoap(signedXml) {
+  const idLote = String(Date.now()).slice(-15).padStart(15, "0");
+  const nfeXml = compactXml$1(stripXmlDeclaration(signedXml));
+  return compactXml$1(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4"><enviNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><idLote>${idLote}</idLote><indSinc>1</indSinc>` + nfeXml + `</enviNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>`);
+}
+function buildAuthorizedXml(signedXml, protocolXml) {
+  if (!protocolXml) return null;
+  return compactXml$1(`<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">${stripXmlDeclaration(signedXml)}${protocolXml}</nfeProc>`);
+}
+function buildRetAutorizacaoSoap(config2, receiptNumber) {
+  const tpAmb = config2.environment === "production" ? "1" : "2";
+  return compactXml$1(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4"><consReciNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${tpAmb}</tpAmb><nRec>${receiptNumber}</nRec></consReciNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>`);
+}
+function mapAuthorizationResponse(request, signedXml, rawResponse, providerWarning) {
+  const loteStatus = extractXmlTag(rawResponse, "cStat");
+  const statusMessage = extractXmlTag(rawResponse, "xMotivo") ?? "Resposta de autorizacao recebida sem xMotivo.";
+  const protocolXml = extractXmlBlock(rawResponse, "protNFe");
+  const protocolStatus = protocolXml ? extractXmlTag(protocolXml, "cStat") : null;
+  const effectiveStatus = protocolStatus ?? loteStatus;
+  const effectiveMessage = protocolXml ? extractXmlTag(protocolXml, "xMotivo") ?? statusMessage : statusMessage;
+  const receiptNumber = extractXmlTag(rawResponse, "nRec");
+  const protocol = protocolXml ? extractXmlTag(protocolXml, "nProt") : null;
+  const authorizedAt = protocolXml ? extractXmlTag(protocolXml, "dhRecbto") : null;
+  const accessKey = protocolXml ? extractXmlTag(protocolXml, "chNFe") : request.accessKey;
+  if (effectiveStatus === "100" || effectiveStatus === "150") {
+    const xmlAuthorized = buildAuthorizedXml(signedXml, protocolXml);
+    return {
+      status: "AUTHORIZED",
+      provider: "sefaz-direct",
+      accessKey,
+      protocol,
+      receiptNumber,
+      statusCode: effectiveStatus,
+      statusMessage: effectiveMessage,
+      authorizedAt,
+      issuedAt: request.issuedAt,
+      xmlBuilt: request.xmlBuilt ?? null,
+      xmlSigned: signedXml,
+      xmlSent: signedXml,
+      xmlAuthorized,
+      qrCodeUrl: request.qrCodeUrl ?? null,
+      rawResponse: { rawResponse, warning: providerWarning ?? null }
+    };
+  }
+  if (loteStatus === "103" || loteStatus === "105") {
+    return {
+      status: "PENDING",
+      provider: "sefaz-direct",
+      accessKey: request.accessKey,
+      receiptNumber,
+      statusCode: loteStatus,
+      statusMessage,
+      issuedAt: request.issuedAt,
+      xmlBuilt: request.xmlBuilt ?? null,
+      xmlSigned: signedXml,
+      xmlSent: signedXml,
+      qrCodeUrl: request.qrCodeUrl ?? null,
+      rawResponse: { rawResponse, warning: providerWarning ?? null }
+    };
+  }
+  return {
+    status: "REJECTED",
+    provider: "sefaz-direct",
+    accessKey: request.accessKey,
+    receiptNumber,
+    protocol,
+    statusCode: effectiveStatus ?? "SEFAZ_AUTHORIZATION_REJECTED",
+    statusMessage: effectiveMessage,
+    issuedAt: request.issuedAt,
+    xmlBuilt: request.xmlBuilt ?? null,
+    xmlSigned: signedXml,
+    xmlSent: signedXml,
+    qrCodeUrl: request.qrCodeUrl ?? null,
+    rawResponse: { rawResponse, warning: providerWarning ?? null }
+  };
+}
 class SefazDirectFiscalProvider {
   constructor() {
     __publicField(this, "providerId", "sefaz-direct");
   }
-  async authorizeNfce(_request, _config) {
-    throw new FiscalError({
-      code: "SEFAZ_DIRECT_NOT_IMPLEMENTED",
-      message: "Provider SEFAZ direto ainda não implementado.",
-      category: "PROVIDER"
-    });
+  async authorizeNfce(request, config2) {
+    validateSefazDirectConfig(config2);
+    if (!request.xmlBuilt) {
+      throw new FiscalError({
+        code: "NFCE_XML_NOT_BUILT",
+        message: "XML NFC-e gerado nao foi informado ao provider SEFAZ.",
+        category: "VALIDATION"
+      });
+    }
+    const url = resolveAutorizacaoUrl(config2);
+    const startedAt = Date.now();
+    logger.info(`[SEFAZ_DIRECT] Iniciando autorizacao NFC-e. saleId=${request.saleId} accessKey=${request.accessKey ?? "sem-chave"} ambiente=${config2.environment} endpoint=${url}`);
+    logger.info(`[SEFAZ_DIRECT] Assinando XML NFC-e. saleId=${request.saleId}`);
+    const signedXml = nfceXmlSigningService.sign(request.xmlBuilt, config2);
+    logger.info(`[SEFAZ_DIRECT] XML NFC-e assinado. saleId=${request.saleId}`);
+    const soapRequest = buildAutorizacaoSoap(signedXml);
+    logger.info(`[SEFAZ_DIRECT] Enviando lote NFeAutorizacao4. saleId=${request.saleId} endpoint=${url}`);
+    const response = await postSefazSoap(url, soapRequest, config2, "autorizacao");
+    const result = mapAuthorizationResponse(request, signedXml, response.rawResponse, response.warning);
+    logger.info(`[SEFAZ_DIRECT] Resposta NFeAutorizacao4. saleId=${request.saleId} cStat=${result.statusCode ?? "sem-cStat"} status=${result.status} motivo=${result.statusMessage}`);
+    if (result.status === "PENDING" && result.receiptNumber) {
+      const retUrl = resolveRetAutorizacaoUrl(config2);
+      const retRequest = buildRetAutorizacaoSoap(config2, result.receiptNumber);
+      logger.info(`[SEFAZ_DIRECT] Consultando NFeRetAutorizacao4. saleId=${request.saleId} nRec=${result.receiptNumber} endpoint=${retUrl}`);
+      const retResponse = await postSefazSoap(retUrl, retRequest, config2, "retAutorizacao");
+      const retResult = mapAuthorizationResponse(request, signedXml, retResponse.rawResponse, retResponse.warning ?? response.warning);
+      logger.info(`[SEFAZ_DIRECT] Resposta NFeRetAutorizacao4. saleId=${request.saleId} cStat=${retResult.statusCode ?? "sem-cStat"} status=${retResult.status} motivo=${retResult.statusMessage}`);
+      return {
+        ...retResult,
+        rawResponse: {
+          ...typeof retResult.rawResponse === "object" && retResult.rawResponse ? retResult.rawResponse : {},
+          authorizationUrl: url,
+          retAutorizacaoUrl: retUrl,
+          responseTimeMs: Date.now() - startedAt
+        }
+      };
+    }
+    return {
+      ...result,
+      rawResponse: {
+        ...typeof result.rawResponse === "object" && result.rawResponse ? result.rawResponse : {},
+        url,
+        responseTimeMs: Date.now() - startedAt
+      }
+    };
   }
   async cancelNfce(_request, _config) {
     throw new FiscalError({
@@ -5591,8 +10447,37 @@ class NfceAccessKeyService {
 const nfceAccessKeyService = new NfceAccessKeyService();
 const NFE_NAMESPACE = "http://www.portalfiscal.inf.br/nfe";
 const PROC_VERSION = "GalbertoPDV-0.1.0";
+const HOMOLOGATION_FIRST_ITEM_DESCRIPTION = "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
 function escapeXml(value) {
   return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+function compactXml(xml) {
+  return xml.replace(/>\s+</g, "><").trim();
+}
+function normalizeCscId(value) {
+  const digits = onlyDigits(value);
+  if (!digits) return "";
+  return String(Number(digits));
+}
+function buildSpNfcePublicUrls(environment) {
+  const host = environment === "production" ? "www.nfce.fazenda.sp.gov.br" : "www.homologacao.nfce.fazenda.sp.gov.br";
+  return {
+    qrCodeBaseUrl: `https://${host}/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx`,
+    publicConsultUrl: `https://${host}/consulta`
+  };
+}
+function sha1Hex(value) {
+  return createHash("sha1").update(value, "utf8").digest("hex").toUpperCase();
+}
+function buildQrCodeUrl(context, accessKey) {
+  const cscId = normalizeCscId(context.cscId);
+  const cscToken = String(context.cscToken ?? "").trim();
+  const tpAmb = context.environment === "production" ? "1" : "2";
+  const qrCodeVersion = "2";
+  const { qrCodeBaseUrl } = buildSpNfcePublicUrls(context.environment);
+  const hash = sha1Hex(`${accessKey}|${qrCodeVersion}|${tpAmb}|${cscId}${cscToken}`);
+  const parameter = `${accessKey}|${qrCodeVersion}|${tpAmb}|${cscId}|${hash}`;
+  return `${qrCodeBaseUrl}?p=${parameter}`;
 }
 function onlyDigits(value) {
   return String(value ?? "").replace(/\D/g, "");
@@ -5628,10 +10513,20 @@ function paymentCode(method) {
   };
   return map[method] ?? "99";
 }
-function icmsXml(item) {
+function paymentCardXml(code) {
+  if (!["03", "04", "17"].includes(code)) {
+    return "";
+  }
+  return "<card><tpIntegra>2</tpIntegra></card>";
+}
+function isSimpleNationalCrt(taxRegimeCode) {
+  return ["1", "4"].includes(String(taxRegimeCode ?? "").trim());
+}
+function icmsXml(item, context) {
   const origin = escapeXml(item.tax.originCode || "0");
-  if (item.tax.csosn) {
-    return `<ICMS><ICMSSN102><orig>${origin}</orig><CSOSN>${escapeXml(item.tax.csosn)}</CSOSN></ICMSSN102></ICMS>`;
+  if (isSimpleNationalCrt(context.emitter.taxRegimeCode)) {
+    const csosn = item.tax.csosn || "102";
+    return `<ICMS><ICMSSN102><orig>${origin}</orig><CSOSN>${escapeXml(csosn)}</CSOSN></ICMSSN102></ICMS>`;
   }
   const cst = item.tax.icmsCst || "00";
   if (["40", "41", "50"].includes(cst)) {
@@ -5657,17 +10552,18 @@ function cofinsXml(item) {
   if (["01", "02"].includes(cst)) {
     return `<COFINS><COFINSAliq><CST>${escapeXml(cst)}</CST><vBC>${money(item.totalAmount)}</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSAliq></COFINS>`;
   }
-  return `<COFINS><COFINSOutr><CST>${escapeXml(cst)}</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINSOutr></COFINS>`;
+  return `<COFINS><COFINSOutr><CST>${escapeXml(cst)}</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>`;
 }
-function itemXml(item, index) {
+function itemXml(item, index, context) {
   const itemCode = item.id || String(index + 1);
   const itemGtin = gtin(item.gtin);
   const discount = item.discountAmount > 0 ? `<vDesc>${money(item.discountAmount)}</vDesc>` : "";
+  const description = context.environment === "homologation" && index === 0 ? HOMOLOGATION_FIRST_ITEM_DESCRIPTION : item.description;
   return `<det nItem="${index + 1}">
 <prod>
 <cProd>${escapeXml(itemCode)}</cProd>
 <cEAN>${escapeXml(itemGtin)}</cEAN>
-<xProd>${escapeXml(item.description)}</xProd>
+<xProd>${escapeXml(description)}</xProd>
 <NCM>${escapeXml(onlyDigits(item.tax.ncm))}</NCM>
 ${item.tax.cest ? `<CEST>${escapeXml(onlyDigits(item.tax.cest))}</CEST>` : ""}
 <CFOP>${escapeXml(onlyDigits(item.tax.cfop))}</CFOP>
@@ -5683,7 +10579,7 @@ ${discount}
 <indTot>1</indTot>
 </prod>
 <imposto>
-${icmsXml(item)}
+${icmsXml(item, context)}
 ${pisXml(item)}
 ${cofinsXml(item)}
 </imposto>
@@ -5704,7 +10600,7 @@ function paymentsXml(payments, changeAmount) {
   const details = payments.map((payment) => {
     const code = paymentCode(payment.method);
     const description = code === "99" && payment.description ? `<xPag>${escapeXml(payment.description)}</xPag>` : "";
-    return `<detPag><indPag>0</indPag><tPag>${code}</tPag>${description}<vPag>${money(payment.amount)}</vPag></detPag>`;
+    return `<detPag><indPag>0</indPag><tPag>${code}</tPag>${description}<vPag>${money(payment.amount)}</vPag>${paymentCardXml(code)}</detPag>`;
   }).join("");
   return `<pag>${details}${changeAmount > 0 ? `<vTroco>${money(changeAmount)}</vTroco>` : ""}</pag>`;
 }
@@ -5719,6 +10615,11 @@ ${input.csrtId ? `<idCSRT>${escapeXml(input.csrtId)}</idCSRT>` : ""}
 ${input.csrtHash ? `<hashCSRT>${escapeXml(input.csrtHash)}</hashCSRT>` : ""}
 </infRespTec>`;
 }
+function infNFeSuplXml(context, accessKey) {
+  const qrCodeUrl = buildQrCodeUrl(context, accessKey);
+  const { publicConsultUrl } = buildSpNfcePublicUrls(context.environment);
+  return `<infNFeSupl><qrCode><![CDATA[${qrCodeUrl}]]></qrCode><urlChave>${escapeXml(publicConsultUrl)}</urlChave></infNFeSupl>`;
+}
 function validateDocument(model) {
   const errors = [];
   const warnings = [];
@@ -5730,10 +10631,12 @@ function validateDocument(model) {
   if (!input.payments.length) addError("PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments");
   if (!onlyDigits(input.fiscalContext.emitter.cnpj)) addError("EMITTER_CNPJ_REQUIRED", "CNPJ do emitente e obrigatorio.", "fiscalContext.emitter.cnpj");
   if (!onlyDigits(input.fiscalContext.emitter.address.cityIbgeCode)) addError("CMUNFG_REQUIRED", "Codigo IBGE do municipio de fato gerador e obrigatorio.", "fiscalContext.emitter.address.cityIbgeCode");
+  if (!normalizeCscId(input.fiscalContext.cscId)) addError("CSC_ID_REQUIRED", "CSC ID e obrigatorio para gerar QR Code NFC-e.", "fiscalContext.cscId");
+  if (!String(input.fiscalContext.cscToken ?? "").trim()) addError("CSC_TOKEN_REQUIRED", "CSC Token e obrigatorio para gerar QR Code NFC-e.", "fiscalContext.cscToken");
   input.items.forEach((item, index) => {
     if (onlyDigits(item.tax.ncm).length !== 8) addError("ITEM_NCM_INVALID", "NCM deve ter 8 digitos.", `items[${index}].tax.ncm`);
     if (onlyDigits(item.tax.cfop).length !== 4) addError("ITEM_CFOP_INVALID", "CFOP deve ter 4 digitos.", `items[${index}].tax.cfop`);
-    if (item.tax.csosn && !["102", "103", "300", "400"].includes(item.tax.csosn)) {
+    if (isSimpleNationalCrt(input.fiscalContext.emitter.taxRegimeCode) && item.tax.csosn && !["102", "103", "300", "400"].includes(item.tax.csosn)) {
       addWarning("ITEM_CSOSN_LIMITED_SUPPORT", `CSOSN ${item.tax.csosn} sera serializado no grupo ICMSSN102; valide a regra fiscal antes de transmitir.`, `items[${index}].tax.csosn`);
     }
   });
@@ -5789,7 +10692,7 @@ ${emitter.tradeName ? `<xFant>${escapeXml(emitter.tradeName)}</xFant>` : ""}
 <CRT>${escapeXml(emitter.taxRegimeCode)}</CRT>
 </emit>
 ${customerXml(input.customer)}
-${input.items.map(itemXml).join("")}
+${input.items.map((item, index) => itemXml(item, index, context)).join("")}
 <total>
 <ICMSTot>
 <vBC>0.00</vBC>
@@ -5818,6 +10721,7 @@ ${paymentsXml(input.payments, input.totals.changeAmount)}
 ${input.sale.additionalInfo ? `<infAdic><infCpl>${escapeXml(input.sale.additionalInfo)}</infCpl></infAdic>` : ""}
 ${technicalResponsibleXml(input.technicalResponsible)}
 </infNFe>
+${infNFeSuplXml(context, accessKey.accessKey)}
 </NFe>`;
 }
 class NfceXmlBuilderService {
@@ -5840,14 +10744,17 @@ class NfceXmlBuilderService {
         numericCode: accessKey.numericCode,
         checkDigit: accessKey.checkDigit,
         xml: "",
+        qrCodeUrl: null,
         validation
       };
     }
+    const qrCodeUrl = buildQrCodeUrl(input.fiscalContext, accessKey.accessKey);
     return {
       accessKey: accessKey.accessKey,
       numericCode: accessKey.numericCode,
       checkDigit: accessKey.checkDigit,
-      xml: serializeDocument(model),
+      xml: compactXml(serializeDocument(model)),
+      qrCodeUrl,
       validation
     };
   }
@@ -5930,6 +10837,9 @@ class DefaultFiscalService {
       accessKey: builtXml.accessKey,
       xmlBuilt: builtXml.xml
     });
+    request.accessKey = builtXml.accessKey;
+    request.xmlBuilt = builtXml.xml;
+    request.qrCodeUrl = builtXml.qrCodeUrl ?? null;
     try {
       await this.certificateService.assertCertificateReady(config2);
       const provider = this.resolveProvider(config2);
@@ -5938,7 +10848,8 @@ class DefaultFiscalService {
         ...response,
         issuedAt: response.issuedAt ?? request.issuedAt,
         accessKey: builtXml.accessKey,
-        xmlBuilt: response.xmlBuilt ?? builtXml.xml
+        xmlBuilt: response.xmlBuilt ?? builtXml.xml,
+        qrCodeUrl: response.qrCodeUrl ?? builtXml.qrCodeUrl ?? null
       };
       if (enrichedResponse.status === "AUTHORIZED") {
         const document = this.repository.markAsAuthorized(persisted.id, enrichedResponse);
@@ -6323,8 +11234,13 @@ const FiscalDocumentStatuses = {
   ERROR: "ERROR"
 };
 const FiscalEventTypes = {
+  XML_GENERATED: "XML_GENERATED",
+  XML_SIGNED: "XML_SIGNED",
   AUTHORIZATION_REQUESTED: "AUTHORIZATION_REQUESTED",
   AUTHORIZATION_RESPONSE: "AUTHORIZATION_RESPONSE",
+  AUTHORIZED: "AUTHORIZED",
+  REJECTED: "REJECTED",
+  PROVIDER_ERROR: "PROVIDER_ERROR",
   STATUS_CONSULTED: "STATUS_CONSULTED",
   CANCELLATION_REQUESTED: "CANCELLATION_REQUESTED",
   CANCELLATION_RESPONSE: "CANCELLATION_RESPONSE",
@@ -6368,6 +11284,38 @@ function resolvePrimaryPaymentMethod(payments) {
 function taxValue(primary, fallback, defaultValue = "") {
   const value = String(primary ?? fallback ?? "").trim();
   return value || defaultValue;
+}
+function isSimpleNationalStore(store) {
+  return ["1", "4"].includes(String(store.taxRegimeCode ?? "").trim());
+}
+function resolveIcmsTaxForStore(store, item) {
+  if (isSimpleNationalStore(store)) {
+    return {
+      csosn: item.csosn ?? "102",
+      icmsCst: item.icms_cst
+    };
+  }
+  return {
+    csosn: null,
+    icmsCst: item.icms_cst ?? "00"
+  };
+}
+function nowInSaoPauloIso() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).formatToParts(/* @__PURE__ */ new Date());
+  const get = (type) => {
+    var _a;
+    return ((_a = parts.find((part) => part.type === type)) == null ? void 0 : _a.value) ?? "00";
+  };
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}:${get("second")}-03:00`;
 }
 class PdvSaleFiscalAdapter {
   loadActiveCompany() {
@@ -6459,7 +11407,7 @@ class PdvSaleFiscalAdapter {
         COALESCE(NULLIF(vi.cfop, ''), NULLIF(snapshot.cfop, ''), NULLIF(product.cfop, ''), '5102') AS cfop,
         COALESCE(vi.cest, snapshot.cest, product.cest) AS cest,
         COALESCE(NULLIF(snapshot.origin_code, ''), NULLIF(product.origin, ''), '0') AS origin_code,
-        COALESCE(NULLIF(snapshot.csosn, ''), '102') AS csosn,
+        NULLIF(snapshot.csosn, '') AS csosn,
         snapshot.icms_cst,
         COALESCE(NULLIF(snapshot.pis_cst, ''), '49') AS pis_cst,
         COALESCE(NULLIF(snapshot.cofins_cst, ''), '49') AS cofins_cst
@@ -6494,6 +11442,7 @@ class PdvSaleFiscalAdapter {
       changeAmount: payment.troco != null ? Number(payment.troco) : void 0,
       description: payment.descricao_outro ?? null
     }));
+    const fiscalIssuedAt = nowInSaoPauloIso();
     return {
       saleId: sale.id,
       companyId: store.id,
@@ -6502,7 +11451,7 @@ class PdvSaleFiscalAdapter {
       environment: mapEnvironment(sale.ambiente),
       paymentMethod: resolvePrimaryPaymentMethod(payments),
       payments,
-      issuedAt: sale.data_emissao,
+      issuedAt: fiscalIssuedAt,
       emitter: {
         cnpj: store.cnpj,
         stateRegistration: store.stateRegistration,
@@ -6523,27 +11472,30 @@ class PdvSaleFiscalAdapter {
         name: sale.cliente_nome ?? void 0,
         cpfCnpj: sale.cpf_cliente ?? sale.cnpj_cliente ?? null
       },
-      items: items.map((item) => ({
-        id: item.produto_id ?? item.codigo_produto,
-        description: item.nome_produto,
-        unit: item.unidade_comercial,
-        quantity: Number(item.quantidade_comercial ?? 0),
-        unitPrice: Number(item.valor_unitario_comercial ?? 0),
-        grossAmount: Number(item.valor_bruto ?? 0),
-        discountAmount: Number(item.valor_desconto ?? 0),
-        totalAmount: Number(item.subtotal ?? 0),
-        gtin: item.gtin,
-        tax: {
-          ncm: item.ncm ?? "",
-          cfop: taxValue(item.cfop, null, "5102"),
-          cest: item.cest,
-          originCode: taxValue(item.origin_code, null, "0"),
-          csosn: item.csosn ?? "102",
-          icmsCst: item.icms_cst,
-          pisCst: item.pis_cst ?? "49",
-          cofinsCst: item.cofins_cst ?? "49"
-        }
-      })),
+      items: items.map((item) => {
+        const icmsTax = resolveIcmsTaxForStore(store, item);
+        return {
+          id: item.produto_id ?? item.codigo_produto,
+          description: item.nome_produto,
+          unit: item.unidade_comercial,
+          quantity: Number(item.quantidade_comercial ?? 0),
+          unitPrice: Number(item.valor_unitario_comercial ?? 0),
+          grossAmount: Number(item.valor_bruto ?? 0),
+          discountAmount: Number(item.valor_desconto ?? 0),
+          totalAmount: Number(item.subtotal ?? 0),
+          gtin: item.gtin,
+          tax: {
+            ncm: item.ncm ?? "",
+            cfop: taxValue(item.cfop, null, "5102"),
+            cest: item.cest,
+            originCode: taxValue(item.origin_code, null, "0"),
+            csosn: icmsTax.csosn,
+            icmsCst: icmsTax.icmsCst,
+            pisCst: item.pis_cst ?? "49",
+            cofinsCst: item.cofins_cst ?? "49"
+          }
+        };
+      }),
       totals: {
         productsAmount: Number(sale.valor_produtos ?? 0),
         discountAmount: Number(sale.valor_desconto ?? 0),
@@ -6573,30 +11525,33 @@ class PdvSaleFiscalAdapter {
       totalAmount: Number(sale.valor_total ?? 0),
       changeAmount: Number(sale.valor_troco ?? 0),
       externalReference,
-      items: items.map((item) => ({
-        productId: item.produto_id ?? item.codigo_produto,
-        description: item.nome_produto,
-        unit: item.unidade_comercial,
-        quantity: Number(item.quantidade_comercial ?? 0),
-        unitPrice: Number(item.valor_unitario_comercial ?? 0),
-        grossAmount: Number(item.valor_bruto ?? 0),
-        discountAmount: Number(item.valor_desconto ?? 0),
-        totalAmount: Number(item.subtotal ?? 0),
-        ncm: item.ncm ?? null,
-        cfop: taxValue(item.cfop, null, "5102"),
-        cest: item.cest,
-        originCode: taxValue(item.origin_code, null, "0"),
-        taxSnapshot: {
-          ncm: item.ncm,
+      items: items.map((item) => {
+        const icmsTax = resolveIcmsTaxForStore(store, item);
+        return {
+          productId: item.produto_id ?? item.codigo_produto,
+          description: item.nome_produto,
+          unit: item.unidade_comercial,
+          quantity: Number(item.quantidade_comercial ?? 0),
+          unitPrice: Number(item.valor_unitario_comercial ?? 0),
+          grossAmount: Number(item.valor_bruto ?? 0),
+          discountAmount: Number(item.valor_desconto ?? 0),
+          totalAmount: Number(item.subtotal ?? 0),
+          ncm: item.ncm ?? null,
           cfop: taxValue(item.cfop, null, "5102"),
           cest: item.cest,
           originCode: taxValue(item.origin_code, null, "0"),
-          csosn: item.csosn ?? "102",
-          icmsCst: item.icms_cst,
-          pisCst: item.pis_cst ?? "49",
-          cofinsCst: item.cofins_cst ?? "49"
-        }
-      })),
+          taxSnapshot: {
+            ncm: item.ncm,
+            cfop: taxValue(item.cfop, null, "5102"),
+            cest: item.cest,
+            originCode: taxValue(item.origin_code, null, "0"),
+            csosn: icmsTax.csosn,
+            icmsCst: icmsTax.icmsCst,
+            pisCst: item.pis_cst ?? "49",
+            cofinsCst: item.cofins_cst ?? "49"
+          }
+        };
+      }),
       payments: payments.map((payment) => ({
         method: mapPaymentMethod(payment.tpag),
         amount: Number(payment.valor ?? 0),
@@ -6624,6 +11579,9 @@ class PdvSaleFiscalAdapter {
       mirroredSale: aggregate,
       mirroredFiscalDocument: persistedDocument
     };
+  }
+  findMirroredSaleByLegacyId(legacySaleId) {
+    return salesRepository.findByExternalReference(`legacy-sale:${legacySaleId}`);
   }
 }
 const pdvSaleFiscalAdapter = new PdvSaleFiscalAdapter();
@@ -6719,7 +11677,7 @@ class IssueFiscalDocumentForSaleService {
     });
     fiscalEventRepository.create({
       fiscalDocumentId: document.id,
-      eventType: FiscalEventTypes.AUTHORIZATION_REQUESTED,
+      eventType: FiscalEventTypes.XML_GENERATED,
       payload: {
         legacySaleId,
         action: "GENERATE_XML_ONLY",
@@ -6759,6 +11717,18 @@ class IssueFiscalDocumentForSaleService {
       const response = await fiscalService.authorizeNfce(fiscalRequest);
       const document = fiscalDocumentRepository.findBySaleId(mirrored.mirroredSale.sale.id);
       if (document) {
+        if (response.xmlSigned) {
+          fiscalEventRepository.create({
+            fiscalDocumentId: document.id,
+            eventType: FiscalEventTypes.XML_SIGNED,
+            payload: {
+              legacySaleId,
+              accessKey: response.accessKey,
+              provider: response.provider
+            },
+            status: FiscalDocumentStatuses.SIGNING
+          });
+        }
         fiscalEventRepository.create({
           fiscalDocumentId: document.id,
           eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
@@ -6766,6 +11736,24 @@ class IssueFiscalDocumentForSaleService {
           response,
           status: response.status
         });
+        if (response.status === "AUTHORIZED") {
+          fiscalEventRepository.create({
+            fiscalDocumentId: document.id,
+            eventType: FiscalEventTypes.AUTHORIZED,
+            payload: { legacySaleId, accessKey: response.accessKey },
+            response,
+            status: FiscalDocumentStatuses.AUTHORIZED
+          });
+        }
+        if (response.status === "REJECTED") {
+          fiscalEventRepository.create({
+            fiscalDocumentId: document.id,
+            eventType: FiscalEventTypes.REJECTED,
+            payload: { legacySaleId, accessKey: response.accessKey },
+            response,
+            status: FiscalDocumentStatuses.REJECTED
+          });
+        }
       }
       return {
         success: true,
@@ -6785,11 +11773,12 @@ class IssueFiscalDocumentForSaleService {
       };
     } catch (error) {
       const fiscalError = normalizeFiscalError(error, "ISSUE_FISCAL_SALE_FAILED");
-      const document = fiscalDocumentRepository.findBySaleId(legacySaleId);
+      const mirroredSale = pdvSaleFiscalAdapter.findMirroredSaleByLegacyId(legacySaleId);
+      const document = mirroredSale ? fiscalDocumentRepository.findBySaleId(mirroredSale.sale.id) : fiscalDocumentRepository.findBySaleId(legacySaleId);
       if (document) {
         fiscalEventRepository.create({
           fiscalDocumentId: document.id,
-          eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
+          eventType: FiscalEventTypes.PROVIDER_ERROR,
           payload: { legacySaleId },
           response: {
             status: "ERROR",

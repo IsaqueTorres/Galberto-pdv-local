@@ -129,6 +129,9 @@ export interface AuthorizeNfceRequest {
   payments: NfcePaymentInput[];
   totals: NfceTotals;
   additionalInfo?: string | null;
+  accessKey?: string | null;
+  xmlBuilt?: string | null;
+  qrCodeUrl?: string | null;
   offlineFallbackMode?: FiscalContingencyMode;
   idempotencyKey: string;
 }
