@@ -435,7 +435,7 @@ function createTableCompany() {
       inscricao_estadual TEXT NOT NULL,
       inscricao_municipal TEXT,
       indicador_ie INTEGER NOT NULL, -- 1,2,9
-      crt INTEGER NOT NULL,           -- 1=SN, 2=SN excesso sublimite, 3=Regime normal
+      crt INTEGER NOT NULL,           -- 1=SN, 2=SN excesso sublimite, 3=Regime normal, 4=MEI
       cnae_principal TEXT NOT NULL,
 
       -- Endereço fiscal

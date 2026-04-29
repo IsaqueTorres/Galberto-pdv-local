@@ -12,17 +12,109 @@
 
 ### 2. OBJETIVO DESTA TAREFA
 
-Estou trabalhando agora na parte de **emissão de NFC-e na SEFAZ-SP**.
 
-Já temos:
+- A SEFAZ retornou rejeição 481:
 
-1. credenciamento no ambiente de homologação da SEFAZ-SP;
-2. CSC válido;
-3. certificado digital ICP-Brasil;
-4. algumas configurações fiscais armazenadas atualmente na tabela `integrations`.
+{
+  "status": "REJECTED",
+  "provider": "sefaz-direct",
+  "statusCode": "481",
+  "statusMessage": "Rejeição: Código Regime Tributário do emitente diverge do cadastro na SEFAZ"
+}
 
-Porém, a tabela `integrations` foi pensada para integrações com ERPs e softwares terceiros.
-Minha intenção é **tirar a configuração fiscal dali** e colocar isso em uma estrutura específica de fiscal.
+Problema:
+O formulário/configuração fiscal do PDV atualmente não possui a opção "Simples Nacional - MEI".
+Por isso, o sistema provavelmente está salvando/enviando `CRT = 1` , mas para MEI deve enviar `CRT = 4`.
+
+Objetivo:
+Adicionar suporte completo ao regime tributário MEI no sistema, garantindo que:
+- O formulário permita selecionar MEI
+- O banco persista corretamente o store
+- O XML da NFC-e envie `<CRT>4</CRT>`
+- A montagem dos impostos use CSOSN compatível com MEI/Simples Nacional
+- A rejeição 481 seja eliminada quando o emitente estiver cadastrado como MEI na SEFAZ
+
+Referência fiscal:
+- A Nota Técnica 2024.001 criou/incluiu o CRT 4 para MEI em NF-e/NFC-e.
+- Códigos esperados:
+  - CRT = 1: Simples Nacional
+  - CRT = 2: Simples Nacional - excesso de sublimite de receita bruta
+  - CRT = 3: Regime Normal
+  - CRT = 4: Simples Nacional - Microempreendedor Individual - MEI
+
+Tarefa:
+Revise e altere o código para implementar suporte ao CRT 4.
+
+Passos obrigatórios:
+
+1. Localizar configuração fiscal do emitente
+Procure onde o sistema salva/lê dados fiscais da empresa/emitente, especialmente:
+- CRT
+- regime tributário
+- inscrição estadual
+- CNPJ
+- UF
+- ambiente de emissão
+- configurações usadas para montar XML NFC-e
+
+Pode estar em:
+- tabela SQLite de empresa/configurações
+- tabela `integrations`
+- store/local config
+- formulário React
+- services de emissão fiscal
+- gerador XML NFC-e
+
+2. Ajustar modelo/tipos TypeScript
+Atualize qualquer union, enum, schema ou tipo que hoje aceite apenas `1 | 2 | 3`.
+
+O tipo correto deve aceitar:
+
+type TaxRegimeCode = 1 | 2 | 3 | 4;
+
+ou enum equivalente:
+
+enum TaxRegimeCode {
+  SIMPLES_NACIONAL = 1,
+  SIMPLES_NACIONAL_EXCESSO_SUBLIMITE = 2,
+  REGIME_NORMAL = 3,
+  MEI = 4
+}
+
+Garanta que nenhum parser, validator, zod schema, formulário ou camada de persistência bloqueie o valor 4.
+
+3. Ajustar formulário fiscal
+No formulário de configuração fiscal da empresa, adicionar a opção:
+
+Label: Simples Nacional - MEI
+Valor: 4
+
+A lista final deve ter, no mínimo:
+- Simples Nacional — valor 1
+- Simples Nacional - excesso de sublimite — valor 2
+- Regime Normal — valor 3
+- Simples Nacional - MEI — valor 4
+
+Se o sistema tiver uma opção simplificada para pequenos comércios, a opção MEI deve aparecer claramente.
+
+4. Ajustar persistência SQLite
+Verifique se o campo de CRT/regime tributário:
+- aceita o valor 4
+- não tem constraint antiga limitada a 1, 2, 3
+- não converte valor desconhecido para 1 ou 3
+- não salva string inválida
+
+Se houver migration necessária, crie uma migration segura.
+
+Exemplo desejado:
+- `tax_regime_code INTEGER NOT NULL`
+- valores aceitos: 1, 2, 3, 4
+
+Se houver CHECK constraint, atualizar para:
+CHECK (tax_regime_code IN (1, 2, 3, 4))
+
+5. Ajustar geração do XML
+Na montagem do XML da NFC-e, garantir que para emitente MEI:
 
 ---
 

@@ -2,6 +2,7 @@ export type FiscalProviderKind = 'mock' | 'sefaz-direct' | 'gateway';
 export type FiscalEnvironment = 'production' | 'homologation';
 export type FiscalContingencyMode = 'online' | 'offline-contingency' | 'queue';
 export type FiscalTlsValidationMode = 'strict' | 'bypass-homologation-diagnostic';
+export type TaxRegimeCode = '1' | '2' | '3' | '4';
 
 export type FiscalConfigView = {
   provider: FiscalProviderKind;
@@ -52,7 +53,7 @@ export type FiscalStoreRecord = {
   legalName: string;
   cnpj: string;
   stateRegistration: string;
-  taxRegimeCode: string;
+  taxRegimeCode: TaxRegimeCode;
   environment: FiscalEnvironment;
   cscId?: string | null;
   cscToken?: string | null;

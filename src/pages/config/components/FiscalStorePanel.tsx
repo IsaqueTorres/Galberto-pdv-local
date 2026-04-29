@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Building2, MapPin, Pencil, Save } from 'lucide-react';
 import { fiscalConfigService } from '../services/fiscal-config.service';
-import type { FiscalEnvironment, FiscalStoreInput, FiscalStoreRecord } from '../types/fiscal-config.types';
+import type { FiscalEnvironment, FiscalStoreInput, FiscalStoreRecord, TaxRegimeCode } from '../types/fiscal-config.types';
 
 const emptyStoreForm: FiscalStoreInput = {
   code: 'MAIN',
@@ -163,11 +163,12 @@ export function FiscalStorePanel({ onStoreReady }: FiscalStorePanelProps) {
                   <SelectCard
                     label="CRT"
                     value={form.taxRegimeCode}
-                    onChange={(value) => updateField('taxRegimeCode', value)}
+                    onChange={(value) => updateField('taxRegimeCode', value as TaxRegimeCode)}
                     options={[
                       { value: '1', label: '1 - Simples Nacional' },
-                      { value: '2', label: '2 - Simples excesso sublimite' },
+                      { value: '2', label: '2 - Simples Nacional - excesso de sublimite' },
                       { value: '3', label: '3 - Regime Normal' },
+                      { value: '4', label: '4 - Simples Nacional - MEI' },
                     ]}
                   />
                 </div>
@@ -263,8 +264,9 @@ function formatCnpj(value: string) {
 function crtLabel(value: string) {
   const labels: Record<string, string> = {
     '1': 'Simples Nacional',
-    '2': 'Simples sublimite',
+    '2': 'Simples Nacional - excesso de sublimite',
     '3': 'Regime Normal',
+    '4': 'Simples Nacional - MEI',
   };
   return labels[value] ?? value;
 }

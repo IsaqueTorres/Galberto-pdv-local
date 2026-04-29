@@ -5,7 +5,7 @@ import { salesRepository } from '../persistence/repositories/SalesRepository';
 import { fiscalDocumentRepository } from '../persistence/repositories/FiscalDocumentRepository';
 import { FiscalDocumentStatuses } from '../persistence/types/schema.types';
 import { fiscalNumberingService } from './FiscalNumberingService';
-import type { StoreRecord } from '../persistence/types/schema.types';
+import type { StoreRecord, TaxRegimeCode } from '../persistence/types/schema.types';
 
 type LegacySaleRow = {
   id: number;
@@ -105,6 +105,14 @@ function isSimpleNationalStore(store: StoreRecord): boolean {
   return ['1', '4'].includes(String(store.taxRegimeCode ?? '').trim());
 }
 
+function toTaxRegimeCode(value: string | number | null | undefined): TaxRegimeCode {
+  const normalized = String(value ?? '').trim();
+  if (['1', '2', '3', '4'].includes(normalized)) {
+    return normalized as TaxRegimeCode;
+  }
+  throw new Error(`CRT/regime tributario invalido na company legada: ${normalized || 'vazio'}.`);
+}
+
 function resolveIcmsTaxForStore(store: StoreRecord, item: LegacySaleItemRow) {
   if (isSimpleNationalStore(store)) {
     return {
@@ -181,7 +189,7 @@ export class PdvSaleFiscalAdapter {
       legalName: company.razao_social,
       cnpj: company.cnpj,
       stateRegistration: company.inscricao_estadual,
-      taxRegimeCode: String(company.crt),
+      taxRegimeCode: toTaxRegimeCode(company.crt),
       environment: mapEnvironment(company.ambiente_emissao),
       cscId: company.csc_id,
       cscToken: company.csc_token,
@@ -294,7 +302,7 @@ export class PdvSaleFiscalAdapter {
         stateRegistration: store.stateRegistration,
         legalName: store.legalName,
         tradeName: store.name,
-        taxRegimeCode: String(store.taxRegimeCode),
+        taxRegimeCode: store.taxRegimeCode,
         address: {
           street: store.addressStreet,
           number: store.addressNumber,

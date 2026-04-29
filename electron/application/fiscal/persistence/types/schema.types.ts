@@ -43,6 +43,8 @@ export type FiscalEventType =
 
 export type FiscalEnvironment = 'homologation' | 'production';
 
+export type TaxRegimeCode = '1' | '2' | '3' | '4';
+
 export type SyncEntityType =
   | 'fiscal_document'
   | 'fiscal_event'
@@ -65,7 +67,7 @@ export interface StoreRecord {
   legalName: string;
   cnpj: string;
   stateRegistration: string;
-  taxRegimeCode: string;
+  taxRegimeCode: TaxRegimeCode;
   environment: FiscalEnvironment;
   cscId?: string | null;
   cscToken?: string | null;
@@ -231,7 +233,7 @@ export interface CreateStoreInput {
   legalName: string;
   cnpj: string;
   stateRegistration: string;
-  taxRegimeCode: string;
+  taxRegimeCode: TaxRegimeCode;
   environment: FiscalEnvironment;
   cscId?: string | null;
   cscToken?: string | null;

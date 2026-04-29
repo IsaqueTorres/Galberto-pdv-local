@@ -1,3 +1,5 @@
+export type TaxRegimeCode = '1' | '2' | '3' | '4';
+
 export interface CompanyFiscalFormData {
   nome_fantasia: string;
   razao_social: string;
@@ -18,7 +20,7 @@ export interface CompanyFiscalFormData {
   pais_nome: string;
   telefone: string;
 
-  crt: string;
+  crt: TaxRegimeCode | string;
   indicador_ie: string;
   cnae_principal: string;
 

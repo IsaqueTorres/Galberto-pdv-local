@@ -1491,7 +1491,7 @@ function createTableCompany() {
       inscricao_estadual TEXT NOT NULL,
       inscricao_municipal TEXT,
       indicador_ie INTEGER NOT NULL, -- 1,2,9
-      crt INTEGER NOT NULL,           -- 1=SN, 2=SN excesso sublimite, 3=Regime normal
+      crt INTEGER NOT NULL,           -- 1=SN, 2=SN excesso sublimite, 3=Regime normal, 4=MEI
       cnae_principal TEXT NOT NULL,
 
       -- Endereço fiscal
@@ -3226,6 +3226,13 @@ class SalesRepository {
   }
 }
 const salesRepository = new SalesRepository();
+function toTaxRegimeCode$2(value) {
+  const normalized = String(value ?? "").trim();
+  if (["1", "2", "3", "4"].includes(normalized)) {
+    return normalized;
+  }
+  throw new Error(`CRT/regime tributario invalido na store: ${normalized || "vazio"}.`);
+}
 function mapStore(row) {
   return {
     id: row.id,
@@ -3234,7 +3241,7 @@ function mapStore(row) {
     legalName: row.legal_name,
     cnpj: row.cnpj,
     stateRegistration: row.state_registration,
-    taxRegimeCode: row.tax_regime_code,
+    taxRegimeCode: toTaxRegimeCode$2(row.tax_regime_code),
     environment: row.environment,
     cscId: row.csc_id,
     cscToken: row.csc_token,
@@ -3887,6 +3894,13 @@ class IntegrationFiscalSettingsService {
     return sanitizeForView$1(next);
   }
 }
+function toTaxRegimeCode$1(value) {
+  const normalized = String(value ?? "").trim();
+  if (["1", "2", "3", "4"].includes(normalized)) {
+    return normalized;
+  }
+  throw new Error(`CRT/regime tributario invalido na company legada: ${normalized || "vazio"}.`);
+}
 function mapCompanyToStoreInput(company) {
   return {
     code: "MAIN",
@@ -3894,7 +3908,7 @@ function mapCompanyToStoreInput(company) {
     legalName: company.razao_social,
     cnpj: company.cnpj,
     stateRegistration: company.inscricao_estadual,
-    taxRegimeCode: String(company.crt),
+    taxRegimeCode: toTaxRegimeCode$1(company.crt),
     environment: company.ambiente_emissao === 1 ? "production" : "homologation",
     cscId: company.csc_id,
     cscToken: company.csc_token,
@@ -4240,6 +4254,10 @@ class FiscalReadinessValidator {
   }
 }
 const fiscalReadinessValidator = new FiscalReadinessValidator();
+const VALID_TAX_REGIME_CODES = ["1", "2", "3", "4"];
+function isTaxRegimeCode(value) {
+  return VALID_TAX_REGIME_CODES.includes(value);
+}
 function cleanDigits(value) {
   return String(value ?? "").replace(/\D/g, "");
 }
@@ -4285,8 +4303,8 @@ function normalizeStoreInput(input) {
   if (!normalized.taxRegimeCode) {
     throw new Error("CRT/regime tributario e obrigatorio.");
   }
-  if (!["1", "2", "3"].includes(normalized.taxRegimeCode)) {
-    throw new Error("CRT deve ser 1, 2 ou 3.");
+  if (!isTaxRegimeCode(normalized.taxRegimeCode)) {
+    throw new Error("CRT deve ser 1, 2, 3 ou 4.");
   }
   if (normalized.addressState.length !== 2) {
     throw new Error("UF deve conter 2 letras.");
@@ -10522,6 +10540,24 @@ function paymentCardXml(code) {
 function isSimpleNationalCrt(taxRegimeCode) {
   return ["1", "4"].includes(String(taxRegimeCode ?? "").trim());
 }
+function shouldTotalizeIcmsBase(item, context) {
+  if (isSimpleNationalCrt(context.emitter.taxRegimeCode)) {
+    return false;
+  }
+  const cst = item.tax.icmsCst || "00";
+  return !["40", "41", "50"].includes(cst);
+}
+function calculateIcmsTotals(items, context) {
+  return items.reduce(
+    (totals, item) => {
+      if (shouldTotalizeIcmsBase(item, context)) {
+        totals.baseAmount += Number(item.totalAmount ?? 0);
+      }
+      return totals;
+    },
+    { baseAmount: 0, amount: 0 }
+  );
+}
 function icmsXml(item, context) {
   const origin = escapeXml(item.tax.originCode || "0");
   if (isSimpleNationalCrt(context.emitter.taxRegimeCode)) {
@@ -10649,6 +10685,7 @@ function serializeDocument(model) {
   const address = emitter.address;
   const tpAmb = context.environment === "production" ? "1" : "2";
   const tpEmis = 1;
+  const icmsTotals = calculateIcmsTotals(input.items, context);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <NFe xmlns="${NFE_NAMESPACE}">
 <infNFe versao="4.00" Id="NFe${accessKey.accessKey}">
@@ -10695,8 +10732,8 @@ ${customerXml(input.customer)}
 ${input.items.map((item, index) => itemXml(item, index, context)).join("")}
 <total>
 <ICMSTot>
-<vBC>0.00</vBC>
-<vICMS>0.00</vICMS>
+<vBC>${money(icmsTotals.baseAmount)}</vBC>
+<vICMS>${money(icmsTotals.amount)}</vICMS>
 <vICMSDeson>0.00</vICMSDeson>
 <vFCP>0.00</vFCP>
 <vBCST>0.00</vBCST>
@@ -11288,6 +11325,13 @@ function taxValue(primary, fallback, defaultValue = "") {
 function isSimpleNationalStore(store) {
   return ["1", "4"].includes(String(store.taxRegimeCode ?? "").trim());
 }
+function toTaxRegimeCode(value) {
+  const normalized = String(value ?? "").trim();
+  if (["1", "2", "3", "4"].includes(normalized)) {
+    return normalized;
+  }
+  throw new Error(`CRT/regime tributario invalido na company legada: ${normalized || "vazio"}.`);
+}
 function resolveIcmsTaxForStore(store, item) {
   if (isSimpleNationalStore(store)) {
     return {
@@ -11359,7 +11403,7 @@ class PdvSaleFiscalAdapter {
       legalName: company.razao_social,
       cnpj: company.cnpj,
       stateRegistration: company.inscricao_estadual,
-      taxRegimeCode: String(company.crt),
+      taxRegimeCode: toTaxRegimeCode(company.crt),
       environment: mapEnvironment(company.ambiente_emissao),
       cscId: company.csc_id,
       cscToken: company.csc_token,
@@ -11457,7 +11501,7 @@ class PdvSaleFiscalAdapter {
         stateRegistration: store.stateRegistration,
         legalName: store.legalName,
         tradeName: store.name,
-        taxRegimeCode: String(store.taxRegimeCode),
+        taxRegimeCode: store.taxRegimeCode,
         address: {
           street: store.addressStreet,
           number: store.addressNumber,

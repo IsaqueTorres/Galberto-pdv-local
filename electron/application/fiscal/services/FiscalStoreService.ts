@@ -1,6 +1,12 @@
 import { logger } from '../../../logger/logger';
 import { storeRepository } from '../persistence/repositories/StoreRepository';
-import type { StoreRecord, UpsertActiveStoreInput } from '../persistence/types/schema.types';
+import type { StoreRecord, TaxRegimeCode, UpsertActiveStoreInput } from '../persistence/types/schema.types';
+
+const VALID_TAX_REGIME_CODES = ['1', '2', '3', '4'] as const;
+
+function isTaxRegimeCode(value: string): value is TaxRegimeCode {
+  return VALID_TAX_REGIME_CODES.includes(value as TaxRegimeCode);
+}
 
 function cleanDigits(value: string): string {
   return String(value ?? '').replace(/\D/g, '');
@@ -26,7 +32,7 @@ function normalizeStoreInput(input: UpsertActiveStoreInput): UpsertActiveStoreIn
     legalName: requireText(input as unknown as Record<string, unknown>, 'legalName', 'Razao social'),
     cnpj: cleanDigits(input.cnpj),
     stateRegistration: cleanText(input.stateRegistration),
-    taxRegimeCode: cleanText(input.taxRegimeCode),
+    taxRegimeCode: cleanText(input.taxRegimeCode) as TaxRegimeCode,
     environment: input.environment === 'production' ? 'production' : 'homologation',
     cscId: cleanText(input.cscId ?? '') || null,
     cscToken: cleanText(input.cscToken ?? '') || null,
@@ -51,8 +57,8 @@ function normalizeStoreInput(input: UpsertActiveStoreInput): UpsertActiveStoreIn
   if (!normalized.taxRegimeCode) {
     throw new Error('CRT/regime tributario e obrigatorio.');
   }
-  if (!['1', '2', '3'].includes(normalized.taxRegimeCode)) {
-    throw new Error('CRT deve ser 1, 2 ou 3.');
+  if (!isTaxRegimeCode(normalized.taxRegimeCode)) {
+    throw new Error('CRT deve ser 1, 2, 3 ou 4.');
   }
   if (normalized.addressState.length !== 2) {
     throw new Error('UF deve conter 2 letras.');

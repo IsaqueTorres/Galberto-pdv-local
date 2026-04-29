@@ -1,6 +1,14 @@
 import db from '../../../../infra/database/db';
-import type { CreateStoreInput, StoreRecord, UpsertActiveStoreInput } from '../types/schema.types';
+import type { CreateStoreInput, StoreRecord, TaxRegimeCode, UpsertActiveStoreInput } from '../types/schema.types';
 import { booleanToInt } from '../utils/db.utils';
+
+function toTaxRegimeCode(value: string | number | null | undefined): TaxRegimeCode {
+  const normalized = String(value ?? '').trim();
+  if (['1', '2', '3', '4'].includes(normalized)) {
+    return normalized as TaxRegimeCode;
+  }
+  throw new Error(`CRT/regime tributario invalido na store: ${normalized || 'vazio'}.`);
+}
 
 type StoreRow = {
   id: number;
@@ -35,7 +43,7 @@ function mapStore(row: StoreRow): StoreRecord {
     legalName: row.legal_name,
     cnpj: row.cnpj,
     stateRegistration: row.state_registration,
-    taxRegimeCode: row.tax_regime_code,
+    taxRegimeCode: toTaxRegimeCode(row.tax_regime_code),
     environment: row.environment,
     cscId: row.csc_id,
     cscToken: row.csc_token,

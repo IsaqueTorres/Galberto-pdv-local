@@ -160,6 +160,27 @@ function isSimpleNationalCrt(taxRegimeCode: string | number | null | undefined):
   return ['1', '4'].includes(String(taxRegimeCode ?? '').trim());
 }
 
+function shouldTotalizeIcmsBase(item: NfceItemInput, context: FiscalContext): boolean {
+  if (isSimpleNationalCrt(context.emitter.taxRegimeCode)) {
+    return false;
+  }
+
+  const cst = item.tax.icmsCst || '00';
+  return !['40', '41', '50'].includes(cst);
+}
+
+function calculateIcmsTotals(items: NfceItemInput[], context: FiscalContext) {
+  return items.reduce(
+    (totals, item) => {
+      if (shouldTotalizeIcmsBase(item, context)) {
+        totals.baseAmount += Number(item.totalAmount ?? 0);
+      }
+      return totals;
+    },
+    { baseAmount: 0, amount: 0 }
+  );
+}
+
 function icmsXml(item: NfceItemInput, context: FiscalContext): string {
   const origin = escapeXml(item.tax.originCode || '0');
 
@@ -310,6 +331,7 @@ function serializeDocument(model: NfceDocumentModel): string {
   const address = emitter.address;
   const tpAmb = context.environment === 'production' ? '1' : '2';
   const tpEmis = 1;
+  const icmsTotals = calculateIcmsTotals(input.items, context);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <NFe xmlns="${NFE_NAMESPACE}">
@@ -357,8 +379,8 @@ ${customerXml(input.customer)}
 ${input.items.map((item, index) => itemXml(item, index, context)).join('')}
 <total>
 <ICMSTot>
-<vBC>0.00</vBC>
-<vICMS>0.00</vICMS>
+<vBC>${money(icmsTotals.baseAmount)}</vBC>
+<vICMS>${money(icmsTotals.amount)}</vICMS>
 <vICMSDeson>0.00</vICMSDeson>
 <vFCP>0.00</vFCP>
 <vBCST>0.00</vBCST>

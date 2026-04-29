@@ -1,6 +1,7 @@
 export type FiscalProviderKind = 'mock' | 'sefaz-direct' | 'gateway';
 
 export type FiscalEnvironment = 'production' | 'homologation';
+export type TaxRegimeCode = '1' | '2' | '3' | '4';
 
 export type FiscalDocumentStatus =
   | 'PENDING'
@@ -55,7 +56,7 @@ export interface FiscalEmitter {
   stateRegistration: string;
   legalName: string;
   tradeName: string;
-  taxRegimeCode: string;
+  taxRegimeCode: TaxRegimeCode;
   address: FiscalPartyAddress;
 }
 

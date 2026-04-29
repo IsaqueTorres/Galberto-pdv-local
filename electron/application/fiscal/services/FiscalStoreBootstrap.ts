@@ -1,7 +1,7 @@
 import db from '../../../infra/database/db';
 import { logger } from '../../../logger/logger';
 import { storeRepository } from '../persistence/repositories/StoreRepository';
-import type { CreateStoreInput, StoreRecord } from '../persistence/types/schema.types';
+import type { CreateStoreInput, StoreRecord, TaxRegimeCode } from '../persistence/types/schema.types';
 
 type CompanyFiscalRow = {
   nome_fantasia: string;
@@ -24,6 +24,14 @@ type CompanyFiscalRow = {
   ativo: number;
 };
 
+function toTaxRegimeCode(value: string | number | null | undefined): TaxRegimeCode {
+  const normalized = String(value ?? '').trim();
+  if (['1', '2', '3', '4'].includes(normalized)) {
+    return normalized as TaxRegimeCode;
+  }
+  throw new Error(`CRT/regime tributario invalido na company legada: ${normalized || 'vazio'}.`);
+}
+
 function mapCompanyToStoreInput(company: CompanyFiscalRow): CreateStoreInput {
   return {
     code: 'MAIN',
@@ -31,7 +39,7 @@ function mapCompanyToStoreInput(company: CompanyFiscalRow): CreateStoreInput {
     legalName: company.razao_social,
     cnpj: company.cnpj,
     stateRegistration: company.inscricao_estadual,
-    taxRegimeCode: String(company.crt),
+    taxRegimeCode: toTaxRegimeCode(company.crt),
     environment: company.ambiente_emissao === 1 ? 'production' : 'homologation',
     cscId: company.csc_id,
     cscToken: company.csc_token,
