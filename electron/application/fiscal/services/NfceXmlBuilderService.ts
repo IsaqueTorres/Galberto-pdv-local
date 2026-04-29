@@ -12,6 +12,7 @@ import { createHash } from 'node:crypto';
 const NFE_NAMESPACE = 'http://www.portalfiscal.inf.br/nfe';
 const PROC_VERSION = 'GalbertoPDV-0.1.0';
 const HOMOLOGATION_FIRST_ITEM_DESCRIPTION = 'NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL';
+const HOMOLOGATION_CUSTOMER_NAME = 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL';
 
 export type NfceXmlBuilderInput = {
   fiscalContext: FiscalContext;
@@ -270,12 +271,15 @@ ${cofinsXml(item)}
 </det>`;
 }
 
-function customerXml(customer: NfceXmlBuilderInput['customer']): string {
+function customerXml(customer: NfceXmlBuilderInput['customer'], environment: FiscalContext['environment']): string {
   const document = onlyDigits(customer?.cpfCnpj);
   if (!document) return '';
 
   const documentTag = document.length === 14 ? 'CNPJ' : 'CPF';
-  const name = customer?.name ? `<xNome>${escapeXml(customer.name)}</xNome>` : '';
+  const customerName = environment === 'homologation'
+    ? HOMOLOGATION_CUSTOMER_NAME
+    : customer?.name;
+  const name = customerName ? `<xNome>${escapeXml(customerName)}</xNome>` : '';
 
   return `<dest>
 <${documentTag}>${document}</${documentTag}>
@@ -410,7 +414,7 @@ ${emitter.tradeName ? `<xFant>${escapeXml(emitter.tradeName)}</xFant>` : ''}
 <IE>${onlyDigits(emitter.stateRegistration)}</IE>
 <CRT>${escapeXml(emitter.taxRegimeCode)}</CRT>
 </emit>
-${customerXml(input.customer)}
+${customerXml(input.customer, context.environment)}
 ${input.items.map((item, index) => itemXml(item, index, context)).join('')}
 <total>
 <ICMSTot>
