@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { buscarProdutoPorNome } from "./services/products.service"
 import { Search, Package, CornerDownLeft, ArrowUpDown, X } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 type Produto = {
   id: string | number
@@ -17,7 +18,7 @@ export default function SearchProduct() {
   const [erro, setErro] = useState("")
   const [selecionado, setSelecionado] = useState<number | null>(null)
 
-  // 🔍 Busca dinâmica com debounce
+  // Busca dinâmica com debounce.
   useEffect(() => {
     if (termo.trim().length < 2) {
       setProdutos([])
@@ -42,7 +43,7 @@ export default function SearchProduct() {
     return () => clearTimeout(timeout)
   }, [termo])
 
-  // ⌨️ Atalhos de teclado
+  // Atalhos de teclado.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (produtos.length === 0) {
@@ -81,123 +82,147 @@ export default function SearchProduct() {
   }
 
   return (
-    <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col p-6 gap-6 font-sans overflow-hidden">
+    <div className="h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe_0,#e2e8f0_34%,#cbd5e1_100%)] text-slate-900 flex flex-col p-6 gap-5 font-sans overflow-hidden">
 
-      {/* HEADER ESTILIZADO */}
-      <header className="flex justify-between items-start">
-        <div>
-            <h1 className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">
-                <div className="w-2 h-6 bg-emerald-500 rounded-full" />
-                Busca de Produtos
-            </h1>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mt-1 ml-4">
-                Inventário em Tempo Real
+      <header className="relative overflow-hidden flex justify-between items-start rounded-[2rem] border border-white/70 bg-white px-6 py-5 shadow-2xl shadow-slate-900/20">
+        <div className="absolute inset-x-0 top-0 h-1 bg-blue-600" />
+        <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-blue-100/80" />
+        <div className="flex items-start gap-4">
+          <div className="h-14 w-14 rounded-2xl bg-blue-600 border border-blue-700 flex items-center justify-center text-white shadow-xl shadow-blue-200">
+            <Search size={22} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-blue-700 uppercase tracking-[0.35em]">
+              Consulta rápida
             </p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight uppercase text-slate-900">
+              Buscar produtos
+            </h1>
+            <p className="mt-1 text-sm font-semibold text-slate-500">
+              Pesquise por nome, marca ou código e pressione Enter para inserir.
+            </p>
+          </div>
         </div>
-        <button onClick={() => window.api.fecharJanela()} className="text-zinc-600 hover:text-rose-500 transition-colors">
-            <X size={24} />
+        <button
+          onClick={() => window.api.fecharJanela()}
+          className="relative h-11 w-11 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center justify-center shadow-sm"
+          aria-label="Fechar busca de produtos"
+        >
+          <X size={20} />
         </button>
       </header>
 
-      {/* INPUT OBSIDIAN */}
       <div className="relative group">
-        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-emerald-500 transition-colors">
-            <Search size={20} />
+        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-blue-500 group-focus-within:text-blue-700 transition-colors">
+          <Search size={20} />
         </div>
         <input
-            autoFocus
-            value={termo}
-            onChange={e => setTermo(e.target.value)}
-            className="w-full bg-zinc-900 border-2 border-zinc-800 p-5 pl-14 rounded-2xl text-xl font-bold text-white outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all placeholder:text-zinc-700 shadow-inner"
-            placeholder="Digite nome, marca ou código..."
+          autoFocus
+          value={termo}
+          onChange={e => setTermo(e.target.value)}
+          className="w-full bg-white border-2 border-blue-300 p-5 pl-14 rounded-3xl text-xl font-black text-blue-800 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-200 transition-all placeholder:text-slate-500 shadow-2xl shadow-slate-900/20"
+          placeholder="Digite nome, marca ou código..."
         />
         {loading && (
-            <div className="absolute right-5 top-1/2 -translate-y-1/2">
-                <div className="w-5 h-5 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-            </div>
+          <div className="absolute right-5 top-1/2 -translate-y-1/2">
+            <div className="w-5 h-5 border-2 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+          </div>
         )}
       </div>
 
-      {/* TABELA DE RESULTADOS */}
-      <div className="flex-1 overflow-hidden bg-zinc-900 border border-zinc-800 rounded-[2rem] flex flex-col shadow-2xl">
-        <div className="overflow-auto flex-1">
-            <table className="w-full border-separate border-spacing-0">
-                <thead className="sticky top-0 z-10">
-                    <tr className="bg-zinc-800/80 backdrop-blur-md text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        <th className="text-left px-6 py-4 border-b border-zinc-700/50">Código</th>
-                        <th className="text-left px-6 py-4 border-b border-zinc-700/50">Descrição</th>
-                        <th className="text-right px-6 py-4 border-b border-zinc-700/50">Preço</th>
-                        <th className="text-right px-6 py-4 border-b border-zinc-700/50">Estoque</th>
-                        <th className="text-right px-6 py-4 border-b border-zinc-700/50">Ação</th>
-                    </tr>
-                </thead>
-                <tbody className="text-sm">
-                    {produtos.map((p, index) => (
-                    <tr
-                        key={p.id}
-                        onClick={() => selecionarProduto(p)}
-                        className={`cursor-pointer transition-all
-                        ${index === selecionado 
-                            ? "bg-emerald-600 text-white shadow-lg" 
-                            : "hover:bg-zinc-800/50 text-zinc-400 border-b border-zinc-800/50"
-                        }`}
-                    >
-                        <td className="px-6 py-4 font-mono text-xs">{p.codigo_barras}</td>
-                        <td className="px-6 py-4 font-bold">{p.nome}</td>
-                        <td className="px-6 py-4 text-right font-black">
-                             R$ {p.preco_venda.toFixed(2)}
-                        </td>
-                        <td className={`px-6 py-4 text-right font-bold ${index === selecionado ? 'text-emerald-100' : 'text-zinc-500'}`}>
-                            {p.estoque} un
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    selecionarProduto(p)
-                                }}
-                                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${
-                                    index === selecionado
-                                        ? "bg-white/15 text-white hover:bg-white/25"
-                                        : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                                }`}
-                            >
-                                Inserir
-                            </button>
-                        </td>
-                    </tr>
-                    ))}
+      <div className="flex-1 overflow-hidden bg-white border border-white/70 rounded-[2rem] flex flex-col shadow-2xl shadow-slate-900/20">
+        <div className="overflow-auto flex-1 bg-slate-50/70">
+          <table className="w-full border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-slate-800 text-[10px] font-black text-slate-200 uppercase tracking-widest">
+                <th className="text-left px-6 py-4 border-b border-slate-900">Código</th>
+                <th className="text-left px-6 py-4 border-b border-slate-900">Descrição</th>
+                <th className="text-right px-6 py-4 border-b border-slate-900">Preço</th>
+                <th className="text-right px-6 py-4 border-b border-slate-900">Estoque</th>
+                <th className="text-right px-6 py-4 border-b border-slate-900">Ação</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm">
+              {produtos.map((p, index) => {
+                const isSelected = index === selecionado
 
-                    {produtos.length === 0 && !loading && termo.length >= 2 && (
-                    <tr>
-                        <td colSpan={5} className="p-20 text-center">
-                            <div className="flex flex-col items-center gap-2 opacity-20">
-                                <Package size={48} />
-                                <span className="font-black uppercase tracking-widest text-xs">Produto não localizado</span>
-                            </div>
-                        </td>
-                    </tr>
-                    )}
-                </tbody>
-            </table>
+                return (
+                  <tr
+                    key={p.id}
+                    onClick={() => selecionarProduto(p)}
+                    className={`cursor-pointer transition-all border-b border-slate-100 ${
+                      isSelected
+                        ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                        : "bg-white text-slate-700 hover:bg-blue-50/80"
+                    }`}
+                  >
+                    <td className={`px-6 py-4 font-mono text-xs ${isSelected ? "text-blue-50" : "text-slate-500"}`}>
+                      {p.codigo_barras || "Sem código"}
+                    </td>
+                    <td className="px-6 py-4 font-black">{p.nome}</td>
+                    <td className={`px-6 py-4 text-right font-black ${isSelected ? "text-white" : "text-slate-900"}`}>
+                      R$ {p.preco_venda.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-black ${
+                        isSelected
+                          ? "bg-white/15 text-white"
+                          : p.estoque > 0
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-red-50 text-red-600"
+                      }`}>
+                        {p.estoque} un
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          selecionarProduto(p)
+                        }}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${
+                          isSelected
+                            ? "bg-white text-blue-700 hover:bg-blue-50"
+                            : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        }`}
+                      >
+                        Inserir
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+
+              {produtos.length === 0 && !loading && termo.length >= 2 && (
+                <tr>
+                  <td colSpan={5} className="p-20 text-center">
+                    <div className="flex flex-col items-center gap-3 text-slate-300">
+                      <Package size={48} />
+                      <span className="font-black uppercase tracking-widest text-xs text-slate-400">
+                        Produto não localizado
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* ERRO STATUS */}
       {erro && (
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-500 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-pulse">
-            <X size={14} /> {erro}
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-xs font-black flex items-center gap-2">
+          <X size={14} /> {erro}
         </div>
       )}
 
-      {/* FOOTER SHORTCUTS */}
       <footer className="flex gap-4 items-center">
         <ShortcutTag icon={ArrowUpDown} label="Navegar" />
         <ShortcutTag icon={CornerDownLeft} label="Selecionar" />
         <div className="flex-1" />
-        <div className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-            ESC para cancelar
+        <div className="px-4 py-2 bg-slate-800 border border-slate-900 rounded-xl text-[10px] font-black text-white uppercase tracking-widest shadow-lg shadow-slate-900/20">
+          ESC para cancelar
         </div>
       </footer>
 
@@ -205,12 +230,11 @@ export default function SearchProduct() {
   )
 }
 
-// Componente auxiliar para os atalhos no rodapé
-function ShortcutTag({ icon: Icon, label }: any) {
-    return (
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl shadow-sm">
-            <Icon size={12} className="text-emerald-500" />
-            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">{label}</span>
-        </div>
-    )
+function ShortcutTag({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 bg-white border border-white/70 rounded-xl shadow-lg shadow-slate-900/15">
+      <Icon size={12} className="text-blue-600" />
+      <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{label}</span>
+    </div>
+  )
 }
