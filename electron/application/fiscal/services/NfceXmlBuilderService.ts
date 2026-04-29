@@ -113,6 +113,14 @@ function money(value: number | null | undefined): string {
   return Number(value ?? 0).toFixed(2);
 }
 
+function moneyToCents(value: number | null | undefined): number {
+  return Math.round(Number(value ?? 0) * 100);
+}
+
+function centsToMoney(value: number): string {
+  return (value / 100).toFixed(2);
+}
+
 function quantity(value: number | null | undefined): string {
   return Number(value ?? 0).toFixed(4);
 }
@@ -154,6 +162,14 @@ function paymentCardXml(code: string): string {
 
   // 2 = pagamento nao integrado ao sistema de automacao/TEF.
   return '<card><tpIntegra>2</tpIntegra></card>';
+}
+
+function paymentXmlAmountCents(payment: NfcePaymentInput): number {
+  if (payment.method === 'DINHEIRO' && payment.receivedAmount != null) {
+    return moneyToCents(payment.receivedAmount);
+  }
+
+  return moneyToCents(payment.amount);
 }
 
 function isSimpleNationalCrt(taxRegimeCode: string | number | null | undefined): boolean {
@@ -268,14 +284,23 @@ ${name}
 </dest>`;
 }
 
-function paymentsXml(payments: NfcePaymentInput[], changeAmount: number): string {
+function calculatePaymentTotals(payments: NfcePaymentInput[], finalAmount: number) {
+  const paidAmountCents = payments.reduce((sum, payment) => sum + paymentXmlAmountCents(payment), 0);
+  const finalAmountCents = moneyToCents(finalAmount);
+  const changeAmountCents = paidAmountCents - finalAmountCents;
+
+  return { paidAmountCents, finalAmountCents, changeAmountCents };
+}
+
+function paymentsXml(payments: NfcePaymentInput[], finalAmount: number): string {
+  const paymentTotals = calculatePaymentTotals(payments, finalAmount);
   const details = payments.map((payment) => {
     const code = paymentCode(payment.method);
     const description = code === '99' && payment.description ? `<xPag>${escapeXml(payment.description)}</xPag>` : '';
-    return `<detPag><indPag>0</indPag><tPag>${code}</tPag>${description}<vPag>${money(payment.amount)}</vPag>${paymentCardXml(code)}</detPag>`;
+    return `<detPag><indPag>0</indPag><tPag>${code}</tPag>${description}<vPag>${centsToMoney(paymentXmlAmountCents(payment))}</vPag>${paymentCardXml(code)}</detPag>`;
   }).join('');
 
-  return `<pag>${details}${changeAmount > 0 ? `<vTroco>${money(changeAmount)}</vTroco>` : ''}</pag>`;
+  return `<pag>${details}${paymentTotals.changeAmountCents > 0 ? `<vTroco>${centsToMoney(paymentTotals.changeAmountCents)}</vTroco>` : ''}</pag>`;
 }
 
 function technicalResponsibleXml(input: NfceXmlBuilderInput['technicalResponsible']): string {
@@ -320,6 +345,16 @@ function validateDocument(model: NfceDocumentModel): NfceXmlBuildResult['validat
       addWarning('ITEM_CSOSN_LIMITED_SUPPORT', `CSOSN ${item.tax.csosn} sera serializado no grupo ICMSSN102; valide a regra fiscal antes de transmitir.`, `items[${index}].tax.csosn`);
     }
   });
+
+  const paymentTotals = calculatePaymentTotals(input.payments, input.totals.finalAmount);
+  if (paymentTotals.paidAmountCents < paymentTotals.finalAmountCents) {
+    addError('PAYMENTS_TOTAL_UNDERPAID', 'A soma dos pagamentos da NFC-e e menor que o valor total da nota.', 'payments');
+  }
+
+  const expectedChangeCents = Math.max(paymentTotals.changeAmountCents, 0);
+  if (moneyToCents(input.totals.changeAmount) !== expectedChangeCents) {
+    addError('PAYMENTS_CHANGE_INVALID', 'Troco informado diverge de soma(detPag/vPag) - vNF.', 'totals.changeAmount');
+  }
 
   return { ok: errors.length === 0, errors, warnings };
 }
@@ -401,7 +436,7 @@ ${input.items.map((item, index) => itemXml(item, index, context)).join('')}
 </ICMSTot>
 </total>
 <transp><modFrete>9</modFrete></transp>
-${paymentsXml(input.payments, input.totals.changeAmount)}
+${paymentsXml(input.payments, input.totals.finalAmount)}
 ${input.sale.additionalInfo ? `<infAdic><infCpl>${escapeXml(input.sale.additionalInfo)}</infCpl></infAdic>` : ''}
 ${technicalResponsibleXml(input.technicalResponsible)}
 </infNFe>
