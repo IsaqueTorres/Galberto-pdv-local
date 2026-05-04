@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { showProductWindow, listarProdutos, editProductWindow, openAddProductWindow } from "./services/products.service";
+import { showProductWindow, listarProdutos, editProductWindow } from "./services/products.service";
 import { NotebookPenIcon, Eye } from 'lucide-react';
 
 export default function TabelaProdutos() {

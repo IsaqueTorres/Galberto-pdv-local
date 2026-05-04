@@ -1,27 +1,23 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-import { app, ipcMain, BrowserWindow, shell, dialog } from "electron";
-import * as fs$2 from "fs";
-import fs__default from "fs";
-import path$2 from "path";
-import require$$2 from "os";
-import require$$3 from "crypto";
-import * as fs$1 from "node:fs";
-import * as path$1 from "node:path";
-import path__default from "node:path";
-import Database from "better-sqlite3";
-import { execFileSync } from "node:child_process";
-import crypto$1, { X509Certificate, createHash, createSign } from "node:crypto";
-import * as https from "node:https";
-import http from "node:http";
-import { URL as URL$1 } from "node:url";
-var main = { exports: {} };
-const fs = fs__default;
-const path = path$2;
-const os = require$$2;
-const crypto = require$$3;
-const TIPS = [
+var Eo = Object.defineProperty;
+var mo = (t, e, r) => e in t ? Eo(t, e, { enumerable: !0, configurable: !0, writable: !0, value: r }) : t[e] = r;
+var ce = (t, e, r) => mo(t, typeof e != "symbol" ? e + "" : e, r);
+import { app as _e, ipcMain as p, BrowserWindow as H, shell as Wa, dialog as Qa } from "electron";
+import * as or from "fs";
+import qt from "fs";
+import Or from "path";
+import po from "os";
+import Ja from "crypto";
+import * as Ee from "node:fs";
+import * as st from "node:path";
+import R from "node:path";
+import _o from "better-sqlite3";
+import { execFileSync as Ar } from "node:child_process";
+import br, { X509Certificate as Jr, createHash as Za, createSign as To } from "node:crypto";
+import * as fo from "node:https";
+import No from "node:http";
+import { URL as hr } from "node:url";
+var De = { exports: {} };
+const Ir = qt, Gt = Or, go = po, Ao = Ja, Zr = [
   "◈ encrypted .env [www.dotenvx.com]",
   "◈ secrets for agents [www.dotenvx.com]",
   "⌁ auth for agents [www.vestauth.com]",
@@ -31,433 +27,309 @@ const TIPS = [
   "⌘ suppress logs { quiet: true }",
   "⌘ multiple files { path: ['.env.local', '.env'] }"
 ];
-function _getRandomTip() {
-  return TIPS[Math.floor(Math.random() * TIPS.length)];
+function ho() {
+  return Zr[Math.floor(Math.random() * Zr.length)];
 }
-function parseBoolean(value) {
-  if (typeof value === "string") {
-    return !["false", "0", "no", "off", ""].includes(value.toLowerCase());
-  }
-  return Boolean(value);
+function nt(t) {
+  return typeof t == "string" ? !["false", "0", "no", "off", ""].includes(t.toLowerCase()) : !!t;
 }
-function supportsAnsi() {
+function Io() {
   return process.stdout.isTTY;
 }
-function dim(text) {
-  return supportsAnsi() ? `\x1B[2m${text}\x1B[0m` : text;
+function Co(t) {
+  return Io() ? `\x1B[2m${t}\x1B[0m` : t;
 }
-const LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
-function parse$1(src) {
-  const obj = {};
-  let lines = src.toString();
-  lines = lines.replace(/\r\n?/mg, "\n");
-  let match;
-  while ((match = LINE.exec(lines)) != null) {
-    const key = match[1];
-    let value = match[2] || "";
-    value = value.trim();
-    const maybeQuote = value[0];
-    value = value.replace(/^(['"`])([\s\S]*)\1$/mg, "$2");
-    if (maybeQuote === '"') {
-      value = value.replace(/\\n/g, "\n");
-      value = value.replace(/\\r/g, "\r");
-    }
-    obj[key] = value;
+const vo = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
+function Do(t) {
+  const e = {};
+  let r = t.toString();
+  r = r.replace(/\r\n?/mg, `
+`);
+  let a;
+  for (; (a = vo.exec(r)) != null; ) {
+    const n = a[1];
+    let o = a[2] || "";
+    o = o.trim();
+    const s = o[0];
+    o = o.replace(/^(['"`])([\s\S]*)\1$/mg, "$2"), s === '"' && (o = o.replace(/\\n/g, `
+`), o = o.replace(/\\r/g, "\r")), e[n] = o;
   }
-  return obj;
+  return e;
 }
-function _parseVault(options2) {
-  options2 = options2 || {};
-  const vaultPath = _vaultPath(options2);
-  options2.path = vaultPath;
-  const result = DotenvModule.configDotenv(options2);
-  if (!result.parsed) {
-    const err = new Error(`MISSING_DATA: Cannot parse ${vaultPath} for an unknown reason`);
-    err.code = "MISSING_DATA";
-    throw err;
+function So(t) {
+  t = t || {};
+  const e = rn(t);
+  t.path = e;
+  const r = B.configDotenv(t);
+  if (!r.parsed) {
+    const s = new Error(`MISSING_DATA: Cannot parse ${e} for an unknown reason`);
+    throw s.code = "MISSING_DATA", s;
   }
-  const keys = _dotenvKey(options2).split(",");
-  const length = keys.length;
-  let decrypted;
-  for (let i = 0; i < length; i++) {
+  const a = tn(t).split(","), n = a.length;
+  let o;
+  for (let s = 0; s < n; s++)
     try {
-      const key = keys[i].trim();
-      const attrs = _instructions(result, key);
-      decrypted = DotenvModule.decrypt(attrs.ciphertext, attrs.key);
+      const i = a[s].trim(), c = Lo(r, i);
+      o = B.decrypt(c.ciphertext, c.key);
       break;
-    } catch (error) {
-      if (i + 1 >= length) {
-        throw error;
-      }
+    } catch (i) {
+      if (s + 1 >= n)
+        throw i;
     }
-  }
-  return DotenvModule.parse(decrypted);
+  return B.parse(o);
 }
-function _warn(message) {
-  console.error(`⚠ ${message}`);
+function Ro(t) {
+  console.error(`⚠ ${t}`);
 }
-function _debug(message) {
-  console.log(`┆ ${message}`);
+function It(t) {
+  console.log(`┆ ${t}`);
 }
-function _log(message) {
-  console.log(`◇ ${message}`);
+function en(t) {
+  console.log(`◇ ${t}`);
 }
-function _dotenvKey(options2) {
-  if (options2 && options2.DOTENV_KEY && options2.DOTENV_KEY.length > 0) {
-    return options2.DOTENV_KEY;
-  }
-  if (process.env.DOTENV_KEY && process.env.DOTENV_KEY.length > 0) {
-    return process.env.DOTENV_KEY;
-  }
-  return "";
+function tn(t) {
+  return t && t.DOTENV_KEY && t.DOTENV_KEY.length > 0 ? t.DOTENV_KEY : process.env.DOTENV_KEY && process.env.DOTENV_KEY.length > 0 ? process.env.DOTENV_KEY : "";
 }
-function _instructions(result, dotenvKey) {
-  let uri;
+function Lo(t, e) {
+  let r;
   try {
-    uri = new URL(dotenvKey);
-  } catch (error) {
-    if (error.code === "ERR_INVALID_URL") {
-      const err = new Error("INVALID_DOTENV_KEY: Wrong format. Must be in valid uri format like dotenv://:key_1234@dotenvx.com/vault/.env.vault?environment=development");
-      err.code = "INVALID_DOTENV_KEY";
-      throw err;
+    r = new URL(e);
+  } catch (i) {
+    if (i.code === "ERR_INVALID_URL") {
+      const c = new Error("INVALID_DOTENV_KEY: Wrong format. Must be in valid uri format like dotenv://:key_1234@dotenvx.com/vault/.env.vault?environment=development");
+      throw c.code = "INVALID_DOTENV_KEY", c;
     }
-    throw error;
+    throw i;
   }
-  const key = uri.password;
-  if (!key) {
-    const err = new Error("INVALID_DOTENV_KEY: Missing key part");
-    err.code = "INVALID_DOTENV_KEY";
-    throw err;
+  const a = r.password;
+  if (!a) {
+    const i = new Error("INVALID_DOTENV_KEY: Missing key part");
+    throw i.code = "INVALID_DOTENV_KEY", i;
   }
-  const environment = uri.searchParams.get("environment");
-  if (!environment) {
-    const err = new Error("INVALID_DOTENV_KEY: Missing environment part");
-    err.code = "INVALID_DOTENV_KEY";
-    throw err;
+  const n = r.searchParams.get("environment");
+  if (!n) {
+    const i = new Error("INVALID_DOTENV_KEY: Missing environment part");
+    throw i.code = "INVALID_DOTENV_KEY", i;
   }
-  const environmentKey = `DOTENV_VAULT_${environment.toUpperCase()}`;
-  const ciphertext = result.parsed[environmentKey];
-  if (!ciphertext) {
-    const err = new Error(`NOT_FOUND_DOTENV_ENVIRONMENT: Cannot locate environment ${environmentKey} in your .env.vault file.`);
-    err.code = "NOT_FOUND_DOTENV_ENVIRONMENT";
-    throw err;
+  const o = `DOTENV_VAULT_${n.toUpperCase()}`, s = t.parsed[o];
+  if (!s) {
+    const i = new Error(`NOT_FOUND_DOTENV_ENVIRONMENT: Cannot locate environment ${o} in your .env.vault file.`);
+    throw i.code = "NOT_FOUND_DOTENV_ENVIRONMENT", i;
   }
-  return { ciphertext, key };
+  return { ciphertext: s, key: a };
 }
-function _vaultPath(options2) {
-  let possibleVaultPath = null;
-  if (options2 && options2.path && options2.path.length > 0) {
-    if (Array.isArray(options2.path)) {
-      for (const filepath of options2.path) {
-        if (fs.existsSync(filepath)) {
-          possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
-        }
-      }
-    } else {
-      possibleVaultPath = options2.path.endsWith(".vault") ? options2.path : `${options2.path}.vault`;
+function rn(t) {
+  let e = null;
+  if (t && t.path && t.path.length > 0)
+    if (Array.isArray(t.path))
+      for (const r of t.path)
+        Ir.existsSync(r) && (e = r.endsWith(".vault") ? r : `${r}.vault`);
+    else
+      e = t.path.endsWith(".vault") ? t.path : `${t.path}.vault`;
+  else
+    e = Gt.resolve(process.cwd(), ".env.vault");
+  return Ir.existsSync(e) ? e : null;
+}
+function ea(t) {
+  return t[0] === "~" ? Gt.join(go.homedir(), t.slice(1)) : t;
+}
+function yo(t) {
+  const e = nt(process.env.DOTENV_CONFIG_DEBUG || t && t.debug), r = nt(process.env.DOTENV_CONFIG_QUIET || t && t.quiet);
+  (e || !r) && en("loading env from encrypted .env.vault");
+  const a = B._parseVault(t);
+  let n = process.env;
+  return t && t.processEnv != null && (n = t.processEnv), B.populate(n, a, t), { parsed: a };
+}
+function Oo(t) {
+  const e = Gt.resolve(process.cwd(), ".env");
+  let r = "utf8", a = process.env;
+  t && t.processEnv != null && (a = t.processEnv);
+  let n = nt(a.DOTENV_CONFIG_DEBUG || t && t.debug), o = nt(a.DOTENV_CONFIG_QUIET || t && t.quiet);
+  t && t.encoding ? r = t.encoding : n && It("no encoding is specified (UTF-8 is used by default)");
+  let s = [e];
+  if (t && t.path)
+    if (!Array.isArray(t.path))
+      s = [ea(t.path)];
+    else {
+      s = [];
+      for (const d of t.path)
+        s.push(ea(d));
     }
-  } else {
-    possibleVaultPath = path.resolve(process.cwd(), ".env.vault");
-  }
-  if (fs.existsSync(possibleVaultPath)) {
-    return possibleVaultPath;
-  }
-  return null;
-}
-function _resolveHome(envPath) {
-  return envPath[0] === "~" ? path.join(os.homedir(), envPath.slice(1)) : envPath;
-}
-function _configVault(options2) {
-  const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options2 && options2.debug);
-  const quiet = parseBoolean(process.env.DOTENV_CONFIG_QUIET || options2 && options2.quiet);
-  if (debug || !quiet) {
-    _log("loading env from encrypted .env.vault");
-  }
-  const parsed = DotenvModule._parseVault(options2);
-  let processEnv = process.env;
-  if (options2 && options2.processEnv != null) {
-    processEnv = options2.processEnv;
-  }
-  DotenvModule.populate(processEnv, parsed, options2);
-  return { parsed };
-}
-function configDotenv(options2) {
-  const dotenvPath = path.resolve(process.cwd(), ".env");
-  let encoding = "utf8";
-  let processEnv = process.env;
-  if (options2 && options2.processEnv != null) {
-    processEnv = options2.processEnv;
-  }
-  let debug = parseBoolean(processEnv.DOTENV_CONFIG_DEBUG || options2 && options2.debug);
-  let quiet = parseBoolean(processEnv.DOTENV_CONFIG_QUIET || options2 && options2.quiet);
-  if (options2 && options2.encoding) {
-    encoding = options2.encoding;
-  } else {
-    if (debug) {
-      _debug("no encoding is specified (UTF-8 is used by default)");
-    }
-  }
-  let optionPaths = [dotenvPath];
-  if (options2 && options2.path) {
-    if (!Array.isArray(options2.path)) {
-      optionPaths = [_resolveHome(options2.path)];
-    } else {
-      optionPaths = [];
-      for (const filepath of options2.path) {
-        optionPaths.push(_resolveHome(filepath));
-      }
-    }
-  }
-  let lastError;
-  const parsedAll = {};
-  for (const path2 of optionPaths) {
+  let i;
+  const c = {};
+  for (const d of s)
     try {
-      const parsed = DotenvModule.parse(fs.readFileSync(path2, { encoding }));
-      DotenvModule.populate(parsedAll, parsed, options2);
-    } catch (e) {
-      if (debug) {
-        _debug(`failed to load ${path2} ${e.message}`);
-      }
-      lastError = e;
+      const m = B.parse(Ir.readFileSync(d, { encoding: r }));
+      B.populate(c, m, t);
+    } catch (m) {
+      n && It(`failed to load ${d} ${m.message}`), i = m;
     }
-  }
-  const populated = DotenvModule.populate(processEnv, parsedAll, options2);
-  debug = parseBoolean(processEnv.DOTENV_CONFIG_DEBUG || debug);
-  quiet = parseBoolean(processEnv.DOTENV_CONFIG_QUIET || quiet);
-  if (debug || !quiet) {
-    const keysCount = Object.keys(populated).length;
-    const shortPaths = [];
-    for (const filePath of optionPaths) {
+  const l = B.populate(a, c, t);
+  if (n = nt(a.DOTENV_CONFIG_DEBUG || n), o = nt(a.DOTENV_CONFIG_QUIET || o), n || !o) {
+    const d = Object.keys(l).length, m = [];
+    for (const E of s)
       try {
-        const relative = path.relative(process.cwd(), filePath);
-        shortPaths.push(relative);
-      } catch (e) {
-        if (debug) {
-          _debug(`failed to load ${filePath} ${e.message}`);
-        }
-        lastError = e;
+        const _ = Gt.relative(process.cwd(), E);
+        m.push(_);
+      } catch (_) {
+        n && It(`failed to load ${E} ${_.message}`), i = _;
       }
-    }
-    _log(`injecting env (${keysCount}) from ${shortPaths.join(",")} ${dim(`// tip: ${_getRandomTip()}`)}`);
+    en(`injecting env (${d}) from ${m.join(",")} ${Co(`// tip: ${ho()}`)}`);
   }
-  if (lastError) {
-    return { parsed: parsedAll, error: lastError };
-  } else {
-    return { parsed: parsedAll };
-  }
+  return i ? { parsed: c, error: i } : { parsed: c };
 }
-function config(options2) {
-  if (_dotenvKey(options2).length === 0) {
-    return DotenvModule.configDotenv(options2);
-  }
-  const vaultPath = _vaultPath(options2);
-  if (!vaultPath) {
-    _warn(`you set DOTENV_KEY but you are missing a .env.vault file at ${vaultPath}`);
-    return DotenvModule.configDotenv(options2);
-  }
-  return DotenvModule._configVault(options2);
+function bo(t) {
+  if (tn(t).length === 0)
+    return B.configDotenv(t);
+  const e = rn(t);
+  return e ? B._configVault(t) : (Ro(`you set DOTENV_KEY but you are missing a .env.vault file at ${e}`), B.configDotenv(t));
 }
-function decrypt(encrypted, keyStr) {
-  const key = Buffer.from(keyStr.slice(-64), "hex");
-  let ciphertext = Buffer.from(encrypted, "base64");
-  const nonce = ciphertext.subarray(0, 12);
-  const authTag = ciphertext.subarray(-16);
-  ciphertext = ciphertext.subarray(12, -16);
+function Uo(t, e) {
+  const r = Buffer.from(e.slice(-64), "hex");
+  let a = Buffer.from(t, "base64");
+  const n = a.subarray(0, 12), o = a.subarray(-16);
+  a = a.subarray(12, -16);
   try {
-    const aesgcm = crypto.createDecipheriv("aes-256-gcm", key, nonce);
-    aesgcm.setAuthTag(authTag);
-    return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
-  } catch (error) {
-    const isRange = error instanceof RangeError;
-    const invalidKeyLength = error.message === "Invalid key length";
-    const decryptionFailed = error.message === "Unsupported state or unable to authenticate data";
-    if (isRange || invalidKeyLength) {
-      const err = new Error("INVALID_DOTENV_KEY: It must be 64 characters long (or more)");
-      err.code = "INVALID_DOTENV_KEY";
-      throw err;
-    } else if (decryptionFailed) {
-      const err = new Error("DECRYPTION_FAILED: Please check your DOTENV_KEY");
-      err.code = "DECRYPTION_FAILED";
-      throw err;
-    } else {
-      throw error;
-    }
+    const s = Ao.createDecipheriv("aes-256-gcm", r, n);
+    return s.setAuthTag(o), `${s.update(a)}${s.final()}`;
+  } catch (s) {
+    const i = s instanceof RangeError, c = s.message === "Invalid key length", l = s.message === "Unsupported state or unable to authenticate data";
+    if (i || c) {
+      const d = new Error("INVALID_DOTENV_KEY: It must be 64 characters long (or more)");
+      throw d.code = "INVALID_DOTENV_KEY", d;
+    } else if (l) {
+      const d = new Error("DECRYPTION_FAILED: Please check your DOTENV_KEY");
+      throw d.code = "DECRYPTION_FAILED", d;
+    } else
+      throw s;
   }
 }
-function populate(processEnv, parsed, options2 = {}) {
-  const debug = Boolean(options2 && options2.debug);
-  const override = Boolean(options2 && options2.override);
-  const populated = {};
-  if (typeof parsed !== "object") {
-    const err = new Error("OBJECT_REQUIRED: Please check the processEnv argument being passed to populate");
-    err.code = "OBJECT_REQUIRED";
-    throw err;
+function Fo(t, e, r = {}) {
+  const a = !!(r && r.debug), n = !!(r && r.override), o = {};
+  if (typeof e != "object") {
+    const s = new Error("OBJECT_REQUIRED: Please check the processEnv argument being passed to populate");
+    throw s.code = "OBJECT_REQUIRED", s;
   }
-  for (const key of Object.keys(parsed)) {
-    if (Object.prototype.hasOwnProperty.call(processEnv, key)) {
-      if (override === true) {
-        processEnv[key] = parsed[key];
-        populated[key] = parsed[key];
-      }
-      if (debug) {
-        if (override === true) {
-          _debug(`"${key}" is already defined and WAS overwritten`);
-        } else {
-          _debug(`"${key}" is already defined and was NOT overwritten`);
-        }
-      }
-    } else {
-      processEnv[key] = parsed[key];
-      populated[key] = parsed[key];
-    }
-  }
-  return populated;
+  for (const s of Object.keys(e))
+    Object.prototype.hasOwnProperty.call(t, s) ? (n === !0 && (t[s] = e[s], o[s] = e[s]), a && It(n === !0 ? `"${s}" is already defined and WAS overwritten` : `"${s}" is already defined and was NOT overwritten`)) : (t[s] = e[s], o[s] = e[s]);
+  return o;
 }
-const DotenvModule = {
-  configDotenv,
-  _configVault,
-  _parseVault,
-  config,
-  decrypt,
-  parse: parse$1,
-  populate
+const B = {
+  configDotenv: Oo,
+  _configVault: yo,
+  _parseVault: So,
+  config: bo,
+  decrypt: Uo,
+  parse: Do,
+  populate: Fo
 };
-main.exports.configDotenv = DotenvModule.configDotenv;
-main.exports._configVault = DotenvModule._configVault;
-main.exports._parseVault = DotenvModule._parseVault;
-main.exports.config = DotenvModule.config;
-main.exports.decrypt = DotenvModule.decrypt;
-main.exports.parse = DotenvModule.parse;
-main.exports.populate = DotenvModule.populate;
-main.exports = DotenvModule;
-var mainExports = main.exports;
-const options = {};
-if (process.env.DOTENV_CONFIG_ENCODING != null) {
-  options.encoding = process.env.DOTENV_CONFIG_ENCODING;
-}
-if (process.env.DOTENV_CONFIG_PATH != null) {
-  options.path = process.env.DOTENV_CONFIG_PATH;
-}
-if (process.env.DOTENV_CONFIG_QUIET != null) {
-  options.quiet = process.env.DOTENV_CONFIG_QUIET;
-}
-if (process.env.DOTENV_CONFIG_DEBUG != null) {
-  options.debug = process.env.DOTENV_CONFIG_DEBUG;
-}
-if (process.env.DOTENV_CONFIG_OVERRIDE != null) {
-  options.override = process.env.DOTENV_CONFIG_OVERRIDE;
-}
-if (process.env.DOTENV_CONFIG_DOTENV_KEY != null) {
-  options.DOTENV_KEY = process.env.DOTENV_CONFIG_DOTENV_KEY;
-}
-var envOptions = options;
-const re = /^dotenv_config_(encoding|path|quiet|debug|override|DOTENV_KEY)=(.+)$/;
-var cliOptions = function optionMatcher(args) {
-  const options2 = args.reduce(function(acc, cur) {
-    const matches = cur.match(re);
-    if (matches) {
-      acc[matches[1]] = matches[2];
-    }
-    return acc;
+De.exports.configDotenv = B.configDotenv;
+De.exports._configVault = B._configVault;
+De.exports._parseVault = B._parseVault;
+De.exports.config = B.config;
+De.exports.decrypt = B.decrypt;
+De.exports.parse = B.parse;
+De.exports.populate = B.populate;
+De.exports = B;
+var wo = De.exports;
+const Ge = {};
+process.env.DOTENV_CONFIG_ENCODING != null && (Ge.encoding = process.env.DOTENV_CONFIG_ENCODING);
+process.env.DOTENV_CONFIG_PATH != null && (Ge.path = process.env.DOTENV_CONFIG_PATH);
+process.env.DOTENV_CONFIG_QUIET != null && (Ge.quiet = process.env.DOTENV_CONFIG_QUIET);
+process.env.DOTENV_CONFIG_DEBUG != null && (Ge.debug = process.env.DOTENV_CONFIG_DEBUG);
+process.env.DOTENV_CONFIG_OVERRIDE != null && (Ge.override = process.env.DOTENV_CONFIG_OVERRIDE);
+process.env.DOTENV_CONFIG_DOTENV_KEY != null && (Ge.DOTENV_KEY = process.env.DOTENV_CONFIG_DOTENV_KEY);
+var xo = Ge;
+const Mo = /^dotenv_config_(encoding|path|quiet|debug|override|DOTENV_KEY)=(.+)$/;
+var Po = function(e) {
+  const r = e.reduce(function(a, n) {
+    const o = n.match(Mo);
+    return o && (a[o[1]] = o[2]), a;
   }, {});
-  if (!("quiet" in options2)) {
-    options2.quiet = "true";
-  }
-  return options2;
+  return "quiet" in r || (r.quiet = "true"), r;
 };
 (function() {
-  mainExports.config(
+  wo.config(
     Object.assign(
       {},
-      envOptions,
-      cliOptions(process.argv)
+      xo,
+      Po(process.argv)
     )
   );
 })();
-const logDir = path$2.join(app.getPath("userData"), "logs");
-if (!fs__default.existsSync(logDir)) {
-  fs__default.mkdirSync(logDir, { recursive: true });
-}
-function writeLog(level, message) {
-  const date = /* @__PURE__ */ new Date();
-  const dateISO = date.toLocaleString("sv-SE", {
+const Cr = Or.join(_e.getPath("userData"), "logs");
+qt.existsSync(Cr) || qt.mkdirSync(Cr, { recursive: !0 });
+function sr(t, e) {
+  const a = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", {
     timeZone: "America/Sao_Paulo"
-  }).replace(" ", "T");
-  const line = `${dateISO} [${level}] ${message}
-`;
-  const fileName = `${dateISO.slice(0, 10)}.log`;
-  const filePath = path$2.join(logDir, fileName);
-  fs__default.appendFileSync(filePath, line, { encoding: "utf-8" });
+  }).replace(" ", "T"), n = `${a} [${t}] ${e}
+`, o = `${a.slice(0, 10)}.log`, s = Or.join(Cr, o);
+  qt.appendFileSync(s, n, { encoding: "utf-8" });
 }
-const logger = {
-  info: (msg) => writeLog("INFO", msg),
-  warn: (msg) => writeLog("WARN", msg),
-  error: (msg) => writeLog("ERROR", msg)
+const f = {
+  info: (t) => sr("INFO", t),
+  warn: (t) => sr("WARN", t),
+  error: (t) => sr("ERROR", t)
 };
-function hashSenha(senha) {
-  return require$$3.createHash("sha256").update(senha).digest("hex");
+function Jt(t) {
+  return Ja.createHash("sha256").update(t).digest("hex");
 }
-function compareSenha(senhaDigitada, hashBanco) {
-  return hashSenha(senhaDigitada) === hashBanco;
+function Bo(t, e) {
+  return Jt(t) === e;
 }
-function autenticarUsuario(username, password) {
-  const user = db.prepare(`
+function Xo(t, e) {
+  const r = u.prepare(`
     SELECT id, nome, funcao, email, username, password, ativo
     FROM usuarios
     WHERE username = ?
     LIMIT 1
-  `).get(username);
-  if (!user) {
+  `).get(t);
+  if (!r)
     throw new Error("Usuário inválido");
-  }
-  if (!compareSenha(password, user.password)) {
+  if (!Bo(e, r.password))
     throw new Error("Senha inválida");
-  }
-  if (!user.ativo) {
+  if (!r.ativo)
     throw new Error("Usuário desabilitado");
-  }
-  const sessionId = db.transaction(() => {
-    db.prepare(`
+  const a = u.transaction(() => {
+    u.prepare(`
       UPDATE sessions
       SET active = 0,
           logout_at = CURRENT_TIMESTAMP
       WHERE user_id = ? AND active = 1
-    `).run(user.id);
-    const result = db.prepare(`
+    `).run(r.id);
+    const n = u.prepare(`
       INSERT INTO sessions (user_id)
       VALUES (?)
-    `).run(user.id);
-    return Number(result.lastInsertRowid);
+    `).run(r.id);
+    return Number(n.lastInsertRowid);
   })();
   return {
-    id: user.id,
-    nome: user.nome,
-    role: user.funcao,
-    email: user.email,
-    login: user.username,
-    sessionId
+    id: r.id,
+    nome: r.nome,
+    role: r.funcao,
+    email: r.email,
+    login: r.username,
+    sessionId: a
   };
 }
-const MIGRATION_ID = "2026-04-16-fiscal-persistence-v1";
-function ensureMigrationsTable(database) {
-  database.exec(`
+const an = "2026-04-16-fiscal-persistence-v1";
+function $o(t) {
+  t.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       id TEXT PRIMARY KEY,
       executed_at TEXT NOT NULL
     );
   `);
 }
-function hasMigration(database, migrationId) {
-  const row = database.prepare(`SELECT 1 FROM schema_migrations WHERE id = ? LIMIT 1`).get(migrationId);
-  return Boolean(row);
+function ko(t, e) {
+  return !!t.prepare("SELECT 1 FROM schema_migrations WHERE id = ? LIMIT 1").get(e);
 }
-function hasColumn(database, table, column) {
-  const rows = database.prepare(`PRAGMA table_info(${table})`).all();
-  return rows.some((row) => row.name === column);
+function Fe(t, e, r) {
+  return t.prepare(`PRAGMA table_info(${e})`).all().some((n) => n.name === r);
 }
-function executeMigration(database) {
-  const transaction = database.transaction(() => {
-    database.exec(`
+function qo(t) {
+  t.transaction(() => {
+    t.exec(`
       CREATE TABLE IF NOT EXISTS stores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT NOT NULL UNIQUE,
@@ -622,8 +494,7 @@ function executeMigration(database) {
 
       CREATE INDEX IF NOT EXISTS idx_sync_queue_entity
       ON sync_queue(entity_type, entity_id, operation);
-    `);
-    database.exec(`
+    `), t.exec(`
       INSERT INTO stores (
         code,
         name,
@@ -672,13 +543,11 @@ function executeMigration(database) {
       FROM company
       WHERE NOT EXISTS (SELECT 1 FROM stores)
       LIMIT 1;
-    `);
-    database.prepare(`INSERT INTO schema_migrations (id, executed_at) VALUES (?, CURRENT_TIMESTAMP)`).run(MIGRATION_ID);
-  });
-  transaction();
+    `), t.prepare("INSERT INTO schema_migrations (id, executed_at) VALUES (?, CURRENT_TIMESTAMP)").run(an);
+  })();
 }
-function ensureFiscalCoreSchema(database) {
-  database.exec(`
+function Go(t) {
+  t.exec(`
     CREATE TABLE IF NOT EXISTS stores (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code TEXT NOT NULL UNIQUE,
@@ -845,40 +714,39 @@ function ensureFiscalCoreSchema(database) {
     ON sync_queue(entity_type, entity_id, operation);
   `);
 }
-function normalizeText$1(value) {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+function z(t) {
+  if (typeof t != "string") return null;
+  const e = t.trim();
+  return e.length > 0 ? e : null;
 }
-function normalizeProvider(value) {
-  return value === "sefaz-direct" || value === "gateway" || value === "mock" ? value : "mock";
+function Vo(t) {
+  return t === "sefaz-direct" || t === "gateway" || t === "mock" ? t : "mock";
 }
-function normalizeEnvironment(value) {
-  return value === "production" || value === "homologation" ? value : null;
+function zo(t) {
+  return t === "production" || t === "homologation" ? t : null;
 }
-function normalizeContingencyMode(value) {
-  return value === "online" || value === "offline-contingency" || value === "queue" ? value : "queue";
+function jo(t) {
+  return t === "online" || t === "offline-contingency" || t === "queue" ? t : "queue";
 }
-function normalizeTlsMode(value) {
-  return value === "bypass-homologation-diagnostic" ? value : "strict";
+function Ho(t) {
+  return t === "bypass-homologation-diagnostic" ? t : "strict";
 }
-function readLegacyFiscalConfig(database) {
-  const row = database.prepare(`
+function Ko(t) {
+  const e = t.prepare(`
     SELECT raw_json
     FROM integrations
     WHERE integration_id = 'fiscal:nfce'
     LIMIT 1
   `).get();
-  if (!(row == null ? void 0 : row.raw_json)) return null;
+  if (!(e != null && e.raw_json)) return null;
   try {
-    return JSON.parse(row.raw_json);
-  } catch (error) {
-    logger.warn(`[FiscalMigration] Falha ao ler integrations.raw_json fiscal:nfce: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
+    return JSON.parse(e.raw_json);
+  } catch (r) {
+    return f.warn(`[FiscalMigration] Falha ao ler integrations.raw_json fiscal:nfce: ${r instanceof Error ? r.message : String(r)}`), null;
   }
 }
-function ensureFiscalSettingsSchema(database) {
-  database.exec(`
+function Yo(t) {
+  t.exec(`
     CREATE TABLE IF NOT EXISTS fiscal_settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       store_id INTEGER NOT NULL,
@@ -908,10 +776,8 @@ function ensureFiscalSettingsSchema(database) {
     WHERE active = 1;
   `);
 }
-function ensureStoreFromCompany(database) {
-  const store = database.prepare(`SELECT id FROM stores WHERE active = 1 ORDER BY id ASC LIMIT 1`).get();
-  if (store) return;
-  database.exec(`
+function Wo(t) {
+  t.prepare("SELECT id FROM stores WHERE active = 1 ORDER BY id ASC LIMIT 1").get() || t.exec(`
     INSERT INTO stores (
       code,
       name,
@@ -963,42 +829,36 @@ function ensureStoreFromCompany(database) {
     LIMIT 1;
   `);
 }
-function backfillFiscalSettings(database) {
-  ensureStoreFromCompany(database);
-  const store = database.prepare(`
+function Qo(t) {
+  Wo(t);
+  const e = t.prepare(`
     SELECT id, csc_id, csc_token, default_series
     FROM stores
     WHERE active = 1
     ORDER BY id ASC
     LIMIT 1
   `).get();
-  if (!store) {
-    logger.warn("[FiscalMigration] Nenhuma store ativa encontrada para backfill de fiscal_settings.");
+  if (!e) {
+    f.warn("[FiscalMigration] Nenhuma store ativa encontrada para backfill de fiscal_settings.");
     return;
   }
-  const existingSettings = database.prepare(`
+  if (t.prepare(`
     SELECT id
     FROM fiscal_settings
     WHERE store_id = ? AND active = 1
     LIMIT 1
-  `).get(store.id);
-  if (existingSettings) {
-    logger.info(`[FiscalMigration] fiscal_settings ativo ja existe para store=${store.id}; backfill preservado.`);
+  `).get(e.id)) {
+    f.info(`[FiscalMigration] fiscal_settings ativo ja existe para store=${e.id}; backfill preservado.`);
     return;
   }
-  const legacy = readLegacyFiscalConfig(database);
-  const company = database.prepare(`
+  const a = Ko(t), n = t.prepare(`
     SELECT cert_tipo, cert_path, cert_password, cert_validade, csc_id, csc_token, serie_nfce
     FROM company
     WHERE ativo = 1
     ORDER BY id ASC
     LIMIT 1
-  `).get();
-  const legacyEnvironment = normalizeEnvironment(legacy == null ? void 0 : legacy.environment);
-  const legacyCscId = normalizeText$1(legacy == null ? void 0 : legacy.cscId) ?? normalizeText$1(company == null ? void 0 : company.csc_id);
-  const legacyCscToken = normalizeText$1(legacy == null ? void 0 : legacy.cscToken) ?? normalizeText$1(company == null ? void 0 : company.csc_token);
-  const legacySeries = Number((legacy == null ? void 0 : legacy.defaultSeries) ?? (company == null ? void 0 : company.serie_nfce) ?? store.default_series ?? 1);
-  database.prepare(`
+  `).get(), o = zo(a == null ? void 0 : a.environment), s = z(a == null ? void 0 : a.cscId) ?? z(n == null ? void 0 : n.csc_id), i = z(a == null ? void 0 : a.cscToken) ?? z(n == null ? void 0 : n.csc_token), c = Number((a == null ? void 0 : a.defaultSeries) ?? (n == null ? void 0 : n.serie_nfce) ?? e.default_series ?? 1);
+  t.prepare(`
     UPDATE stores
     SET
       environment = COALESCE(?, environment),
@@ -1008,14 +868,13 @@ function backfillFiscalSettings(database) {
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(
-    legacyEnvironment,
-    legacyCscId,
-    legacyCscToken,
-    legacySeries,
-    legacySeries,
-    store.id
-  );
-  database.prepare(`
+    o,
+    s,
+    i,
+    c,
+    c,
+    e.id
+  ), t.prepare(`
     INSERT INTO fiscal_settings (
       store_id,
       provider,
@@ -1035,67 +894,36 @@ function backfillFiscalSettings(database) {
       updated_at
     ) VALUES (?, ?, 65, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).run(
-    store.id,
-    normalizeProvider(legacy == null ? void 0 : legacy.provider),
-    normalizeContingencyMode(legacy == null ? void 0 : legacy.contingencyMode),
-    normalizeText$1(legacy == null ? void 0 : legacy.sefazBaseUrl),
-    normalizeText$1(legacy == null ? void 0 : legacy.gatewayBaseUrl),
-    normalizeText$1(legacy == null ? void 0 : legacy.gatewayApiKey),
-    normalizeText$1(company == null ? void 0 : company.cert_tipo) ?? "A1",
-    normalizeText$1(legacy == null ? void 0 : legacy.certificatePath) ?? normalizeText$1(company == null ? void 0 : company.cert_path),
-    normalizeText$1(legacy == null ? void 0 : legacy.certificatePassword) ?? normalizeText$1(company == null ? void 0 : company.cert_password),
-    normalizeText$1(legacy == null ? void 0 : legacy.certificateValidUntil) ?? normalizeText$1(company == null ? void 0 : company.cert_validade),
-    normalizeText$1(legacy == null ? void 0 : legacy.caBundlePath),
-    normalizeTlsMode(legacy == null ? void 0 : legacy.tlsValidationMode)
-  );
-  logger.info(`[FiscalMigration] fiscal_settings criado para store=${store.id} usando integrations/company como origem legada.`);
+    e.id,
+    Vo(a == null ? void 0 : a.provider),
+    jo(a == null ? void 0 : a.contingencyMode),
+    z(a == null ? void 0 : a.sefazBaseUrl),
+    z(a == null ? void 0 : a.gatewayBaseUrl),
+    z(a == null ? void 0 : a.gatewayApiKey),
+    z(n == null ? void 0 : n.cert_tipo) ?? "A1",
+    z(a == null ? void 0 : a.certificatePath) ?? z(n == null ? void 0 : n.cert_path),
+    z(a == null ? void 0 : a.certificatePassword) ?? z(n == null ? void 0 : n.cert_password),
+    z(a == null ? void 0 : a.certificateValidUntil) ?? z(n == null ? void 0 : n.cert_validade),
+    z(a == null ? void 0 : a.caBundlePath),
+    Ho(a == null ? void 0 : a.tlsValidationMode)
+  ), f.info(`[FiscalMigration] fiscal_settings criado para store=${e.id} usando integrations/company como origem legada.`);
 }
-function ensureFiscalPersistenceColumns(database) {
-  const statements = [];
-  if (!hasColumn(database, "fiscal_documents", "issued_datetime")) {
-    statements.push(`ALTER TABLE fiscal_documents ADD COLUMN issued_datetime TEXT`);
-  }
-  if (!hasColumn(database, "fiscal_documents", "xml_authorized")) {
-    statements.push(`ALTER TABLE fiscal_documents ADD COLUMN xml_authorized TEXT`);
-  }
-  if (!hasColumn(database, "fiscal_documents", "xml_cancellation")) {
-    statements.push(`ALTER TABLE fiscal_documents ADD COLUMN xml_cancellation TEXT`);
-  }
-  if (!hasColumn(database, "sync_queue", "result_json")) {
-    statements.push(`ALTER TABLE sync_queue ADD COLUMN result_json TEXT`);
-  }
-  if (!hasColumn(database, "sync_queue", "locked_at")) {
-    statements.push(`ALTER TABLE sync_queue ADD COLUMN locked_at TEXT`);
-  }
-  if (!hasColumn(database, "sync_queue", "locked_by")) {
-    statements.push(`ALTER TABLE sync_queue ADD COLUMN locked_by TEXT`);
-  }
-  if (!hasColumn(database, "sync_queue", "processed_at")) {
-    statements.push(`ALTER TABLE sync_queue ADD COLUMN processed_at TEXT`);
-  }
-  if (statements.length > 0) {
-    database.exec(statements.join(";\n"));
-  }
+function Jo(t) {
+  const e = [];
+  Fe(t, "fiscal_documents", "issued_datetime") || e.push("ALTER TABLE fiscal_documents ADD COLUMN issued_datetime TEXT"), Fe(t, "fiscal_documents", "xml_authorized") || e.push("ALTER TABLE fiscal_documents ADD COLUMN xml_authorized TEXT"), Fe(t, "fiscal_documents", "xml_cancellation") || e.push("ALTER TABLE fiscal_documents ADD COLUMN xml_cancellation TEXT"), Fe(t, "sync_queue", "result_json") || e.push("ALTER TABLE sync_queue ADD COLUMN result_json TEXT"), Fe(t, "sync_queue", "locked_at") || e.push("ALTER TABLE sync_queue ADD COLUMN locked_at TEXT"), Fe(t, "sync_queue", "locked_by") || e.push("ALTER TABLE sync_queue ADD COLUMN locked_by TEXT"), Fe(t, "sync_queue", "processed_at") || e.push("ALTER TABLE sync_queue ADD COLUMN processed_at TEXT"), e.length > 0 && t.exec(e.join(`;
+`));
 }
-function runFiscalPersistenceMigrations(database) {
-  ensureMigrationsTable(database);
-  if (!hasMigration(database, MIGRATION_ID)) {
-    executeMigration(database);
-  }
-  ensureFiscalCoreSchema(database);
-  ensureFiscalPersistenceColumns(database);
-  ensureFiscalSettingsSchema(database);
-  backfillFiscalSettings(database);
+function Zo(t) {
+  $o(t), ko(t, an) || qo(t), Go(t), Jo(t), Yo(t), Qo(t);
 }
-const dbPath = path__default.join(app.getPath("userData"), "galberto.db");
-console.log(" Criando/abrindo banco de dados em: ", dbPath);
-const db = new Database(dbPath);
-function enableForeignKeys() {
-  db.exec("PRAGMA foreign_keys = ON;");
-  logger.info("-> Foreign keys ativadas");
+const nn = R.join(_e.getPath("userData"), "galberto.db");
+console.log(" Criando/abrindo banco de dados em: ", nn);
+const u = new _o(nn);
+function es() {
+  u.exec("PRAGMA foreign_keys = ON;"), f.info("-> Foreign keys ativadas");
 }
-function createTableProducts() {
-  const sqlComand = `
+function ts() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
     external_id TEXT,
@@ -1210,77 +1038,71 @@ function createTableProducts() {
 
   CREATE INDEX IF NOT EXISTS idx_produtos_gtin
     ON produtos (gtin);
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'products' checada/criada");
+  `), f.info("-> Tabela 'products' checada/criada");
 }
-function ensureProductsColumns() {
-  const productColumnDefinitions = [
-    `current_stock REAL NOT NULL DEFAULT 0`,
-    `minimum_stock REAL NOT NULL DEFAULT 0`,
-    `ncm TEXT`,
-    `cfop TEXT`,
-    `origin TEXT`,
-    `fixed_ipi_value_cents INTEGER`,
-    `notes TEXT`,
-    `situation TEXT`,
-    `supplier_code TEXT`,
-    `supplier_name TEXT`,
-    `location TEXT`,
-    `maximum_stock REAL`,
-    `net_weight_kg REAL`,
-    `gross_weight_kg REAL`,
-    `packaging_barcode TEXT`,
-    `width_cm REAL`,
-    `height_cm REAL`,
-    `depth_cm REAL`,
-    `expiration_date TEXT`,
-    `supplier_product_description TEXT`,
-    `complementary_description TEXT`,
-    `items_per_box REAL`,
-    `is_variation INTEGER`,
-    `production_type TEXT`,
-    `ipi_tax_class TEXT`,
-    `service_list_code TEXT`,
-    `item_type TEXT`,
-    `tags_group TEXT`,
-    `tags TEXT`,
-    `taxes_json TEXT`,
-    `parent_code TEXT`,
-    `integration_code TEXT`,
-    `product_group TEXT`,
-    `brand TEXT`,
-    `cest TEXT`,
-    `volumes REAL`,
-    `short_description TEXT`,
-    `cross_docking_days INTEGER`,
-    `external_image_urls TEXT`,
-    `external_link TEXT`,
-    `supplier_warranty_months INTEGER`,
-    `clone_parent_data INTEGER`,
-    `product_condition TEXT`,
-    `free_shipping INTEGER`,
-    `fci_number TEXT`,
-    `department TEXT`,
-    `measurement_unit TEXT`,
-    `purchase_price_cents INTEGER`,
-    `icms_st_retention_base_cents INTEGER`,
-    `icms_st_retention_value_cents INTEGER`,
-    `icms_substitute_own_value_cents INTEGER`,
-    `product_category_name TEXT`,
-    `additional_info TEXT`
-  ];
-  const columns = db.prepare(`PRAGMA table_info(products)`).all();
-  const columnNames = new Set(columns.map((column) => column.name));
-  for (const definition of productColumnDefinitions) {
-    const [columnName] = definition.split(" ");
-    if (!columnNames.has(columnName)) {
-      db.exec(`ALTER TABLE products ADD COLUMN ${definition};`);
-    }
+function rs() {
+  const t = [
+    "current_stock REAL NOT NULL DEFAULT 0",
+    "minimum_stock REAL NOT NULL DEFAULT 0",
+    "ncm TEXT",
+    "cfop TEXT",
+    "origin TEXT",
+    "fixed_ipi_value_cents INTEGER",
+    "notes TEXT",
+    "situation TEXT",
+    "supplier_code TEXT",
+    "supplier_name TEXT",
+    "location TEXT",
+    "maximum_stock REAL",
+    "net_weight_kg REAL",
+    "gross_weight_kg REAL",
+    "packaging_barcode TEXT",
+    "width_cm REAL",
+    "height_cm REAL",
+    "depth_cm REAL",
+    "expiration_date TEXT",
+    "supplier_product_description TEXT",
+    "complementary_description TEXT",
+    "items_per_box REAL",
+    "is_variation INTEGER",
+    "production_type TEXT",
+    "ipi_tax_class TEXT",
+    "service_list_code TEXT",
+    "item_type TEXT",
+    "tags_group TEXT",
+    "tags TEXT",
+    "taxes_json TEXT",
+    "parent_code TEXT",
+    "integration_code TEXT",
+    "product_group TEXT",
+    "brand TEXT",
+    "cest TEXT",
+    "volumes REAL",
+    "short_description TEXT",
+    "cross_docking_days INTEGER",
+    "external_image_urls TEXT",
+    "external_link TEXT",
+    "supplier_warranty_months INTEGER",
+    "clone_parent_data INTEGER",
+    "product_condition TEXT",
+    "free_shipping INTEGER",
+    "fci_number TEXT",
+    "department TEXT",
+    "measurement_unit TEXT",
+    "purchase_price_cents INTEGER",
+    "icms_st_retention_base_cents INTEGER",
+    "icms_st_retention_value_cents INTEGER",
+    "icms_substitute_own_value_cents INTEGER",
+    "product_category_name TEXT",
+    "additional_info TEXT"
+  ], e = u.prepare("PRAGMA table_info(products)").all(), r = new Set(e.map((a) => a.name));
+  for (const a of t) {
+    const [n] = a.split(" ");
+    r.has(n) || u.exec(`ALTER TABLE products ADD COLUMN ${a};`);
   }
 }
-function syncLegacyProductsMirror() {
-  db.exec(`
+function as() {
+  u.exec(`
     INSERT OR REPLACE INTO produtos (
       id, internal_code, gtin, nome, marca, preco_custo, preco_venda,
       estoque_atual, estoque_minimo, unidade_medida, ncm, ativo, created_at, updated_at
@@ -1304,8 +1126,8 @@ function syncLegacyProductsMirror() {
     LEFT JOIN produtos prod ON prod.id = p.id;
   `);
 }
-function createTableCategories() {
-  const sqlComand = `
+function ns() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS categories (
     id TEXT PRIMARY KEY,
     external_id TEXT,
@@ -1327,12 +1149,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_categories_integration_external
 
 CREATE INDEX IF NOT EXISTS idx_categories_name
   ON categories (name);
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'categories' checada/criada");
+  `), f.info("-> Tabela 'categories' checada/criada");
 }
-function createTableTaxProfile() {
-  const sqlComand = `
+function os() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS tax_profiles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1374,12 +1194,10 @@ function createTableTaxProfile() {
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'tax_profiles' checada/criada");
+  `), f.info("-> Tabela 'tax_profiles' checada/criada");
 }
-function createTableFornecedores() {
-  const sqlComand = `
+function ss() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS fornecedores (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       razao_social TEXT NOT NULL,
@@ -1402,12 +1220,10 @@ function createTableFornecedores() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'fornecedores' checada/criada");
+  `), f.info("-> Tabela 'fornecedores' checada/criada");
 }
-function createTableClientes() {
-  const sqlComand = `
+function is() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS customers (
     id TEXT PRIMARY KEY,
     external_id TEXT,
@@ -1475,12 +1291,10 @@ CREATE INDEX IF NOT EXISTS idx_customers_cnpj
 
   CREATE INDEX IF NOT EXISTS idx_clientes_cnpj
     ON clientes (cnpj);
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Created table customer");
+  `), f.info("-> Created table customer");
 }
-function createTableCompany() {
-  const sqlComand = `
+function cs() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS company (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1529,12 +1343,10 @@ function createTableCompany() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'company' checada/criada");
+  `), f.info("-> Tabela 'company' checada/criada");
 }
-function createTableVendas() {
-  const sqlComand = `
+function us() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS vendas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1582,12 +1394,10 @@ function createTableVendas() {
 
       UNIQUE (modelo_documento, serie, numero, ambiente)
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'vendas' checada/criada");
+  `), f.info("-> Tabela 'vendas' checada/criada");
 }
-function createTableVendaItens() {
-  const sqlComand = `
+function ds() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS venda_itens (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1627,12 +1437,10 @@ function createTableVendaItens() {
       FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE,
       FOREIGN KEY (produto_id) REFERENCES products(id)
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'venda_itens' checada/criada");
+  `), f.info("-> Tabela 'venda_itens' checada/criada");
 }
-function createTableSaleItemTaxSnapshot() {
-  const sqlComand = `
+function ls() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS sale_item_tax_snapshot (
       sale_item_id INTEGER PRIMARY KEY,
 
@@ -1688,12 +1496,10 @@ function createTableSaleItemTaxSnapshot() {
 
       FOREIGN KEY (sale_item_id) REFERENCES venda_itens(id) ON DELETE CASCADE
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'sale_item_tax_snapshot' checada/criada");
+  `), f.info("-> Tabela 'sale_item_tax_snapshot' checada/criada");
 }
-function createTableVendaPagamento() {
-  const sqlComand = `
+function Es() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS venda_pagamento (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       venda_id INTEGER NOT NULL,
@@ -1707,12 +1513,10 @@ function createTableVendaPagamento() {
 
       FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'venda_pagamento' checada/criada");
+  `), f.info("-> Tabela 'venda_pagamento' checada/criada");
 }
-function createTablePrinters() {
-  const sqlComand = `
+function ms() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS printers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -1735,34 +1539,32 @@ function createTablePrinters() {
       installed_at TEXT,
       notes TEXT
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'printers' checada/criada");
+  `), f.info("-> Tabela 'printers' checada/criada");
 }
-function ensurePrintersColumns() {
+function ps() {
   try {
-    db.exec(`ALTER TABLE printers ADD COLUMN paper_width_mm REAL NOT NULL DEFAULT 80`);
+    u.exec("ALTER TABLE printers ADD COLUMN paper_width_mm REAL NOT NULL DEFAULT 80");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE printers ADD COLUMN content_width_mm REAL NOT NULL DEFAULT 76`);
+    u.exec("ALTER TABLE printers ADD COLUMN content_width_mm REAL NOT NULL DEFAULT 76");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE printers ADD COLUMN base_font_size_px REAL NOT NULL DEFAULT 13`);
+    u.exec("ALTER TABLE printers ADD COLUMN base_font_size_px REAL NOT NULL DEFAULT 13");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE printers ADD COLUMN line_height REAL NOT NULL DEFAULT 1.5`);
+    u.exec("ALTER TABLE printers ADD COLUMN line_height REAL NOT NULL DEFAULT 1.5");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE printers ADD COLUMN receipt_settings_json TEXT`);
+    u.exec("ALTER TABLE printers ADD COLUMN receipt_settings_json TEXT");
   } catch {
   }
 }
-function createTablePrinterLogs() {
-  const sqlComand = `
+function _s() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS printer_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       printer_id INTEGER NOT NULL,
@@ -1770,12 +1572,10 @@ function createTablePrinterLogs() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (printer_id) REFERENCES printers(id) ON DELETE CASCADE
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'printer_logs' checada/criada");
+  `), f.info("-> Tabela 'printer_logs' checada/criada");
 }
-function createTableUsuarios() {
-  const sqlComand = `
+function Ts() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome TEXT NOT NULL,
@@ -1788,12 +1588,10 @@ function createTableUsuarios() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'usuarios' checada/criada");
+  `), f.info("-> Tabela 'usuarios' checada/criada");
 }
-function createTableSession() {
-  const sqlComand = `
+function fs() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -1802,12 +1600,10 @@ function createTableSession() {
       active INTEGER DEFAULT 1,
       FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'sessions' checada/criada");
+  `), f.info("-> Tabela 'sessions' checada/criada");
 }
-function createTableStockMoviments() {
-  const sqlComand = `CREATE TABLE IF NOT EXISTS stock_movements (
+function Ns() {
+  const t = `CREATE TABLE IF NOT EXISTS stock_movements (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 
   product_id TEXT NOT NULL,
@@ -1844,11 +1640,10 @@ function createTableStockMoviments() {
   FOREIGN KEY (reversed_by_user_id) REFERENCES usuarios(id)
 );
 `;
-  logger.info("-> Tabela 'stock_movements' checada/criada");
-  db.exec(sqlComand);
+  f.info("-> Tabela 'stock_movements' checada/criada"), u.exec(t);
 }
-function createTableCashRegisterSessions() {
-  const sqlComand = `
+function gs() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS cash_register_sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       operator_id INTEGER NOT NULL,
@@ -1863,30 +1658,28 @@ function createTableCashRegisterSessions() {
       opened_at TEXT NOT NULL,
       closed_at TEXT
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'cash_register_sessions' checada/criada");
+  `), f.info("-> Tabela 'cash_register_sessions' checada/criada");
 }
-function ensureCashRegisterSessionsColumns() {
+function As() {
   try {
-    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN expected_cash_amount REAL`);
+    u.exec("ALTER TABLE cash_register_sessions ADD COLUMN expected_cash_amount REAL");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN closing_difference REAL`);
+    u.exec("ALTER TABLE cash_register_sessions ADD COLUMN closing_difference REAL");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN opening_notes TEXT`);
+    u.exec("ALTER TABLE cash_register_sessions ADD COLUMN opening_notes TEXT");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN closing_notes TEXT`);
+    u.exec("ALTER TABLE cash_register_sessions ADD COLUMN closing_notes TEXT");
   } catch {
   }
 }
-function createTableCashRegisterMovements() {
-  const sqlComand = `
+function hs() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS cash_register_movements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       cash_session_id INTEGER NOT NULL,
@@ -1899,27 +1692,25 @@ function createTableCashRegisterMovements() {
 
       FOREIGN KEY (cash_session_id) REFERENCES cash_register_sessions(id) ON DELETE CASCADE
     );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'cash_register_movements' checada/criada");
+  `), f.info("-> Tabela 'cash_register_movements' checada/criada");
 }
-function ensureVendaPagamentoColumns() {
+function Is() {
   try {
-    db.exec(`ALTER TABLE venda_pagamento ADD COLUMN cash_session_id INTEGER REFERENCES cash_register_sessions(id)`);
+    u.exec("ALTER TABLE venda_pagamento ADD COLUMN cash_session_id INTEGER REFERENCES cash_register_sessions(id)");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE venda_pagamento ADD COLUMN valor_recebido REAL NOT NULL DEFAULT 0`);
+    u.exec("ALTER TABLE venda_pagamento ADD COLUMN valor_recebido REAL NOT NULL DEFAULT 0");
   } catch {
   }
   try {
-    db.exec(`ALTER TABLE venda_pagamento ADD COLUMN troco REAL NOT NULL DEFAULT 0`);
+    u.exec("ALTER TABLE venda_pagamento ADD COLUMN troco REAL NOT NULL DEFAULT 0");
   } catch {
   }
 }
-function createTableIntegrations() {
+function Cs() {
   try {
-    const sqlComand = `
+    const t = `
       CREATE TABLE IF NOT EXISTS integrations (
         integration_id TEXT PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -1931,19 +1722,17 @@ function createTableIntegrations() {
         updated_at TEXT NOT NULL
       );
     `;
-    console.log("Criando tabela integrations...");
-    db.exec(sqlComand);
-    console.log("Tabela criada com sucesso!");
-    const test = db.prepare(`
+    console.log("Criando tabela integrations..."), u.exec(t), console.log("Tabela criada com sucesso!");
+    const e = u.prepare(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='integrations';
     `).get();
-    console.log("Tabela existe?", test);
-  } catch (err) {
-    console.error("Erro ao criar tabela:", err);
+    console.log("Tabela existe?", e);
+  } catch (t) {
+    console.error("Erro ao criar tabela:", t);
   }
 }
-function createTablePrintedDocuments() {
-  const sqlComand = `
+function vs() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS printed_documents (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       document_type TEXT NOT NULL CHECK (document_type IN ('SALE_RECEIPT', 'CASH_OPENING_RECEIPT', 'CASH_CLOSING_RECEIPT')),
@@ -1973,12 +1762,10 @@ function createTablePrintedDocuments() {
 
     CREATE INDEX IF NOT EXISTS idx_printed_documents_cash_session_id
       ON printed_documents (cash_session_id);
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'printed_documents' checada/criada");
+  `), f.info("-> Tabela 'printed_documents' checada/criada");
 }
-function createTablePrintJobs() {
-  const sqlComand = `
+function Ds() {
+  u.exec(`
     CREATE TABLE IF NOT EXISTS print_jobs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       printed_document_id INTEGER NOT NULL,
@@ -1998,13 +1785,11 @@ function createTablePrintJobs() {
 
     CREATE INDEX IF NOT EXISTS idx_print_jobs_status
       ON print_jobs (status);
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'print_jobs' checada/criada");
+  `), f.info("-> Tabela 'print_jobs' checada/criada");
 }
-function createTableSyncState() {
+function Ss() {
   try {
-    const sqlComand = `
+    const t = `
       CREATE TABLE IF NOT EXISTS sync_states (
           id TEXT PRIMARY KEY,
           integration_id TEXT NOT NULL,
@@ -2019,20 +1804,18 @@ function createTableSyncState() {
           UNIQUE(integration_id, resource)
       );
     `;
-    console.log("Criando tabela sync_state...");
-    db.exec(sqlComand);
-    console.log("Tabela criada com sucesso!");
-    const test = db.prepare(`
+    console.log("Criando tabela sync_state..."), u.exec(t), console.log("Tabela criada com sucesso!");
+    const e = u.prepare(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='integrations';
     `).get();
-    console.log("Tabela existe?", test);
-  } catch (err) {
-    console.error("Erro ao criar tabela:", err);
+    console.log("Tabela existe?", e);
+  } catch (t) {
+    console.error("Erro ao criar tabela:", t);
   }
 }
-function createTableSyncLogs() {
+function Rs() {
   try {
-    const sqlComand = `
+    const t = `
       CREATE TABLE IF NOT EXISTS sync_logs (
           id TEXT PRIMARY KEY,
           integration_id TEXT NOT NULL,
@@ -2048,91 +1831,85 @@ function createTableSyncLogs() {
           error_message TEXT
       );
     `;
-    console.log("Criando tabela sync_logs...");
-    db.exec(sqlComand);
-    console.log("Tabela criada com sucesso!");
-    const test = db.prepare(`
+    console.log("Criando tabela sync_logs..."), u.exec(t), console.log("Tabela criada com sucesso!");
+    const e = u.prepare(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='integrations';
     `).get();
-    console.log("Tabela existe?", test);
-  } catch (err) {
-    console.error("Erro ao criar tabela:", err);
+    console.log("Tabela existe?", e);
+  } catch (t) {
+    console.error("Erro ao criar tabela:", t);
   }
 }
-createTableProducts();
-ensureProductsColumns();
-syncLegacyProductsMirror();
-createTableCategories();
-createTableClientes();
-createTableUsuarios();
-createTableFornecedores();
-createTableVendas();
-createTableVendaItens();
-createTableCompany();
-createTablePrinters();
-ensurePrintersColumns();
-createTablePrinterLogs();
-createTableSession();
-createTableTaxProfile();
-createTableSaleItemTaxSnapshot();
-createTableStockMoviments();
-createTableVendaPagamento();
-ensureVendaPagamentoColumns();
-createTableCashRegisterSessions();
-ensureCashRegisterSessionsColumns();
-createTableCashRegisterMovements();
-createTableIntegrations();
-createTableSyncState();
-createTableSyncLogs();
-createTablePrintedDocuments();
-createTablePrintJobs();
-runFiscalPersistenceMigrations(db);
-function getSaleDefaults() {
-  const company = db.prepare(`
+ts();
+rs();
+as();
+ns();
+is();
+Ts();
+ss();
+us();
+ds();
+cs();
+ms();
+ps();
+_s();
+fs();
+os();
+ls();
+Ns();
+Es();
+Is();
+gs();
+As();
+hs();
+Cs();
+Ss();
+Rs();
+vs();
+Ds();
+Zo(u);
+function on() {
+  const t = u.prepare(`
     SELECT ambiente_emissao, serie_nfce
     FROM company
     WHERE ativo = 1
     LIMIT 1
-  `).get();
-  const ambiente = (company == null ? void 0 : company.ambiente_emissao) ?? 2;
-  const serie = (company == null ? void 0 : company.serie_nfce) ?? 1;
-  const nextNumberRow = db.prepare(`
+  `).get(), e = (t == null ? void 0 : t.ambiente_emissao) ?? 2, r = (t == null ? void 0 : t.serie_nfce) ?? 1, a = u.prepare(`
     SELECT COALESCE(MAX(numero), 0) + 1 AS nextNumber
     FROM vendas
     WHERE modelo_documento = 65 AND serie = ? AND ambiente = ?
-  `).get(serie, ambiente);
+  `).get(r, e);
   return {
-    ambiente,
-    serie,
-    numero: nextNumberRow.nextNumber,
+    ambiente: e,
+    serie: r,
+    numero: a.nextNumber,
     naturezaOperacao: "VENDA PDV",
     modeloDocumento: 65
   };
 }
-function getSaleItemSnapshot(productId) {
-  const product = db.prepare(`
+function Ls(t) {
+  const e = u.prepare(`
     SELECT id, barcode, name, unit, sale_price_cents, ncm, cfop, origin, cest
     FROM products
     WHERE id = ? AND deleted_at IS NULL
     LIMIT 1
-  `).get(productId);
-  if (!product) {
-    throw new Error(`Produto não encontrado para venda: ${productId}`);
-  }
+  `).get(t);
+  if (!e)
+    throw new Error(`Produto não encontrado para venda: ${t}`);
   return {
-    codigoProduto: product.barcode || product.id,
-    nomeProduto: product.name,
-    gtin: product.barcode,
-    unidade: product.unit || "UN",
-    precoUnitario: Number(product.sale_price_cents ?? 0) / 100,
-    ncm: product.ncm ?? "",
-    cfop: product.cfop ?? "5102",
-    cest: product.cest ?? null,
-    originCode: product.origin ?? null
+    codigoProduto: e.barcode || e.id,
+    nomeProduto: e.name,
+    gtin: e.barcode,
+    unidade: e.unit || "UN",
+    precoUnitario: Number(e.sale_price_cents ?? 0) / 100,
+    ncm: e.ncm ?? "",
+    cfop: e.cfop ?? "5102",
+    cest: e.cest ?? null,
+    originCode: e.origin ?? null
   };
 }
-function getDefaultTaxProfile() {
-  return db.prepare(`
+function ys() {
+  return u.prepare(`
     SELECT origin_code, cfop_padrao_saida_interna, csosn, icms_cst, pis_cst, cofins_cst
     FROM tax_profiles
     WHERE ativo = 1
@@ -2140,15 +1917,9 @@ function getDefaultTaxProfile() {
     LIMIT 1
   `).get();
 }
-function insertSaleItemTaxSnapshot(input) {
-  const profile = getDefaultTaxProfile();
-  const originCode = input.originCode || (profile == null ? void 0 : profile.origin_code) || "0";
-  const cfop = input.cfop || (profile == null ? void 0 : profile.cfop_padrao_saida_interna) || "5102";
-  const pisCst = (profile == null ? void 0 : profile.pis_cst) || "49";
-  const cofinsCst = (profile == null ? void 0 : profile.cofins_cst) || "49";
-  const csosn = (profile == null ? void 0 : profile.csosn) || "102";
-  const icmsCst = (profile == null ? void 0 : profile.icms_cst) ?? null;
-  db.prepare(`
+function Os(t) {
+  const e = ys(), r = t.originCode || (e == null ? void 0 : e.origin_code) || "0", a = t.cfop || (e == null ? void 0 : e.cfop_padrao_saida_interna) || "5102", n = (e == null ? void 0 : e.pis_cst) || "49", o = (e == null ? void 0 : e.cofins_cst) || "49", s = (e == null ? void 0 : e.csosn) || "102", i = (e == null ? void 0 : e.icms_cst) ?? null;
+  u.prepare(`
     INSERT INTO sale_item_tax_snapshot (
       sale_item_id, origem, origin_code, ncm, cfop, cest, csosn, icms_cst,
       pis_cst, cofins_cst, utrib, qtrib, vuntrib
@@ -2167,24 +1938,24 @@ function insertSaleItemTaxSnapshot(input) {
       qtrib = excluded.qtrib,
       vuntrib = excluded.vuntrib
   `).run(
-    input.saleItemId,
-    originCode,
-    originCode,
-    input.ncm,
-    cfop,
-    input.cest,
-    csosn,
-    icmsCst,
-    pisCst,
-    cofinsCst,
-    input.unit,
-    input.quantity,
-    input.unitPrice
+    t.saleItemId,
+    r,
+    r,
+    t.ncm,
+    a,
+    t.cest,
+    s,
+    i,
+    n,
+    o,
+    t.unit,
+    t.quantity,
+    t.unitPrice
   );
 }
-function replaceSaleItems(vendaId, itens) {
-  db.prepare(`DELETE FROM venda_itens WHERE venda_id = ?`).run(vendaId);
-  const insertItem = db.prepare(`
+function sn(t, e) {
+  u.prepare("DELETE FROM venda_itens WHERE venda_id = ?").run(t);
+  const r = u.prepare(`
     INSERT INTO venda_itens(
       venda_id, produto_id, codigo_produto, nome_produto, gtin, gtin_tributavel,
       ncm, cfop, cest, unidade_comercial, quantidade_comercial, valor_unitario_comercial,
@@ -2193,54 +1964,44 @@ function replaceSaleItems(vendaId, itens) {
     )
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  for (const item of itens) {
-    const snapshot = getSaleItemSnapshot(item.produto_id);
-    const quantidade = Number(item.quantidade ?? item.estoque_atual ?? 0);
-    const precoUnitario = Number(item.preco_venda ?? snapshot.precoUnitario);
-    const valorBruto = Number(item.valor_bruto ?? quantidade * precoUnitario);
-    const valorDesconto = Math.max(0, Math.min(Number(item.valor_desconto ?? 0), valorBruto));
-    const subtotal = Number(item.subtotal ?? Math.max(valorBruto - valorDesconto, 0));
-    const result = insertItem.run(
-      vendaId,
-      item.produto_id,
-      snapshot.codigoProduto,
-      item.nome ?? snapshot.nomeProduto,
-      snapshot.gtin,
-      snapshot.gtin,
-      snapshot.ncm,
-      snapshot.cfop,
-      snapshot.cest,
-      snapshot.unidade,
-      quantidade,
-      precoUnitario,
-      snapshot.unidade,
-      quantidade,
-      precoUnitario,
-      valorBruto,
-      valorDesconto,
-      subtotal
+  for (const a of e) {
+    const n = Ls(a.produto_id), o = Number(a.quantidade ?? a.estoque_atual ?? 0), s = Number(a.preco_venda ?? n.precoUnitario), i = Number(a.valor_bruto ?? o * s), c = Math.max(0, Math.min(Number(a.valor_desconto ?? 0), i)), l = Number(a.subtotal ?? Math.max(i - c, 0)), d = r.run(
+      t,
+      a.produto_id,
+      n.codigoProduto,
+      a.nome ?? n.nomeProduto,
+      n.gtin,
+      n.gtin,
+      n.ncm,
+      n.cfop,
+      n.cest,
+      n.unidade,
+      o,
+      s,
+      n.unidade,
+      o,
+      s,
+      i,
+      c,
+      l
     );
-    insertSaleItemTaxSnapshot({
-      saleItemId: Number(result.lastInsertRowid),
-      ncm: snapshot.ncm,
-      cfop: snapshot.cfop,
-      cest: snapshot.cest,
-      originCode: snapshot.originCode,
-      unit: snapshot.unidade,
-      quantity: quantidade,
-      unitPrice: precoUnitario
+    Os({
+      saleItemId: Number(d.lastInsertRowid),
+      ncm: n.ncm,
+      cfop: n.cfop,
+      cest: n.cest,
+      originCode: n.originCode,
+      unit: n.unidade,
+      quantity: o,
+      unitPrice: s
     });
   }
 }
-function salvarVendaPendente(venda, status, vendaId) {
-  const saleDefaults = getSaleDefaults();
-  const valorProdutos = Number(venda.valor_produtos ?? venda.total ?? 0);
-  const valorDesconto = Number(venda.valor_desconto ?? 0);
-  const valorTotal = Number(venda.total ?? 0);
-  const transaction = db.transaction(() => {
-    let persistedSaleId = vendaId ?? null;
-    if (persistedSaleId) {
-      db.prepare(`
+function ta(t, e, r) {
+  const a = on(), n = Number(t.valor_produtos ?? t.total ?? 0), o = Number(t.valor_desconto ?? 0), s = Number(t.total ?? 0);
+  return u.transaction(() => {
+    let c = r ?? null;
+    return c ? u.prepare(`
         UPDATE vendas
         SET
           data_movimento = datetime('now', 'localtime'),
@@ -2253,54 +2014,46 @@ function salvarVendaPendente(venda, status, vendaId) {
           updated_at = datetime('now', 'localtime')
         WHERE id = ?
       `).run(
-        status,
-        venda.cpf_cliente ?? null,
-        venda.consumidor_identificado ? venda.cpf_cliente ?? null : "Consumidor final",
-        valorProdutos,
-        valorDesconto,
-        valorTotal,
-        persistedSaleId
-      );
-    } else {
-      const result = db.prepare(`
+      e,
+      t.cpf_cliente ?? null,
+      t.consumidor_identificado ? t.cpf_cliente ?? null : "Consumidor final",
+      n,
+      o,
+      s,
+      c
+    ) : c = u.prepare(`
         INSERT INTO vendas(
           data_emissao, data_movimento, status, natureza_operacao, modelo_documento,
           serie, numero, ambiente, cliente_nome, cpf_cliente, valor_produtos, valor_desconto, valor_total
         )
         VALUES(datetime('now', 'localtime'), datetime('now', 'localtime'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        status,
-        saleDefaults.naturezaOperacao,
-        saleDefaults.modeloDocumento,
-        saleDefaults.serie,
-        saleDefaults.numero,
-        saleDefaults.ambiente,
-        venda.consumidor_identificado ? venda.cpf_cliente ?? null : "Consumidor final",
-        venda.cpf_cliente ?? null,
-        valorProdutos,
-        valorDesconto,
-        valorTotal
-      );
-      persistedSaleId = result.lastInsertRowid;
-    }
-    replaceSaleItems(persistedSaleId, venda.itens);
-    return persistedSaleId;
-  });
-  return transaction();
+      e,
+      a.naturezaOperacao,
+      a.modeloDocumento,
+      a.serie,
+      a.numero,
+      a.ambiente,
+      t.consumidor_identificado ? t.cpf_cliente ?? null : "Consumidor final",
+      t.cpf_cliente ?? null,
+      n,
+      o,
+      s
+    ).lastInsertRowid, sn(c, t.itens), c;
+  })();
 }
-function mapPaymentTypeToFiscalCode(meioPagamento) {
-  const paymentTypeMap = {
+function bs(t) {
+  return {
     DINHEIRO: "01",
     CHEQUE: "02",
     CREDITO: "03",
     DEBITO: "04",
     VOUCHER: "10",
     PIX: "17"
-  };
-  return paymentTypeMap[meioPagamento] ?? "99";
+  }[t] ?? "99";
 }
-function getCashSessionSummaryById(sessionId) {
-  const stmt = db.prepare(`
+function Ct(t) {
+  const r = u.prepare(`
     SELECT
       s.id,
       s.operator_id,
@@ -2324,58 +2077,46 @@ function getCashSessionSummaryById(sessionId) {
     FROM cash_register_sessions s
     WHERE s.id = ?
     LIMIT 1
-  `);
-  const session = stmt.get(sessionId);
-  if (!session) {
-    return null;
-  }
-  return {
-    ...session,
-    total_sangrias: Number(session.total_sangrias ?? 0),
-    total_vendas_dinheiro: Number(session.total_vendas_dinheiro ?? 0),
-    expected_cash_amount: Number(session.opening_cash_amount ?? 0) + Number(session.total_vendas_dinheiro ?? 0) - Number(session.total_sangrias ?? 0)
-  };
+  `).get(t);
+  return r ? {
+    ...r,
+    total_sangrias: Number(r.total_sangrias ?? 0),
+    total_vendas_dinheiro: Number(r.total_vendas_dinheiro ?? 0),
+    expected_cash_amount: Number(r.opening_cash_amount ?? 0) + Number(r.total_vendas_dinheiro ?? 0) - Number(r.total_sangrias ?? 0)
+  } : null;
 }
-function registrarPagamentoVenda(vendaId, paymentData) {
-  if (!(paymentData == null ? void 0 : paymentData.meioPagamento)) {
+function Us(t, e) {
+  if (!(e != null && e.meioPagamento))
     return;
-  }
-  const sale = db.prepare(`
+  const r = u.prepare(`
     SELECT valor_total
     FROM vendas
     WHERE id = ?
     LIMIT 1
-  `).get(vendaId);
-  if (!sale) {
-    throw new Error(`Venda não encontrada para registrar pagamento: ${vendaId}`);
-  }
-  db.prepare(`DELETE FROM venda_pagamento WHERE venda_id = ?`).run(vendaId);
-  const valorVenda = Number(sale.valor_total ?? 0);
-  const troco = Number(paymentData.troco ?? 0);
-  const valorRecebido = paymentData.meioPagamento === "DINHEIRO" ? Number(paymentData.valorPago ?? valorVenda) : valorVenda;
-  db.prepare(`
+  `).get(t);
+  if (!r)
+    throw new Error(`Venda não encontrada para registrar pagamento: ${t}`);
+  u.prepare("DELETE FROM venda_pagamento WHERE venda_id = ?").run(t);
+  const a = Number(r.valor_total ?? 0), n = Number(e.troco ?? 0), o = e.meioPagamento === "DINHEIRO" ? Number(e.valorPago ?? a) : a;
+  u.prepare(`
     INSERT INTO venda_pagamento(
       venda_id, cash_session_id, tpag, valor, valor_recebido, troco, descricao_outro
     )
     VALUES(?, ?, ?, ?, ?, ?, ?)
   `).run(
-    vendaId,
-    paymentData.cashSessionId ?? null,
-    mapPaymentTypeToFiscalCode(paymentData.meioPagamento),
-    valorVenda,
-    valorRecebido,
-    troco,
+    t,
+    e.cashSessionId ?? null,
+    bs(e.meioPagamento),
+    a,
+    o,
+    n,
     null
   );
 }
-function cancelarVenda(venda) {
-  db.prepare("BEGIN").run();
+function Fs(t) {
+  u.prepare("BEGIN").run();
   try {
-    const saleDefaults = getSaleDefaults();
-    const valorProdutos = Number(venda.valor_produtos ?? venda.total ?? 0);
-    const valorDesconto = Number(venda.valor_desconto ?? 0);
-    const valorTotal = Number(venda.total ?? 0);
-    const vendaResult = db.prepare(`
+    const e = on(), r = Number(t.valor_produtos ?? t.total ?? 0), a = Number(t.valor_desconto ?? 0), n = Number(t.total ?? 0), s = u.prepare(`
         INSERT INTO vendas(
           data_emissao, data_movimento, status, natureza_operacao, modelo_documento,
           serie, numero, ambiente, valor_produtos, valor_desconto, valor_total
@@ -2383,56 +2124,46 @@ function cancelarVenda(venda) {
         VALUES(datetime('now', 'localtime'), datetime('now', 'localtime'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
       "CANCELADA",
-      saleDefaults.naturezaOperacao,
-      saleDefaults.modeloDocumento,
-      saleDefaults.serie,
-      saleDefaults.numero,
-      saleDefaults.ambiente,
-      valorProdutos,
-      valorDesconto,
-      valorTotal
-    );
-    const vendaId = vendaResult.lastInsertRowid;
-    replaceSaleItems(vendaId, venda.itens);
-    db.prepare("COMMIT").run();
-    return { sucesso: true, vendaId };
-  } catch (error) {
-    db.prepare("ROLLBACK").run();
-    throw error;
+      e.naturezaOperacao,
+      e.modeloDocumento,
+      e.serie,
+      e.numero,
+      e.ambiente,
+      r,
+      a,
+      n
+    ).lastInsertRowid;
+    return sn(s, t.itens), u.prepare("COMMIT").run(), { sucesso: !0, vendaId: s };
+  } catch (e) {
+    throw u.prepare("ROLLBACK").run(), e;
   }
 }
-function finalizarVendaComBaixaEstoque(vendaPayload) {
-  const vendaId = typeof vendaPayload === "number" ? vendaPayload : vendaPayload.vendaId;
-  const selectItens = db.prepare(
+function ws(t) {
+  const e = typeof t == "number" ? t : t.vendaId, r = u.prepare(
     `SELECT produto_id, quantidade_comercial AS quantidade
      FROM venda_itens
      WHERE venda_id = ? `
-  );
-  const selectSaldo = db.prepare(
+  ), a = u.prepare(
     `SELECT current_stock
      FROM products
      WHERE id = ? AND deleted_at IS NULL
      LIMIT 1`
-  );
-  const atualizarEstoque = db.prepare(
+  ), n = u.prepare(
     `UPDATE products
      SET current_stock = current_stock - ?,
          updated_at = datetime('now')
      WHERE id = ?`
-  );
-  const atualizarEstoqueLegado = db.prepare(
+  ), o = u.prepare(
     `UPDATE produtos
      SET estoque_atual = estoque_atual - ?,
          updated_at = datetime('now')
      WHERE id = ?`
-  );
-  const buscarValoresVenda = db.prepare(
+  ), s = u.prepare(
     `SELECT valor_produtos, valor_desconto, valor_total
      FROM vendas
      WHERE id = ?
      LIMIT 1`
-  );
-  const atualizarVenda = db.prepare(
+  ), i = u.prepare(
     `UPDATE vendas
      SET status = 'FINALIZADA'
        , data_movimento = datetime('now')
@@ -2443,63 +2174,50 @@ function finalizarVendaComBaixaEstoque(vendaPayload) {
        , updated_at = datetime('now')
      WHERE id = ? `
   );
-  const transaction = db.transaction(() => {
-    const itens = selectItens.all(vendaId);
-    const vendaAtual = buscarValoresVenda.get(vendaId);
-    if (!vendaAtual) {
-      throw new Error(`Venda não encontrada: ${vendaId}`);
+  u.transaction(() => {
+    const l = r.all(e), d = s.get(e);
+    if (!d)
+      throw new Error(`Venda não encontrada: ${e}`);
+    for (const N of l) {
+      const C = a.get(N.produto_id);
+      if (!C)
+        throw new Error(`Produto da venda não encontrado: ${N.produto_id}`);
+      if (Number(C.current_stock ?? 0) < Number(N.quantidade ?? 0))
+        throw new Error(`Estoque insuficiente para o produto ${N.produto_id}`);
+      n.run(N.quantidade, N.produto_id), o.run(N.quantidade, N.produto_id);
     }
-    for (const item of itens) {
-      const saldo = selectSaldo.get(item.produto_id);
-      if (!saldo) {
-        throw new Error(`Produto da venda não encontrado: ${item.produto_id}`);
-      }
-      if (Number(saldo.current_stock ?? 0) < Number(item.quantidade ?? 0)) {
-        throw new Error(`Estoque insuficiente para o produto ${item.produto_id}`);
-      }
-      atualizarEstoque.run(item.quantidade, item.produto_id);
-      atualizarEstoqueLegado.run(item.quantidade, item.produto_id);
-    }
-    const valorProdutos = typeof vendaPayload === "number" ? Number(vendaAtual.valor_produtos ?? 0) : Number(vendaPayload.valorProdutos ?? vendaAtual.valor_produtos ?? 0);
-    const valorDesconto = typeof vendaPayload === "number" ? Number(vendaAtual.valor_desconto ?? 0) : Number(vendaPayload.valorDesconto ?? vendaAtual.valor_desconto ?? 0);
-    const valorTotal = typeof vendaPayload === "number" ? Number(vendaAtual.valor_total ?? 0) : Number(vendaPayload.valorTotal ?? vendaAtual.valor_total ?? 0);
-    const valorTroco = typeof vendaPayload === "number" ? 0 : Number(vendaPayload.troco ?? 0);
-    atualizarVenda.run(
-      valorProdutos,
-      valorDesconto,
-      valorTotal,
-      valorTroco,
-      vendaId
+    const m = Number(typeof t == "number" ? d.valor_produtos ?? 0 : t.valorProdutos ?? d.valor_produtos ?? 0), E = Number(typeof t == "number" ? d.valor_desconto ?? 0 : t.valorDesconto ?? d.valor_desconto ?? 0), _ = Number(typeof t == "number" ? d.valor_total ?? 0 : t.valorTotal ?? d.valor_total ?? 0), A = typeof t == "number" ? 0 : Number(t.troco ?? 0);
+    i.run(
+      m,
+      E,
+      _,
+      A,
+      e
+    ), Us(
+      e,
+      typeof t == "number" ? void 0 : t
     );
-    registrarPagamentoVenda(
-      vendaId,
-      typeof vendaPayload === "number" ? void 0 : vendaPayload
-    );
-  });
-  transaction();
+  })();
 }
-function insertCashSession(data) {
-  var _a;
-  const stmt = db.prepare(`
+function xs(t) {
+  var n;
+  const r = u.prepare(`
     INSERT INTO cash_register_sessions
       (operator_id, pdv_id, status, opening_cash_amount, opening_notes, opened_at)
     VALUES(?, ?, 'OPEN', ?, ?, datetime('now'))
-      `);
-  const result = stmt.run(
-    data.operator_id,
-    data.pdv_id,
-    data.opening_cash_amount,
-    ((_a = data.opening_notes) == null ? void 0 : _a.trim()) || null
-  );
-  const session = getCashSessionSummaryById(result.lastInsertRowid);
-  if (!session) {
+      `).run(
+    t.operator_id,
+    t.pdv_id,
+    t.opening_cash_amount,
+    ((n = t.opening_notes) == null ? void 0 : n.trim()) || null
+  ), a = Ct(r.lastInsertRowid);
+  if (!a)
     throw new Error("Sessão de caixa não encontrada após abertura.");
-  }
-  return session;
+  return a;
 }
-function registerCashWithdrawal(data) {
-  var _a;
-  const openSession = db.prepare(`
+function Ms(t) {
+  var o;
+  if (!u.prepare(`
     SELECT id
     FROM cash_register_sessions
     WHERE id = ?
@@ -2507,43 +2225,37 @@ function registerCashWithdrawal(data) {
       AND pdv_id = ?
       AND status = 'OPEN'
     LIMIT 1
-  `).get(data.cash_session_id, data.operator_id, data.pdv_id);
-  if (!openSession) {
+  `).get(t.cash_session_id, t.operator_id, t.pdv_id))
     throw new Error("Nenhum caixa aberto foi encontrado para registrar a sangria.");
-  }
-  const session = getCashSessionSummaryById(data.cash_session_id);
-  if (!session) {
+  const r = Ct(t.cash_session_id);
+  if (!r)
     throw new Error("Sessão de caixa inválida para sangria.");
-  }
-  const valorSangria = Number(data.amount ?? 0);
-  if (valorSangria <= 0) {
+  const a = Number(t.amount ?? 0);
+  if (a <= 0)
     throw new Error("Informe um valor válido para a sangria.");
-  }
-  if (valorSangria > Number(session.expected_cash_amount ?? 0)) {
+  if (a > Number(r.expected_cash_amount ?? 0))
     throw new Error("A sangria não pode ser maior que o valor disponível em caixa.");
-  }
-  db.prepare(`
+  u.prepare(`
     INSERT INTO cash_register_movements(
       cash_session_id, operator_id, pdv_id, movement_type, amount, reason
     )
     VALUES(?, ?, ?, ?, ?, ?)
   `).run(
-    data.cash_session_id,
-    data.operator_id,
-    data.pdv_id,
-    data.movement_type,
-    valorSangria,
-    ((_a = data.reason) == null ? void 0 : _a.trim()) || null
+    t.cash_session_id,
+    t.operator_id,
+    t.pdv_id,
+    t.movement_type,
+    a,
+    ((o = t.reason) == null ? void 0 : o.trim()) || null
   );
-  const updatedSession = getCashSessionSummaryById(data.cash_session_id);
-  if (!updatedSession) {
+  const n = Ct(t.cash_session_id);
+  if (!n)
     throw new Error("Não foi possível recarregar a sessão após a sangria.");
-  }
-  return updatedSession;
+  return n;
 }
-function closeCashSession(data) {
-  var _a;
-  const stmt = db.prepare(`
+function Ps(t) {
+  var o;
+  if (u.prepare(`
     UPDATE cash_register_sessions
     SET
       status = 'CLOSED',
@@ -2556,73 +2268,54 @@ function closeCashSession(data) {
     WHERE operator_id = ?
       AND pdv_id = ?
         AND status = 'OPEN'
-          `);
-  const result = stmt.run(
-    data.closing_cash_amount,
-    data.expected_cash_amount,
-    data.difference,
-    ((_a = data.closing_notes) == null ? void 0 : _a.trim()) || null,
-    data.operator_id,
-    data.pdv_id
-  );
-  if (result.changes === 0) {
+          `).run(
+    t.closing_cash_amount,
+    t.expected_cash_amount,
+    t.difference,
+    ((o = t.closing_notes) == null ? void 0 : o.trim()) || null,
+    t.operator_id,
+    t.pdv_id
+  ).changes === 0)
     throw new Error("Nenhum caixa aberto foi encontrado para fechamento.");
-  }
-  const closedSession = db.prepare(`
+  const a = u.prepare(`
     SELECT id
     FROM cash_register_sessions
     WHERE operator_id = ?
       AND pdv_id = ?
     ORDER BY id DESC
     LIMIT 1
-  `).get(data.operator_id, data.pdv_id);
-  if (!closedSession) {
+  `).get(t.operator_id, t.pdv_id);
+  if (!a)
     throw new Error("Sessão de caixa não encontrada após o fechamento.");
-  }
-  const summary = getCashSessionSummaryById(closedSession.id);
-  if (!summary) {
+  const n = Ct(a.id);
+  if (!n)
     throw new Error("Resumo da sessão de caixa não encontrado após o fechamento.");
-  }
-  return summary;
+  return n;
 }
-function listarVendas({ venda_id, data, status, page = 1, limit = 20 }) {
-  const offset = (page - 1) * limit;
-  let where = [];
-  let params = [];
-  const statusMap = { 1: "FINALIZADA", 2: "CANCELADA", 3: "ABERTA_PAGAMENTO", 4: "ORCAMENTO", 5: "PAUSADA" };
-  if (venda_id) {
-    where.push("CAST(id AS TEXT) LIKE ?");
-    params.push(`%${venda_id}%`);
-  }
-  if (data) {
-    where.push("date(data_emissao) = date(?)");
-    params.push(data);
-  }
-  if (status !== void 0) {
-    where.push("status = ?");
-    params.push(statusMap[status]);
-  }
-  const whereClause = where.length ? `WHERE ${where.join(" AND ")} ` : "";
-  const stmt = db.prepare(`
+function Bs({ venda_id: t, data: e, status: r, page: a = 1, limit: n = 20 }) {
+  const o = (a - 1) * n;
+  let s = [], i = [];
+  const c = { 1: "FINALIZADA", 2: "CANCELADA", 3: "ABERTA_PAGAMENTO", 4: "ORCAMENTO", 5: "PAUSADA" };
+  t && (s.push("CAST(id AS TEXT) LIKE ?"), i.push(`%${t}%`)), e && (s.push("date(data_emissao) = date(?)"), i.push(e)), r !== void 0 && (s.push("status = ?"), i.push(c[r]));
+  const l = s.length ? `WHERE ${s.join(" AND ")} ` : "", d = u.prepare(`
     SELECT * FROM vendas
-      ${whereClause}
+      ${l}
       ORDER BY id DESC
     LIMIT ? OFFSET ?
-      `).all(...params, limit, offset);
-  const total = db.prepare(`
+      `).all(...i, n, o), m = u.prepare(`
       SELECT COUNT(*) as total
       FROM vendas
-      ${whereClause}
-    `).get(...params);
+      ${l}
+    `).get(...i);
   return {
-    data: stmt,
-    page,
-    limit,
-    total: total.total
+    data: d,
+    page: a,
+    limit: n,
+    total: m.total
   };
 }
-function buscarVendaPorId(vendaId) {
-  const venda = db.prepare(`
+function Xs(t) {
+  const e = u.prepare(`
       SELECT
         id,
         data_emissao,
@@ -2637,9 +2330,9 @@ function buscarVendaPorId(vendaId) {
         observacao
       FROM vendas
       WHERE id = ?
-      `).get(vendaId);
-  if (!venda) return null;
-  const itens = db.prepare(`
+      `).get(t);
+  if (!e) return null;
+  const r = u.prepare(`
       SELECT
         produto_id,
         codigo_produto,
@@ -2651,29 +2344,17 @@ function buscarVendaPorId(vendaId) {
         subtotal
       FROM venda_itens
       WHERE venda_id = ?
-      `).all(vendaId);
+      `).all(t);
   return {
-    ...venda,
-    itens
+    ...e,
+    itens: r
   };
 }
-function listarProdutos({ nome, codigo, ativo, page = 1, limit = 20 }) {
-  const offset = (page - 1) * limit;
-  let where = [];
-  let params = [];
-  if (nome) {
-    where.push("name LIKE ?");
-    params.push(`%${nome}%`);
-  }
-  if (codigo) {
-    where.push("(barcode LIKE ? OR sku LIKE ?)");
-    params.push(`%${codigo}%`, `%${codigo}%`);
-  }
-  if (ativo !== void 0) {
-    where.push("active = ?");
-    params.push(ativo);
-  }
-  const data = db.prepare(`
+function $s({ nome: t, codigo: e, ativo: r, page: a = 1, limit: n = 20 }) {
+  const o = (a - 1) * n;
+  let s = [], i = [];
+  t && (s.push("name LIKE ?"), i.push(`%${t}%`)), e && (s.push("(barcode LIKE ? OR sku LIKE ?)"), i.push(`%${e}%`, `%${e}%`)), r !== void 0 && (s.push("active = ?"), i.push(r));
+  const c = u.prepare(`
       SELECT
         id,
         barcode AS codigo_barras,
@@ -2683,25 +2364,24 @@ function listarProdutos({ nome, codigo, ativo, page = 1, limit = 20 }) {
         active AS ativo
       FROM products
       WHERE deleted_at IS NULL
-      ${where.length ? `AND ${where.join(" AND ")}` : ""}
+      ${s.length ? `AND ${s.join(" AND ")}` : ""}
       ORDER BY name
     LIMIT ? OFFSET ?
-      `).all(...params, limit, offset);
-  const total = db.prepare(`
+      `).all(...i, n, o), l = u.prepare(`
       SELECT COUNT(*) as total
       FROM products
       WHERE deleted_at IS NULL
-      ${where.length ? `AND ${where.join(" AND ")}` : ""}
-    `).get(...params);
+      ${s.length ? `AND ${s.join(" AND ")}` : ""}
+    `).get(...i);
   return {
-    data,
-    page,
-    limit,
-    total: total.total
+    data: c,
+    page: a,
+    limit: n,
+    total: l.total
   };
 }
-function select_product_by_id(id) {
-  const stmt = db.prepare(`
+function ks(t) {
+  return u.prepare(`
     SELECT
       id,
       external_id,
@@ -2780,11 +2460,10 @@ function select_product_by_id(id) {
     FROM products
     WHERE id = ? AND deleted_at IS NULL
     LIMIT 1;
-  `);
-  return stmt.get(id);
+  `).get(t);
 }
-function buscarProdutosPorNome(termo) {
-  const stmt = db.prepare(`
+function qs(t) {
+  return u.prepare(`
     SELECT
       id,
       barcode AS codigo_barras,
@@ -2796,11 +2475,10 @@ function buscarProdutosPorNome(termo) {
       AND LOWER(name) LIKE LOWER(?)
     ORDER BY name
     LIMIT 50
-      `);
-  return stmt.all(`%${termo}%`);
+      `).all(`%${t}%`);
 }
-function buscarProdutoPorCodigoBarras(codigo) {
-  const stmt = db.prepare(`
+function Gs(t) {
+  return u.prepare(`
     SELECT
       id,
       barcode AS codigo_barras,
@@ -2811,11 +2489,10 @@ function buscarProdutoPorCodigoBarras(codigo) {
     WHERE deleted_at IS NULL
       AND barcode = ?
     LIMIT 1;
-  `);
-  return stmt.get(codigo);
+  `).get(t);
 }
-function selectSuggestionProduct(term) {
-  const stmt = db.prepare(`
+function Vs(t) {
+  return u.prepare(`
     SELECT *
     FROM products
     WHERE deleted_at IS NULL
@@ -2827,30 +2504,25 @@ function selectSuggestionProduct(term) {
       )
     ORDER BY name
     LIMIT 5
-      `);
-  const rows = stmt.all(term, term, `%${term}%`);
-  return rows.map((product) => ({
-    id: product.id,
-    internalCode: product.sku ?? "",
-    name: product.name,
-    brand: product.brand ?? "",
-    gtin: product.barcode ?? "",
-    unitOfMeasure: product.unit ?? "UN",
-    currentStock: Number(product.current_stock ?? 0),
-    minimumStock: Number(product.minimum_stock ?? 0),
-    avgCost: Number(product.cost_price_cents ?? 0) / 100,
-    ncm: product.ncm ?? "",
-    cfop: product.cfop ?? "",
-    controlsExpiration: false,
-    controlsBatch: false
+      `).all(t, t, `%${t}%`).map((a) => ({
+    id: a.id,
+    internalCode: a.sku ?? "",
+    name: a.name,
+    brand: a.brand ?? "",
+    gtin: a.barcode ?? "",
+    unitOfMeasure: a.unit ?? "UN",
+    currentStock: Number(a.current_stock ?? 0),
+    minimumStock: Number(a.minimum_stock ?? 0),
+    avgCost: Number(a.cost_price_cents ?? 0) / 100,
+    ncm: a.ncm ?? "",
+    cfop: a.cfop ?? "",
+    controlsExpiration: !1,
+    controlsBatch: !1
   }));
 }
-console.log(db);
-function addPrinter(dados) {
-  if (dados.is_default === 1) {
-    db.prepare(`UPDATE printers SET is_default = 0 WHERE is_default = 1`).run();
-  }
-  const stmt = db.prepare(`
+console.log(u);
+function zs(t) {
+  t.is_default === 1 && u.prepare("UPDATE printers SET is_default = 0 WHERE is_default = 1").run(), u.prepare(`
     INSERT INTO printers(
       name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
       paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json, notes, is_default
@@ -2859,30 +2531,27 @@ function addPrinter(dados) {
       @selectedPrinter, @display_name, @brand, @model, @connection_type, @driver_name, @driver_version,
       @photo_path, @paper_width_mm, @content_width_mm, @base_font_size_px, @line_height, @receipt_settings_json, @notes, @is_default
     )
-      `);
-  stmt.run(dados);
+      `).run(t);
 }
-function listarPrinters() {
-  const stmt = db.prepare(`
+function js() {
+  return u.prepare(`
     SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
            paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json, notes, is_default, installed_at
     FROM printers
     ORDER BY is_default DESC, id DESC
-      `);
-  return stmt.all();
+      `).all();
 }
-function getPrinterPadrao() {
-  const stmt = db.prepare(`
+function Hs() {
+  return u.prepare(`
     SELECT id, name, display_name, brand, model, connection_type, is_default,
            paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json
     FROM printers
     WHERE is_default = 1
     LIMIT 1
-  `);
-  return stmt.get();
+  `).get();
 }
-function atualizarLayoutPrinter(id, dados) {
-  return db.prepare(`
+function Ks(t, e) {
+  return u.prepare(`
     UPDATE printers
     SET
       paper_width_mm = ?,
@@ -2891,157 +2560,106 @@ function atualizarLayoutPrinter(id, dados) {
       line_height = ?
     WHERE id = ?
   `).run(
-    dados.paper_width_mm,
-    dados.content_width_mm,
-    dados.base_font_size_px,
-    dados.line_height,
-    id
+    e.paper_width_mm,
+    e.content_width_mm,
+    e.base_font_size_px,
+    e.line_height,
+    t
   );
 }
-function atualizarPersonalizacaoCupomPrinter(id, receiptSettingsJson) {
-  return db.prepare(`
+function Ys(t, e) {
+  return u.prepare(`
     UPDATE printers
     SET receipt_settings_json = ?
     WHERE id = ?
-  `).run(receiptSettingsJson, id);
+  `).run(e, t);
 }
-function removerPrinter(id) {
-  const stmt = db.prepare(`DELETE FROM printers WHERE id = ? `);
-  return stmt.run(id);
+function Ws(t) {
+  return u.prepare("DELETE FROM printers WHERE id = ? ").run(t);
 }
-function definirPrinterPadrao(id) {
-  const transaction = db.transaction(() => {
-    db.prepare(`UPDATE printers SET is_default = 0 WHERE is_default = 1`).run();
-    db.prepare(`UPDATE printers SET is_default = 1 WHERE id = ? `).run(id);
-  });
-  transaction();
+function Qs(t) {
+  u.transaction(() => {
+    u.prepare("UPDATE printers SET is_default = 0 WHERE is_default = 1").run(), u.prepare("UPDATE printers SET is_default = 1 WHERE id = ? ").run(t);
+  })();
 }
-function criarUsuarioAdmin() {
-  const existe = db.prepare(`SELECT COUNT(*) as total FROM usuarios`).get();
-  if (existe.total === 0) {
-    const stmt = db.prepare(`
+function Js() {
+  u.prepare("SELECT COUNT(*) as total FROM usuarios").get().total === 0 && (u.prepare(`
       INSERT INTO usuarios(nome, funcao, email, username, password, ativo)
     VALUES(?, ?, ?, ?, ?, ?)
-      `);
-    stmt.run(
-      "Administrador",
-      "Gerente",
-      "admin@galberto.local",
-      "admin",
-      hashSenha("admin123"),
-      1
-    );
-    logger.info("-> Usuário admin padrão criado (admin / admin123)");
-    console.log("-> Usuário admin padrão criado (admin / admin123)");
-  }
+      `).run(
+    "Administrador",
+    "Gerente",
+    "admin@galberto.local",
+    "admin",
+    Jt("admin123"),
+    1
+  ), f.info("-> Usuário admin padrão criado (admin / admin123)"), console.log("-> Usuário admin padrão criado (admin / admin123)"));
 }
-function buscarUsuario(id) {
-  const stmt = db.prepare(`
+function Zs(t) {
+  return u.prepare(`
     SELECT id, nome, funcao, email, username, ativo, foto_path
     FROM usuarios
     WHERE id = ?
-      `);
-  return stmt.get(id);
+      `).get(t);
 }
-function selectUsers({ name, role, login, ativo, page = 1, limit = 20 }) {
-  const offset = (page - 1) * limit;
-  let where = [];
-  let params = [];
-  if (name) {
-    where.push("nome LIKE ?");
-    params.push(`% ${name}% `);
-  }
-  if (role) {
-    where.push("funcao LIKE ?");
-    params.push(`% ${role}% `);
-  }
-  if (login) {
-    where.push("username LIKE ?");
-    params.push(`% ${login}% `);
-  }
-  if (ativo !== void 0) {
-    where.push("ativo = ?");
-    params.push(ativo);
-  }
-  const whereClause = where.length ? `WHERE ${where.join(" AND ")} ` : "";
-  const data = db.prepare(`
+function ei({ name: t, role: e, login: r, ativo: a, page: n = 1, limit: o = 20 }) {
+  const s = (n - 1) * o;
+  let i = [], c = [];
+  t && (i.push("nome LIKE ?"), c.push(`% ${t}% `)), e && (i.push("funcao LIKE ?"), c.push(`% ${e}% `)), r && (i.push("username LIKE ?"), c.push(`% ${r}% `)), a !== void 0 && (i.push("ativo = ?"), c.push(a));
+  const l = i.length ? `WHERE ${i.join(" AND ")} ` : "", d = u.prepare(`
       SELECT id, nome, funcao AS role, email, username AS login, ativo
       FROM usuarios
-      ${whereClause}
+      ${l}
       ORDER BY nome
     LIMIT ? OFFSET ?
-      `).all(...params, limit, offset);
-  const total = db.prepare(`
+      `).all(...c, o, s), m = u.prepare(`
       SELECT COUNT(*) as total
       FROM usuarios
-      ${whereClause}
-    `).get(...params);
+      ${l}
+    `).get(...c);
   return {
-    data,
-    page,
-    limit,
-    total: total.total
+    data: d,
+    page: n,
+    limit: o,
+    total: m.total
   };
 }
-function addUsuario(dados) {
-  const stmt = db.prepare(`
+function ti(t) {
+  return u.prepare(`
     INSERT INTO usuarios(nome, funcao, email, username, password, ativo, foto_path)
     VALUES(@nome, @funcao, @email, @username, @password, @ativo, @foto_path)
-  `);
-  return stmt.run({
-    ...dados,
-    foto_path: dados.foto_path ?? null,
-    password: hashSenha(dados.password)
+  `).run({
+    ...t,
+    foto_path: t.foto_path ?? null,
+    password: Jt(t.password)
   });
 }
-function alterarSenhaUsuario(id, newPassword) {
-  const stmt = db.prepare(`UPDATE usuarios SET password = ? WHERE id = ? `);
-  return stmt.run(hashSenha(newPassword), id);
+function ri(t, e) {
+  return u.prepare("UPDATE usuarios SET password = ? WHERE id = ? ").run(Jt(e), t);
 }
-function removerUsuario(id) {
-  const stmt = db.prepare(`DELETE FROM usuarios WHERE id = ? `);
-  return stmt.run(id);
+function ai(t) {
+  return u.prepare("DELETE FROM usuarios WHERE id = ? ").run(t);
 }
-function updateUser(data) {
-  console.log("Dados chegando no db.ts", data);
-  const campos = [];
-  const valores = [];
-  if (data.nome !== void 0) {
-    campos.push("nome = ?");
-    valores.push(data.nome);
-  }
-  if (data.email !== void 0) {
-    campos.push("email = ?");
-    valores.push(data.email);
-  }
-  if (data.login !== void 0) {
-    campos.push("username = ?");
-    valores.push(data.login);
-  }
-  if (data.role !== void 0) {
-    campos.push("funcao = ?");
-    valores.push(data.role);
-  }
-  valores.push(data.id);
-  const sql = `
+function ni(t) {
+  console.log("Dados chegando no db.ts", t);
+  const e = [], r = [];
+  t.nome !== void 0 && (e.push("nome = ?"), r.push(t.nome)), t.email !== void 0 && (e.push("email = ?"), r.push(t.email)), t.login !== void 0 && (e.push("username = ?"), r.push(t.login)), t.role !== void 0 && (e.push("funcao = ?"), r.push(t.role)), r.push(t.id);
+  const a = `
   UPDATE usuarios
-  SET ${campos.join(", ")}
+  SET ${e.join(", ")}
   WHERE id = ?
       `;
-  const stmt = db.prepare(sql);
-  stmt.run(...valores);
+  u.prepare(a).run(...r);
 }
-function disableUser(id) {
-  const stmt = db.prepare(`UPDATE usuarios SET ativo = 0 WHERE id = ? `);
-  return stmt.run(id);
+function oi(t) {
+  return u.prepare("UPDATE usuarios SET ativo = 0 WHERE id = ? ").run(t);
 }
-function enableUser(id) {
-  const stmt = db.prepare(`UPDATE usuarios SET ativo = 1 WHERE id = ? `);
-  return stmt.run(id);
+function si(t) {
+  return u.prepare("UPDATE usuarios SET ativo = 1 WHERE id = ? ").run(t);
 }
-criarUsuarioAdmin();
-function getOpenCashSession(data) {
-  const stmt = db.prepare(`
+Js();
+function ii(t) {
+  const r = u.prepare(`
     SELECT id
       FROM cash_register_sessions
     WHERE pdv_id = ?
@@ -3049,219 +2667,206 @@ function getOpenCashSession(data) {
         AND status = 'OPEN'
     ORDER BY opened_at DESC
     LIMIT 1;
-    `);
-  const session = stmt.get(data.pdv_id, data.operator_id);
-  if (!session) {
-    return null;
-  }
-  return getCashSessionSummaryById(session.id);
+    `).get(t.pdv_id, t.operator_id);
+  return r ? Ct(r.id) : null;
 }
-function serializeJson(value) {
-  return JSON.stringify(value ?? null);
+function vr(t) {
+  return JSON.stringify(t ?? null);
 }
-function booleanToInt(value) {
-  return value ? 1 : 0;
+function Vt(t) {
+  return t ? 1 : 0;
 }
-function mapSale(row) {
+function ci(t) {
   return {
-    id: row.id,
-    storeId: row.store_id,
-    customerId: row.customer_id,
-    customerName: row.customer_name,
-    customerDocument: row.customer_document,
-    status: row.status,
-    subtotalAmount: row.subtotal_amount,
-    discountAmount: row.discount_amount,
-    surchargeAmount: row.surcharge_amount,
-    totalAmount: row.total_amount,
-    changeAmount: row.change_amount,
-    externalReference: row.external_reference,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    storeId: t.store_id,
+    customerId: t.customer_id,
+    customerName: t.customer_name,
+    customerDocument: t.customer_document,
+    status: t.status,
+    subtotalAmount: t.subtotal_amount,
+    discountAmount: t.discount_amount,
+    surchargeAmount: t.surcharge_amount,
+    totalAmount: t.total_amount,
+    changeAmount: t.change_amount,
+    externalReference: t.external_reference,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-function mapItem(row) {
+function ui(t) {
   return {
-    id: row.id,
-    saleId: row.sale_id,
-    productId: row.product_id,
-    sku: row.sku,
-    description: row.description,
-    unit: row.unit,
-    quantity: row.quantity,
-    unitPrice: row.unit_price,
-    grossAmount: row.gross_amount,
-    discountAmount: row.discount_amount,
-    totalAmount: row.total_amount,
-    ncm: row.ncm,
-    cfop: row.cfop,
-    cest: row.cest,
-    originCode: row.origin_code,
-    taxSnapshotJson: row.tax_snapshot_json,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    saleId: t.sale_id,
+    productId: t.product_id,
+    sku: t.sku,
+    description: t.description,
+    unit: t.unit,
+    quantity: t.quantity,
+    unitPrice: t.unit_price,
+    grossAmount: t.gross_amount,
+    discountAmount: t.discount_amount,
+    totalAmount: t.total_amount,
+    ncm: t.ncm,
+    cfop: t.cfop,
+    cest: t.cest,
+    originCode: t.origin_code,
+    taxSnapshotJson: t.tax_snapshot_json,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-function mapPayment(row) {
+function di(t) {
   return {
-    id: row.id,
-    saleId: row.sale_id,
-    method: row.method,
-    amount: row.amount,
-    receivedAmount: row.received_amount,
-    changeAmount: row.change_amount,
-    integrationReference: row.integration_reference,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    saleId: t.sale_id,
+    method: t.method,
+    amount: t.amount,
+    receivedAmount: t.received_amount,
+    changeAmount: t.change_amount,
+    integrationReference: t.integration_reference,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-class SalesRepository {
-  create(input) {
-    const transaction = db.transaction(() => {
-      const saleResult = db.prepare(`
+class li {
+  create(e) {
+    return u.transaction(() => {
+      const a = u.prepare(`
         INSERT INTO sales (
           store_id, customer_id, customer_name, customer_document, status,
           subtotal_amount, discount_amount, surcharge_amount, total_amount,
           change_amount, external_reference, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(
-        input.storeId,
-        input.customerId ?? null,
-        input.customerName ?? null,
-        input.customerDocument ?? null,
-        input.status ?? "OPEN",
-        input.subtotalAmount,
-        input.discountAmount ?? 0,
-        input.surchargeAmount ?? 0,
-        input.totalAmount,
-        input.changeAmount ?? 0,
-        input.externalReference ?? null
-      );
-      const saleId = Number(saleResult.lastInsertRowid);
-      const insertItem = db.prepare(`
+        e.storeId,
+        e.customerId ?? null,
+        e.customerName ?? null,
+        e.customerDocument ?? null,
+        e.status ?? "OPEN",
+        e.subtotalAmount,
+        e.discountAmount ?? 0,
+        e.surchargeAmount ?? 0,
+        e.totalAmount,
+        e.changeAmount ?? 0,
+        e.externalReference ?? null
+      ), n = Number(a.lastInsertRowid), o = u.prepare(`
         INSERT INTO sale_items (
           sale_id, product_id, sku, description, unit, quantity, unit_price,
           gross_amount, discount_amount, total_amount, ncm, cfop, cest,
           origin_code, tax_snapshot_json, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `);
-      for (const item of input.items) {
-        insertItem.run(
-          saleId,
-          item.productId ?? null,
-          item.sku ?? null,
-          item.description,
-          item.unit,
-          item.quantity,
-          item.unitPrice,
-          item.grossAmount,
-          item.discountAmount ?? 0,
-          item.totalAmount,
-          item.ncm ?? null,
-          item.cfop ?? null,
-          item.cest ?? null,
-          item.originCode ?? null,
-          item.taxSnapshot ? serializeJson(item.taxSnapshot) : null
+      for (const i of e.items)
+        o.run(
+          n,
+          i.productId ?? null,
+          i.sku ?? null,
+          i.description,
+          i.unit,
+          i.quantity,
+          i.unitPrice,
+          i.grossAmount,
+          i.discountAmount ?? 0,
+          i.totalAmount,
+          i.ncm ?? null,
+          i.cfop ?? null,
+          i.cest ?? null,
+          i.originCode ?? null,
+          i.taxSnapshot ? vr(i.taxSnapshot) : null
         );
-      }
-      const insertPayment = db.prepare(`
+      const s = u.prepare(`
         INSERT INTO payments (
           sale_id, method, amount, received_amount, change_amount,
           integration_reference, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `);
-      for (const payment of input.payments) {
-        insertPayment.run(
-          saleId,
-          payment.method,
-          payment.amount,
-          payment.receivedAmount ?? payment.amount,
-          payment.changeAmount ?? 0,
-          payment.integrationReference ?? null
+      for (const i of e.payments)
+        s.run(
+          n,
+          i.method,
+          i.amount,
+          i.receivedAmount ?? i.amount,
+          i.changeAmount ?? 0,
+          i.integrationReference ?? null
         );
-      }
-      return this.findAggregateById(saleId);
-    });
-    return transaction();
+      return this.findAggregateById(n);
+    })();
   }
-  findById(id) {
-    const row = db.prepare(`SELECT * FROM sales WHERE id = ? LIMIT 1`).get(id);
-    return row ? mapSale(row) : null;
+  findById(e) {
+    const r = u.prepare("SELECT * FROM sales WHERE id = ? LIMIT 1").get(e);
+    return r ? ci(r) : null;
   }
-  findByExternalReference(externalReference) {
-    const row = db.prepare(`
+  findByExternalReference(e) {
+    const r = u.prepare(`
       SELECT * FROM sales
       WHERE external_reference = ?
       LIMIT 1
-    `).get(externalReference);
-    return row ? this.findAggregateById(row.id) : null;
+    `).get(e);
+    return r ? this.findAggregateById(r.id) : null;
   }
-  findAggregateById(id) {
-    const sale = this.findById(id);
-    if (!sale) return null;
-    const items = db.prepare(`SELECT * FROM sale_items WHERE sale_id = ? ORDER BY id ASC`).all(id);
-    const payments = db.prepare(`SELECT * FROM payments WHERE sale_id = ? ORDER BY id ASC`).all(id);
-    const fiscalDocument = db.prepare(`SELECT id FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(id);
+  findAggregateById(e) {
+    const r = this.findById(e);
+    if (!r) return null;
+    const a = u.prepare("SELECT * FROM sale_items WHERE sale_id = ? ORDER BY id ASC").all(e), n = u.prepare("SELECT * FROM payments WHERE sale_id = ? ORDER BY id ASC").all(e), o = u.prepare("SELECT id FROM fiscal_documents WHERE sale_id = ? LIMIT 1").get(e);
     return {
-      sale,
-      items: items.map(mapItem),
-      payments: payments.map(mapPayment),
-      fiscalDocument: fiscalDocument ? { id: fiscalDocument.id } : null
+      sale: r,
+      items: a.map(ui),
+      payments: n.map(di),
+      fiscalDocument: o ? { id: o.id } : null
     };
   }
-  listRecent(limit = 20) {
-    const sales = db.prepare(`
+  listRecent(e = 20) {
+    return u.prepare(`
       SELECT * FROM sales
       ORDER BY created_at DESC
       LIMIT ?
-    `).all(limit);
-    return sales.map((sale) => this.findAggregateById(sale.id)).filter((sale) => Boolean(sale));
+    `).all(e).map((a) => this.findAggregateById(a.id)).filter((a) => !!a);
   }
-  updateStatus(id, status) {
-    db.prepare(`
+  updateStatus(e, r) {
+    u.prepare(`
       UPDATE sales
       SET status = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(status, id);
+    `).run(r, e);
   }
 }
-const salesRepository = new SalesRepository();
-function toTaxRegimeCode$2(value) {
-  const normalized = String(value ?? "").trim();
-  if (["1", "2", "3", "4"].includes(normalized)) {
-    return normalized;
-  }
-  throw new Error(`CRT/regime tributario invalido na store: ${normalized || "vazio"}.`);
+const Xt = new li();
+function Ei(t) {
+  const e = String(t ?? "").trim();
+  if (["1", "2", "3", "4"].includes(e))
+    return e;
+  throw new Error(`CRT/regime tributario invalido na store: ${e || "vazio"}.`);
 }
-function mapStore(row) {
+function ra(t) {
   return {
-    id: row.id,
-    code: row.code,
-    name: row.name,
-    legalName: row.legal_name,
-    cnpj: row.cnpj,
-    stateRegistration: row.state_registration,
-    taxRegimeCode: toTaxRegimeCode$2(row.tax_regime_code),
-    environment: row.environment,
-    cscId: row.csc_id,
-    cscToken: row.csc_token,
-    defaultSeries: row.default_series,
-    nextNfceNumber: row.next_nfce_number,
-    addressStreet: row.address_street,
-    addressNumber: row.address_number,
-    addressNeighborhood: row.address_neighborhood,
-    addressCity: row.address_city,
-    addressState: row.address_state,
-    addressZipCode: row.address_zip_code,
-    addressCityIbgeCode: row.address_city_ibge_code,
-    active: Boolean(row.active),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    code: t.code,
+    name: t.name,
+    legalName: t.legal_name,
+    cnpj: t.cnpj,
+    stateRegistration: t.state_registration,
+    taxRegimeCode: Ei(t.tax_regime_code),
+    environment: t.environment,
+    cscId: t.csc_id,
+    cscToken: t.csc_token,
+    defaultSeries: t.default_series,
+    nextNfceNumber: t.next_nfce_number,
+    addressStreet: t.address_street,
+    addressNumber: t.address_number,
+    addressNeighborhood: t.address_neighborhood,
+    addressCity: t.address_city,
+    addressState: t.address_state,
+    addressZipCode: t.address_zip_code,
+    addressCityIbgeCode: t.address_city_ibge_code,
+    active: !!t.active,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-class StoreRepository {
-  create(input) {
-    const result = db.prepare(`
+class mi {
+  create(e) {
+    const r = u.prepare(`
       INSERT INTO stores (
         code, name, legal_name, cnpj, state_registration, tax_regime_code,
         environment, csc_id, csc_token, default_series, next_nfce_number,
@@ -3270,47 +2875,44 @@ class StoreRepository {
         created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
-      input.code,
-      input.name,
-      input.legalName,
-      input.cnpj,
-      input.stateRegistration,
-      input.taxRegimeCode,
-      input.environment,
-      input.cscId ?? null,
-      input.cscToken ?? null,
-      input.defaultSeries ?? 1,
-      input.nextNfceNumber ?? 1,
-      input.addressStreet,
-      input.addressNumber,
-      input.addressNeighborhood,
-      input.addressCity,
-      input.addressState,
-      input.addressZipCode,
-      input.addressCityIbgeCode,
-      booleanToInt(input.active ?? true)
+      e.code,
+      e.name,
+      e.legalName,
+      e.cnpj,
+      e.stateRegistration,
+      e.taxRegimeCode,
+      e.environment,
+      e.cscId ?? null,
+      e.cscToken ?? null,
+      e.defaultSeries ?? 1,
+      e.nextNfceNumber ?? 1,
+      e.addressStreet,
+      e.addressNumber,
+      e.addressNeighborhood,
+      e.addressCity,
+      e.addressState,
+      e.addressZipCode,
+      e.addressCityIbgeCode,
+      Vt(e.active ?? !0)
     );
-    return this.findById(Number(result.lastInsertRowid));
+    return this.findById(Number(r.lastInsertRowid));
   }
-  findById(id) {
-    const row = db.prepare(`SELECT * FROM stores WHERE id = ? LIMIT 1`).get(id);
-    return row ? mapStore(row) : null;
+  findById(e) {
+    const r = u.prepare("SELECT * FROM stores WHERE id = ? LIMIT 1").get(e);
+    return r ? ra(r) : null;
   }
   findActive() {
-    const row = db.prepare(`
+    const e = u.prepare(`
       SELECT * FROM stores
       WHERE active = 1
       ORDER BY id ASC
       LIMIT 1
     `).get();
-    return row ? mapStore(row) : null;
+    return e ? ra(e) : null;
   }
-  upsertActive(input) {
-    const current = input.id ? this.findById(input.id) : this.findActive();
-    if (!current) {
-      return this.create({ ...input, code: input.code || "MAIN", active: true });
-    }
-    db.prepare(`
+  upsertActive(e) {
+    const r = e.id ? this.findById(e.id) : this.findActive();
+    return r ? (u.prepare(`
       UPDATE stores
       SET
         code = ?,
@@ -3335,35 +2937,33 @@ class StoreRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      input.code || current.code || "MAIN",
-      input.name,
-      input.legalName,
-      input.cnpj,
-      input.stateRegistration,
-      input.taxRegimeCode,
-      input.environment,
-      input.cscId ?? null,
-      input.cscToken ?? current.cscToken ?? null,
-      input.defaultSeries ?? current.defaultSeries,
-      input.nextNfceNumber ?? current.nextNfceNumber,
-      input.addressStreet,
-      input.addressNumber,
-      input.addressNeighborhood,
-      input.addressCity,
-      input.addressState,
-      input.addressZipCode,
-      input.addressCityIbgeCode,
-      booleanToInt(input.active ?? true),
-      current.id
-    );
-    return this.findById(current.id);
+      e.code || r.code || "MAIN",
+      e.name,
+      e.legalName,
+      e.cnpj,
+      e.stateRegistration,
+      e.taxRegimeCode,
+      e.environment,
+      e.cscId ?? null,
+      e.cscToken ?? r.cscToken ?? null,
+      e.defaultSeries ?? r.defaultSeries,
+      e.nextNfceNumber ?? r.nextNfceNumber,
+      e.addressStreet,
+      e.addressNumber,
+      e.addressNeighborhood,
+      e.addressCity,
+      e.addressState,
+      e.addressZipCode,
+      e.addressCityIbgeCode,
+      Vt(e.active ?? !0),
+      r.id
+    ), this.findById(r.id)) : this.create({ ...e, code: e.code || "MAIN", active: !0 });
   }
-  updateFiscalConfiguration(storeId, input) {
-    const current = this.findById(storeId);
-    if (!current) {
-      throw new Error(`Store ${storeId} não encontrada.`);
-    }
-    db.prepare(`
+  updateFiscalConfiguration(e, r) {
+    const a = this.findById(e);
+    if (!a)
+      throw new Error(`Store ${e} não encontrada.`);
+    return u.prepare(`
       UPDATE stores
       SET
         environment = ?,
@@ -3373,85 +2973,71 @@ class StoreRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      input.environment ?? current.environment,
-      input.cscId ?? current.cscId ?? null,
-      input.cscToken ?? current.cscToken ?? null,
-      input.defaultSeries && input.defaultSeries > 0 ? input.defaultSeries : current.defaultSeries,
-      storeId
-    );
-    return this.findById(storeId);
+      r.environment ?? a.environment,
+      r.cscId ?? a.cscId ?? null,
+      r.cscToken ?? a.cscToken ?? null,
+      r.defaultSeries && r.defaultSeries > 0 ? r.defaultSeries : a.defaultSeries,
+      e
+    ), this.findById(e);
   }
-  reserveNextNfceNumber(storeId) {
-    const transaction = db.transaction(() => {
-      const current = db.prepare(`
+  reserveNextNfceNumber(e) {
+    return u.transaction(() => {
+      const a = u.prepare(`
         SELECT default_series, next_nfce_number
         FROM stores
         WHERE id = ?
         LIMIT 1
-      `).get(storeId);
-      if (!current) {
-        throw new Error(`Store ${storeId} não encontrada.`);
-      }
-      db.prepare(`
+      `).get(e);
+      if (!a)
+        throw new Error(`Store ${e} não encontrada.`);
+      return u.prepare(`
         UPDATE stores
         SET next_nfce_number = next_nfce_number + 1, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(storeId);
-      return {
-        series: current.default_series,
-        number: current.next_nfce_number
+      `).run(e), {
+        series: a.default_series,
+        number: a.next_nfce_number
       };
-    });
-    return transaction();
+    })();
   }
 }
-const storeRepository = new StoreRepository();
-function money$1(value) {
-  return Number(value ?? 0).toLocaleString("pt-BR", {
+const se = new mi();
+function Et(t) {
+  return Number(t ?? 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL"
   });
 }
-class HtmlDanfeService {
+class pi {
   constructor() {
-    __publicField(this, "outputDir", path$1.join(app.getPath("userData"), "fiscal", "danfe"));
+    ce(this, "outputDir", st.join(_e.getPath("userData"), "fiscal", "danfe"));
   }
-  async generate(document) {
-    fs$1.mkdirSync(this.outputDir, { recursive: true });
-    const danfePath = document.danfePath || path$1.join(this.outputDir, `nfce-${document.id}.html`);
-    const html = this.render(document);
-    fs$1.writeFileSync(danfePath, html, "utf8");
-    return {
-      documentId: document.id,
-      danfePath,
+  async generate(e) {
+    Ee.mkdirSync(this.outputDir, { recursive: !0 });
+    const r = e.danfePath || st.join(this.outputDir, `nfce-${e.id}.html`), a = this.render(e);
+    return Ee.writeFileSync(r, a, "utf8"), {
+      documentId: e.id,
+      danfePath: r,
       contentType: "text/html",
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
-  async recover(document) {
-    if (!document.danfePath || !fs$1.existsSync(document.danfePath)) {
-      return null;
-    }
-    return {
-      documentId: document.id,
-      danfePath: document.danfePath,
+  async recover(e) {
+    return !e.danfePath || !Ee.existsSync(e.danfePath) ? null : {
+      documentId: e.id,
+      danfePath: e.danfePath,
       contentType: "text/html",
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
-  render(document) {
-    const aggregate = salesRepository.findAggregateById(document.saleId);
-    const store = storeRepository.findById(document.companyId);
-    const isHomologation = document.environment === "homologation";
-    const items = (aggregate == null ? void 0 : aggregate.items) ?? [];
-    const payments = (aggregate == null ? void 0 : aggregate.payments) ?? [];
-    const total = (aggregate == null ? void 0 : aggregate.sale.totalAmount) ?? 0;
+  render(e) {
+    const r = Xt.findAggregateById(e.saleId), a = se.findById(e.companyId), n = e.environment === "homologation", o = (r == null ? void 0 : r.items) ?? [], s = (r == null ? void 0 : r.payments) ?? [], i = (r == null ? void 0 : r.sale.totalAmount) ?? 0;
     return `<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DANFE NFC-e ${document.number}</title>
+    <title>DANFE NFC-e ${e.number}</title>
     <style>
       body { font-family: Arial, sans-serif; background: #f4f4f5; color: #18181b; padding: 12px; }
       .card { width: 320px; margin: 0 auto; background: white; border: 1px solid #d4d4d8; border-radius: 12px; padding: 16px; }
@@ -3470,224 +3056,200 @@ class HtmlDanfeService {
   <body>
     <div class="card">
       <div class="title">DANFE NFC-e</div>
-      <div class="subtitle">${(store == null ? void 0 : store.legalName) ?? "Emitente não encontrado"}</div>
-      <div class="subtitle">CNPJ ${(store == null ? void 0 : store.cnpj) ?? "—"} | IE ${(store == null ? void 0 : store.stateRegistration) ?? "—"}</div>
-      <div class="subtitle">${store ? `${store.addressStreet}, ${store.addressNumber} - ${store.addressNeighborhood}` : "Endereço indisponível"}</div>
-      <div class="subtitle">${store ? `${store.addressCity}/${store.addressState}` : ""}</div>
-      ${isHomologation ? '<div class="warn">EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ""}
+      <div class="subtitle">${(a == null ? void 0 : a.legalName) ?? "Emitente não encontrado"}</div>
+      <div class="subtitle">CNPJ ${(a == null ? void 0 : a.cnpj) ?? "—"} | IE ${(a == null ? void 0 : a.stateRegistration) ?? "—"}</div>
+      <div class="subtitle">${a ? `${a.addressStreet}, ${a.addressNumber} - ${a.addressNeighborhood}` : "Endereço indisponível"}</div>
+      <div class="subtitle">${a ? `${a.addressCity}/${a.addressState}` : ""}</div>
+      ${n ? '<div class="warn">EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ""}
       <div class="divider"></div>
-      <div class="row"><span class="muted">Documento</span><span>${document.id}</span></div>
-      <div class="row"><span class="muted">Venda</span><span>${document.saleId}</span></div>
-      <div class="row"><span class="muted">Número/Série</span><span>${document.number}/${document.series}</span></div>
-      <div class="row"><span class="muted">Status</span><span class="${document.status === "AUTHORIZED" ? "ok" : "muted"}">${document.status}</span></div>
-      <div class="row"><span class="muted">Emissão</span><span>${document.issuedAt}</span></div>
-      <div class="row"><span class="muted">Autorização</span><span>${document.authorizedAt ?? "Pendente"}</span></div>
-      <div class="row"><span class="muted">Protocolo</span><span>${document.authorizationProtocol ?? "Pendente"}</span></div>
+      <div class="row"><span class="muted">Documento</span><span>${e.id}</span></div>
+      <div class="row"><span class="muted">Venda</span><span>${e.saleId}</span></div>
+      <div class="row"><span class="muted">Número/Série</span><span>${e.number}/${e.series}</span></div>
+      <div class="row"><span class="muted">Status</span><span class="${e.status === "AUTHORIZED" ? "ok" : "muted"}">${e.status}</span></div>
+      <div class="row"><span class="muted">Emissão</span><span>${e.issuedAt}</span></div>
+      <div class="row"><span class="muted">Autorização</span><span>${e.authorizedAt ?? "Pendente"}</span></div>
+      <div class="row"><span class="muted">Protocolo</span><span>${e.authorizationProtocol ?? "Pendente"}</span></div>
       <div class="divider"></div>
       <div class="subtitle"><strong>Itens</strong></div>
-      ${items.map((item) => `
+      ${o.map((c) => `
         <div class="item">
-          <strong>${item.description}</strong>
-          <div class="row"><span>${Number(item.quantity).toFixed(3)} x ${money$1(item.unitPrice)}</span><span>${money$1(item.totalAmount)}</span></div>
+          <strong>${c.description}</strong>
+          <div class="row"><span>${Number(c.quantity).toFixed(3)} x ${Et(c.unitPrice)}</span><span>${Et(c.totalAmount)}</span></div>
         </div>
       `).join("")}
       <div class="divider"></div>
       <div class="subtitle"><strong>Pagamentos</strong></div>
-      ${payments.map((payment) => `
+      ${s.map((c) => `
         <div class="row">
-          <span>${payment.method}</span>
-          <span>${money$1(payment.amount)}</span>
+          <span>${c.method}</span>
+          <span>${Et(c.amount)}</span>
         </div>
       `).join("")}
-      <div class="row"><span class="muted">Troco</span><span>${money$1((aggregate == null ? void 0 : aggregate.sale.changeAmount) ?? 0)}</span></div>
-      <div class="row"><span class="muted">Total</span><span><strong>${money$1(total)}</strong></span></div>
+      <div class="row"><span class="muted">Troco</span><span>${Et((r == null ? void 0 : r.sale.changeAmount) ?? 0)}</span></div>
+      <div class="row"><span class="muted">Total</span><span><strong>${Et(i)}</strong></span></div>
       <div class="divider"></div>
-      <div class="row"><span class="muted">Chave</span><span>${document.accessKey ?? "Pendente"}</span></div>
-      <div class="qr">${document.qrCodeUrl ?? "QR Code indisponível"}</div>
+      <div class="row"><span class="muted">Chave</span><span>${e.accessKey ?? "Pendente"}</span></div>
+      <div class="qr">${e.qrCodeUrl ?? "QR Code indisponível"}</div>
     </div>
   </body>
 </html>`;
   }
 }
-class FiscalError extends Error {
-  constructor(input) {
-    super(input.message);
-    __publicField(this, "code");
-    __publicField(this, "category");
-    __publicField(this, "retryable");
-    __publicField(this, "details");
-    this.name = "FiscalError";
-    this.code = input.code;
-    this.category = input.category;
-    this.retryable = input.retryable ?? false;
-    this.details = input.details;
-    if (input.cause !== void 0) {
-      this.cause = input.cause;
-    }
+class I extends Error {
+  constructor(r) {
+    super(r.message);
+    ce(this, "code");
+    ce(this, "category");
+    ce(this, "retryable");
+    ce(this, "details");
+    this.name = "FiscalError", this.code = r.code, this.category = r.category, this.retryable = r.retryable ?? !1, this.details = r.details, r.cause !== void 0 && (this.cause = r.cause);
   }
 }
-function normalizeFiscalError(error, fallbackCode = "FISCAL_INTERNAL_ERROR") {
-  if (error instanceof FiscalError) {
-    return error;
-  }
-  if (error instanceof Error) {
-    return new FiscalError({
-      code: fallbackCode,
-      message: error.message,
-      category: "INTERNAL",
-      retryable: false,
-      cause: error
-    });
-  }
-  return new FiscalError({
-    code: fallbackCode,
+function Z(t, e = "FISCAL_INTERNAL_ERROR") {
+  return t instanceof I ? t : t instanceof Error ? new I({
+    code: e,
+    message: t.message,
+    category: "INTERNAL",
+    retryable: !1,
+    cause: t
+  }) : new I({
+    code: e,
     message: "Erro interno na camada fiscal.",
     category: "INTERNAL",
-    retryable: false,
-    details: error
+    retryable: !1,
+    details: t
   });
 }
-class FileSystemCertificateService {
-  readCertificatePem(config2) {
-    var _a;
-    const certificatePath = (_a = config2.certificatePath) == null ? void 0 : _a.trim();
-    if (!certificatePath) {
+class _i {
+  readCertificatePem(e) {
+    var n;
+    const r = (n = e.certificatePath) == null ? void 0 : n.trim();
+    if (!r)
       return null;
-    }
-    const extension = path$1.extname(certificatePath).toLowerCase();
-    if (extension === ".pem" || extension === ".crt" || extension === ".cer") {
-      return fs$1.readFileSync(certificatePath, "utf8");
-    }
-    if (extension === ".pfx" || extension === ".p12") {
-      if (!config2.certificatePassword) {
-        throw new FiscalError({
+    const a = st.extname(r).toLowerCase();
+    if (a === ".pem" || a === ".crt" || a === ".cer")
+      return Ee.readFileSync(r, "utf8");
+    if (a === ".pfx" || a === ".p12") {
+      if (!e.certificatePassword)
+        throw new I({
           code: "CERTIFICATE_PASSWORD_REQUIRED",
           message: "Senha do certificado não configurada.",
           category: "CERTIFICATE"
         });
-      }
       try {
-        return execFileSync(
+        return Ar(
           "openssl",
-          ["pkcs12", "-in", certificatePath, "-clcerts", "-nokeys", "-passin", `pass:${config2.certificatePassword}`],
+          ["pkcs12", "-in", r, "-clcerts", "-nokeys", "-passin", `pass:${e.certificatePassword}`],
           { encoding: "utf8" }
         );
-      } catch (error) {
-        throw new FiscalError({
+      } catch (o) {
+        throw new I({
           code: "CERTIFICATE_READ_FAILED",
           message: "Não foi possível validar o certificado digital informado.",
           category: "CERTIFICATE",
-          cause: error
+          cause: o
         });
       }
     }
     return null;
   }
-  async getCertificateInfo(config2) {
-    var _a;
-    const certificatePath = (_a = config2.certificatePath) == null ? void 0 : _a.trim();
-    const lastCheckedAt = (/* @__PURE__ */ new Date()).toISOString();
-    if (!certificatePath) {
+  async getCertificateInfo(e) {
+    var s;
+    const r = (s = e.certificatePath) == null ? void 0 : s.trim(), a = (/* @__PURE__ */ new Date()).toISOString();
+    if (!r)
       return {
-        configured: false,
+        configured: !1,
         type: "UNKNOWN",
-        lastCheckedAt
+        lastCheckedAt: a
       };
-    }
-    const exists = fs$1.existsSync(certificatePath);
-    let validUntil = null;
-    if (exists) {
+    const n = Ee.existsSync(r);
+    let o = null;
+    if (n)
       try {
-        const pem = this.readCertificatePem(config2);
-        if (pem) {
-          const certificate = new X509Certificate(pem);
-          validUntil = new Date(certificate.validTo).toISOString();
+        const i = this.readCertificatePem(e);
+        if (i) {
+          const c = new Jr(i);
+          o = new Date(c.validTo).toISOString();
         }
       } catch {
-        validUntil = null;
+        o = null;
       }
-    }
     return {
-      configured: exists,
-      type: [".pfx", ".p12"].includes(path$1.extname(certificatePath).toLowerCase()) ? "A1" : "UNKNOWN",
-      alias: path$1.basename(certificatePath),
-      source: certificatePath,
-      validUntil,
-      lastCheckedAt
+      configured: n,
+      type: [".pfx", ".p12"].includes(st.extname(r).toLowerCase()) ? "A1" : "UNKNOWN",
+      alias: st.basename(r),
+      source: r,
+      validUntil: o,
+      lastCheckedAt: a
     };
   }
-  async assertCertificateReady(config2) {
-    if (config2.provider === "mock") {
+  async assertCertificateReady(e) {
+    if (e.provider === "mock")
       return;
-    }
-    if (!config2.certificatePath) {
-      throw new FiscalError({
+    if (!e.certificatePath)
+      throw new I({
         code: "CERTIFICATE_NOT_CONFIGURED",
         message: "Certificado fiscal não configurado.",
         category: "CERTIFICATE"
       });
-    }
-    if (!fs$1.existsSync(config2.certificatePath)) {
-      throw new FiscalError({
+    if (!Ee.existsSync(e.certificatePath))
+      throw new I({
         code: "CERTIFICATE_FILE_NOT_FOUND",
-        message: `Arquivo do certificado não encontrado: ${config2.certificatePath}`,
+        message: `Arquivo do certificado não encontrado: ${e.certificatePath}`,
         category: "CERTIFICATE"
       });
-    }
-    const pem = this.readCertificatePem(config2);
-    if (!pem) {
-      throw new FiscalError({
+    const r = this.readCertificatePem(e);
+    if (!r)
+      throw new I({
         code: "CERTIFICATE_FORMAT_NOT_SUPPORTED",
         message: "Formato de certificado não suportado pela camada fiscal atual.",
         category: "CERTIFICATE"
       });
-    }
-    const certificate = new X509Certificate(pem);
-    if (new Date(certificate.validTo).getTime() < Date.now()) {
-      throw new FiscalError({
+    const a = new Jr(r);
+    if (new Date(a.validTo).getTime() < Date.now())
+      throw new I({
         code: "CERTIFICATE_EXPIRED",
         message: "O certificado digital configurado está expirado.",
         category: "CERTIFICATE"
       });
-    }
   }
 }
-function mapFiscalSettings(row) {
+function aa(t) {
   return {
-    id: row.id,
-    storeId: row.store_id,
-    provider: row.provider,
-    documentModel: row.document_model,
-    contingencyMode: row.contingency_mode,
-    sefazBaseUrl: row.sefaz_base_url,
-    gatewayBaseUrl: row.gateway_base_url,
-    gatewayApiKey: row.gateway_api_key,
-    certificateType: row.certificate_type,
-    certificatePath: row.certificate_path,
-    certificatePassword: row.certificate_password,
-    certificateValidUntil: row.certificate_valid_until,
-    caBundlePath: row.ca_bundle_path,
-    tlsValidationMode: row.tls_validation_mode,
-    active: Boolean(row.active),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    storeId: t.store_id,
+    provider: t.provider,
+    documentModel: t.document_model,
+    contingencyMode: t.contingency_mode,
+    sefazBaseUrl: t.sefaz_base_url,
+    gatewayBaseUrl: t.gateway_base_url,
+    gatewayApiKey: t.gateway_api_key,
+    certificateType: t.certificate_type,
+    certificatePath: t.certificate_path,
+    certificatePassword: t.certificate_password,
+    certificateValidUntil: t.certificate_valid_until,
+    caBundlePath: t.ca_bundle_path,
+    tlsValidationMode: t.tls_validation_mode,
+    active: !!t.active,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-class FiscalSettingsRepository {
-  findActiveByStoreId(storeId) {
-    const row = db.prepare(`
+class Ti {
+  findActiveByStoreId(e) {
+    const r = u.prepare(`
       SELECT *
       FROM fiscal_settings
       WHERE store_id = ? AND active = 1
       ORDER BY id DESC
       LIMIT 1
-    `).get(storeId);
-    return row ? mapFiscalSettings(row) : null;
+    `).get(e);
+    return r ? aa(r) : null;
   }
-  upsertActive(input) {
-    const current = this.findActiveByStoreId(input.storeId);
-    if (!current) {
-      const result = db.prepare(`
+  upsertActive(e) {
+    const r = this.findActiveByStoreId(e.storeId);
+    if (!r) {
+      const a = u.prepare(`
         INSERT INTO fiscal_settings (
           store_id,
           provider,
@@ -3707,24 +3269,24 @@ class FiscalSettingsRepository {
           updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(
-        input.storeId,
-        input.provider,
-        input.documentModel ?? 65,
-        input.contingencyMode ?? "queue",
-        input.sefazBaseUrl ?? null,
-        input.gatewayBaseUrl ?? null,
-        input.gatewayApiKey ?? null,
-        input.certificateType ?? "A1",
-        input.certificatePath ?? null,
-        input.certificatePassword ?? null,
-        input.certificateValidUntil ?? null,
-        input.caBundlePath ?? null,
-        input.tlsValidationMode ?? "strict",
-        booleanToInt(input.active ?? true)
+        e.storeId,
+        e.provider,
+        e.documentModel ?? 65,
+        e.contingencyMode ?? "queue",
+        e.sefazBaseUrl ?? null,
+        e.gatewayBaseUrl ?? null,
+        e.gatewayApiKey ?? null,
+        e.certificateType ?? "A1",
+        e.certificatePath ?? null,
+        e.certificatePassword ?? null,
+        e.certificateValidUntil ?? null,
+        e.caBundlePath ?? null,
+        e.tlsValidationMode ?? "strict",
+        Vt(e.active ?? !0)
       );
-      return this.findById(Number(result.lastInsertRowid));
+      return this.findById(Number(a.lastInsertRowid));
     }
-    db.prepare(`
+    return u.prepare(`
       UPDATE fiscal_settings
       SET
         provider = ?,
@@ -3743,45 +3305,42 @@ class FiscalSettingsRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      input.provider,
-      input.documentModel ?? current.documentModel,
-      input.contingencyMode ?? current.contingencyMode ?? "queue",
-      input.sefazBaseUrl ?? null,
-      input.gatewayBaseUrl ?? null,
-      input.gatewayApiKey ?? null,
-      input.certificateType ?? current.certificateType,
-      input.certificatePath ?? null,
-      input.certificatePassword ?? null,
-      input.certificateValidUntil ?? null,
-      input.caBundlePath ?? null,
-      input.tlsValidationMode ?? current.tlsValidationMode,
-      booleanToInt(input.active ?? current.active),
-      current.id
-    );
-    return this.findById(current.id);
+      e.provider,
+      e.documentModel ?? r.documentModel,
+      e.contingencyMode ?? r.contingencyMode ?? "queue",
+      e.sefazBaseUrl ?? null,
+      e.gatewayBaseUrl ?? null,
+      e.gatewayApiKey ?? null,
+      e.certificateType ?? r.certificateType,
+      e.certificatePath ?? null,
+      e.certificatePassword ?? null,
+      e.certificateValidUntil ?? null,
+      e.caBundlePath ?? null,
+      e.tlsValidationMode ?? r.tlsValidationMode,
+      Vt(e.active ?? r.active),
+      r.id
+    ), this.findById(r.id);
   }
-  findById(id) {
-    const row = db.prepare(`
+  findById(e) {
+    const r = u.prepare(`
       SELECT *
       FROM fiscal_settings
       WHERE id = ?
       LIMIT 1
-    `).get(id);
-    return row ? mapFiscalSettings(row) : null;
+    `).get(e);
+    return r ? aa(r) : null;
   }
 }
-const fiscalSettingsRepository = new FiscalSettingsRepository();
-const FISCAL_INTEGRATION_ID = "fiscal:nfce";
-const CONFIG_SENTINEL = "__FISCAL_CONFIG__";
-function nowIso$1() {
+const cn = new Ti(), ht = "fiscal:nfce", na = "__FISCAL_CONFIG__";
+function Dr() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
-function defaultConfig() {
+function oa() {
   return {
     provider: "mock",
     environment: "homologation",
     contingencyMode: "queue",
-    integrationId: FISCAL_INTEGRATION_ID,
+    integrationId: ht,
     gatewayApiKey: null,
     gatewayBaseUrl: null,
     sefazBaseUrl: null,
@@ -3796,72 +3355,68 @@ function defaultConfig() {
     certificateValidUntil: null,
     caBundlePath: null,
     tlsValidationMode: "strict",
-    updatedAt: nowIso$1()
+    updatedAt: Dr()
   };
 }
-function sanitizeForView$1(config2) {
+function sa(t) {
   return {
-    provider: config2.provider,
-    environment: config2.environment,
-    contingencyMode: config2.contingencyMode,
-    integrationId: config2.integrationId,
-    gatewayBaseUrl: config2.gatewayBaseUrl ?? null,
-    sefazBaseUrl: config2.sefazBaseUrl ?? null,
-    certificatePath: config2.certificatePath ?? null,
-    cscId: config2.cscId ?? null,
-    uf: config2.uf ?? "SP",
-    model: config2.model ?? 65,
-    defaultSeries: config2.defaultSeries ?? null,
-    certificateType: config2.certificateType ?? "A1",
-    certificateValidUntil: config2.certificateValidUntil ?? null,
-    caBundlePath: config2.caBundlePath ?? null,
-    tlsValidationMode: config2.tlsValidationMode ?? "strict",
-    hasGatewayApiKey: Boolean(config2.gatewayApiKey),
-    hasCertificatePassword: Boolean(config2.certificatePassword),
-    hasCscToken: Boolean(config2.cscToken),
-    updatedAt: config2.updatedAt
+    provider: t.provider,
+    environment: t.environment,
+    contingencyMode: t.contingencyMode,
+    integrationId: t.integrationId,
+    gatewayBaseUrl: t.gatewayBaseUrl ?? null,
+    sefazBaseUrl: t.sefazBaseUrl ?? null,
+    certificatePath: t.certificatePath ?? null,
+    cscId: t.cscId ?? null,
+    uf: t.uf ?? "SP",
+    model: t.model ?? 65,
+    defaultSeries: t.defaultSeries ?? null,
+    certificateType: t.certificateType ?? "A1",
+    certificateValidUntil: t.certificateValidUntil ?? null,
+    caBundlePath: t.caBundlePath ?? null,
+    tlsValidationMode: t.tlsValidationMode ?? "strict",
+    hasGatewayApiKey: !!t.gatewayApiKey,
+    hasCertificatePassword: !!t.certificatePassword,
+    hasCscToken: !!t.cscToken,
+    updatedAt: t.updatedAt
   };
 }
-class IntegrationFiscalSettingsService {
+class un {
   /**
    * Legacy fallback only.
    * Fiscal runtime must use FiscalSettingsService/FiscalContextResolver as the primary source.
    */
   getConfig() {
-    const row = db.prepare(`
+    const e = u.prepare(`
       SELECT integration_id, raw_json, updated_at
       FROM integrations
       WHERE integration_id = ?
       LIMIT 1
-    `).get(FISCAL_INTEGRATION_ID);
-    if (!(row == null ? void 0 : row.raw_json)) {
-      logger.warn("[FiscalConfig] Configuracao fiscal fiscal:nfce nao encontrada. Usando defaults.");
-      return defaultConfig();
-    }
-    const parsed = JSON.parse(row.raw_json);
-    logger.info(`[FiscalConfig] Configuracao fiscal carregada provider=${parsed.provider ?? "mock"} ambiente=${parsed.environment ?? "homologation"} uf=${parsed.uf ?? "SP"}.`);
-    return {
-      ...defaultConfig(),
-      ...parsed,
-      integrationId: FISCAL_INTEGRATION_ID,
-      updatedAt: parsed.updatedAt ?? row.updated_at ?? nowIso$1()
+    `).get(ht);
+    if (!(e != null && e.raw_json))
+      return f.warn("[FiscalConfig] Configuracao fiscal fiscal:nfce nao encontrada. Usando defaults."), oa();
+    const r = JSON.parse(e.raw_json);
+    return f.info(`[FiscalConfig] Configuracao fiscal carregada provider=${r.provider ?? "mock"} ambiente=${r.environment ?? "homologation"} uf=${r.uf ?? "SP"}.`), {
+      ...oa(),
+      ...r,
+      integrationId: ht,
+      updatedAt: r.updatedAt ?? e.updated_at ?? Dr()
     };
   }
   getConfigView() {
-    return sanitizeForView$1(this.getConfig());
+    return sa(this.getConfig());
   }
-  saveConfig(input) {
-    const current = this.getConfig();
-    const next = {
-      ...current,
-      ...input,
-      gatewayApiKey: input.gatewayApiKey === "" ? current.gatewayApiKey : input.gatewayApiKey ?? current.gatewayApiKey,
-      certificatePassword: input.certificatePassword === "" ? current.certificatePassword : input.certificatePassword ?? current.certificatePassword,
-      cscToken: input.cscToken === "" ? current.cscToken : input.cscToken ?? current.cscToken,
-      integrationId: FISCAL_INTEGRATION_ID,
-      updatedAt: nowIso$1()
+  saveConfig(e) {
+    const r = this.getConfig(), a = {
+      ...r,
+      ...e,
+      gatewayApiKey: e.gatewayApiKey === "" ? r.gatewayApiKey : e.gatewayApiKey ?? r.gatewayApiKey,
+      certificatePassword: e.certificatePassword === "" ? r.certificatePassword : e.certificatePassword ?? r.certificatePassword,
+      cscToken: e.cscToken === "" ? r.cscToken : e.cscToken ?? r.cscToken,
+      integrationId: ht,
+      updatedAt: Dr()
     };
-    db.prepare(`
+    return u.prepare(`
       INSERT INTO integrations (
         integration_id,
         access_token,
@@ -3881,495 +3436,403 @@ class IntegrationFiscalSettingsService {
         raw_json = excluded.raw_json,
         updated_at = excluded.updated_at
     `).run(
-      FISCAL_INTEGRATION_ID,
-      CONFIG_SENTINEL,
-      CONFIG_SENTINEL,
+      ht,
+      na,
+      na,
       "CONFIG",
       "9999-12-31T23:59:59.999Z",
       "fiscal:nfce",
-      JSON.stringify(next),
-      next.updatedAt
-    );
-    logger.info(`[FiscalConfig] Configuracao fiscal salva provider=${next.provider} ambiente=${next.environment} uf=${next.uf ?? "SP"}.`);
-    return sanitizeForView$1(next);
+      JSON.stringify(a),
+      a.updatedAt
+    ), f.info(`[FiscalConfig] Configuracao fiscal salva provider=${a.provider} ambiente=${a.environment} uf=${a.uf ?? "SP"}.`), sa(a);
   }
 }
-function toTaxRegimeCode$1(value) {
-  const normalized = String(value ?? "").trim();
-  if (["1", "2", "3", "4"].includes(normalized)) {
-    return normalized;
-  }
-  throw new Error(`CRT/regime tributario invalido na company legada: ${normalized || "vazio"}.`);
+function fi(t) {
+  const e = String(t ?? "").trim();
+  if (["1", "2", "3", "4"].includes(e))
+    return e;
+  throw new Error(`CRT/regime tributario invalido na company legada: ${e || "vazio"}.`);
 }
-function mapCompanyToStoreInput(company) {
+function Ni(t) {
   return {
     code: "MAIN",
-    name: company.nome_fantasia,
-    legalName: company.razao_social,
-    cnpj: company.cnpj,
-    stateRegistration: company.inscricao_estadual,
-    taxRegimeCode: toTaxRegimeCode$1(company.crt),
-    environment: company.ambiente_emissao === 1 ? "production" : "homologation",
-    cscId: company.csc_id,
-    cscToken: company.csc_token,
-    defaultSeries: Number(company.serie_nfce ?? 1),
-    nextNfceNumber: Number(company.proximo_numero_nfce ?? 1),
-    addressStreet: company.rua,
-    addressNumber: company.numero,
-    addressNeighborhood: company.bairro,
-    addressCity: company.cidade,
-    addressState: company.uf,
-    addressZipCode: company.cep,
-    addressCityIbgeCode: company.cod_municipio_ibge,
-    active: Boolean(company.ativo)
+    name: t.nome_fantasia,
+    legalName: t.razao_social,
+    cnpj: t.cnpj,
+    stateRegistration: t.inscricao_estadual,
+    taxRegimeCode: fi(t.crt),
+    environment: t.ambiente_emissao === 1 ? "production" : "homologation",
+    cscId: t.csc_id,
+    cscToken: t.csc_token,
+    defaultSeries: Number(t.serie_nfce ?? 1),
+    nextNfceNumber: Number(t.proximo_numero_nfce ?? 1),
+    addressStreet: t.rua,
+    addressNumber: t.numero,
+    addressNeighborhood: t.bairro,
+    addressCity: t.cidade,
+    addressState: t.uf,
+    addressZipCode: t.cep,
+    addressCityIbgeCode: t.cod_municipio_ibge,
+    active: !!t.ativo
   };
 }
-function ensureActiveFiscalStore() {
-  const existing = storeRepository.findActive();
-  if (existing) return existing;
-  const company = db.prepare(`
+function dn() {
+  const t = se.findActive();
+  if (t) return t;
+  const e = u.prepare(`
     SELECT *
     FROM company
     WHERE ativo = 1
     ORDER BY id ASC
     LIMIT 1
   `).get();
-  if (!company) {
-    logger.warn("[FiscalStore] Nenhuma store ativa e nenhuma company ativa encontrada.");
-    return null;
-  }
-  const store = storeRepository.create(mapCompanyToStoreInput(company));
-  logger.info(`[FiscalStore] Store fiscal criada a partir de company ativa store=${store.id}.`);
-  return store;
+  if (!e)
+    return f.warn("[FiscalStore] Nenhuma store ativa e nenhuma company ativa encontrada."), null;
+  const r = se.create(Ni(e));
+  return f.info(`[FiscalStore] Store fiscal criada a partir de company ativa store=${r.id}.`), r;
 }
-const LEGACY_INTEGRATION_ID$1 = "fiscal:nfce";
-function normalizeUf(value) {
-  return (value ?? "SP").trim().toUpperCase() || "SP";
+const gi = "fiscal:nfce";
+function Ai(t) {
+  return (t ?? "SP").trim().toUpperCase() || "SP";
 }
-function mapSettingsToProviderConfig(context) {
+function hi(t) {
   return {
-    provider: context.provider,
-    environment: context.environment,
-    contingencyMode: context.contingencyMode,
-    integrationId: LEGACY_INTEGRATION_ID$1,
-    certificateType: context.certificateType ?? "A1",
-    sefazBaseUrl: context.sefazBaseUrl ?? null,
-    gatewayBaseUrl: context.gatewayBaseUrl ?? null,
-    gatewayApiKey: context.gatewayApiKey ?? null,
-    certificatePath: context.certificatePath ?? null,
-    certificatePassword: context.certificatePassword ?? null,
-    certificateValidUntil: context.certificateValidUntil ?? null,
-    caBundlePath: context.caBundlePath ?? null,
-    tlsValidationMode: context.tlsValidationMode,
-    cscId: context.cscId ?? null,
-    cscToken: context.cscToken ?? null,
-    uf: context.uf,
-    model: context.documentModel,
-    defaultSeries: context.defaultSeries,
-    updatedAt: context.updatedAt
+    provider: t.provider,
+    environment: t.environment,
+    contingencyMode: t.contingencyMode,
+    integrationId: gi,
+    certificateType: t.certificateType ?? "A1",
+    sefazBaseUrl: t.sefazBaseUrl ?? null,
+    gatewayBaseUrl: t.gatewayBaseUrl ?? null,
+    gatewayApiKey: t.gatewayApiKey ?? null,
+    certificatePath: t.certificatePath ?? null,
+    certificatePassword: t.certificatePassword ?? null,
+    certificateValidUntil: t.certificateValidUntil ?? null,
+    caBundlePath: t.caBundlePath ?? null,
+    tlsValidationMode: t.tlsValidationMode,
+    cscId: t.cscId ?? null,
+    cscToken: t.cscToken ?? null,
+    uf: t.uf,
+    model: t.documentModel,
+    defaultSeries: t.defaultSeries,
+    updatedAt: t.updatedAt
   };
 }
-class FiscalContextResolver {
-  constructor(legacySettings = new IntegrationFiscalSettingsService()) {
-    this.legacySettings = legacySettings;
+class Ii {
+  constructor(e = new un()) {
+    this.legacySettings = e;
   }
-  resolve(storeId) {
-    const effectiveStore = storeId ? storeRepository.findById(storeId) : ensureActiveFiscalStore();
-    if (storeId && !effectiveStore) {
-      throw new Error(`Store fiscal ${storeId} não encontrada ou inativa.`);
-    }
-    if (!effectiveStore) {
+  resolve(e) {
+    const r = e ? se.findById(e) : dn();
+    if (e && !r)
+      throw new Error(`Store fiscal ${e} não encontrada ou inativa.`);
+    if (!r)
       throw new Error("Nenhuma store fiscal ativa encontrada. Cadastre os dados do emitente antes da emissão.");
-    }
-    const settings = fiscalSettingsRepository.findActiveByStoreId(effectiveStore.id);
-    const legacy = settings ? null : this.legacySettings.getConfig();
-    const legacyFallbackUsed = !settings && Boolean(legacy);
-    if (legacyFallbackUsed) {
-      logger.warn(`[FiscalContext] Usando fallback legado integrations para store=${effectiveStore.id}.`);
-    }
-    const settingsSource = settings ? "fiscal_settings" : legacyFallbackUsed ? "integrations-fallback" : "defaults";
-    return this.buildContext(effectiveStore, settings, legacy ?? null, settingsSource, legacyFallbackUsed);
+    const a = cn.findActiveByStoreId(r.id), n = a ? null : this.legacySettings.getConfig(), o = !a && !!n;
+    o && f.warn(`[FiscalContext] Usando fallback legado integrations para store=${r.id}.`);
+    const s = a ? "fiscal_settings" : o ? "integrations-fallback" : "defaults";
+    return this.buildContext(r, a, n ?? null, s, o);
   }
-  resolveProviderConfig(storeId) {
-    return mapSettingsToProviderConfig(this.resolve(storeId));
+  resolveProviderConfig(e) {
+    return hi(this.resolve(e));
   }
-  buildContext(store, settings, legacy, settingsSource, legacyFallbackUsed) {
+  buildContext(e, r, a, n, o) {
     return {
-      storeId: store.id,
-      provider: (settings == null ? void 0 : settings.provider) ?? (legacy == null ? void 0 : legacy.provider) ?? "mock",
-      environment: store.environment,
-      contingencyMode: (settings == null ? void 0 : settings.contingencyMode) ?? (legacy == null ? void 0 : legacy.contingencyMode) ?? "queue",
+      storeId: e.id,
+      provider: (r == null ? void 0 : r.provider) ?? (a == null ? void 0 : a.provider) ?? "mock",
+      environment: e.environment,
+      contingencyMode: (r == null ? void 0 : r.contingencyMode) ?? (a == null ? void 0 : a.contingencyMode) ?? "queue",
       documentModel: 65,
-      sefazBaseUrl: (settings == null ? void 0 : settings.sefazBaseUrl) ?? (legacy == null ? void 0 : legacy.sefazBaseUrl) ?? null,
-      gatewayBaseUrl: (settings == null ? void 0 : settings.gatewayBaseUrl) ?? (legacy == null ? void 0 : legacy.gatewayBaseUrl) ?? null,
-      gatewayApiKey: (settings == null ? void 0 : settings.gatewayApiKey) ?? (legacy == null ? void 0 : legacy.gatewayApiKey) ?? null,
-      certificateType: (settings == null ? void 0 : settings.certificateType) ?? (legacy == null ? void 0 : legacy.certificateType) ?? "A1",
-      certificatePath: (settings == null ? void 0 : settings.certificatePath) ?? (legacy == null ? void 0 : legacy.certificatePath) ?? null,
-      certificatePassword: (settings == null ? void 0 : settings.certificatePassword) ?? (legacy == null ? void 0 : legacy.certificatePassword) ?? null,
-      certificateValidUntil: (settings == null ? void 0 : settings.certificateValidUntil) ?? (legacy == null ? void 0 : legacy.certificateValidUntil) ?? null,
-      caBundlePath: (settings == null ? void 0 : settings.caBundlePath) ?? (legacy == null ? void 0 : legacy.caBundlePath) ?? null,
-      tlsValidationMode: (settings == null ? void 0 : settings.tlsValidationMode) ?? (legacy == null ? void 0 : legacy.tlsValidationMode) ?? "strict",
-      cscId: store.cscId ?? (legacy == null ? void 0 : legacy.cscId) ?? null,
-      cscToken: store.cscToken ?? (legacy == null ? void 0 : legacy.cscToken) ?? null,
-      uf: normalizeUf(store.addressState ?? (legacy == null ? void 0 : legacy.uf)),
-      defaultSeries: store.defaultSeries,
-      nextNfceNumber: store.nextNfceNumber,
+      sefazBaseUrl: (r == null ? void 0 : r.sefazBaseUrl) ?? (a == null ? void 0 : a.sefazBaseUrl) ?? null,
+      gatewayBaseUrl: (r == null ? void 0 : r.gatewayBaseUrl) ?? (a == null ? void 0 : a.gatewayBaseUrl) ?? null,
+      gatewayApiKey: (r == null ? void 0 : r.gatewayApiKey) ?? (a == null ? void 0 : a.gatewayApiKey) ?? null,
+      certificateType: (r == null ? void 0 : r.certificateType) ?? (a == null ? void 0 : a.certificateType) ?? "A1",
+      certificatePath: (r == null ? void 0 : r.certificatePath) ?? (a == null ? void 0 : a.certificatePath) ?? null,
+      certificatePassword: (r == null ? void 0 : r.certificatePassword) ?? (a == null ? void 0 : a.certificatePassword) ?? null,
+      certificateValidUntil: (r == null ? void 0 : r.certificateValidUntil) ?? (a == null ? void 0 : a.certificateValidUntil) ?? null,
+      caBundlePath: (r == null ? void 0 : r.caBundlePath) ?? (a == null ? void 0 : a.caBundlePath) ?? null,
+      tlsValidationMode: (r == null ? void 0 : r.tlsValidationMode) ?? (a == null ? void 0 : a.tlsValidationMode) ?? "strict",
+      cscId: e.cscId ?? (a == null ? void 0 : a.cscId) ?? null,
+      cscToken: e.cscToken ?? (a == null ? void 0 : a.cscToken) ?? null,
+      uf: Ai(e.addressState ?? (a == null ? void 0 : a.uf)),
+      defaultSeries: e.defaultSeries,
+      nextNfceNumber: e.nextNfceNumber,
       emitter: {
-        cnpj: store.cnpj,
-        stateRegistration: store.stateRegistration,
-        legalName: store.legalName,
-        tradeName: store.name,
-        taxRegimeCode: store.taxRegimeCode,
+        cnpj: e.cnpj,
+        stateRegistration: e.stateRegistration,
+        legalName: e.legalName,
+        tradeName: e.name,
+        taxRegimeCode: e.taxRegimeCode,
         address: {
-          street: store.addressStreet,
-          number: store.addressNumber,
-          neighborhood: store.addressNeighborhood,
-          city: store.addressCity,
-          state: store.addressState,
-          zipCode: store.addressZipCode,
-          cityIbgeCode: store.addressCityIbgeCode
+          street: e.addressStreet,
+          number: e.addressNumber,
+          neighborhood: e.addressNeighborhood,
+          city: e.addressCity,
+          state: e.addressState,
+          zipCode: e.addressZipCode,
+          cityIbgeCode: e.addressCityIbgeCode
         }
       },
       source: {
         store: "stores",
-        settings: settingsSource,
-        legacyFallbackUsed
+        settings: n,
+        legacyFallbackUsed: o
       },
-      updatedAt: (settings == null ? void 0 : settings.updatedAt) ?? (legacy == null ? void 0 : legacy.updatedAt) ?? store.updatedAt
+      updatedAt: (r == null ? void 0 : r.updatedAt) ?? (a == null ? void 0 : a.updatedAt) ?? e.updatedAt
     };
   }
 }
-const fiscalContextResolver = new FiscalContextResolver();
-const LEGACY_INTEGRATION_ID = "fiscal:nfce";
-function sanitizeForView(config2) {
+const Oe = new Ii(), Ci = "fiscal:nfce";
+function ia(t) {
   return {
-    provider: config2.provider,
-    environment: config2.environment,
-    contingencyMode: config2.contingencyMode,
-    integrationId: config2.integrationId,
-    certificateType: config2.certificateType ?? "A1",
-    gatewayBaseUrl: config2.gatewayBaseUrl ?? null,
-    sefazBaseUrl: config2.sefazBaseUrl ?? null,
-    certificatePath: config2.certificatePath ?? null,
-    certificateValidUntil: config2.certificateValidUntil ?? null,
-    caBundlePath: config2.caBundlePath ?? null,
-    tlsValidationMode: config2.tlsValidationMode ?? "strict",
-    cscId: config2.cscId ?? null,
-    uf: config2.uf ?? "SP",
-    model: config2.model ?? 65,
-    defaultSeries: config2.defaultSeries ?? null,
-    hasGatewayApiKey: Boolean(config2.gatewayApiKey),
-    hasCertificatePassword: Boolean(config2.certificatePassword),
-    hasCscToken: Boolean(config2.cscToken),
-    updatedAt: config2.updatedAt
+    provider: t.provider,
+    environment: t.environment,
+    contingencyMode: t.contingencyMode,
+    integrationId: t.integrationId,
+    certificateType: t.certificateType ?? "A1",
+    gatewayBaseUrl: t.gatewayBaseUrl ?? null,
+    sefazBaseUrl: t.sefazBaseUrl ?? null,
+    certificatePath: t.certificatePath ?? null,
+    certificateValidUntil: t.certificateValidUntil ?? null,
+    caBundlePath: t.caBundlePath ?? null,
+    tlsValidationMode: t.tlsValidationMode ?? "strict",
+    cscId: t.cscId ?? null,
+    uf: t.uf ?? "SP",
+    model: t.model ?? 65,
+    defaultSeries: t.defaultSeries ?? null,
+    hasGatewayApiKey: !!t.gatewayApiKey,
+    hasCertificatePassword: !!t.certificatePassword,
+    hasCscToken: !!t.cscToken,
+    updatedAt: t.updatedAt
   };
 }
-function normalizeNullableText(value) {
-  if (value === void 0 || value === null) return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+function Re(t) {
+  if (t == null) return null;
+  const e = t.trim();
+  return e.length > 0 ? e : null;
 }
-class FiscalSettingsService {
-  constructor(legacySettings = new IntegrationFiscalSettingsService()) {
-    this.legacySettings = legacySettings;
+class vi {
+  constructor(e = new un()) {
+    this.legacySettings = e;
   }
   getConfig() {
-    return fiscalContextResolver.resolveProviderConfig();
+    return Oe.resolveProviderConfig();
   }
   getConfigView() {
-    return sanitizeForView(this.getConfig());
+    return ia(this.getConfig());
   }
-  saveConfig(input) {
-    const store = ensureActiveFiscalStore();
-    if (!store) {
+  saveConfig(e) {
+    const r = dn();
+    if (!r)
       throw new Error("Nenhuma store fiscal ativa encontrada. Cadastre os dados do emitente antes de salvar a configuração fiscal.");
-    }
-    const current = this.getConfig();
-    const nextPassword = input.certificatePassword === "" ? current.certificatePassword : input.certificatePassword ?? current.certificatePassword ?? null;
-    const nextGatewayApiKey = input.gatewayApiKey === "" ? current.gatewayApiKey : input.gatewayApiKey ?? current.gatewayApiKey ?? null;
-    const nextCscToken = input.cscToken === "" ? current.cscToken : input.cscToken ?? current.cscToken ?? null;
-    const updatedStore = storeRepository.updateFiscalConfiguration(store.id, {
-      environment: input.environment,
-      cscId: normalizeNullableText(input.cscId) ?? current.cscId ?? null,
-      cscToken: nextCscToken,
-      defaultSeries: input.defaultSeries ?? current.defaultSeries ?? store.defaultSeries
-    });
-    const settings = fiscalSettingsRepository.upsertActive({
-      storeId: updatedStore.id,
-      provider: input.provider,
-      documentModel: input.model ?? 65,
-      contingencyMode: input.contingencyMode,
-      sefazBaseUrl: normalizeNullableText(input.sefazBaseUrl),
-      gatewayBaseUrl: normalizeNullableText(input.gatewayBaseUrl),
-      gatewayApiKey: normalizeNullableText(nextGatewayApiKey),
-      certificateType: input.certificateType ?? current.certificateType ?? "A1",
-      certificatePath: normalizeNullableText(input.certificatePath) ?? current.certificatePath ?? null,
-      certificatePassword: normalizeNullableText(nextPassword),
-      certificateValidUntil: normalizeNullableText(input.certificateValidUntil) ?? current.certificateValidUntil ?? null,
-      caBundlePath: normalizeNullableText(input.caBundlePath),
-      tlsValidationMode: input.tlsValidationMode ?? current.tlsValidationMode ?? "strict",
-      active: true
-    });
-    const nextConfig = fiscalContextResolver.resolveProviderConfig(updatedStore.id);
-    this.mirrorLegacyConfig(nextConfig);
-    logger.info(`[FiscalConfig] Configuracao fiscal salva em fiscal_settings store=${settings.storeId} provider=${settings.provider} ambiente=${updatedStore.environment}.`);
-    return sanitizeForView(nextConfig);
+    const a = this.getConfig(), n = e.certificatePassword === "" ? a.certificatePassword : e.certificatePassword ?? a.certificatePassword ?? null, o = e.gatewayApiKey === "" ? a.gatewayApiKey : e.gatewayApiKey ?? a.gatewayApiKey ?? null, s = e.cscToken === "" ? a.cscToken : e.cscToken ?? a.cscToken ?? null, i = se.updateFiscalConfiguration(r.id, {
+      environment: e.environment,
+      cscId: Re(e.cscId) ?? a.cscId ?? null,
+      cscToken: s,
+      defaultSeries: e.defaultSeries ?? a.defaultSeries ?? r.defaultSeries
+    }), c = cn.upsertActive({
+      storeId: i.id,
+      provider: e.provider,
+      documentModel: e.model ?? 65,
+      contingencyMode: e.contingencyMode,
+      sefazBaseUrl: Re(e.sefazBaseUrl),
+      gatewayBaseUrl: Re(e.gatewayBaseUrl),
+      gatewayApiKey: Re(o),
+      certificateType: e.certificateType ?? a.certificateType ?? "A1",
+      certificatePath: Re(e.certificatePath) ?? a.certificatePath ?? null,
+      certificatePassword: Re(n),
+      certificateValidUntil: Re(e.certificateValidUntil) ?? a.certificateValidUntil ?? null,
+      caBundlePath: Re(e.caBundlePath),
+      tlsValidationMode: e.tlsValidationMode ?? a.tlsValidationMode ?? "strict",
+      active: !0
+    }), l = Oe.resolveProviderConfig(i.id);
+    return this.mirrorLegacyConfig(l), f.info(`[FiscalConfig] Configuracao fiscal salva em fiscal_settings store=${c.storeId} provider=${c.provider} ambiente=${i.environment}.`), ia(l);
   }
-  mirrorLegacyConfig(config2) {
+  mirrorLegacyConfig(e) {
     try {
       this.legacySettings.saveConfig({
-        provider: config2.provider,
-        environment: config2.environment,
-        contingencyMode: config2.contingencyMode,
-        certificateType: config2.certificateType,
-        sefazBaseUrl: config2.sefazBaseUrl,
-        gatewayBaseUrl: config2.gatewayBaseUrl,
-        gatewayApiKey: config2.gatewayApiKey,
-        certificatePath: config2.certificatePath,
-        certificatePassword: config2.certificatePassword,
-        certificateValidUntil: config2.certificateValidUntil,
-        caBundlePath: config2.caBundlePath,
-        tlsValidationMode: config2.tlsValidationMode,
-        cscId: config2.cscId,
-        cscToken: config2.cscToken,
-        uf: config2.uf,
-        model: config2.model,
-        defaultSeries: config2.defaultSeries
+        provider: e.provider,
+        environment: e.environment,
+        contingencyMode: e.contingencyMode,
+        certificateType: e.certificateType,
+        sefazBaseUrl: e.sefazBaseUrl,
+        gatewayBaseUrl: e.gatewayBaseUrl,
+        gatewayApiKey: e.gatewayApiKey,
+        certificatePath: e.certificatePath,
+        certificatePassword: e.certificatePassword,
+        certificateValidUntil: e.certificateValidUntil,
+        caBundlePath: e.caBundlePath,
+        tlsValidationMode: e.tlsValidationMode,
+        cscId: e.cscId,
+        cscToken: e.cscToken,
+        uf: e.uf,
+        model: e.model,
+        defaultSeries: e.defaultSeries
       });
-    } catch (error) {
-      logger.warn(`[FiscalConfig] Falha ao espelhar configuracao fiscal no legado integrations: ${error instanceof Error ? error.message : String(error)}`);
+    } catch (r) {
+      f.warn(`[FiscalConfig] Falha ao espelhar configuracao fiscal no legado integrations: ${r instanceof Error ? r.message : String(r)}`);
     }
   }
   getLegacyRowForDiagnostics() {
-    return db.prepare(`
+    return u.prepare(`
       SELECT integration_id, updated_at
       FROM integrations
       WHERE integration_id = ?
       LIMIT 1
-    `).get(LEGACY_INTEGRATION_ID);
+    `).get(Ci);
   }
 }
-function onlyDigits$2(value) {
-  return String(value ?? "").replace(/\D/g, "");
+function mt(t) {
+  return String(t ?? "").replace(/\D/g, "");
 }
-function hasText(value) {
-  return typeof value === "string" && value.trim().length > 0;
+function w(t) {
+  return typeof t == "string" && t.trim().length > 0;
 }
-function addIssue(issues, code, message, field, table, severity = "error") {
-  issues.push({ code, message, field, table, severity });
+function D(t, e, r, a, n, o = "error") {
+  t.push({ code: e, message: r, field: a, table: n, severity: o });
 }
-class FiscalReadinessValidator {
-  validateContext(context) {
-    const issues = [];
-    if (onlyDigits$2(context.emitter.cnpj).length !== 14) {
-      addIssue(issues, "EMITTER_CNPJ_REQUIRED", "CNPJ do emitente deve ter 14 digitos.", "cnpj", "stores");
-    }
-    if (!hasText(context.emitter.stateRegistration)) {
-      addIssue(issues, "EMITTER_IE_REQUIRED", "IE do emitente e obrigatoria.", "state_registration", "stores");
-    }
-    if (!hasText(context.emitter.legalName)) {
-      addIssue(issues, "EMITTER_LEGAL_NAME_REQUIRED", "Razao social do emitente e obrigatoria.", "legal_name", "stores");
-    }
-    if (!hasText(context.emitter.taxRegimeCode)) {
-      addIssue(issues, "EMITTER_TAX_REGIME_REQUIRED", "Regime tributario/CRT e obrigatorio.", "tax_regime_code", "stores");
-    }
-    const address = context.emitter.address;
-    if (!hasText(address.street)) addIssue(issues, "EMITTER_STREET_REQUIRED", "Logradouro do emitente e obrigatorio.", "address_street", "stores");
-    if (!hasText(address.number)) addIssue(issues, "EMITTER_NUMBER_REQUIRED", "Numero do endereco do emitente e obrigatorio.", "address_number", "stores");
-    if (!hasText(address.neighborhood)) addIssue(issues, "EMITTER_NEIGHBORHOOD_REQUIRED", "Bairro do emitente e obrigatorio.", "address_neighborhood", "stores");
-    if (!hasText(address.city)) addIssue(issues, "EMITTER_CITY_REQUIRED", "Municipio do emitente e obrigatorio.", "address_city", "stores");
-    if (!hasText(address.state) || address.state.length !== 2) addIssue(issues, "EMITTER_UF_REQUIRED", "UF do emitente deve ter 2 letras.", "address_state", "stores");
-    if (onlyDigits$2(address.zipCode).length !== 8) addIssue(issues, "EMITTER_ZIP_REQUIRED", "CEP do emitente deve ter 8 digitos.", "address_zip_code", "stores");
-    if (onlyDigits$2(address.cityIbgeCode).length !== 7) addIssue(issues, "EMITTER_IBGE_REQUIRED", "Codigo IBGE do municipio deve ter 7 digitos.", "address_city_ibge_code", "stores");
-    if (!context.environment) addIssue(issues, "FISCAL_ENVIRONMENT_REQUIRED", "Ambiente fiscal e obrigatorio.", "environment", "stores");
-    if (!context.provider) addIssue(issues, "FISCAL_PROVIDER_REQUIRED", "Provider fiscal e obrigatorio.", "provider", "fiscal_settings");
-    if (context.provider === "sefaz-direct" && !hasText(context.sefazBaseUrl) && context.uf !== "SP") {
-      addIssue(issues, "SEFAZ_URL_REQUIRED", "URL SEFAZ deve ser configurada para UF diferente de SP.", "sefaz_base_url", "fiscal_settings");
-    }
-    if (context.provider === "gateway" && !hasText(context.gatewayBaseUrl)) {
-      addIssue(issues, "GATEWAY_URL_REQUIRED", "URL do gateway fiscal e obrigatoria para provider gateway.", "gateway_base_url", "fiscal_settings");
-    }
-    if (context.provider === "gateway" && !hasText(context.gatewayApiKey)) {
-      addIssue(issues, "GATEWAY_API_KEY_REQUIRED", "API key do gateway fiscal e obrigatoria para provider gateway.", "gateway_api_key", "fiscal_settings");
-    }
-    if (context.provider !== "mock") {
-      if (!hasText(context.certificatePath)) addIssue(issues, "CERTIFICATE_PATH_REQUIRED", "Certificado A1 e obrigatorio para emissao real.", "certificate_path", "fiscal_settings");
-      if (!hasText(context.certificatePassword)) addIssue(issues, "CERTIFICATE_PASSWORD_REQUIRED", "Senha do certificado A1 e obrigatoria.", "certificate_password", "fiscal_settings");
-      if (!hasText(context.cscId)) addIssue(issues, "CSC_ID_REQUIRED", "CSC ID e obrigatorio para NFC-e.", "csc_id", "stores");
-      if (!hasText(context.cscToken)) addIssue(issues, "CSC_TOKEN_REQUIRED", "CSC token e obrigatorio para NFC-e.", "csc_token", "stores");
-    }
-    if (!Number.isInteger(context.defaultSeries) || context.defaultSeries <= 0) {
-      addIssue(issues, "DEFAULT_SERIES_REQUIRED", "Serie padrao NFC-e deve ser maior que zero.", "default_series", "stores");
-    }
-    if (!Number.isInteger(context.nextNfceNumber) || context.nextNfceNumber <= 0) {
-      addIssue(issues, "NEXT_NFCE_NUMBER_REQUIRED", "Proximo numero NFC-e deve ser maior que zero.", "next_nfce_number", "stores");
-    }
-    return this.toResult(issues);
+class Di {
+  validateContext(e) {
+    const r = [];
+    mt(e.emitter.cnpj).length !== 14 && D(r, "EMITTER_CNPJ_REQUIRED", "CNPJ do emitente deve ter 14 digitos.", "cnpj", "stores"), w(e.emitter.stateRegistration) || D(r, "EMITTER_IE_REQUIRED", "IE do emitente e obrigatoria.", "state_registration", "stores"), w(e.emitter.legalName) || D(r, "EMITTER_LEGAL_NAME_REQUIRED", "Razao social do emitente e obrigatoria.", "legal_name", "stores"), w(e.emitter.taxRegimeCode) || D(r, "EMITTER_TAX_REGIME_REQUIRED", "Regime tributario/CRT e obrigatorio.", "tax_regime_code", "stores");
+    const a = e.emitter.address;
+    return w(a.street) || D(r, "EMITTER_STREET_REQUIRED", "Logradouro do emitente e obrigatorio.", "address_street", "stores"), w(a.number) || D(r, "EMITTER_NUMBER_REQUIRED", "Numero do endereco do emitente e obrigatorio.", "address_number", "stores"), w(a.neighborhood) || D(r, "EMITTER_NEIGHBORHOOD_REQUIRED", "Bairro do emitente e obrigatorio.", "address_neighborhood", "stores"), w(a.city) || D(r, "EMITTER_CITY_REQUIRED", "Municipio do emitente e obrigatorio.", "address_city", "stores"), (!w(a.state) || a.state.length !== 2) && D(r, "EMITTER_UF_REQUIRED", "UF do emitente deve ter 2 letras.", "address_state", "stores"), mt(a.zipCode).length !== 8 && D(r, "EMITTER_ZIP_REQUIRED", "CEP do emitente deve ter 8 digitos.", "address_zip_code", "stores"), mt(a.cityIbgeCode).length !== 7 && D(r, "EMITTER_IBGE_REQUIRED", "Codigo IBGE do municipio deve ter 7 digitos.", "address_city_ibge_code", "stores"), e.environment || D(r, "FISCAL_ENVIRONMENT_REQUIRED", "Ambiente fiscal e obrigatorio.", "environment", "stores"), e.provider || D(r, "FISCAL_PROVIDER_REQUIRED", "Provider fiscal e obrigatorio.", "provider", "fiscal_settings"), e.provider === "sefaz-direct" && !w(e.sefazBaseUrl) && e.uf !== "SP" && D(r, "SEFAZ_URL_REQUIRED", "URL SEFAZ deve ser configurada para UF diferente de SP.", "sefaz_base_url", "fiscal_settings"), e.provider === "gateway" && !w(e.gatewayBaseUrl) && D(r, "GATEWAY_URL_REQUIRED", "URL do gateway fiscal e obrigatoria para provider gateway.", "gateway_base_url", "fiscal_settings"), e.provider === "gateway" && !w(e.gatewayApiKey) && D(r, "GATEWAY_API_KEY_REQUIRED", "API key do gateway fiscal e obrigatoria para provider gateway.", "gateway_api_key", "fiscal_settings"), e.provider !== "mock" && (w(e.certificatePath) || D(r, "CERTIFICATE_PATH_REQUIRED", "Certificado A1 e obrigatorio para emissao real.", "certificate_path", "fiscal_settings"), w(e.certificatePassword) || D(r, "CERTIFICATE_PASSWORD_REQUIRED", "Senha do certificado A1 e obrigatoria.", "certificate_password", "fiscal_settings"), w(e.cscId) || D(r, "CSC_ID_REQUIRED", "CSC ID e obrigatorio para NFC-e.", "csc_id", "stores"), w(e.cscToken) || D(r, "CSC_TOKEN_REQUIRED", "CSC token e obrigatorio para NFC-e.", "csc_token", "stores")), (!Number.isInteger(e.defaultSeries) || e.defaultSeries <= 0) && D(r, "DEFAULT_SERIES_REQUIRED", "Serie padrao NFC-e deve ser maior que zero.", "default_series", "stores"), (!Number.isInteger(e.nextNfceNumber) || e.nextNfceNumber <= 0) && D(r, "NEXT_NFCE_NUMBER_REQUIRED", "Proximo numero NFC-e deve ser maior que zero.", "next_nfce_number", "stores"), this.toResult(r);
   }
-  validateAuthorizeReadiness(context, request) {
-    const contextResult = this.validateContext(context);
-    const issues = [...contextResult.errors, ...contextResult.warnings];
-    this.validateItems(request.items, issues);
-    this.validatePayments(request.payments, issues);
-    if (!request.totals || request.totals.finalAmount <= 0) {
-      addIssue(issues, "SALE_TOTAL_REQUIRED", "Total da venda deve ser maior que zero.", "totals.finalAmount", "sales");
-    }
-    return this.toResult(issues);
+  validateAuthorizeReadiness(e, r) {
+    const a = this.validateContext(e), n = [...a.errors, ...a.warnings];
+    return this.validateItems(r.items, n), this.validatePayments(r.payments, n), (!r.totals || r.totals.finalAmount <= 0) && D(n, "SALE_TOTAL_REQUIRED", "Total da venda deve ser maior que zero.", "totals.finalAmount", "sales"), this.toResult(n);
   }
-  validateItems(items, issues) {
-    if (!Array.isArray(items) || items.length === 0) {
-      addIssue(issues, "SALE_ITEMS_REQUIRED", "Venda deve possuir ao menos um item.", "items", "sale_items");
+  validateItems(e, r) {
+    if (!Array.isArray(e) || e.length === 0) {
+      D(r, "SALE_ITEMS_REQUIRED", "Venda deve possuir ao menos um item.", "items", "sale_items");
       return;
     }
-    items.forEach((item, index) => {
-      var _a, _b, _c, _d, _e, _f, _g;
-      const prefix = `items[${index}]`;
-      if (!hasText(item.description)) addIssue(issues, "ITEM_DESCRIPTION_REQUIRED", "Descricao do item e obrigatoria.", `${prefix}.description`, "sale_items");
-      if (!hasText(item.unit)) addIssue(issues, "ITEM_UNIT_REQUIRED", "Unidade do item e obrigatoria.", `${prefix}.unit`, "sale_items");
-      if (item.quantity <= 0) addIssue(issues, "ITEM_QUANTITY_REQUIRED", "Quantidade do item deve ser maior que zero.", `${prefix}.quantity`, "sale_items");
-      if (item.unitPrice <= 0) addIssue(issues, "ITEM_UNIT_PRICE_REQUIRED", "Valor unitario do item deve ser maior que zero.", `${prefix}.unitPrice`, "sale_items");
-      if (onlyDigits$2((_a = item.tax) == null ? void 0 : _a.ncm).length !== 8) addIssue(issues, "ITEM_NCM_REQUIRED", `NCM do item "${item.description}" deve ter 8 digitos. Corrija o cadastro do produto antes de emitir NFC-e.`, `${prefix}.tax.ncm`, "sale_items");
-      if (onlyDigits$2((_b = item.tax) == null ? void 0 : _b.cfop).length !== 4) addIssue(issues, "ITEM_CFOP_REQUIRED", "CFOP do item deve ter 4 digitos.", `${prefix}.tax.cfop`, "sale_items");
-      if (!hasText((_c = item.tax) == null ? void 0 : _c.originCode)) addIssue(issues, "ITEM_ORIGIN_REQUIRED", `Origem tributaria do item "${item.description}" e obrigatoria.`, `${prefix}.tax.originCode`, "sale_item_tax_snapshot");
-      if (!hasText((_d = item.tax) == null ? void 0 : _d.csosn) && !hasText((_e = item.tax) == null ? void 0 : _e.icmsCst)) addIssue(issues, "ITEM_ICMS_REQUIRED", `CST ou CSOSN do ICMS do item "${item.description}" e obrigatorio.`, `${prefix}.tax`, "sale_item_tax_snapshot");
-      if (!hasText((_f = item.tax) == null ? void 0 : _f.pisCst)) addIssue(issues, "ITEM_PIS_REQUIRED", `CST de PIS do item "${item.description}" e obrigatorio.`, `${prefix}.tax.pisCst`, "sale_item_tax_snapshot");
-      if (!hasText((_g = item.tax) == null ? void 0 : _g.cofinsCst)) addIssue(issues, "ITEM_COFINS_REQUIRED", `CST de COFINS do item "${item.description}" e obrigatorio.`, `${prefix}.tax.cofinsCst`, "sale_item_tax_snapshot");
+    e.forEach((a, n) => {
+      var s, i, c, l, d, m, E;
+      const o = `items[${n}]`;
+      w(a.description) || D(r, "ITEM_DESCRIPTION_REQUIRED", "Descricao do item e obrigatoria.", `${o}.description`, "sale_items"), w(a.unit) || D(r, "ITEM_UNIT_REQUIRED", "Unidade do item e obrigatoria.", `${o}.unit`, "sale_items"), a.quantity <= 0 && D(r, "ITEM_QUANTITY_REQUIRED", "Quantidade do item deve ser maior que zero.", `${o}.quantity`, "sale_items"), a.unitPrice <= 0 && D(r, "ITEM_UNIT_PRICE_REQUIRED", "Valor unitario do item deve ser maior que zero.", `${o}.unitPrice`, "sale_items"), mt((s = a.tax) == null ? void 0 : s.ncm).length !== 8 && D(r, "ITEM_NCM_REQUIRED", `NCM do item "${a.description}" deve ter 8 digitos. Corrija o cadastro do produto antes de emitir NFC-e.`, `${o}.tax.ncm`, "sale_items"), mt((i = a.tax) == null ? void 0 : i.cfop).length !== 4 && D(r, "ITEM_CFOP_REQUIRED", "CFOP do item deve ter 4 digitos.", `${o}.tax.cfop`, "sale_items"), w((c = a.tax) == null ? void 0 : c.originCode) || D(r, "ITEM_ORIGIN_REQUIRED", `Origem tributaria do item "${a.description}" e obrigatoria.`, `${o}.tax.originCode`, "sale_item_tax_snapshot"), !w((l = a.tax) == null ? void 0 : l.csosn) && !w((d = a.tax) == null ? void 0 : d.icmsCst) && D(r, "ITEM_ICMS_REQUIRED", `CST ou CSOSN do ICMS do item "${a.description}" e obrigatorio.`, `${o}.tax`, "sale_item_tax_snapshot"), w((m = a.tax) == null ? void 0 : m.pisCst) || D(r, "ITEM_PIS_REQUIRED", `CST de PIS do item "${a.description}" e obrigatorio.`, `${o}.tax.pisCst`, "sale_item_tax_snapshot"), w((E = a.tax) == null ? void 0 : E.cofinsCst) || D(r, "ITEM_COFINS_REQUIRED", `CST de COFINS do item "${a.description}" e obrigatorio.`, `${o}.tax.cofinsCst`, "sale_item_tax_snapshot");
     });
   }
-  validatePayments(payments, issues) {
-    if (!Array.isArray(payments) || payments.length === 0) {
-      addIssue(issues, "PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments", "payments");
+  validatePayments(e, r) {
+    if (!Array.isArray(e) || e.length === 0) {
+      D(r, "PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments", "payments");
       return;
     }
-    payments.forEach((payment, index) => {
-      const prefix = `payments[${index}]`;
-      if (!hasText(payment.method)) addIssue(issues, "PAYMENT_METHOD_REQUIRED", "Forma de pagamento e obrigatoria.", `${prefix}.method`, "payments");
-      if (payment.amount <= 0) addIssue(issues, "PAYMENT_AMOUNT_REQUIRED", "Valor do pagamento deve ser maior que zero.", `${prefix}.amount`, "payments");
+    e.forEach((a, n) => {
+      const o = `payments[${n}]`;
+      w(a.method) || D(r, "PAYMENT_METHOD_REQUIRED", "Forma de pagamento e obrigatoria.", `${o}.method`, "payments"), a.amount <= 0 && D(r, "PAYMENT_AMOUNT_REQUIRED", "Valor do pagamento deve ser maior que zero.", `${o}.amount`, "payments");
     });
   }
-  toResult(issues) {
-    const errors = issues.filter((issue) => issue.severity === "error");
-    const warnings = issues.filter((issue) => issue.severity === "warning");
-    return { ok: errors.length === 0, errors, warnings };
+  toResult(e) {
+    const r = e.filter((n) => n.severity === "error"), a = e.filter((n) => n.severity === "warning");
+    return { ok: r.length === 0, errors: r, warnings: a };
   }
 }
-const fiscalReadinessValidator = new FiscalReadinessValidator();
-const VALID_TAX_REGIME_CODES = ["1", "2", "3", "4"];
-function isTaxRegimeCode(value) {
-  return VALID_TAX_REGIME_CODES.includes(value);
+const Ur = new Di(), Si = ["1", "2", "3", "4"];
+function Ri(t) {
+  return Si.includes(t);
 }
-function cleanDigits(value) {
-  return String(value ?? "").replace(/\D/g, "");
+function ir(t) {
+  return String(t ?? "").replace(/\D/g, "");
 }
-function cleanText(value) {
-  return String(value ?? "").trim();
+function $e(t) {
+  return String(t ?? "").trim();
 }
-function requireText(input, field, label) {
-  const value = cleanText(String(input[field] ?? ""));
-  if (!value) {
-    throw new Error(`${label} e obrigatorio.`);
-  }
-  return value;
+function je(t, e, r) {
+  const a = $e(String(t[e] ?? ""));
+  if (!a)
+    throw new Error(`${r} e obrigatorio.`);
+  return a;
 }
-function normalizeStoreInput(input) {
-  const normalized = {
-    id: input.id,
-    code: cleanText(input.code || "MAIN") || "MAIN",
-    name: requireText(input, "name", "Nome fantasia"),
-    legalName: requireText(input, "legalName", "Razao social"),
-    cnpj: cleanDigits(input.cnpj),
-    stateRegistration: cleanText(input.stateRegistration),
-    taxRegimeCode: cleanText(input.taxRegimeCode),
-    environment: input.environment === "production" ? "production" : "homologation",
-    cscId: cleanText(input.cscId ?? "") || null,
-    cscToken: cleanText(input.cscToken ?? "") || null,
-    defaultSeries: Number(input.defaultSeries ?? 1),
-    nextNfceNumber: Number(input.nextNfceNumber ?? 1),
-    addressStreet: requireText(input, "addressStreet", "Logradouro"),
-    addressNumber: requireText(input, "addressNumber", "Numero"),
-    addressNeighborhood: requireText(input, "addressNeighborhood", "Bairro"),
-    addressCity: requireText(input, "addressCity", "Cidade"),
-    addressState: cleanText(input.addressState).toUpperCase(),
-    addressZipCode: cleanDigits(input.addressZipCode),
-    addressCityIbgeCode: cleanDigits(input.addressCityIbgeCode),
-    active: true
+function Li(t) {
+  const e = {
+    id: t.id,
+    code: $e(t.code || "MAIN") || "MAIN",
+    name: je(t, "name", "Nome fantasia"),
+    legalName: je(t, "legalName", "Razao social"),
+    cnpj: ir(t.cnpj),
+    stateRegistration: $e(t.stateRegistration),
+    taxRegimeCode: $e(t.taxRegimeCode),
+    environment: t.environment === "production" ? "production" : "homologation",
+    cscId: $e(t.cscId ?? "") || null,
+    cscToken: $e(t.cscToken ?? "") || null,
+    defaultSeries: Number(t.defaultSeries ?? 1),
+    nextNfceNumber: Number(t.nextNfceNumber ?? 1),
+    addressStreet: je(t, "addressStreet", "Logradouro"),
+    addressNumber: je(t, "addressNumber", "Numero"),
+    addressNeighborhood: je(t, "addressNeighborhood", "Bairro"),
+    addressCity: je(t, "addressCity", "Cidade"),
+    addressState: $e(t.addressState).toUpperCase(),
+    addressZipCode: ir(t.addressZipCode),
+    addressCityIbgeCode: ir(t.addressCityIbgeCode),
+    active: !0
   };
-  if (normalized.cnpj.length !== 14) {
+  if (e.cnpj.length !== 14)
     throw new Error("CNPJ deve conter 14 digitos.");
-  }
-  if (!normalized.stateRegistration) {
+  if (!e.stateRegistration)
     throw new Error("Inscricao estadual e obrigatoria.");
-  }
-  if (!normalized.taxRegimeCode) {
+  if (!e.taxRegimeCode)
     throw new Error("CRT/regime tributario e obrigatorio.");
-  }
-  if (!isTaxRegimeCode(normalized.taxRegimeCode)) {
+  if (!Ri(e.taxRegimeCode))
     throw new Error("CRT deve ser 1, 2, 3 ou 4.");
-  }
-  if (normalized.addressState.length !== 2) {
+  if (e.addressState.length !== 2)
     throw new Error("UF deve conter 2 letras.");
-  }
-  if (normalized.addressZipCode.length !== 8) {
+  if (e.addressZipCode.length !== 8)
     throw new Error("CEP deve conter 8 digitos.");
-  }
-  if (normalized.addressCityIbgeCode.length !== 7) {
+  if (e.addressCityIbgeCode.length !== 7)
     throw new Error("Codigo IBGE do municipio deve conter 7 digitos.");
-  }
-  if (!Number.isInteger(normalized.defaultSeries ?? 0) || (normalized.defaultSeries ?? 0) <= 0) {
+  if (!Number.isInteger(e.defaultSeries ?? 0) || (e.defaultSeries ?? 0) <= 0)
     throw new Error("Serie padrao NFC-e deve ser maior que zero.");
-  }
-  if (!Number.isInteger(normalized.nextNfceNumber ?? 0) || (normalized.nextNfceNumber ?? 0) <= 0) {
+  if (!Number.isInteger(e.nextNfceNumber ?? 0) || (e.nextNfceNumber ?? 0) <= 0)
     throw new Error("Proximo numero NFC-e deve ser maior que zero.");
-  }
-  return normalized;
+  return e;
 }
-class FiscalStoreService {
+class yi {
   getActiveStore() {
-    return storeRepository.findActive();
+    return se.findActive();
   }
-  saveActiveStore(input) {
-    const store = storeRepository.upsertActive(normalizeStoreInput(input));
-    logger.info(`[FiscalStore] Store fiscal salva id=${store.id} cnpj=${store.cnpj} ambiente=${store.environment}.`);
-    return store;
+  saveActiveStore(e) {
+    const r = se.upsertActive(Li(e));
+    return f.info(`[FiscalStore] Store fiscal salva id=${r.id} cnpj=${r.cnpj} ambiente=${r.environment}.`), r;
   }
 }
-const fiscalStoreService = new FiscalStoreService();
-function toPersistedDocument(row) {
+const Oi = new yi();
+function cr(t) {
   return {
-    id: row.id,
-    saleId: row.sale_id,
-    companyId: row.store_id,
-    number: row.number,
-    series: row.series,
-    model: row.model,
-    environment: row.environment,
-    status: row.status,
-    issueType: row.contingency_type ? 9 : 1,
-    accessKey: row.access_key,
-    authorizationProtocol: row.protocol,
-    receiptNumber: row.receipt_number,
-    statusCode: row.rejection_code,
-    statusMessage: row.rejection_reason,
-    issuedAt: row.issued_datetime ?? row.created_at,
-    authorizedAt: row.authorization_datetime,
-    cancelledAt: row.cancel_datetime,
-    cancellationProtocol: row.protocol,
-    xmlBuilt: row.xml,
-    xmlSigned: row.xml_signed,
-    xmlSent: row.xml,
-    xmlAuthorized: row.xml_authorized,
-    xmlCancellation: row.xml_cancellation,
-    danfePath: row.danfe_path,
-    qrCodeUrl: row.qr_code_url,
+    id: t.id,
+    saleId: t.sale_id,
+    companyId: t.store_id,
+    number: t.number,
+    series: t.series,
+    model: t.model,
+    environment: t.environment,
+    status: t.status,
+    issueType: t.contingency_type ? 9 : 1,
+    accessKey: t.access_key,
+    authorizationProtocol: t.protocol,
+    receiptNumber: t.receipt_number,
+    statusCode: t.rejection_code,
+    statusMessage: t.rejection_reason,
+    issuedAt: t.issued_datetime ?? t.created_at,
+    authorizedAt: t.authorization_datetime,
+    cancelledAt: t.cancel_datetime,
+    cancellationProtocol: t.protocol,
+    xmlBuilt: t.xml,
+    xmlSigned: t.xml_signed,
+    xmlSent: t.xml,
+    xmlAuthorized: t.xml_authorized,
+    xmlCancellation: t.xml_cancellation,
+    danfePath: t.danfe_path,
+    qrCodeUrl: t.qr_code_url,
     digestValue: null,
-    contingencyJustification: row.contingency_type,
+    contingencyJustification: t.contingency_type,
     cancellationJustification: null,
-    updatedAt: row.updated_at,
-    createdAt: row.created_at
+    updatedAt: t.updated_at,
+    createdAt: t.created_at
   };
 }
-function toQueueStatus(status) {
-  switch (status) {
+function bi(t) {
+  switch (t) {
     case "PENDING":
       return "pending";
     case "PROCESSING":
@@ -4381,40 +3844,37 @@ function toQueueStatus(status) {
       return "failed";
   }
 }
-function toQueueItem(row) {
-  const payload = JSON.parse(row.payload_json);
-  const result = row.result_json ? JSON.parse(row.result_json) : null;
-  const parsedEntityId = Number(row.entity_id);
+function ur(t) {
+  const e = JSON.parse(t.payload_json), r = t.result_json ? JSON.parse(t.result_json) : null, a = Number(t.entity_id);
   return {
-    id: String(row.id),
-    saleId: Number((payload == null ? void 0 : payload.saleId) ?? 0),
-    documentId: Number.isNaN(parsedEntityId) ? null : parsedEntityId,
-    operation: row.operation,
-    payload,
-    result,
-    status: toQueueStatus(row.status),
-    idempotencyKey: row.idempotency_key,
-    attempts: row.attempts,
+    id: String(t.id),
+    saleId: Number((e == null ? void 0 : e.saleId) ?? 0),
+    documentId: Number.isNaN(a) ? null : a,
+    operation: t.operation,
+    payload: e,
+    result: r,
+    status: bi(t.status),
+    idempotencyKey: t.idempotency_key,
+    attempts: t.attempts,
     maxAttempts: 5,
-    nextRetryAt: row.next_attempt_at,
-    lastErrorCode: row.last_error ?? null,
-    lastErrorMessage: row.last_error ?? null,
-    lockedAt: row.locked_at,
-    lockedBy: row.locked_by,
-    processedAt: row.processed_at ?? (row.status === "DONE" ? row.updated_at : null),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    nextRetryAt: t.next_attempt_at,
+    lastErrorCode: t.last_error ?? null,
+    lastErrorMessage: t.last_error ?? null,
+    lockedAt: t.locked_at,
+    lockedBy: t.locked_by,
+    processedAt: t.processed_at ?? (t.status === "DONE" ? t.updated_at : null),
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-class SqliteFiscalRepository {
+class Ui {
   ensureSchema() {
   }
-  createPendingDocument(request) {
-    const existing = this.findBySaleId(request.saleId);
-    if (existing) {
-      return existing;
-    }
-    const result = db.prepare(`
+  createPendingDocument(e) {
+    const r = this.findBySaleId(e.saleId);
+    if (r)
+      return r;
+    const a = u.prepare(`
       INSERT INTO fiscal_documents (
         sale_id, store_id, model, series, number, access_key, environment, status,
         issued_datetime, xml, xml_signed, xml_authorized, xml_cancellation, protocol, receipt_number, qr_code_url, authorization_datetime,
@@ -4422,19 +3882,19 @@ class SqliteFiscalRepository {
         provider, created_at, updated_at
       ) VALUES (?, ?, 65, ?, ?, NULL, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ?, NULL, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
-      request.saleId,
-      request.companyId,
-      request.series,
-      request.number,
-      request.environment,
-      request.offlineFallbackMode === "queue" ? "QUEUED" : "PENDING",
-      request.issuedAt,
-      request.offlineFallbackMode === "offline-contingency" ? "offline-contingency" : null
+      e.saleId,
+      e.companyId,
+      e.series,
+      e.number,
+      e.environment,
+      e.offlineFallbackMode === "queue" ? "QUEUED" : "PENDING",
+      e.issuedAt,
+      e.offlineFallbackMode === "offline-contingency" ? "offline-contingency" : null
     );
-    return this.findById(Number(result.lastInsertRowid));
+    return this.findById(Number(a.lastInsertRowid));
   }
-  updateTransmissionArtifacts(documentId, input) {
-    db.prepare(`
+  updateTransmissionArtifacts(e, r) {
+    u.prepare(`
       UPDATE fiscal_documents
       SET
         issued_datetime = COALESCE(?, issued_datetime),
@@ -4446,17 +3906,17 @@ class SqliteFiscalRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      input.issuedAt ?? null,
-      input.accessKey ?? null,
-      input.xmlBuilt ?? null,
-      input.xmlSigned ?? null,
-      input.xmlAuthorized ?? null,
-      input.xmlCancellation ?? null,
-      documentId
+      r.issuedAt ?? null,
+      r.accessKey ?? null,
+      r.xmlBuilt ?? null,
+      r.xmlSigned ?? null,
+      r.xmlAuthorized ?? null,
+      r.xmlCancellation ?? null,
+      e
     );
   }
-  markAsAuthorized(documentId, response) {
-    db.prepare(`
+  markAsAuthorized(e, r) {
+    return u.prepare(`
       UPDATE fiscal_documents
       SET
         status = 'AUTHORIZED',
@@ -4475,24 +3935,23 @@ class SqliteFiscalRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      response.accessKey ?? null,
-      response.protocol ?? null,
-      response.receiptNumber ?? null,
-      response.qrCodeUrl ?? null,
-      response.authorizedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      response.issuedAt ?? null,
-      response.xmlBuilt ?? response.xmlSent ?? null,
-      response.xmlSigned ?? null,
-      response.xmlAuthorized ?? null,
-      response.statusCode ?? null,
-      response.statusMessage,
-      response.provider ?? null,
-      documentId
-    );
-    return this.findById(documentId);
+      r.accessKey ?? null,
+      r.protocol ?? null,
+      r.receiptNumber ?? null,
+      r.qrCodeUrl ?? null,
+      r.authorizedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      r.issuedAt ?? null,
+      r.xmlBuilt ?? r.xmlSent ?? null,
+      r.xmlSigned ?? null,
+      r.xmlAuthorized ?? null,
+      r.statusCode ?? null,
+      r.statusMessage,
+      r.provider ?? null,
+      e
+    ), this.findById(e);
   }
-  markAsRejected(documentId, response) {
-    db.prepare(`
+  markAsRejected(e, r) {
+    return u.prepare(`
       UPDATE fiscal_documents
       SET
         status = ?,
@@ -4510,24 +3969,23 @@ class SqliteFiscalRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      response.status,
-      response.accessKey ?? null,
-      response.protocol ?? null,
-      response.receiptNumber ?? null,
-      response.qrCodeUrl ?? null,
-      response.issuedAt ?? null,
-      response.xmlBuilt ?? response.xmlSent ?? null,
-      response.xmlSigned ?? null,
-      response.xmlAuthorized ?? null,
-      response.statusCode ?? null,
-      response.statusMessage,
-      response.provider ?? null,
-      documentId
-    );
-    return this.findById(documentId);
+      r.status,
+      r.accessKey ?? null,
+      r.protocol ?? null,
+      r.receiptNumber ?? null,
+      r.qrCodeUrl ?? null,
+      r.issuedAt ?? null,
+      r.xmlBuilt ?? r.xmlSent ?? null,
+      r.xmlSigned ?? null,
+      r.xmlAuthorized ?? null,
+      r.statusCode ?? null,
+      r.statusMessage,
+      r.provider ?? null,
+      e
+    ), this.findById(e);
   }
-  markAsCancelled(documentId, _request, response) {
-    db.prepare(`
+  markAsCancelled(e, r, a) {
+    return u.prepare(`
       UPDATE fiscal_documents
       SET
         status = 'CANCELLED',
@@ -4540,37 +3998,36 @@ class SqliteFiscalRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      response.cancelledAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      response.cancellationProtocol ?? null,
-      response.xmlAuthorized ?? null,
-      response.xmlCancellation ?? null,
-      response.statusCode ?? null,
-      response.statusMessage,
-      documentId
-    );
-    return this.findById(documentId);
+      a.cancelledAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      a.cancellationProtocol ?? null,
+      a.xmlAuthorized ?? null,
+      a.xmlCancellation ?? null,
+      a.statusCode ?? null,
+      a.statusMessage,
+      e
+    ), this.findById(e);
   }
-  updateDanfePath(documentId, danfePath) {
-    db.prepare(`
+  updateDanfePath(e, r) {
+    u.prepare(`
       UPDATE fiscal_documents
       SET danfe_path = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(danfePath, documentId);
+    `).run(r, e);
   }
-  findById(documentId) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1`).get(documentId);
-    return row ? toPersistedDocument(row) : null;
+  findById(e) {
+    const r = u.prepare("SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1").get(e);
+    return r ? cr(r) : null;
   }
-  findBySaleId(saleId) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(saleId);
-    return row ? toPersistedDocument(row) : null;
+  findBySaleId(e) {
+    const r = u.prepare("SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1").get(e);
+    return r ? cr(r) : null;
   }
-  findByAccessKey(accessKey) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1`).get(accessKey);
-    return row ? toPersistedDocument(row) : null;
+  findByAccessKey(e) {
+    const r = u.prepare("SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1").get(e);
+    return r ? cr(r) : null;
   }
-  updateStatus(documentId, status, statusCode, statusMessage) {
-    db.prepare(`
+  updateStatus(e, r, a, n) {
+    u.prepare(`
       UPDATE fiscal_documents
       SET
         status = ?,
@@ -4578,68 +4035,59 @@ class SqliteFiscalRepository {
         rejection_reason = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(status, statusCode ?? null, statusMessage ?? null, documentId);
+    `).run(r, a ?? null, n ?? null, e);
   }
-  enqueue(request) {
-    const existing = this.findQueueItemByIdempotencyKey(request.idempotencyKey);
-    if (existing) {
-      return existing;
-    }
-    const result = db.prepare(`
+  enqueue(e) {
+    const r = this.findQueueItemByIdempotencyKey(e.idempotencyKey);
+    if (r)
+      return r;
+    const a = u.prepare(`
       INSERT INTO sync_queue (
         entity_type, entity_id, operation, payload_json, status, attempts,
         next_attempt_at, last_error, idempotency_key, created_at, updated_at
       ) VALUES (?, ?, ?, ?, 'PENDING', 0, CURRENT_TIMESTAMP, NULL, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
       "fiscal_document",
-      String(request.documentId ?? request.saleId),
-      request.operation,
-      JSON.stringify(request.payload),
-      request.idempotencyKey
+      String(e.documentId ?? e.saleId),
+      e.operation,
+      JSON.stringify(e.payload),
+      e.idempotencyKey
     );
-    return this.findQueueItemById(String(result.lastInsertRowid));
+    return this.findQueueItemById(String(a.lastInsertRowid));
   }
-  findQueueItemByIdempotencyKey(idempotencyKey) {
-    const row = db.prepare(`
+  findQueueItemByIdempotencyKey(e) {
+    const r = u.prepare(`
       SELECT * FROM sync_queue
       WHERE idempotency_key = ?
       LIMIT 1
-    `).get(idempotencyKey);
-    return row ? toQueueItem(row) : null;
+    `).get(e);
+    return r ? ur(r) : null;
   }
-  findQueueItemById(queueId) {
-    const row = db.prepare(`SELECT * FROM sync_queue WHERE id = ? LIMIT 1`).get(Number(queueId));
-    return row ? toQueueItem(row) : null;
+  findQueueItemById(e) {
+    const r = u.prepare("SELECT * FROM sync_queue WHERE id = ? LIMIT 1").get(Number(e));
+    return r ? ur(r) : null;
   }
-  claimNextQueueItem(nowIso2, _workerId) {
-    const row = db.prepare(`
+  claimNextQueueItem(e, r) {
+    const a = u.prepare(`
       SELECT * FROM sync_queue
       WHERE status IN ('PENDING', 'FAILED')
         AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
       ORDER BY created_at ASC
       LIMIT 1
-    `).get(nowIso2);
-    if (!row) {
-      return null;
-    }
-    this.markQueueItemProcessing(String(row.id), "main", nowIso2);
-    return this.findQueueItemById(String(row.id));
+    `).get(e);
+    return a ? (this.markQueueItemProcessing(String(a.id), "main", e), this.findQueueItemById(String(a.id))) : null;
   }
-  claimQueueItemById(queueId, nowIso2, workerId) {
-    const row = db.prepare(`
+  claimQueueItemById(e, r, a) {
+    const n = u.prepare(`
       SELECT * FROM sync_queue
       WHERE id = ?
         AND status IN ('PENDING', 'FAILED')
       LIMIT 1
-    `).get(Number(queueId));
-    if (!row) {
-      return null;
-    }
-    this.markQueueItemProcessing(String(row.id), workerId, nowIso2);
-    return this.findQueueItemById(String(row.id));
+    `).get(Number(e));
+    return n ? (this.markQueueItemProcessing(String(n.id), a, r), this.findQueueItemById(String(n.id))) : null;
   }
-  markQueueItemProcessing(queueId, workerId, nowIso2) {
-    db.prepare(`
+  markQueueItemProcessing(e, r, a) {
+    u.prepare(`
       UPDATE sync_queue
       SET
         status = 'PROCESSING',
@@ -4648,10 +4096,10 @@ class SqliteFiscalRepository {
         locked_by = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(nowIso2, workerId, Number(queueId));
+    `).run(a, r, Number(e));
   }
-  markQueueItemDone(queueId, processedAtIso, result) {
-    db.prepare(`
+  markQueueItemDone(e, r, a) {
+    u.prepare(`
       UPDATE sync_queue
       SET
         status = 'DONE',
@@ -4662,11 +4110,11 @@ class SqliteFiscalRepository {
         locked_by = NULL,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(result === void 0 ? null : JSON.stringify(result), processedAtIso, Number(queueId));
+    `).run(a === void 0 ? null : JSON.stringify(a), r, Number(e));
   }
-  markQueueItemFailed(queueId, errorCode, errorMessage, nextRetryAtIso, failedAtIso, result) {
-    const message = [errorCode, errorMessage].filter(Boolean).join(": ");
-    db.prepare(`
+  markQueueItemFailed(e, r, a, n, o, s) {
+    const i = [r, a].filter(Boolean).join(": ");
+    u.prepare(`
       UPDATE sync_queue
       SET
         status = 'FAILED',
@@ -4679,275 +4127,244 @@ class SqliteFiscalRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      message,
-      nextRetryAtIso ?? null,
-      result === void 0 ? null : JSON.stringify(result),
-      failedAtIso,
-      Number(queueId)
+      i,
+      n ?? null,
+      s === void 0 ? null : JSON.stringify(s),
+      o,
+      Number(e)
     );
   }
-  listQueueItems(limit = 20) {
-    const rows = db.prepare(`
+  listQueueItems(e = 20) {
+    return u.prepare(`
       SELECT * FROM sync_queue
       ORDER BY created_at DESC
       LIMIT ?
-    `).all(limit);
-    return rows.map(toQueueItem);
+    `).all(e).map(ur);
   }
   summarizeQueue() {
-    const rows = db.prepare(`
+    const e = u.prepare(`
       SELECT status, COUNT(*) as total
       FROM sync_queue
       GROUP BY status
-    `).all();
-    const summary = {
+    `).all(), r = {
       pending: 0,
       processing: 0,
       failed: 0,
       done: 0,
       nextRetryAt: null
     };
-    for (const row of rows) {
-      if (row.status === "PENDING") summary.pending = row.total;
-      if (row.status === "PROCESSING") summary.processing = row.total;
-      if (row.status === "FAILED") summary.failed = row.total;
-      if (row.status === "DONE") summary.done = row.total;
-    }
-    const nextRetry = db.prepare(`
+    for (const n of e)
+      n.status === "PENDING" && (r.pending = n.total), n.status === "PROCESSING" && (r.processing = n.total), n.status === "FAILED" && (r.failed = n.total), n.status === "DONE" && (r.done = n.total);
+    const a = u.prepare(`
       SELECT next_attempt_at
       FROM sync_queue
       WHERE status = 'FAILED' AND next_attempt_at IS NOT NULL
       ORDER BY next_attempt_at ASC
       LIMIT 1
     `).get();
-    summary.nextRetryAt = (nextRetry == null ? void 0 : nextRetry.next_attempt_at) ?? null;
-    return summary;
+    return r.nextRetryAt = (a == null ? void 0 : a.next_attempt_at) ?? null, r;
   }
 }
-function resolveBaseUrl(config2) {
-  var _a;
-  const baseUrl = (_a = config2.gatewayBaseUrl) == null ? void 0 : _a.trim();
-  if (!baseUrl) {
-    throw new FiscalError({
+function pt(t) {
+  var r;
+  const e = (r = t.gatewayBaseUrl) == null ? void 0 : r.trim();
+  if (!e)
+    throw new I({
       code: "GATEWAY_BASE_URL_REQUIRED",
       message: "Gateway fiscal não configurado.",
       category: "CONFIGURATION"
     });
-  }
-  return baseUrl.replace(/\/+$/, "");
+  return e.replace(/\/+$/, "");
 }
-function resolveHeaders(config2) {
-  var _a;
-  const apiKey = (_a = config2.gatewayApiKey) == null ? void 0 : _a.trim();
-  if (!apiKey) {
-    throw new FiscalError({
+function Ft(t) {
+  var r;
+  const e = (r = t.gatewayApiKey) == null ? void 0 : r.trim();
+  if (!e)
+    throw new I({
       code: "GATEWAY_API_KEY_REQUIRED",
       message: "API key do gateway fiscal não configurada.",
       category: "CONFIGURATION"
     });
-  }
   return {
     "content-type": "application/json",
-    authorization: `Bearer ${apiKey}`
+    authorization: `Bearer ${e}`
   };
 }
-async function parseGatewayResponse(response, fallbackCode) {
-  var _a, _b, _c, _d, _e, _f;
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
-  const envelope = payload;
-  if (!response.ok) {
-    throw new FiscalError({
-      code: ((_a = envelope.error) == null ? void 0 : _a.code) ?? fallbackCode,
-      message: ((_b = envelope.error) == null ? void 0 : _b.message) ?? `Gateway fiscal retornou HTTP ${response.status}.`,
+async function wt(t, e) {
+  var o, s, i, c, l, d;
+  const r = await t.text(), a = r ? JSON.parse(r) : {}, n = a;
+  if (!t.ok)
+    throw new I({
+      code: ((o = n.error) == null ? void 0 : o.code) ?? e,
+      message: ((s = n.error) == null ? void 0 : s.message) ?? `Gateway fiscal retornou HTTP ${t.status}.`,
       category: "PROVIDER",
-      retryable: response.status >= 500 || ((_c = envelope.error) == null ? void 0 : _c.retryable) === true,
-      details: payload
+      retryable: t.status >= 500 || ((i = n.error) == null ? void 0 : i.retryable) === !0,
+      details: a
     });
-  }
-  if ("success" in envelope && envelope.success === false) {
-    throw new FiscalError({
-      code: ((_d = envelope.error) == null ? void 0 : _d.code) ?? fallbackCode,
-      message: ((_e = envelope.error) == null ? void 0 : _e.message) ?? "Gateway fiscal retornou erro de negócio.",
+  if ("success" in n && n.success === !1)
+    throw new I({
+      code: ((c = n.error) == null ? void 0 : c.code) ?? e,
+      message: ((l = n.error) == null ? void 0 : l.message) ?? "Gateway fiscal retornou erro de negócio.",
       category: "PROVIDER",
-      retryable: ((_f = envelope.error) == null ? void 0 : _f.retryable) === true,
-      details: payload
+      retryable: ((d = n.error) == null ? void 0 : d.retryable) === !0,
+      details: a
     });
-  }
-  return "data" in envelope && envelope.data !== void 0 ? envelope.data : payload;
+  return "data" in n && n.data !== void 0 ? n.data : a;
 }
-class GatewayFiscalProvider {
+class Fi {
   constructor() {
-    __publicField(this, "providerId", "gateway");
+    ce(this, "providerId", "gateway");
   }
-  async authorizeNfce(request, config2) {
-    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/authorize`, {
+  async authorizeNfce(e, r) {
+    const a = await fetch(`${pt(r)}/nfce/authorize`, {
       method: "POST",
-      headers: resolveHeaders(config2),
+      headers: Ft(r),
       body: JSON.stringify({
-        request
+        request: e
       })
     });
-    return parseGatewayResponse(response, "GATEWAY_AUTHORIZE_FAILED");
+    return wt(a, "GATEWAY_AUTHORIZE_FAILED");
   }
-  async cancelNfce(request, config2) {
-    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/cancel`, {
+  async cancelNfce(e, r) {
+    const a = await fetch(`${pt(r)}/nfce/cancel`, {
       method: "POST",
-      headers: resolveHeaders(config2),
+      headers: Ft(r),
       body: JSON.stringify({
-        request
+        request: e
       })
     });
-    return parseGatewayResponse(response, "GATEWAY_CANCEL_FAILED");
+    return wt(a, "GATEWAY_CANCEL_FAILED");
   }
-  async consultStatus(request, config2) {
-    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/status/${encodeURIComponent(request.accessKey)}`, {
+  async consultStatus(e, r) {
+    const a = await fetch(`${pt(r)}/nfce/status/${encodeURIComponent(e.accessKey)}`, {
       method: "GET",
-      headers: resolveHeaders(config2)
+      headers: Ft(r)
     });
-    return parseGatewayResponse(response, "GATEWAY_CONSULT_FAILED");
+    return wt(a, "GATEWAY_CONSULT_FAILED");
   }
-  async testStatusServico(config2) {
-    const startedAt = Date.now();
-    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/status-servico`, {
+  async testStatusServico(e) {
+    const r = Date.now(), a = await fetch(`${pt(e)}/nfce/status-servico`, {
       method: "POST",
-      headers: resolveHeaders(config2),
+      headers: Ft(e),
       body: JSON.stringify({
-        environment: config2.environment,
-        uf: config2.uf ?? "SP",
-        model: config2.model ?? 65
+        environment: e.environment,
+        uf: e.uf ?? "SP",
+        model: e.model ?? 65
       })
-    });
-    const data = await parseGatewayResponse(
-      response,
+    }), n = await wt(
+      a,
       "GATEWAY_STATUS_SERVICE_FAILED"
     );
     return {
       provider: "gateway",
-      environment: config2.environment,
-      uf: config2.uf ?? data.uf ?? "SP",
+      environment: e.environment,
+      uf: e.uf ?? n.uf ?? "SP",
       model: 65,
       service: "NFeStatusServico4",
-      url: `${resolveBaseUrl(config2)}/nfce/status-servico`,
-      success: data.success ?? true,
-      statusCode: data.statusCode ?? null,
-      statusMessage: data.statusMessage ?? "Consulta de status executada pelo gateway fiscal.",
-      responseTimeMs: data.responseTimeMs ?? Date.now() - startedAt,
-      rawRequest: data.rawRequest ?? "",
-      rawResponse: data.rawResponse ?? JSON.stringify(data),
-      checkedAt: data.checkedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      tlsValidation: data.tlsValidation ?? "verified",
-      warning: data.warning ?? null
+      url: `${pt(e)}/nfce/status-servico`,
+      success: n.success ?? !0,
+      statusCode: n.statusCode ?? null,
+      statusMessage: n.statusMessage ?? "Consulta de status executada pelo gateway fiscal.",
+      responseTimeMs: n.responseTimeMs ?? Date.now() - r,
+      rawRequest: n.rawRequest ?? "",
+      rawResponse: n.rawResponse ?? JSON.stringify(n),
+      checkedAt: n.checkedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      tlsValidation: n.tlsValidation ?? "verified",
+      warning: n.warning ?? null
     };
   }
 }
-function buildAccessKey(request) {
-  const base = `${request.emitter.address.state}${request.saleId}${request.number}${request.series}`.replace(/\D/g, "");
-  return base.padEnd(44, "0").slice(0, 44);
+function wi(t) {
+  return `${t.emitter.address.state}${t.saleId}${t.number}${t.series}`.replace(/\D/g, "").padEnd(44, "0").slice(0, 44);
 }
-class MockFiscalProvider {
+class xi {
   constructor() {
-    __publicField(this, "providerId", "mock");
+    ce(this, "providerId", "mock");
   }
-  async authorizeNfce(request, _config) {
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const accessKey = buildAccessKey(request);
+  async authorizeNfce(e, r) {
+    const a = (/* @__PURE__ */ new Date()).toISOString(), n = wi(e);
     return {
       status: "AUTHORIZED",
       provider: "mock",
-      accessKey,
-      protocol: `MOCK-PROT-${request.saleId}-${request.number}`,
-      receiptNumber: `MOCK-REC-${request.saleId}`,
+      accessKey: n,
+      protocol: `MOCK-PROT-${e.saleId}-${e.number}`,
+      receiptNumber: `MOCK-REC-${e.saleId}`,
       statusCode: "100",
       statusMessage: "Autorizado em ambiente mock.",
-      authorizedAt: now,
-      xmlSent: `<NFe><infNFe Id="${accessKey}"></infNFe></NFe>`,
-      xmlAuthorized: `<procNFe><protNFe nProt="MOCK-PROT-${request.saleId}-${request.number}"/></procNFe>`,
-      qrCodeUrl: `https://mock.fiscal.local/qrcode/${accessKey}`,
-      rawResponse: { mock: true, environment: request.environment }
+      authorizedAt: a,
+      xmlSent: `<NFe><infNFe Id="${n}"></infNFe></NFe>`,
+      xmlAuthorized: `<procNFe><protNFe nProt="MOCK-PROT-${e.saleId}-${e.number}"/></procNFe>`,
+      qrCodeUrl: `https://mock.fiscal.local/qrcode/${n}`,
+      rawResponse: { mock: !0, environment: e.environment }
     };
   }
-  async cancelNfce(request, _config) {
+  async cancelNfce(e, r) {
     return {
       status: "CANCELLED",
       provider: "mock",
-      cancellationProtocol: `MOCK-CANC-${request.documentId}`,
+      cancellationProtocol: `MOCK-CANC-${e.documentId}`,
       cancelledAt: (/* @__PURE__ */ new Date()).toISOString(),
       statusCode: "135",
       statusMessage: "Cancelamento homologado em provider mock.",
-      xmlCancellation: `<procEventoNFe><descEvento>Cancelamento</descEvento></procEventoNFe>`,
-      rawResponse: { mock: true }
+      xmlCancellation: "<procEventoNFe><descEvento>Cancelamento</descEvento></procEventoNFe>",
+      rawResponse: { mock: !0 }
     };
   }
-  async consultStatus(request, _config) {
+  async consultStatus(e, r) {
     return {
       provider: "mock",
-      accessKey: request.accessKey,
+      accessKey: e.accessKey,
       status: "AUTHORIZED",
       statusCode: "100",
       statusMessage: "Documento autorizado em ambiente mock.",
-      protocol: `MOCK-CONSULT-${request.accessKey.slice(-8)}`,
+      protocol: `MOCK-CONSULT-${e.accessKey.slice(-8)}`,
       authorizedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      rawResponse: { mock: true }
+      rawResponse: { mock: !0 }
     };
   }
-  async testStatusServico(config2) {
-    const checkedAt = (/* @__PURE__ */ new Date()).toISOString();
+  async testStatusServico(e) {
+    const r = (/* @__PURE__ */ new Date()).toISOString();
     return {
       provider: "mock",
-      environment: config2.environment,
-      uf: config2.uf ?? "SP",
+      environment: e.environment,
+      uf: e.uf ?? "SP",
       model: 65,
       service: "NFeStatusServico4",
       url: "mock://nfce/status-servico",
-      success: true,
+      success: !0,
       statusCode: "107",
       statusMessage: "Servico em operacao em ambiente mock.",
       responseTimeMs: 0,
       rawRequest: "<mockStatusServico />",
       rawResponse: "<retConsStatServ><cStat>107</cStat><xMotivo>Servico em operacao</xMotivo></retConsStatServ>",
-      checkedAt,
+      checkedAt: r,
       tlsValidation: "verified",
       warning: null
     };
   }
 }
-var dom$1 = {};
-var conventions$2 = {};
-function find$1(list, predicate, ac) {
-  if (ac === void 0) {
-    ac = Array.prototype;
-  }
-  if (list && typeof ac.find === "function") {
-    return ac.find.call(list, predicate);
-  }
-  for (var i = 0; i < list.length; i++) {
-    if (Object.prototype.hasOwnProperty.call(list, i)) {
-      var item = list[i];
-      if (predicate.call(void 0, item, i, list)) {
-        return item;
-      }
+var Ue = {}, Se = {};
+function Mi(t, e, r) {
+  if (r === void 0 && (r = Array.prototype), t && typeof r.find == "function")
+    return r.find.call(t, e);
+  for (var a = 0; a < t.length; a++)
+    if (Object.prototype.hasOwnProperty.call(t, a)) {
+      var n = t[a];
+      if (e.call(void 0, n, a, t))
+        return n;
     }
-  }
 }
-function freeze(object, oc) {
-  if (oc === void 0) {
-    oc = Object;
-  }
-  return oc && typeof oc.freeze === "function" ? oc.freeze(object) : object;
+function Fr(t, e) {
+  return e === void 0 && (e = Object), e && typeof e.freeze == "function" ? e.freeze(t) : t;
 }
-function assign(target, source) {
-  if (target === null || typeof target !== "object") {
+function Pi(t, e) {
+  if (t === null || typeof t != "object")
     throw new TypeError("target is not an object");
-  }
-  for (var key in source) {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
-      target[key] = source[key];
-    }
-  }
-  return target;
+  for (var r in e)
+    Object.prototype.hasOwnProperty.call(e, r) && (t[r] = e[r]);
+  return t;
 }
-var MIME_TYPE = freeze({
+var ln = Fr({
   /**
    * `text/html`, the only mime type that triggers treating an XML document as HTML.
    *
@@ -4968,8 +4385,8 @@ var MIME_TYPE = freeze({
    * @see https://en.wikipedia.org/wiki/HTML Wikipedia
    * @see https://developer.mozilla.org/en-US/docs/Web/API/DOMParser/parseFromString MDN
    * @see https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html#dom-domparser-parsefromstring 	 */
-  isHTML: function(value) {
-    return value === MIME_TYPE.HTML;
+  isHTML: function(t) {
+    return t === ln.HTML;
   },
   /**
    * `application/xml`, the standard mime type for XML documents.
@@ -5004,8 +4421,7 @@ var MIME_TYPE = freeze({
    * @see https://en.wikipedia.org/wiki/Scalable_Vector_Graphics Wikipedia
    */
   XML_SVG_IMAGE: "image/svg+xml"
-});
-var NAMESPACE$3 = freeze({
+}), En = Fr({
   /**
    * The XHTML namespace.
    *
@@ -5019,8 +4435,8 @@ var NAMESPACE$3 = freeze({
    *
    * @see NAMESPACE.HTML
    */
-  isHTML: function(uri) {
-    return uri === NAMESPACE$3.HTML;
+  isHTML: function(t) {
+    return t === En.HTML;
   },
   /**
    * The SVG namespace.
@@ -5041,108 +4457,72 @@ var NAMESPACE$3 = freeze({
    */
   XMLNS: "http://www.w3.org/2000/xmlns/"
 });
-conventions$2.assign = assign;
-conventions$2.find = find$1;
-conventions$2.freeze = freeze;
-conventions$2.MIME_TYPE = MIME_TYPE;
-conventions$2.NAMESPACE = NAMESPACE$3;
-var conventions$1 = conventions$2;
-var find = conventions$1.find;
-var NAMESPACE$2 = conventions$1.NAMESPACE;
-function notEmptyString(input) {
-  return input !== "";
+Se.assign = Pi;
+Se.find = Mi;
+Se.freeze = Fr;
+Se.MIME_TYPE = ln;
+Se.NAMESPACE = En;
+var mn = Se, me = mn.find, vt = mn.NAMESPACE;
+function Bi(t) {
+  return t !== "";
 }
-function splitOnASCIIWhitespace(input) {
-  return input ? input.split(/[\t\n\f\r ]+/).filter(notEmptyString) : [];
+function Xi(t) {
+  return t ? t.split(/[\t\n\f\r ]+/).filter(Bi) : [];
 }
-function orderedSetReducer(current, element) {
-  if (!current.hasOwnProperty(element)) {
-    current[element] = true;
-  }
-  return current;
+function $i(t, e) {
+  return t.hasOwnProperty(e) || (t[e] = !0), t;
 }
-function toOrderedSet(input) {
-  if (!input) return [];
-  var list = splitOnASCIIWhitespace(input);
-  return Object.keys(list.reduce(orderedSetReducer, {}));
+function ca(t) {
+  if (!t) return [];
+  var e = Xi(t);
+  return Object.keys(e.reduce($i, {}));
 }
-function arrayIncludes(list) {
-  return function(element) {
-    return list && list.indexOf(element) !== -1;
+function ki(t) {
+  return function(e) {
+    return t && t.indexOf(e) !== -1;
   };
 }
-function copy(src, dest) {
-  for (var p in src) {
-    if (Object.prototype.hasOwnProperty.call(src, p)) {
-      dest[p] = src[p];
-    }
-  }
+function yt(t, e) {
+  for (var r in t)
+    Object.prototype.hasOwnProperty.call(t, r) && (e[r] = t[r]);
 }
-function _extends(Class, Super) {
-  var pt = Class.prototype;
-  if (!(pt instanceof Super)) {
-    let t = function() {
+function W(t, e) {
+  var r = t.prototype;
+  if (!(r instanceof e)) {
+    let a = function() {
     };
-    t.prototype = Super.prototype;
-    t = new t();
-    copy(pt, t);
-    Class.prototype = pt = t;
+    a.prototype = e.prototype, a = new a(), yt(r, a), t.prototype = r = a;
   }
-  if (pt.constructor != Class) {
-    if (typeof Class != "function") {
-      console.error("unknown Class:" + Class);
-    }
-    pt.constructor = Class;
-  }
+  r.constructor != t && (typeof t != "function" && console.error("unknown Class:" + t), r.constructor = t);
 }
-var NodeType = {};
-var ELEMENT_NODE = NodeType.ELEMENT_NODE = 1;
-var ATTRIBUTE_NODE = NodeType.ATTRIBUTE_NODE = 2;
-var TEXT_NODE = NodeType.TEXT_NODE = 3;
-var CDATA_SECTION_NODE = NodeType.CDATA_SECTION_NODE = 4;
-var ENTITY_REFERENCE_NODE = NodeType.ENTITY_REFERENCE_NODE = 5;
-var ENTITY_NODE = NodeType.ENTITY_NODE = 6;
-var PROCESSING_INSTRUCTION_NODE = NodeType.PROCESSING_INSTRUCTION_NODE = 7;
-var COMMENT_NODE = NodeType.COMMENT_NODE = 8;
-var DOCUMENT_NODE = NodeType.DOCUMENT_NODE = 9;
-var DOCUMENT_TYPE_NODE = NodeType.DOCUMENT_TYPE_NODE = 10;
-var DOCUMENT_FRAGMENT_NODE = NodeType.DOCUMENT_FRAGMENT_NODE = 11;
-var NOTATION_NODE = NodeType.NOTATION_NODE = 12;
-var ExceptionCode = {};
-var ExceptionMessage = {};
-ExceptionCode.INDEX_SIZE_ERR = (ExceptionMessage[1] = "Index size error", 1);
-ExceptionCode.DOMSTRING_SIZE_ERR = (ExceptionMessage[2] = "DOMString size error", 2);
-var HIERARCHY_REQUEST_ERR = ExceptionCode.HIERARCHY_REQUEST_ERR = (ExceptionMessage[3] = "Hierarchy request error", 3);
-ExceptionCode.WRONG_DOCUMENT_ERR = (ExceptionMessage[4] = "Wrong document", 4);
-ExceptionCode.INVALID_CHARACTER_ERR = (ExceptionMessage[5] = "Invalid character", 5);
-ExceptionCode.NO_DATA_ALLOWED_ERR = (ExceptionMessage[6] = "No data allowed", 6);
-ExceptionCode.NO_MODIFICATION_ALLOWED_ERR = (ExceptionMessage[7] = "No modification allowed", 7);
-var NOT_FOUND_ERR = ExceptionCode.NOT_FOUND_ERR = (ExceptionMessage[8] = "Not found", 8);
-ExceptionCode.NOT_SUPPORTED_ERR = (ExceptionMessage[9] = "Not supported", 9);
-var INUSE_ATTRIBUTE_ERR = ExceptionCode.INUSE_ATTRIBUTE_ERR = (ExceptionMessage[10] = "Attribute in use", 10);
-ExceptionCode.INVALID_STATE_ERR = (ExceptionMessage[11] = "Invalid state", 11);
-ExceptionCode.SYNTAX_ERR = (ExceptionMessage[12] = "Syntax error", 12);
-ExceptionCode.INVALID_MODIFICATION_ERR = (ExceptionMessage[13] = "Invalid modification", 13);
-ExceptionCode.NAMESPACE_ERR = (ExceptionMessage[14] = "Invalid namespace", 14);
-ExceptionCode.INVALID_ACCESS_ERR = (ExceptionMessage[15] = "Invalid access", 15);
-function DOMException(code, message) {
-  if (message instanceof Error) {
-    var error = message;
-  } else {
-    error = this;
-    Error.call(this, ExceptionMessage[code]);
-    this.message = ExceptionMessage[code];
-    if (Error.captureStackTrace) Error.captureStackTrace(this, DOMException);
-  }
-  error.code = code;
-  if (message) this.message = this.message + ": " + message;
-  return error;
+var Q = {}, ie = Q.ELEMENT_NODE = 1, it = Q.ATTRIBUTE_NODE = 2, zt = Q.TEXT_NODE = 3, pn = Q.CDATA_SECTION_NODE = 4, _n = Q.ENTITY_REFERENCE_NODE = 5, qi = Q.ENTITY_NODE = 6, Tn = Q.PROCESSING_INSTRUCTION_NODE = 7, fn = Q.COMMENT_NODE = 8, Nn = Q.DOCUMENT_NODE = 9, gn = Q.DOCUMENT_TYPE_NODE = 10, Ce = Q.DOCUMENT_FRAGMENT_NODE = 11, Gi = Q.NOTATION_NODE = 12, q = {}, X = {};
+q.INDEX_SIZE_ERR = (X[1] = "Index size error", 1);
+q.DOMSTRING_SIZE_ERR = (X[2] = "DOMString size error", 2);
+var Y = q.HIERARCHY_REQUEST_ERR = (X[3] = "Hierarchy request error", 3);
+q.WRONG_DOCUMENT_ERR = (X[4] = "Wrong document", 4);
+q.INVALID_CHARACTER_ERR = (X[5] = "Invalid character", 5);
+q.NO_DATA_ALLOWED_ERR = (X[6] = "No data allowed", 6);
+q.NO_MODIFICATION_ALLOWED_ERR = (X[7] = "No modification allowed", 7);
+var An = q.NOT_FOUND_ERR = (X[8] = "Not found", 8);
+q.NOT_SUPPORTED_ERR = (X[9] = "Not supported", 9);
+var ua = q.INUSE_ATTRIBUTE_ERR = (X[10] = "Attribute in use", 10);
+q.INVALID_STATE_ERR = (X[11] = "Invalid state", 11);
+q.SYNTAX_ERR = (X[12] = "Syntax error", 12);
+q.INVALID_MODIFICATION_ERR = (X[13] = "Invalid modification", 13);
+q.NAMESPACE_ERR = (X[14] = "Invalid namespace", 14);
+q.INVALID_ACCESS_ERR = (X[15] = "Invalid access", 15);
+function M(t, e) {
+  if (e instanceof Error)
+    var r = e;
+  else
+    r = this, Error.call(this, X[t]), this.message = X[t], Error.captureStackTrace && Error.captureStackTrace(this, M);
+  return r.code = t, e && (this.message = this.message + ": " + e), r;
 }
-DOMException.prototype = Error.prototype;
-copy(ExceptionCode, DOMException);
-function NodeList() {
+M.prototype = Error.prototype;
+yt(q, M);
+function Ie() {
 }
-NodeList.prototype = {
+Ie.prototype = {
   /**
    * The number of nodes in the list. The range of valid child node indices is 0 to length-1 inclusive.
    * @standard level1
@@ -5156,160 +4536,121 @@ NodeList.prototype = {
    * @return Node
    * 	The node at the indexth position in the NodeList, or null if that is not a valid index.
    */
-  item: function(index) {
-    return index >= 0 && index < this.length ? this[index] : null;
+  item: function(t) {
+    return t >= 0 && t < this.length ? this[t] : null;
   },
-  toString: function(isHTML, nodeFilter) {
-    for (var buf = [], i = 0; i < this.length; i++) {
-      serializeToString(this[i], buf, isHTML, nodeFilter);
-    }
-    return buf.join("");
+  toString: function(t, e) {
+    for (var r = [], a = 0; a < this.length; a++)
+      ot(this[a], r, t, e);
+    return r.join("");
   },
   /**
    * @private
    * @param {function (Node):boolean} predicate
    * @returns {Node[]}
    */
-  filter: function(predicate) {
-    return Array.prototype.filter.call(this, predicate);
+  filter: function(t) {
+    return Array.prototype.filter.call(this, t);
   },
   /**
    * @private
    * @param {Node} item
    * @returns {number}
    */
-  indexOf: function(item) {
-    return Array.prototype.indexOf.call(this, item);
+  indexOf: function(t) {
+    return Array.prototype.indexOf.call(this, t);
   }
 };
-function LiveNodeList(node, refresh) {
-  this._node = node;
-  this._refresh = refresh;
-  _updateLiveList(this);
+function ct(t, e) {
+  this._node = t, this._refresh = e, wr(this);
 }
-function _updateLiveList(list) {
-  var inc = list._node._inc || list._node.ownerDocument._inc;
-  if (list._inc !== inc) {
-    var ls = list._refresh(list._node);
-    __set__(list, "length", ls.length);
-    if (!list.$$length || ls.length < list.$$length) {
-      for (var i = ls.length; i in list; i++) {
-        if (Object.prototype.hasOwnProperty.call(list, i)) {
-          delete list[i];
-        }
-      }
-    }
-    copy(ls, list);
-    list._inc = inc;
+function wr(t) {
+  var e = t._node._inc || t._node.ownerDocument._inc;
+  if (t._inc !== e) {
+    var r = t._refresh(t._node);
+    if (Un(t, "length", r.length), !t.$$length || r.length < t.$$length)
+      for (var a = r.length; a in t; a++)
+        Object.prototype.hasOwnProperty.call(t, a) && delete t[a];
+    yt(r, t), t._inc = e;
   }
 }
-LiveNodeList.prototype.item = function(i) {
-  _updateLiveList(this);
-  return this[i] || null;
+ct.prototype.item = function(t) {
+  return wr(this), this[t] || null;
 };
-_extends(LiveNodeList, NodeList);
-function NamedNodeMap() {
+W(ct, Ie);
+function jt() {
 }
-function _findNodeIndex(list, node) {
-  var i = list.length;
-  while (i--) {
-    if (list[i] === node) {
-      return i;
-    }
+function hn(t, e) {
+  for (var r = t.length; r--; )
+    if (t[r] === e)
+      return r;
+}
+function da(t, e, r, a) {
+  if (a ? e[hn(e, a)] = r : e[e.length++] = r, t) {
+    r.ownerElement = t;
+    var n = t.ownerDocument;
+    n && (a && vn(n, t, a), Vi(n, t, r));
   }
 }
-function _addNamedNode(el, list, newAttr, oldAttr) {
-  if (oldAttr) {
-    list[_findNodeIndex(list, oldAttr)] = newAttr;
-  } else {
-    list[list.length++] = newAttr;
-  }
-  if (el) {
-    newAttr.ownerElement = el;
-    var doc = el.ownerDocument;
-    if (doc) {
-      oldAttr && _onRemoveAttribute(doc, el, oldAttr);
-      _onAddAttribute(doc, el, newAttr);
+function la(t, e, r) {
+  var a = hn(e, r);
+  if (a >= 0) {
+    for (var n = e.length - 1; a < n; )
+      e[a] = e[++a];
+    if (e.length = n, t) {
+      var o = t.ownerDocument;
+      o && (vn(o, t, r), r.ownerElement = null);
     }
-  }
+  } else
+    throw new M(An, new Error(t.tagName + "@" + r));
 }
-function _removeNamedNode(el, list, attr) {
-  var i = _findNodeIndex(list, attr);
-  if (i >= 0) {
-    var lastIndex = list.length - 1;
-    while (i < lastIndex) {
-      list[i] = list[++i];
-    }
-    list.length = lastIndex;
-    if (el) {
-      var doc = el.ownerDocument;
-      if (doc) {
-        _onRemoveAttribute(doc, el, attr);
-        attr.ownerElement = null;
-      }
-    }
-  } else {
-    throw new DOMException(NOT_FOUND_ERR, new Error(el.tagName + "@" + attr));
-  }
-}
-NamedNodeMap.prototype = {
+jt.prototype = {
   length: 0,
-  item: NodeList.prototype.item,
-  getNamedItem: function(key) {
-    var i = this.length;
-    while (i--) {
-      var attr = this[i];
-      if (attr.nodeName == key) {
-        return attr;
-      }
+  item: Ie.prototype.item,
+  getNamedItem: function(t) {
+    for (var e = this.length; e--; ) {
+      var r = this[e];
+      if (r.nodeName == t)
+        return r;
     }
   },
-  setNamedItem: function(attr) {
-    var el = attr.ownerElement;
-    if (el && el != this._ownerElement) {
-      throw new DOMException(INUSE_ATTRIBUTE_ERR);
-    }
-    var oldAttr = this.getNamedItem(attr.nodeName);
-    _addNamedNode(this._ownerElement, this, attr, oldAttr);
-    return oldAttr;
+  setNamedItem: function(t) {
+    var e = t.ownerElement;
+    if (e && e != this._ownerElement)
+      throw new M(ua);
+    var r = this.getNamedItem(t.nodeName);
+    return da(this._ownerElement, this, t, r), r;
   },
   /* returns Node */
-  setNamedItemNS: function(attr) {
-    var el = attr.ownerElement, oldAttr;
-    if (el && el != this._ownerElement) {
-      throw new DOMException(INUSE_ATTRIBUTE_ERR);
-    }
-    oldAttr = this.getNamedItemNS(attr.namespaceURI, attr.localName);
-    _addNamedNode(this._ownerElement, this, attr, oldAttr);
-    return oldAttr;
+  setNamedItemNS: function(t) {
+    var e = t.ownerElement, r;
+    if (e && e != this._ownerElement)
+      throw new M(ua);
+    return r = this.getNamedItemNS(t.namespaceURI, t.localName), da(this._ownerElement, this, t, r), r;
   },
   /* returns Node */
-  removeNamedItem: function(key) {
-    var attr = this.getNamedItem(key);
-    _removeNamedNode(this._ownerElement, this, attr);
-    return attr;
+  removeNamedItem: function(t) {
+    var e = this.getNamedItem(t);
+    return la(this._ownerElement, this, e), e;
   },
   // raises: NOT_FOUND_ERR,NO_MODIFICATION_ALLOWED_ERR
   //for level2
-  removeNamedItemNS: function(namespaceURI, localName2) {
-    var attr = this.getNamedItemNS(namespaceURI, localName2);
-    _removeNamedNode(this._ownerElement, this, attr);
-    return attr;
+  removeNamedItemNS: function(t, e) {
+    var r = this.getNamedItemNS(t, e);
+    return la(this._ownerElement, this, r), r;
   },
-  getNamedItemNS: function(namespaceURI, localName2) {
-    var i = this.length;
-    while (i--) {
-      var node = this[i];
-      if (node.localName == localName2 && node.namespaceURI == namespaceURI) {
-        return node;
-      }
+  getNamedItemNS: function(t, e) {
+    for (var r = this.length; r--; ) {
+      var a = this[r];
+      if (a.localName == e && a.namespaceURI == t)
+        return a;
     }
     return null;
   }
 };
-function DOMImplementation$1() {
+function In() {
 }
-DOMImplementation$1.prototype = {
+In.prototype = {
   /**
    * The DOMImplementation.hasFeature() method returns a Boolean flag indicating if a given feature is supported.
    * The different implementations fairly diverged in what kind of features were reported.
@@ -5325,8 +4666,8 @@ DOMImplementation$1.prototype = {
    * @see https://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html#ID-5CED94D7 DOM Level 1 Core
    * @see https://dom.spec.whatwg.org/#dom-domimplementation-hasfeature DOM Living Standard
    */
-  hasFeature: function(feature, version) {
-    return true;
+  hasFeature: function(t, e) {
+    return !0;
   },
   /**
    * Creates an XML Document object of the specified type with its document element.
@@ -5350,19 +4691,13 @@ DOMImplementation$1.prototype = {
    * @see https://www.w3.org/TR/xml/#NT-NameStartChar XML Spec: Names
    * @see https://www.w3.org/TR/xml-names/#ns-qualnames XML Namespaces: Qualified names
    */
-  createDocument: function(namespaceURI, qualifiedName, doctype) {
-    var doc = new Document();
-    doc.implementation = this;
-    doc.childNodes = new NodeList();
-    doc.doctype = doctype || null;
-    if (doctype) {
-      doc.appendChild(doctype);
+  createDocument: function(t, e, r) {
+    var a = new Ot();
+    if (a.implementation = this, a.childNodes = new Ie(), a.doctype = r || null, r && a.appendChild(r), e) {
+      var n = a.createElementNS(t, e);
+      a.appendChild(n);
     }
-    if (qualifiedName) {
-      var root = doc.createElementNS(namespaceURI, qualifiedName);
-      doc.appendChild(root);
-    }
-    return doc;
+    return a;
   },
   /**
    * Returns a doctype, with the given `qualifiedName`, `publicId`, and `systemId`.
@@ -5385,18 +4720,14 @@ DOMImplementation$1.prototype = {
    * @see https://www.w3.org/TR/xml/#NT-NameStartChar XML Spec: Names
    * @see https://www.w3.org/TR/xml-names/#ns-qualnames XML Namespaces: Qualified names
    */
-  createDocumentType: function(qualifiedName, publicId, systemId) {
-    var node = new DocumentType();
-    node.name = qualifiedName;
-    node.nodeName = qualifiedName;
-    node.publicId = publicId || "";
-    node.systemId = systemId || "";
-    return node;
+  createDocumentType: function(t, e, r) {
+    var a = new Zt();
+    return a.name = t, a.nodeName = t, a.publicId = e || "", a.systemId = r || "", a;
   }
 };
-function Node() {
+function L() {
 }
-Node.prototype = {
+L.prototype = {
   firstChild: null,
   lastChild: null,
   previousSibling: null,
@@ -5410,44 +4741,34 @@ Node.prototype = {
   prefix: null,
   localName: null,
   // Modified in DOM Level 2:
-  insertBefore: function(newChild, refChild) {
-    return _insertBefore(this, newChild, refChild);
+  insertBefore: function(t, e) {
+    return Ht(this, t, e);
   },
-  replaceChild: function(newChild, oldChild) {
-    _insertBefore(this, newChild, oldChild, assertPreReplacementValidityInDocument);
-    if (oldChild) {
-      this.removeChild(oldChild);
-    }
+  replaceChild: function(t, e) {
+    Ht(this, t, e, Sn), e && this.removeChild(e);
   },
-  removeChild: function(oldChild) {
-    return _removeChild(this, oldChild);
+  removeChild: function(t) {
+    return Dn(this, t);
   },
-  appendChild: function(newChild) {
-    return this.insertBefore(newChild, null);
+  appendChild: function(t) {
+    return this.insertBefore(t, null);
   },
   hasChildNodes: function() {
     return this.firstChild != null;
   },
-  cloneNode: function(deep) {
-    return cloneNode(this.ownerDocument || this, this, deep);
+  cloneNode: function(t) {
+    return Sr(this.ownerDocument || this, this, t);
   },
   // Modified in DOM Level 2:
   normalize: function() {
-    var child = this.firstChild;
-    while (child) {
-      var next = child.nextSibling;
-      if (next && next.nodeType == TEXT_NODE && child.nodeType == TEXT_NODE) {
-        this.removeChild(next);
-        child.appendData(next.data);
-      } else {
-        child.normalize();
-        child = next;
-      }
+    for (var t = this.firstChild; t; ) {
+      var e = t.nextSibling;
+      e && e.nodeType == zt && t.nodeType == zt ? (this.removeChild(e), t.appendData(e.data)) : (t.normalize(), t = e);
     }
   },
   // Introduced in DOM Level 2:
-  isSupported: function(feature, version) {
-    return this.ownerDocument.implementation.hasFeature(feature, version);
+  isSupported: function(t, e) {
+    return this.ownerDocument.implementation.hasFeature(t, e);
   },
   // Introduced in DOM Level 2:
   hasAttributes: function() {
@@ -5467,310 +4788,209 @@ Node.prototype = {
    * @see https://dom.spec.whatwg.org/#dom-node-lookupprefix
    * @see https://github.com/xmldom/xmldom/issues/322
    */
-  lookupPrefix: function(namespaceURI) {
-    var el = this;
-    while (el) {
-      var map = el._nsMap;
-      if (map) {
-        for (var n in map) {
-          if (Object.prototype.hasOwnProperty.call(map, n) && map[n] === namespaceURI) {
-            return n;
-          }
-        }
+  lookupPrefix: function(t) {
+    for (var e = this; e; ) {
+      var r = e._nsMap;
+      if (r) {
+        for (var a in r)
+          if (Object.prototype.hasOwnProperty.call(r, a) && r[a] === t)
+            return a;
       }
-      el = el.nodeType == ATTRIBUTE_NODE ? el.ownerDocument : el.parentNode;
+      e = e.nodeType == it ? e.ownerDocument : e.parentNode;
     }
     return null;
   },
   // Introduced in DOM Level 3:
-  lookupNamespaceURI: function(prefix) {
-    var el = this;
-    while (el) {
-      var map = el._nsMap;
-      if (map) {
-        if (Object.prototype.hasOwnProperty.call(map, prefix)) {
-          return map[prefix];
-        }
-      }
-      el = el.nodeType == ATTRIBUTE_NODE ? el.ownerDocument : el.parentNode;
+  lookupNamespaceURI: function(t) {
+    for (var e = this; e; ) {
+      var r = e._nsMap;
+      if (r && Object.prototype.hasOwnProperty.call(r, t))
+        return r[t];
+      e = e.nodeType == it ? e.ownerDocument : e.parentNode;
     }
     return null;
   },
   // Introduced in DOM Level 3:
-  isDefaultNamespace: function(namespaceURI) {
-    var prefix = this.lookupPrefix(namespaceURI);
-    return prefix == null;
+  isDefaultNamespace: function(t) {
+    var e = this.lookupPrefix(t);
+    return e == null;
   }
 };
-function _xmlEncoder(c) {
-  return c == "<" && "&lt;" || c == ">" && "&gt;" || c == "&" && "&amp;" || c == '"' && "&quot;" || "&#" + c.charCodeAt() + ";";
+function Cn(t) {
+  return t == "<" && "&lt;" || t == ">" && "&gt;" || t == "&" && "&amp;" || t == '"' && "&quot;" || "&#" + t.charCodeAt() + ";";
 }
-copy(NodeType, Node);
-copy(NodeType, Node.prototype);
-function _visitNode(node, callback) {
-  if (callback(node)) {
-    return true;
-  }
-  if (node = node.firstChild) {
-    do {
-      if (_visitNode(node, callback)) {
-        return true;
-      }
-    } while (node = node.nextSibling);
-  }
+yt(Q, L);
+yt(Q, L.prototype);
+function Dt(t, e) {
+  if (e(t))
+    return !0;
+  if (t = t.firstChild)
+    do
+      if (Dt(t, e))
+        return !0;
+    while (t = t.nextSibling);
 }
-function Document() {
+function Ot() {
   this.ownerDocument = this;
 }
-function _onAddAttribute(doc, el, newAttr) {
-  doc && doc._inc++;
-  var ns = newAttr.namespaceURI;
-  if (ns === NAMESPACE$2.XMLNS) {
-    el._nsMap[newAttr.prefix ? newAttr.localName : ""] = newAttr.value;
-  }
+function Vi(t, e, r) {
+  t && t._inc++;
+  var a = r.namespaceURI;
+  a === vt.XMLNS && (e._nsMap[r.prefix ? r.localName : ""] = r.value);
 }
-function _onRemoveAttribute(doc, el, newAttr, remove) {
-  doc && doc._inc++;
-  var ns = newAttr.namespaceURI;
-  if (ns === NAMESPACE$2.XMLNS) {
-    delete el._nsMap[newAttr.prefix ? newAttr.localName : ""];
-  }
+function vn(t, e, r, a) {
+  t && t._inc++;
+  var n = r.namespaceURI;
+  n === vt.XMLNS && delete e._nsMap[r.prefix ? r.localName : ""];
 }
-function _onUpdateChild(doc, el, newChild) {
-  if (doc && doc._inc) {
-    doc._inc++;
-    var cs = el.childNodes;
-    if (newChild) {
-      cs[cs.length++] = newChild;
-    } else {
-      var child = el.firstChild;
-      var i = 0;
-      while (child) {
-        cs[i++] = child;
-        child = child.nextSibling;
-      }
-      cs.length = i;
-      delete cs[cs.length];
+function xr(t, e, r) {
+  if (t && t._inc) {
+    t._inc++;
+    var a = e.childNodes;
+    if (r)
+      a[a.length++] = r;
+    else {
+      for (var n = e.firstChild, o = 0; n; )
+        a[o++] = n, n = n.nextSibling;
+      a.length = o, delete a[a.length];
     }
   }
 }
-function _removeChild(parentNode, child) {
-  var previous = child.previousSibling;
-  var next = child.nextSibling;
-  if (previous) {
-    previous.nextSibling = next;
-  } else {
-    parentNode.firstChild = next;
+function Dn(t, e) {
+  var r = e.previousSibling, a = e.nextSibling;
+  return r ? r.nextSibling = a : t.firstChild = a, a ? a.previousSibling = r : t.lastChild = r, e.parentNode = null, e.previousSibling = null, e.nextSibling = null, xr(t.ownerDocument, t), e;
+}
+function zi(t) {
+  return t && (t.nodeType === L.DOCUMENT_NODE || t.nodeType === L.DOCUMENT_FRAGMENT_NODE || t.nodeType === L.ELEMENT_NODE);
+}
+function ji(t) {
+  return t && (pe(t) || Mr(t) || ve(t) || t.nodeType === L.DOCUMENT_FRAGMENT_NODE || t.nodeType === L.COMMENT_NODE || t.nodeType === L.PROCESSING_INSTRUCTION_NODE);
+}
+function ve(t) {
+  return t && t.nodeType === L.DOCUMENT_TYPE_NODE;
+}
+function pe(t) {
+  return t && t.nodeType === L.ELEMENT_NODE;
+}
+function Mr(t) {
+  return t && t.nodeType === L.TEXT_NODE;
+}
+function Ea(t, e) {
+  var r = t.childNodes || [];
+  if (me(r, pe) || ve(e))
+    return !1;
+  var a = me(r, ve);
+  return !(e && a && r.indexOf(a) > r.indexOf(e));
+}
+function ma(t, e) {
+  var r = t.childNodes || [];
+  function a(o) {
+    return pe(o) && o !== e;
   }
-  if (next) {
-    next.previousSibling = previous;
-  } else {
-    parentNode.lastChild = previous;
-  }
-  child.parentNode = null;
-  child.previousSibling = null;
-  child.nextSibling = null;
-  _onUpdateChild(parentNode.ownerDocument, parentNode);
-  return child;
+  if (me(r, a))
+    return !1;
+  var n = me(r, ve);
+  return !(e && n && r.indexOf(n) > r.indexOf(e));
 }
-function hasValidParentNodeType(node) {
-  return node && (node.nodeType === Node.DOCUMENT_NODE || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE || node.nodeType === Node.ELEMENT_NODE);
-}
-function hasInsertableNodeType(node) {
-  return node && (isElementNode(node) || isTextNode(node) || isDocTypeNode(node) || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE || node.nodeType === Node.COMMENT_NODE || node.nodeType === Node.PROCESSING_INSTRUCTION_NODE);
-}
-function isDocTypeNode(node) {
-  return node && node.nodeType === Node.DOCUMENT_TYPE_NODE;
-}
-function isElementNode(node) {
-  return node && node.nodeType === Node.ELEMENT_NODE;
-}
-function isTextNode(node) {
-  return node && node.nodeType === Node.TEXT_NODE;
-}
-function isElementInsertionPossible(doc, child) {
-  var parentChildNodes = doc.childNodes || [];
-  if (find(parentChildNodes, isElementNode) || isDocTypeNode(child)) {
-    return false;
-  }
-  var docTypeNode = find(parentChildNodes, isDocTypeNode);
-  return !(child && docTypeNode && parentChildNodes.indexOf(docTypeNode) > parentChildNodes.indexOf(child));
-}
-function isElementReplacementPossible(doc, child) {
-  var parentChildNodes = doc.childNodes || [];
-  function hasElementChildThatIsNotChild(node) {
-    return isElementNode(node) && node !== child;
-  }
-  if (find(parentChildNodes, hasElementChildThatIsNotChild)) {
-    return false;
-  }
-  var docTypeNode = find(parentChildNodes, isDocTypeNode);
-  return !(child && docTypeNode && parentChildNodes.indexOf(docTypeNode) > parentChildNodes.indexOf(child));
-}
-function assertPreInsertionValidity1to5(parent, node, child) {
-  if (!hasValidParentNodeType(parent)) {
-    throw new DOMException(HIERARCHY_REQUEST_ERR, "Unexpected parent node type " + parent.nodeType);
-  }
-  if (child && child.parentNode !== parent) {
-    throw new DOMException(NOT_FOUND_ERR, "child not in parent");
-  }
+function Hi(t, e, r) {
+  if (!zi(t))
+    throw new M(Y, "Unexpected parent node type " + t.nodeType);
+  if (r && r.parentNode !== t)
+    throw new M(An, "child not in parent");
   if (
     // 4. If `node` is not a DocumentFragment, DocumentType, Element, or CharacterData node, then throw a "HierarchyRequestError" DOMException.
-    !hasInsertableNodeType(node) || // 5. If either `node` is a Text node and `parent` is a document,
+    !ji(e) || // 5. If either `node` is a Text node and `parent` is a document,
     // the sax parser currently adds top level text nodes, this will be fixed in 0.9.0
     // || (node.nodeType === Node.TEXT_NODE && parent.nodeType === Node.DOCUMENT_NODE)
     // or `node` is a doctype and `parent` is not a document, then throw a "HierarchyRequestError" DOMException.
-    isDocTypeNode(node) && parent.nodeType !== Node.DOCUMENT_NODE
-  ) {
-    throw new DOMException(
-      HIERARCHY_REQUEST_ERR,
-      "Unexpected node type " + node.nodeType + " for parent node type " + parent.nodeType
+    ve(e) && t.nodeType !== L.DOCUMENT_NODE
+  )
+    throw new M(
+      Y,
+      "Unexpected node type " + e.nodeType + " for parent node type " + t.nodeType
     );
+}
+function Ki(t, e, r) {
+  var a = t.childNodes || [], n = e.childNodes || [];
+  if (e.nodeType === L.DOCUMENT_FRAGMENT_NODE) {
+    var o = n.filter(pe);
+    if (o.length > 1 || me(n, Mr))
+      throw new M(Y, "More than one element or text in fragment");
+    if (o.length === 1 && !Ea(t, r))
+      throw new M(Y, "Element in fragment can not be inserted before doctype");
+  }
+  if (pe(e) && !Ea(t, r))
+    throw new M(Y, "Only one element can be added and only after doctype");
+  if (ve(e)) {
+    if (me(a, ve))
+      throw new M(Y, "Only one doctype is allowed");
+    var s = me(a, pe);
+    if (r && a.indexOf(s) < a.indexOf(r))
+      throw new M(Y, "Doctype can only be inserted before an element");
+    if (!r && s)
+      throw new M(Y, "Doctype can not be appended since element is present");
   }
 }
-function assertPreInsertionValidityInDocument(parent, node, child) {
-  var parentChildNodes = parent.childNodes || [];
-  var nodeChildNodes = node.childNodes || [];
-  if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-    var nodeChildElements = nodeChildNodes.filter(isElementNode);
-    if (nodeChildElements.length > 1 || find(nodeChildNodes, isTextNode)) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "More than one element or text in fragment");
-    }
-    if (nodeChildElements.length === 1 && !isElementInsertionPossible(parent, child)) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "Element in fragment can not be inserted before doctype");
-    }
+function Sn(t, e, r) {
+  var a = t.childNodes || [], n = e.childNodes || [];
+  if (e.nodeType === L.DOCUMENT_FRAGMENT_NODE) {
+    var o = n.filter(pe);
+    if (o.length > 1 || me(n, Mr))
+      throw new M(Y, "More than one element or text in fragment");
+    if (o.length === 1 && !ma(t, r))
+      throw new M(Y, "Element in fragment can not be inserted before doctype");
   }
-  if (isElementNode(node)) {
-    if (!isElementInsertionPossible(parent, child)) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "Only one element can be added and only after doctype");
-    }
-  }
-  if (isDocTypeNode(node)) {
-    if (find(parentChildNodes, isDocTypeNode)) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "Only one doctype is allowed");
-    }
-    var parentElementChild = find(parentChildNodes, isElementNode);
-    if (child && parentChildNodes.indexOf(parentElementChild) < parentChildNodes.indexOf(child)) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "Doctype can only be inserted before an element");
-    }
-    if (!child && parentElementChild) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "Doctype can not be appended since element is present");
-    }
+  if (pe(e) && !ma(t, r))
+    throw new M(Y, "Only one element can be added and only after doctype");
+  if (ve(e)) {
+    if (me(a, function(c) {
+      return ve(c) && c !== r;
+    }))
+      throw new M(Y, "Only one doctype is allowed");
+    var s = me(a, pe);
+    if (r && a.indexOf(s) < a.indexOf(r))
+      throw new M(Y, "Doctype can only be inserted before an element");
   }
 }
-function assertPreReplacementValidityInDocument(parent, node, child) {
-  var parentChildNodes = parent.childNodes || [];
-  var nodeChildNodes = node.childNodes || [];
-  if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-    var nodeChildElements = nodeChildNodes.filter(isElementNode);
-    if (nodeChildElements.length > 1 || find(nodeChildNodes, isTextNode)) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "More than one element or text in fragment");
-    }
-    if (nodeChildElements.length === 1 && !isElementReplacementPossible(parent, child)) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "Element in fragment can not be inserted before doctype");
-    }
-  }
-  if (isElementNode(node)) {
-    if (!isElementReplacementPossible(parent, child)) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "Only one element can be added and only after doctype");
-    }
-  }
-  if (isDocTypeNode(node)) {
-    let hasDoctypeChildThatIsNotChild = function(node2) {
-      return isDocTypeNode(node2) && node2 !== child;
-    };
-    if (find(parentChildNodes, hasDoctypeChildThatIsNotChild)) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "Only one doctype is allowed");
-    }
-    var parentElementChild = find(parentChildNodes, isElementNode);
-    if (child && parentChildNodes.indexOf(parentElementChild) < parentChildNodes.indexOf(child)) {
-      throw new DOMException(HIERARCHY_REQUEST_ERR, "Doctype can only be inserted before an element");
-    }
-  }
-}
-function _insertBefore(parent, node, child, _inDocumentAssertion) {
-  assertPreInsertionValidity1to5(parent, node, child);
-  if (parent.nodeType === Node.DOCUMENT_NODE) {
-    (_inDocumentAssertion || assertPreInsertionValidityInDocument)(parent, node, child);
-  }
-  var cp = node.parentNode;
-  if (cp) {
-    cp.removeChild(node);
-  }
-  if (node.nodeType === DOCUMENT_FRAGMENT_NODE) {
-    var newFirst = node.firstChild;
-    if (newFirst == null) {
-      return node;
-    }
-    var newLast = node.lastChild;
-  } else {
-    newFirst = newLast = node;
-  }
-  var pre = child ? child.previousSibling : parent.lastChild;
-  newFirst.previousSibling = pre;
-  newLast.nextSibling = child;
-  if (pre) {
-    pre.nextSibling = newFirst;
-  } else {
-    parent.firstChild = newFirst;
-  }
-  if (child == null) {
-    parent.lastChild = newLast;
-  } else {
-    child.previousSibling = newLast;
-  }
+function Ht(t, e, r, a) {
+  Hi(t, e, r), t.nodeType === L.DOCUMENT_NODE && (a || Ki)(t, e, r);
+  var n = e.parentNode;
+  if (n && n.removeChild(e), e.nodeType === Ce) {
+    var o = e.firstChild;
+    if (o == null)
+      return e;
+    var s = e.lastChild;
+  } else
+    o = s = e;
+  var i = r ? r.previousSibling : t.lastChild;
+  o.previousSibling = i, s.nextSibling = r, i ? i.nextSibling = o : t.firstChild = o, r == null ? t.lastChild = s : r.previousSibling = s;
   do {
-    newFirst.parentNode = parent;
-    var targetDoc = parent.ownerDocument || parent;
-    _updateOwnerDocument(newFirst, targetDoc);
-  } while (newFirst !== newLast && (newFirst = newFirst.nextSibling));
-  _onUpdateChild(parent.ownerDocument || parent, parent);
-  if (node.nodeType == DOCUMENT_FRAGMENT_NODE) {
-    node.firstChild = node.lastChild = null;
-  }
-  return node;
+    o.parentNode = t;
+    var c = t.ownerDocument || t;
+    St(o, c);
+  } while (o !== s && (o = o.nextSibling));
+  return xr(t.ownerDocument || t, t), e.nodeType == Ce && (e.firstChild = e.lastChild = null), e;
 }
-function _updateOwnerDocument(node, newOwnerDocument) {
-  if (node.ownerDocument === newOwnerDocument) {
-    return;
-  }
-  node.ownerDocument = newOwnerDocument;
-  if (node.nodeType === ELEMENT_NODE && node.attributes) {
-    for (var i = 0; i < node.attributes.length; i++) {
-      var attr = node.attributes.item(i);
-      if (attr) {
-        attr.ownerDocument = newOwnerDocument;
+function St(t, e) {
+  if (t.ownerDocument !== e) {
+    if (t.ownerDocument = e, t.nodeType === ie && t.attributes)
+      for (var r = 0; r < t.attributes.length; r++) {
+        var a = t.attributes.item(r);
+        a && (a.ownerDocument = e);
       }
-    }
-  }
-  var child = node.firstChild;
-  while (child) {
-    _updateOwnerDocument(child, newOwnerDocument);
-    child = child.nextSibling;
+    for (var n = t.firstChild; n; )
+      St(n, e), n = n.nextSibling;
   }
 }
-function _appendSingleChild(parentNode, newChild) {
-  if (newChild.parentNode) {
-    newChild.parentNode.removeChild(newChild);
-  }
-  newChild.parentNode = parentNode;
-  newChild.previousSibling = parentNode.lastChild;
-  newChild.nextSibling = null;
-  if (newChild.previousSibling) {
-    newChild.previousSibling.nextSibling = newChild;
-  } else {
-    parentNode.firstChild = newChild;
-  }
-  parentNode.lastChild = newChild;
-  _onUpdateChild(parentNode.ownerDocument, parentNode, newChild);
-  var targetDoc = parentNode.ownerDocument || parentNode;
-  _updateOwnerDocument(newChild, targetDoc);
-  return newChild;
+function Yi(t, e) {
+  e.parentNode && e.parentNode.removeChild(e), e.parentNode = t, e.previousSibling = t.lastChild, e.nextSibling = null, e.previousSibling ? e.previousSibling.nextSibling = e : t.firstChild = e, t.lastChild = e, xr(t.ownerDocument, t, e);
+  var r = t.ownerDocument || t;
+  return St(e, r), e;
 }
-Document.prototype = {
+Ot.prototype = {
   //implementation : null,
   nodeName: "#document",
-  nodeType: DOCUMENT_NODE,
+  nodeType: Nn,
   /**
    * The DocumentType node of the document.
    *
@@ -5780,55 +5000,33 @@ Document.prototype = {
   doctype: null,
   documentElement: null,
   _inc: 1,
-  insertBefore: function(newChild, refChild) {
-    if (newChild.nodeType == DOCUMENT_FRAGMENT_NODE) {
-      var child = newChild.firstChild;
-      while (child) {
-        var next = child.nextSibling;
-        this.insertBefore(child, refChild);
-        child = next;
+  insertBefore: function(t, e) {
+    if (t.nodeType == Ce) {
+      for (var r = t.firstChild; r; ) {
+        var a = r.nextSibling;
+        this.insertBefore(r, e), r = a;
       }
-      return newChild;
+      return t;
     }
-    _insertBefore(this, newChild, refChild);
-    _updateOwnerDocument(newChild, this);
-    if (this.documentElement === null && newChild.nodeType === ELEMENT_NODE) {
-      this.documentElement = newChild;
-    }
-    return newChild;
+    return Ht(this, t, e), St(t, this), this.documentElement === null && t.nodeType === ie && (this.documentElement = t), t;
   },
-  removeChild: function(oldChild) {
-    if (this.documentElement == oldChild) {
-      this.documentElement = null;
-    }
-    return _removeChild(this, oldChild);
+  removeChild: function(t) {
+    return this.documentElement == t && (this.documentElement = null), Dn(this, t);
   },
-  replaceChild: function(newChild, oldChild) {
-    _insertBefore(this, newChild, oldChild, assertPreReplacementValidityInDocument);
-    _updateOwnerDocument(newChild, this);
-    if (oldChild) {
-      this.removeChild(oldChild);
-    }
-    if (isElementNode(newChild)) {
-      this.documentElement = newChild;
-    }
+  replaceChild: function(t, e) {
+    Ht(this, t, e, Sn), St(t, this), e && this.removeChild(e), pe(t) && (this.documentElement = t);
   },
   // Introduced in DOM Level 2:
-  importNode: function(importedNode, deep) {
-    return importNode(this, importedNode, deep);
+  importNode: function(t, e) {
+    return bn(this, t, e);
   },
   // Introduced in DOM Level 2:
-  getElementById: function(id) {
-    var rtv = null;
-    _visitNode(this.documentElement, function(node) {
-      if (node.nodeType == ELEMENT_NODE) {
-        if (node.getAttribute("id") == id) {
-          rtv = node;
-          return true;
-        }
-      }
-    });
-    return rtv;
+  getElementById: function(t) {
+    var e = null;
+    return Dt(this.documentElement, function(r) {
+      if (r.nodeType == ie && r.getAttribute("id") == t)
+        return e = r, !0;
+    }), e;
   },
   /**
    * The `getElementsByClassName` method of `Document` interface returns an array-like object
@@ -5847,633 +5045,457 @@ Document.prototype = {
    * @see https://developer.mozilla.org/en-US/docs/Web/API/Document/getElementsByClassName
    * @see https://dom.spec.whatwg.org/#concept-getelementsbyclassname
    */
-  getElementsByClassName: function(classNames) {
-    var classNamesSet = toOrderedSet(classNames);
-    return new LiveNodeList(this, function(base) {
-      var ls = [];
-      if (classNamesSet.length > 0) {
-        _visitNode(base.documentElement, function(node) {
-          if (node !== base && node.nodeType === ELEMENT_NODE) {
-            var nodeClassNames = node.getAttribute("class");
-            if (nodeClassNames) {
-              var matches = classNames === nodeClassNames;
-              if (!matches) {
-                var nodeClassNamesSet = toOrderedSet(nodeClassNames);
-                matches = classNamesSet.every(arrayIncludes(nodeClassNamesSet));
-              }
-              if (matches) {
-                ls.push(node);
-              }
+  getElementsByClassName: function(t) {
+    var e = ca(t);
+    return new ct(this, function(r) {
+      var a = [];
+      return e.length > 0 && Dt(r.documentElement, function(n) {
+        if (n !== r && n.nodeType === ie) {
+          var o = n.getAttribute("class");
+          if (o) {
+            var s = t === o;
+            if (!s) {
+              var i = ca(o);
+              s = e.every(ki(i));
             }
+            s && a.push(n);
           }
-        });
-      }
-      return ls;
+        }
+      }), a;
     });
   },
   //document factory method:
-  createElement: function(tagName) {
-    var node = new Element();
-    node.ownerDocument = this;
-    node.nodeName = tagName;
-    node.tagName = tagName;
-    node.localName = tagName;
-    node.childNodes = new NodeList();
-    var attrs = node.attributes = new NamedNodeMap();
-    attrs._ownerElement = node;
-    return node;
+  createElement: function(t) {
+    var e = new qe();
+    e.ownerDocument = this, e.nodeName = t, e.tagName = t, e.localName = t, e.childNodes = new Ie();
+    var r = e.attributes = new jt();
+    return r._ownerElement = e, e;
   },
   createDocumentFragment: function() {
-    var node = new DocumentFragment();
-    node.ownerDocument = this;
-    node.childNodes = new NodeList();
-    return node;
+    var t = new er();
+    return t.ownerDocument = this, t.childNodes = new Ie(), t;
   },
-  createTextNode: function(data) {
-    var node = new Text();
-    node.ownerDocument = this;
-    node.appendData(data);
-    return node;
+  createTextNode: function(t) {
+    var e = new Pr();
+    return e.ownerDocument = this, e.appendData(t), e;
   },
-  createComment: function(data) {
-    var node = new Comment();
-    node.ownerDocument = this;
-    node.appendData(data);
-    return node;
+  createComment: function(t) {
+    var e = new Br();
+    return e.ownerDocument = this, e.appendData(t), e;
   },
-  createCDATASection: function(data) {
-    var node = new CDATASection();
-    node.ownerDocument = this;
-    node.appendData(data);
-    return node;
+  createCDATASection: function(t) {
+    var e = new Xr();
+    return e.ownerDocument = this, e.appendData(t), e;
   },
-  createProcessingInstruction: function(target, data) {
-    var node = new ProcessingInstruction();
-    node.ownerDocument = this;
-    node.tagName = node.nodeName = node.target = target;
-    node.nodeValue = node.data = data;
-    return node;
+  createProcessingInstruction: function(t, e) {
+    var r = new kr();
+    return r.ownerDocument = this, r.tagName = r.nodeName = r.target = t, r.nodeValue = r.data = e, r;
   },
-  createAttribute: function(name) {
-    var node = new Attr();
-    node.ownerDocument = this;
-    node.name = name;
-    node.nodeName = name;
-    node.localName = name;
-    node.specified = true;
-    return node;
+  createAttribute: function(t) {
+    var e = new Kt();
+    return e.ownerDocument = this, e.name = t, e.nodeName = t, e.localName = t, e.specified = !0, e;
   },
-  createEntityReference: function(name) {
-    var node = new EntityReference();
-    node.ownerDocument = this;
-    node.nodeName = name;
-    return node;
+  createEntityReference: function(t) {
+    var e = new $r();
+    return e.ownerDocument = this, e.nodeName = t, e;
   },
   // Introduced in DOM Level 2:
-  createElementNS: function(namespaceURI, qualifiedName) {
-    var node = new Element();
-    var pl = qualifiedName.split(":");
-    var attrs = node.attributes = new NamedNodeMap();
-    node.childNodes = new NodeList();
-    node.ownerDocument = this;
-    node.nodeName = qualifiedName;
-    node.tagName = qualifiedName;
-    node.namespaceURI = namespaceURI;
-    if (pl.length == 2) {
-      node.prefix = pl[0];
-      node.localName = pl[1];
-    } else {
-      node.localName = qualifiedName;
-    }
-    attrs._ownerElement = node;
-    return node;
+  createElementNS: function(t, e) {
+    var r = new qe(), a = e.split(":"), n = r.attributes = new jt();
+    return r.childNodes = new Ie(), r.ownerDocument = this, r.nodeName = e, r.tagName = e, r.namespaceURI = t, a.length == 2 ? (r.prefix = a[0], r.localName = a[1]) : r.localName = e, n._ownerElement = r, r;
   },
   // Introduced in DOM Level 2:
-  createAttributeNS: function(namespaceURI, qualifiedName) {
-    var node = new Attr();
-    var pl = qualifiedName.split(":");
-    node.ownerDocument = this;
-    node.nodeName = qualifiedName;
-    node.name = qualifiedName;
-    node.namespaceURI = namespaceURI;
-    node.specified = true;
-    if (pl.length == 2) {
-      node.prefix = pl[0];
-      node.localName = pl[1];
-    } else {
-      node.localName = qualifiedName;
-    }
-    return node;
+  createAttributeNS: function(t, e) {
+    var r = new Kt(), a = e.split(":");
+    return r.ownerDocument = this, r.nodeName = e, r.name = e, r.namespaceURI = t, r.specified = !0, a.length == 2 ? (r.prefix = a[0], r.localName = a[1]) : r.localName = e, r;
   }
 };
-_extends(Document, Node);
-function Element() {
+W(Ot, L);
+function qe() {
   this._nsMap = {};
 }
-Element.prototype = {
-  nodeType: ELEMENT_NODE,
-  hasAttribute: function(name) {
-    return this.getAttributeNode(name) != null;
+qe.prototype = {
+  nodeType: ie,
+  hasAttribute: function(t) {
+    return this.getAttributeNode(t) != null;
   },
-  getAttribute: function(name) {
-    var attr = this.getAttributeNode(name);
-    return attr && attr.value || "";
+  getAttribute: function(t) {
+    var e = this.getAttributeNode(t);
+    return e && e.value || "";
   },
-  getAttributeNode: function(name) {
-    return this.attributes.getNamedItem(name);
+  getAttributeNode: function(t) {
+    return this.attributes.getNamedItem(t);
   },
-  setAttribute: function(name, value) {
-    var attr = this.ownerDocument.createAttribute(name);
-    attr.value = attr.nodeValue = "" + value;
-    this.setAttributeNode(attr);
+  setAttribute: function(t, e) {
+    var r = this.ownerDocument.createAttribute(t);
+    r.value = r.nodeValue = "" + e, this.setAttributeNode(r);
   },
-  removeAttribute: function(name) {
-    var attr = this.getAttributeNode(name);
-    attr && this.removeAttributeNode(attr);
+  removeAttribute: function(t) {
+    var e = this.getAttributeNode(t);
+    e && this.removeAttributeNode(e);
   },
   //four real opeartion method
-  appendChild: function(newChild) {
-    if (newChild.nodeType === DOCUMENT_FRAGMENT_NODE) {
-      return this.insertBefore(newChild, null);
-    } else {
-      return _appendSingleChild(this, newChild);
-    }
+  appendChild: function(t) {
+    return t.nodeType === Ce ? this.insertBefore(t, null) : Yi(this, t);
   },
-  setAttributeNode: function(newAttr) {
-    return this.attributes.setNamedItem(newAttr);
+  setAttributeNode: function(t) {
+    return this.attributes.setNamedItem(t);
   },
-  setAttributeNodeNS: function(newAttr) {
-    return this.attributes.setNamedItemNS(newAttr);
+  setAttributeNodeNS: function(t) {
+    return this.attributes.setNamedItemNS(t);
   },
-  removeAttributeNode: function(oldAttr) {
-    return this.attributes.removeNamedItem(oldAttr.nodeName);
+  removeAttributeNode: function(t) {
+    return this.attributes.removeNamedItem(t.nodeName);
   },
   //get real attribute name,and remove it by removeAttributeNode
-  removeAttributeNS: function(namespaceURI, localName2) {
-    var old = this.getAttributeNodeNS(namespaceURI, localName2);
-    old && this.removeAttributeNode(old);
+  removeAttributeNS: function(t, e) {
+    var r = this.getAttributeNodeNS(t, e);
+    r && this.removeAttributeNode(r);
   },
-  hasAttributeNS: function(namespaceURI, localName2) {
-    return this.getAttributeNodeNS(namespaceURI, localName2) != null;
+  hasAttributeNS: function(t, e) {
+    return this.getAttributeNodeNS(t, e) != null;
   },
-  getAttributeNS: function(namespaceURI, localName2) {
-    var attr = this.getAttributeNodeNS(namespaceURI, localName2);
-    return attr && attr.value || "";
+  getAttributeNS: function(t, e) {
+    var r = this.getAttributeNodeNS(t, e);
+    return r && r.value || "";
   },
-  setAttributeNS: function(namespaceURI, qualifiedName, value) {
-    var attr = this.ownerDocument.createAttributeNS(namespaceURI, qualifiedName);
-    attr.value = attr.nodeValue = "" + value;
-    this.setAttributeNode(attr);
+  setAttributeNS: function(t, e, r) {
+    var a = this.ownerDocument.createAttributeNS(t, e);
+    a.value = a.nodeValue = "" + r, this.setAttributeNode(a);
   },
-  getAttributeNodeNS: function(namespaceURI, localName2) {
-    return this.attributes.getNamedItemNS(namespaceURI, localName2);
+  getAttributeNodeNS: function(t, e) {
+    return this.attributes.getNamedItemNS(t, e);
   },
-  getElementsByTagName: function(tagName) {
-    return new LiveNodeList(this, function(base) {
-      var ls = [];
-      _visitNode(base, function(node) {
-        if (node !== base && node.nodeType == ELEMENT_NODE && (tagName === "*" || node.tagName == tagName)) {
-          ls.push(node);
-        }
-      });
-      return ls;
+  getElementsByTagName: function(t) {
+    return new ct(this, function(e) {
+      var r = [];
+      return Dt(e, function(a) {
+        a !== e && a.nodeType == ie && (t === "*" || a.tagName == t) && r.push(a);
+      }), r;
     });
   },
-  getElementsByTagNameNS: function(namespaceURI, localName2) {
-    return new LiveNodeList(this, function(base) {
-      var ls = [];
-      _visitNode(base, function(node) {
-        if (node !== base && node.nodeType === ELEMENT_NODE && (namespaceURI === "*" || node.namespaceURI === namespaceURI) && (localName2 === "*" || node.localName == localName2)) {
-          ls.push(node);
-        }
-      });
-      return ls;
+  getElementsByTagNameNS: function(t, e) {
+    return new ct(this, function(r) {
+      var a = [];
+      return Dt(r, function(n) {
+        n !== r && n.nodeType === ie && (t === "*" || n.namespaceURI === t) && (e === "*" || n.localName == e) && a.push(n);
+      }), a;
     });
   }
 };
-Document.prototype.getElementsByTagName = Element.prototype.getElementsByTagName;
-Document.prototype.getElementsByTagNameNS = Element.prototype.getElementsByTagNameNS;
-_extends(Element, Node);
-function Attr() {
+Ot.prototype.getElementsByTagName = qe.prototype.getElementsByTagName;
+Ot.prototype.getElementsByTagNameNS = qe.prototype.getElementsByTagNameNS;
+W(qe, L);
+function Kt() {
 }
-Attr.prototype.nodeType = ATTRIBUTE_NODE;
-_extends(Attr, Node);
-function CharacterData() {
+Kt.prototype.nodeType = it;
+W(Kt, L);
+function bt() {
 }
-CharacterData.prototype = {
+bt.prototype = {
   data: "",
-  substringData: function(offset, count) {
-    return this.data.substring(offset, offset + count);
+  substringData: function(t, e) {
+    return this.data.substring(t, t + e);
   },
-  appendData: function(text) {
-    text = this.data + text;
-    this.nodeValue = this.data = text;
-    this.length = text.length;
+  appendData: function(t) {
+    t = this.data + t, this.nodeValue = this.data = t, this.length = t.length;
   },
-  insertData: function(offset, text) {
-    this.replaceData(offset, 0, text);
+  insertData: function(t, e) {
+    this.replaceData(t, 0, e);
   },
-  appendChild: function(newChild) {
-    throw new Error(ExceptionMessage[HIERARCHY_REQUEST_ERR]);
+  appendChild: function(t) {
+    throw new Error(X[Y]);
   },
-  deleteData: function(offset, count) {
-    this.replaceData(offset, count, "");
+  deleteData: function(t, e) {
+    this.replaceData(t, e, "");
   },
-  replaceData: function(offset, count, text) {
-    var start = this.data.substring(0, offset);
-    var end = this.data.substring(offset + count);
-    text = start + text + end;
-    this.nodeValue = this.data = text;
-    this.length = text.length;
+  replaceData: function(t, e, r) {
+    var a = this.data.substring(0, t), n = this.data.substring(t + e);
+    r = a + r + n, this.nodeValue = this.data = r, this.length = r.length;
   }
 };
-_extends(CharacterData, Node);
-function Text() {
+W(bt, L);
+function Pr() {
 }
-Text.prototype = {
+Pr.prototype = {
   nodeName: "#text",
-  nodeType: TEXT_NODE,
-  splitText: function(offset) {
-    var text = this.data;
-    var newText = text.substring(offset);
-    text = text.substring(0, offset);
-    this.data = this.nodeValue = text;
-    this.length = text.length;
-    var newNode = this.ownerDocument.createTextNode(newText);
-    if (this.parentNode) {
-      this.parentNode.insertBefore(newNode, this.nextSibling);
-    }
-    return newNode;
+  nodeType: zt,
+  splitText: function(t) {
+    var e = this.data, r = e.substring(t);
+    e = e.substring(0, t), this.data = this.nodeValue = e, this.length = e.length;
+    var a = this.ownerDocument.createTextNode(r);
+    return this.parentNode && this.parentNode.insertBefore(a, this.nextSibling), a;
   }
 };
-_extends(Text, CharacterData);
-function Comment() {
+W(Pr, bt);
+function Br() {
 }
-Comment.prototype = {
+Br.prototype = {
   nodeName: "#comment",
-  nodeType: COMMENT_NODE
+  nodeType: fn
 };
-_extends(Comment, CharacterData);
-function CDATASection() {
+W(Br, bt);
+function Xr() {
 }
-CDATASection.prototype = {
+Xr.prototype = {
   nodeName: "#cdata-section",
-  nodeType: CDATA_SECTION_NODE
+  nodeType: pn
 };
-_extends(CDATASection, CharacterData);
-function DocumentType() {
+W(Xr, bt);
+function Zt() {
 }
-DocumentType.prototype.nodeType = DOCUMENT_TYPE_NODE;
-_extends(DocumentType, Node);
-function Notation() {
+Zt.prototype.nodeType = gn;
+W(Zt, L);
+function Rn() {
 }
-Notation.prototype.nodeType = NOTATION_NODE;
-_extends(Notation, Node);
-function Entity() {
+Rn.prototype.nodeType = Gi;
+W(Rn, L);
+function Ln() {
 }
-Entity.prototype.nodeType = ENTITY_NODE;
-_extends(Entity, Node);
-function EntityReference() {
+Ln.prototype.nodeType = qi;
+W(Ln, L);
+function $r() {
 }
-EntityReference.prototype.nodeType = ENTITY_REFERENCE_NODE;
-_extends(EntityReference, Node);
-function DocumentFragment() {
+$r.prototype.nodeType = _n;
+W($r, L);
+function er() {
 }
-DocumentFragment.prototype.nodeName = "#document-fragment";
-DocumentFragment.prototype.nodeType = DOCUMENT_FRAGMENT_NODE;
-_extends(DocumentFragment, Node);
-function ProcessingInstruction() {
+er.prototype.nodeName = "#document-fragment";
+er.prototype.nodeType = Ce;
+W(er, L);
+function kr() {
 }
-ProcessingInstruction.prototype.nodeType = PROCESSING_INSTRUCTION_NODE;
-_extends(ProcessingInstruction, Node);
-function XMLSerializer() {
+kr.prototype.nodeType = Tn;
+W(kr, L);
+function yn() {
 }
-XMLSerializer.prototype.serializeToString = function(node, isHtml, nodeFilter) {
-  return nodeSerializeToString.call(node, isHtml, nodeFilter);
+yn.prototype.serializeToString = function(t, e, r) {
+  return On.call(t, e, r);
 };
-Node.prototype.toString = nodeSerializeToString;
-function nodeSerializeToString(isHtml, nodeFilter) {
-  var buf = [];
-  var refNode = this.nodeType == 9 && this.documentElement || this;
-  var prefix = refNode.prefix;
-  var uri = refNode.namespaceURI;
-  if (uri && prefix == null) {
-    var prefix = refNode.lookupPrefix(uri);
-    if (prefix == null) {
-      var visibleNamespaces = [
-        { namespace: uri, prefix: null }
+L.prototype.toString = On;
+function On(t, e) {
+  var r = [], a = this.nodeType == 9 && this.documentElement || this, n = a.prefix, o = a.namespaceURI;
+  if (o && n == null) {
+    var n = a.lookupPrefix(o);
+    if (n == null)
+      var s = [
+        { namespace: o, prefix: null }
         //{namespace:uri,prefix:''}
       ];
-    }
   }
-  serializeToString(this, buf, isHtml, nodeFilter, visibleNamespaces);
-  return buf.join("");
+  return ot(this, r, t, e, s), r.join("");
 }
-function needNamespaceDefine(node, isHTML, visibleNamespaces) {
-  var prefix = node.prefix || "";
-  var uri = node.namespaceURI;
-  if (!uri) {
-    return false;
+function pa(t, e, r) {
+  var a = t.prefix || "", n = t.namespaceURI;
+  if (!n || a === "xml" && n === vt.XML || n === vt.XMLNS)
+    return !1;
+  for (var o = r.length; o--; ) {
+    var s = r[o];
+    if (s.prefix === a)
+      return s.namespace !== n;
   }
-  if (prefix === "xml" && uri === NAMESPACE$2.XML || uri === NAMESPACE$2.XMLNS) {
-    return false;
-  }
-  var i = visibleNamespaces.length;
-  while (i--) {
-    var ns = visibleNamespaces[i];
-    if (ns.prefix === prefix) {
-      return ns.namespace !== uri;
-    }
-  }
-  return true;
+  return !0;
 }
-function addSerializedAttribute(buf, qualifiedName, value) {
-  buf.push(" ", qualifiedName, '="', value.replace(/[<>&"\t\n\r]/g, _xmlEncoder), '"');
+function dr(t, e, r) {
+  t.push(" ", e, '="', r.replace(/[<>&"\t\n\r]/g, Cn), '"');
 }
-function serializeToString(node, buf, isHTML, nodeFilter, visibleNamespaces) {
-  if (!visibleNamespaces) {
-    visibleNamespaces = [];
-  }
-  if (nodeFilter) {
-    node = nodeFilter(node);
-    if (node) {
-      if (typeof node == "string") {
-        buf.push(node);
+function ot(t, e, r, a, n) {
+  if (n || (n = []), a)
+    if (t = a(t), t) {
+      if (typeof t == "string") {
+        e.push(t);
         return;
       }
-    } else {
+    } else
       return;
-    }
-  }
-  switch (node.nodeType) {
-    case ELEMENT_NODE:
-      var attrs = node.attributes;
-      var len = attrs.length;
-      var child = node.firstChild;
-      var nodeName = node.tagName;
-      isHTML = NAMESPACE$2.isHTML(node.namespaceURI) || isHTML;
-      var prefixedNodeName = nodeName;
-      if (!isHTML && !node.prefix && node.namespaceURI) {
-        var defaultNS;
-        for (var ai = 0; ai < attrs.length; ai++) {
-          if (attrs.item(ai).name === "xmlns") {
-            defaultNS = attrs.item(ai).value;
+  switch (t.nodeType) {
+    case ie:
+      var o = t.attributes, s = o.length, O = t.firstChild, i = t.tagName;
+      r = vt.isHTML(t.namespaceURI) || r;
+      var c = i;
+      if (!r && !t.prefix && t.namespaceURI) {
+        for (var l, d = 0; d < o.length; d++)
+          if (o.item(d).name === "xmlns") {
+            l = o.item(d).value;
             break;
           }
-        }
-        if (!defaultNS) {
-          for (var nsi = visibleNamespaces.length - 1; nsi >= 0; nsi--) {
-            var namespace = visibleNamespaces[nsi];
-            if (namespace.prefix === "" && namespace.namespace === node.namespaceURI) {
-              defaultNS = namespace.namespace;
+        if (!l)
+          for (var m = n.length - 1; m >= 0; m--) {
+            var E = n[m];
+            if (E.prefix === "" && E.namespace === t.namespaceURI) {
+              l = E.namespace;
               break;
             }
           }
-        }
-        if (defaultNS !== node.namespaceURI) {
-          for (var nsi = visibleNamespaces.length - 1; nsi >= 0; nsi--) {
-            var namespace = visibleNamespaces[nsi];
-            if (namespace.namespace === node.namespaceURI) {
-              if (namespace.prefix) {
-                prefixedNodeName = namespace.prefix + ":" + nodeName;
-              }
+        if (l !== t.namespaceURI)
+          for (var m = n.length - 1; m >= 0; m--) {
+            var E = n[m];
+            if (E.namespace === t.namespaceURI) {
+              E.prefix && (c = E.prefix + ":" + i);
               break;
             }
           }
+      }
+      e.push("<", c);
+      for (var _ = 0; _ < s; _++) {
+        var A = o.item(_);
+        A.prefix == "xmlns" ? n.push({ prefix: A.localName, namespace: A.value }) : A.nodeName == "xmlns" && n.push({ prefix: "", namespace: A.value });
+      }
+      for (var _ = 0; _ < s; _++) {
+        var A = o.item(_);
+        if (pa(A, r, n)) {
+          var N = A.prefix || "", C = A.namespaceURI;
+          dr(e, N ? "xmlns:" + N : "xmlns", C), n.push({ prefix: N, namespace: C });
         }
+        ot(A, e, r, a, n);
       }
-      buf.push("<", prefixedNodeName);
-      for (var i = 0; i < len; i++) {
-        var attr = attrs.item(i);
-        if (attr.prefix == "xmlns") {
-          visibleNamespaces.push({ prefix: attr.localName, namespace: attr.value });
-        } else if (attr.nodeName == "xmlns") {
-          visibleNamespaces.push({ prefix: "", namespace: attr.value });
-        }
+      if (i === c && pa(t, r, n)) {
+        var N = t.prefix || "", C = t.namespaceURI;
+        dr(e, N ? "xmlns:" + N : "xmlns", C), n.push({ prefix: N, namespace: C });
       }
-      for (var i = 0; i < len; i++) {
-        var attr = attrs.item(i);
-        if (needNamespaceDefine(attr, isHTML, visibleNamespaces)) {
-          var prefix = attr.prefix || "";
-          var uri = attr.namespaceURI;
-          addSerializedAttribute(buf, prefix ? "xmlns:" + prefix : "xmlns", uri);
-          visibleNamespaces.push({ prefix, namespace: uri });
-        }
-        serializeToString(attr, buf, isHTML, nodeFilter, visibleNamespaces);
-      }
-      if (nodeName === prefixedNodeName && needNamespaceDefine(node, isHTML, visibleNamespaces)) {
-        var prefix = node.prefix || "";
-        var uri = node.namespaceURI;
-        addSerializedAttribute(buf, prefix ? "xmlns:" + prefix : "xmlns", uri);
-        visibleNamespaces.push({ prefix, namespace: uri });
-      }
-      if (child || isHTML && !/^(?:meta|link|img|br|hr|input)$/i.test(nodeName)) {
-        buf.push(">");
-        if (isHTML && /^script$/i.test(nodeName)) {
-          while (child) {
-            if (child.data) {
-              buf.push(child.data);
-            } else {
-              serializeToString(child, buf, isHTML, nodeFilter, visibleNamespaces.slice());
-            }
-            child = child.nextSibling;
-          }
-        } else {
-          while (child) {
-            serializeToString(child, buf, isHTML, nodeFilter, visibleNamespaces.slice());
-            child = child.nextSibling;
-          }
-        }
-        buf.push("</", prefixedNodeName, ">");
-      } else {
-        buf.push("/>");
-      }
+      if (O || r && !/^(?:meta|link|img|br|hr|input)$/i.test(i)) {
+        if (e.push(">"), r && /^script$/i.test(i))
+          for (; O; )
+            O.data ? e.push(O.data) : ot(O, e, r, a, n.slice()), O = O.nextSibling;
+        else
+          for (; O; )
+            ot(O, e, r, a, n.slice()), O = O.nextSibling;
+        e.push("</", c, ">");
+      } else
+        e.push("/>");
       return;
-    case DOCUMENT_NODE:
-    case DOCUMENT_FRAGMENT_NODE:
-      var child = node.firstChild;
-      while (child) {
-        serializeToString(child, buf, isHTML, nodeFilter, visibleNamespaces.slice());
-        child = child.nextSibling;
-      }
+    case Nn:
+    case Ce:
+      for (var O = t.firstChild; O; )
+        ot(O, e, r, a, n.slice()), O = O.nextSibling;
       return;
-    case ATTRIBUTE_NODE:
-      return addSerializedAttribute(buf, node.name, node.value);
-    case TEXT_NODE:
-      return buf.push(
-        node.data.replace(/[<&>]/g, _xmlEncoder)
+    case it:
+      return dr(e, t.name, t.value);
+    case zt:
+      return e.push(
+        t.data.replace(/[<&>]/g, Cn)
       );
-    case CDATA_SECTION_NODE:
-      return buf.push("<![CDATA[", node.data, "]]>");
-    case COMMENT_NODE:
-      return buf.push("<!--", node.data, "-->");
-    case DOCUMENT_TYPE_NODE:
-      var pubid = node.publicId;
-      var sysid = node.systemId;
-      buf.push("<!DOCTYPE ", node.name);
-      if (pubid) {
-        buf.push(" PUBLIC ", pubid);
-        if (sysid && sysid != ".") {
-          buf.push(" ", sysid);
-        }
-        buf.push(">");
-      } else if (sysid && sysid != ".") {
-        buf.push(" SYSTEM ", sysid, ">");
-      } else {
-        var sub = node.internalSubset;
-        if (sub) {
-          buf.push(" [", sub, "]");
-        }
-        buf.push(">");
+    case pn:
+      return e.push("<![CDATA[", t.data, "]]>");
+    case fn:
+      return e.push("<!--", t.data, "-->");
+    case gn:
+      var J = t.publicId, b = t.systemId;
+      if (e.push("<!DOCTYPE ", t.name), J)
+        e.push(" PUBLIC ", J), b && b != "." && e.push(" ", b), e.push(">");
+      else if (b && b != ".")
+        e.push(" SYSTEM ", b, ">");
+      else {
+        var F = t.internalSubset;
+        F && e.push(" [", F, "]"), e.push(">");
       }
       return;
-    case PROCESSING_INSTRUCTION_NODE:
-      return buf.push("<?", node.target, " ", node.data, "?>");
-    case ENTITY_REFERENCE_NODE:
-      return buf.push("&", node.nodeName, ";");
+    case Tn:
+      return e.push("<?", t.target, " ", t.data, "?>");
+    case _n:
+      return e.push("&", t.nodeName, ";");
     default:
-      buf.push("??", node.nodeName);
+      e.push("??", t.nodeName);
   }
 }
-function importNode(doc, node, deep) {
-  var node2;
-  switch (node.nodeType) {
-    case ELEMENT_NODE:
-      node2 = node.cloneNode(false);
-      node2.ownerDocument = doc;
-    case DOCUMENT_FRAGMENT_NODE:
+function bn(t, e, r) {
+  var a;
+  switch (e.nodeType) {
+    case ie:
+      a = e.cloneNode(!1), a.ownerDocument = t;
+    case Ce:
       break;
-    case ATTRIBUTE_NODE:
-      deep = true;
+    case it:
+      r = !0;
       break;
   }
-  if (!node2) {
-    node2 = node.cloneNode(false);
-  }
-  node2.ownerDocument = doc;
-  node2.parentNode = null;
-  if (deep) {
-    var child = node.firstChild;
-    while (child) {
-      node2.appendChild(importNode(doc, child, deep));
-      child = child.nextSibling;
-    }
-  }
-  return node2;
+  if (a || (a = e.cloneNode(!1)), a.ownerDocument = t, a.parentNode = null, r)
+    for (var n = e.firstChild; n; )
+      a.appendChild(bn(t, n, r)), n = n.nextSibling;
+  return a;
 }
-function cloneNode(doc, node, deep) {
-  var node2 = new node.constructor();
-  for (var n in node) {
-    if (Object.prototype.hasOwnProperty.call(node, n)) {
-      var v = node[n];
-      if (typeof v != "object") {
-        if (v != node2[n]) {
-          node2[n] = v;
-        }
-      }
+function Sr(t, e, r) {
+  var a = new e.constructor();
+  for (var n in e)
+    if (Object.prototype.hasOwnProperty.call(e, n)) {
+      var o = e[n];
+      typeof o != "object" && o != a[n] && (a[n] = o);
     }
-  }
-  if (node.childNodes) {
-    node2.childNodes = new NodeList();
-  }
-  node2.ownerDocument = doc;
-  switch (node2.nodeType) {
-    case ELEMENT_NODE:
-      var attrs = node.attributes;
-      var attrs2 = node2.attributes = new NamedNodeMap();
-      var len = attrs.length;
-      attrs2._ownerElement = node2;
-      for (var i = 0; i < len; i++) {
-        node2.setAttributeNode(cloneNode(doc, attrs.item(i), true));
-      }
+  switch (e.childNodes && (a.childNodes = new Ie()), a.ownerDocument = t, a.nodeType) {
+    case ie:
+      var s = e.attributes, i = a.attributes = new jt(), c = s.length;
+      i._ownerElement = a;
+      for (var l = 0; l < c; l++)
+        a.setAttributeNode(Sr(t, s.item(l), !0));
       break;
-    case ATTRIBUTE_NODE:
-      deep = true;
+    case it:
+      r = !0;
   }
-  if (deep) {
-    var child = node.firstChild;
-    while (child) {
-      node2.appendChild(cloneNode(doc, child, deep));
-      child = child.nextSibling;
-    }
-  }
-  return node2;
+  if (r)
+    for (var d = e.firstChild; d; )
+      a.appendChild(Sr(t, d, r)), d = d.nextSibling;
+  return a;
 }
-function __set__(object, key, value) {
-  object[key] = value;
+function Un(t, e, r) {
+  t[e] = r;
 }
 try {
   if (Object.defineProperty) {
-    let getTextContent = function(node) {
-      switch (node.nodeType) {
-        case ELEMENT_NODE:
-        case DOCUMENT_FRAGMENT_NODE:
-          var buf = [];
-          node = node.firstChild;
-          while (node) {
-            if (node.nodeType !== 7 && node.nodeType !== 8) {
-              buf.push(getTextContent(node));
-            }
-            node = node.nextSibling;
-          }
-          return buf.join("");
+    let t = function(e) {
+      switch (e.nodeType) {
+        case ie:
+        case Ce:
+          var r = [];
+          for (e = e.firstChild; e; )
+            e.nodeType !== 7 && e.nodeType !== 8 && r.push(t(e)), e = e.nextSibling;
+          return r.join("");
         default:
-          return node.nodeValue;
+          return e.nodeValue;
       }
     };
-    Object.defineProperty(LiveNodeList.prototype, "length", {
+    Object.defineProperty(ct.prototype, "length", {
       get: function() {
-        _updateLiveList(this);
-        return this.$$length;
+        return wr(this), this.$$length;
       }
-    });
-    Object.defineProperty(Node.prototype, "textContent", {
+    }), Object.defineProperty(L.prototype, "textContent", {
       get: function() {
-        return getTextContent(this);
+        return t(this);
       },
-      set: function(data) {
+      set: function(e) {
         switch (this.nodeType) {
-          case ELEMENT_NODE:
-          case DOCUMENT_FRAGMENT_NODE:
-            while (this.firstChild) {
+          case ie:
+          case Ce:
+            for (; this.firstChild; )
               this.removeChild(this.firstChild);
-            }
-            if (data || String(data)) {
-              this.appendChild(this.ownerDocument.createTextNode(data));
-            }
+            (e || String(e)) && this.appendChild(this.ownerDocument.createTextNode(e));
             break;
           default:
-            this.data = data;
-            this.value = data;
-            this.nodeValue = data;
+            this.data = e, this.value = e, this.nodeValue = e;
         }
       }
-    });
-    __set__ = function(object, key, value) {
-      object["$$" + key] = value;
+    }), Un = function(e, r, a) {
+      e["$$" + r] = a;
     };
   }
-} catch (e) {
+} catch {
 }
-dom$1.DocumentType = DocumentType;
-dom$1.DOMException = DOMException;
-dom$1.DOMImplementation = DOMImplementation$1;
-dom$1.Element = Element;
-dom$1.Node = Node;
-dom$1.NodeList = NodeList;
-dom$1.XMLSerializer = XMLSerializer;
-var domParser = {};
-var entities$1 = {};
-(function(exports$1) {
-  var freeze2 = conventions$2.freeze;
-  exports$1.XML_ENTITIES = freeze2({
+Ue.DocumentType = Zt;
+Ue.DOMException = M;
+Ue.DOMImplementation = In;
+Ue.Element = qe;
+Ue.Node = L;
+Ue.NodeList = Ie;
+Ue.XMLSerializer = yn;
+var tr = {}, Fn = {};
+(function(t) {
+  var e = Se.freeze;
+  t.XML_ENTITIES = e({
     amp: "&",
     apos: "'",
     gt: ">",
     lt: "<",
     quot: '"'
-  });
-  exports$1.HTML_ENTITIES = freeze2({
+  }), t.HTML_ENTITIES = e({
     Aacute: "Á",
     aacute: "á",
     Abreve: "Ă",
@@ -7583,7 +6605,8 @@ var entities$1 = {};
     nesim: "≂̸",
     NestedGreaterGreater: "≫",
     NestedLessLess: "≪",
-    NewLine: "\n",
+    NewLine: `
+`,
     nexist: "∄",
     nexists: "∄",
     Nfr: "𝔑",
@@ -8599,560 +7622,318 @@ var entities$1 = {};
     zscr: "𝓏",
     zwj: "‍",
     zwnj: "‌"
-  });
-  exports$1.entityMap = exports$1.HTML_ENTITIES;
-})(entities$1);
-var sax$1 = {};
-var NAMESPACE$1 = conventions$2.NAMESPACE;
-var nameStartChar = /[A-Z_a-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]/;
-var nameChar = new RegExp("[\\-\\.0-9" + nameStartChar.source.slice(1, -1) + "\\u00B7\\u0300-\\u036F\\u203F-\\u2040]");
-var tagNamePattern = new RegExp("^" + nameStartChar.source + nameChar.source + "*(?::" + nameStartChar.source + nameChar.source + "*)?$");
-var S_TAG = 0;
-var S_ATTR = 1;
-var S_ATTR_SPACE = 2;
-var S_EQ = 3;
-var S_ATTR_NOQUOT_VALUE = 4;
-var S_ATTR_END = 5;
-var S_TAG_SPACE = 6;
-var S_TAG_CLOSE = 7;
-function ParseError$1(message, locator) {
-  this.message = message;
-  this.locator = locator;
-  if (Error.captureStackTrace) Error.captureStackTrace(this, ParseError$1);
+  }), t.entityMap = t.HTML_ENTITIES;
+})(Fn);
+var qr = {}, Rt = Se.NAMESPACE, Rr = /[A-Z_a-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]/, _a = new RegExp("[\\-\\.0-9" + Rr.source.slice(1, -1) + "\\u00B7\\u0300-\\u036F\\u203F-\\u2040]"), Ta = new RegExp("^" + Rr.source + _a.source + "*(?::" + Rr.source + _a.source + "*)?$"), _t = 0, Le = 1, He = 2, Tt = 3, Ke = 4, Ye = 5, ft = 6, xt = 7;
+function ut(t, e) {
+  this.message = t, this.locator = e, Error.captureStackTrace && Error.captureStackTrace(this, ut);
 }
-ParseError$1.prototype = new Error();
-ParseError$1.prototype.name = ParseError$1.name;
-function XMLReader$1() {
+ut.prototype = new Error();
+ut.prototype.name = ut.name;
+function wn() {
 }
-XMLReader$1.prototype = {
-  parse: function(source, defaultNSMap, entityMap) {
-    var domBuilder = this.domBuilder;
-    domBuilder.startDocument();
-    _copy(defaultNSMap, defaultNSMap = {});
-    parse(
-      source,
-      defaultNSMap,
-      entityMap,
-      domBuilder,
+wn.prototype = {
+  parse: function(t, e, r) {
+    var a = this.domBuilder;
+    a.startDocument(), xn(e, e = {}), Wi(
+      t,
+      e,
+      r,
+      a,
       this.errorHandler
-    );
-    domBuilder.endDocument();
+    ), a.endDocument();
   }
 };
-function parse(source, defaultNSMapCopy, entityMap, domBuilder, errorHandler) {
-  function fixedFromCharCode(code) {
-    if (code > 65535) {
-      code -= 65536;
-      var surrogate1 = 55296 + (code >> 10), surrogate2 = 56320 + (code & 1023);
-      return String.fromCharCode(surrogate1, surrogate2);
-    } else {
-      return String.fromCharCode(code);
+function Wi(t, e, r, a, n) {
+  function o(x) {
+    if (x > 65535) {
+      x -= 65536;
+      var re = 55296 + (x >> 10), lo = 56320 + (x & 1023);
+      return String.fromCharCode(re, lo);
+    } else
+      return String.fromCharCode(x);
+  }
+  function s(x) {
+    var re = x.slice(1, -1);
+    return Object.hasOwnProperty.call(r, re) ? r[re] : re.charAt(0) === "#" ? o(parseInt(re.substr(1).replace("x", "0x"))) : (n.error("entity not found:" + x), x);
+  }
+  function i(x) {
+    if (x > N) {
+      var re = t.substring(N, x).replace(/&#?\w+;/g, s);
+      E && c(N), a.characters(re, 0, x - N), N = x;
     }
   }
-  function entityReplacer(a2) {
-    var k = a2.slice(1, -1);
-    if (Object.hasOwnProperty.call(entityMap, k)) {
-      return entityMap[k];
-    } else if (k.charAt(0) === "#") {
-      return fixedFromCharCode(parseInt(k.substr(1).replace("x", "0x")));
-    } else {
-      errorHandler.error("entity not found:" + a2);
-      return a2;
-    }
+  function c(x, re) {
+    for (; x >= d && (re = m.exec(t)); )
+      l = re.index, d = l + re[0].length, E.lineNumber++;
+    E.columnNumber = x - l + 1;
   }
-  function appendText(end2) {
-    if (end2 > start) {
-      var xt = source.substring(start, end2).replace(/&#?\w+;/g, entityReplacer);
-      locator && position2(start);
-      domBuilder.characters(xt, 0, end2 - start);
-      start = end2;
-    }
-  }
-  function position2(p, m) {
-    while (p >= lineEnd && (m = linePattern.exec(source))) {
-      lineStart = m.index;
-      lineEnd = lineStart + m[0].length;
-      locator.lineNumber++;
-    }
-    locator.columnNumber = p - lineStart + 1;
-  }
-  var lineStart = 0;
-  var lineEnd = 0;
-  var linePattern = /.*(?:\r\n?|\n)|.*$/g;
-  var locator = domBuilder.locator;
-  var parseStack = [{ currentNSMap: defaultNSMapCopy }];
-  var closeMap = {};
-  var start = 0;
-  while (true) {
+  for (var l = 0, d = 0, m = /.*(?:\r\n?|\n)|.*$/g, E = a.locator, _ = [{ currentNSMap: e }], A = {}, N = 0; ; ) {
     try {
-      var tagStart = source.indexOf("<", start);
-      if (tagStart < 0) {
-        if (!source.substr(start).match(/^\s*$/)) {
-          var doc = domBuilder.doc;
-          var text = doc.createTextNode(source.substr(start));
-          doc.appendChild(text);
-          domBuilder.currentElement = text;
+      var C = t.indexOf("<", N);
+      if (C < 0) {
+        if (!t.substr(N).match(/^\s*$/)) {
+          var O = a.doc, J = O.createTextNode(t.substr(N));
+          O.appendChild(J), a.currentElement = J;
         }
         return;
       }
-      if (tagStart > start) {
-        appendText(tagStart);
-      }
-      switch (source.charAt(tagStart + 1)) {
+      switch (C > N && i(C), t.charAt(C + 1)) {
         case "/":
-          var end = source.indexOf(">", tagStart + 3);
-          var tagName = source.substring(tagStart + 2, end).replace(/[ \t\n\r]+$/g, "");
-          var config2 = parseStack.pop();
-          if (end < 0) {
-            tagName = source.substring(tagStart + 2).replace(/[\s<].*/, "");
-            errorHandler.error("end tag name: " + tagName + " is not complete:" + config2.tagName);
-            end = tagStart + 1 + tagName.length;
-          } else if (tagName.match(/\s</)) {
-            tagName = tagName.replace(/[\s<].*/, "");
-            errorHandler.error("end tag name: " + tagName + " maybe not complete");
-            end = tagStart + 1 + tagName.length;
-          }
-          var localNSMap = config2.localNSMap;
-          var endMatch = config2.tagName == tagName;
-          var endIgnoreCaseMach = endMatch || config2.tagName && config2.tagName.toLowerCase() == tagName.toLowerCase();
-          if (endIgnoreCaseMach) {
-            domBuilder.endElement(config2.uri, config2.localName, tagName);
-            if (localNSMap) {
-              for (var prefix in localNSMap) {
-                if (Object.prototype.hasOwnProperty.call(localNSMap, prefix)) {
-                  domBuilder.endPrefixMapping(prefix);
-                }
-              }
-            }
-            if (!endMatch) {
-              errorHandler.fatalError("end tag name: " + tagName + " is not match the current start tagName:" + config2.tagName);
-            }
-          } else {
-            parseStack.push(config2);
-          }
-          end++;
+          var h = t.indexOf(">", C + 3), b = t.substring(C + 2, h).replace(/[ \t\n\r]+$/g, ""), F = _.pop();
+          h < 0 ? (b = t.substring(C + 2).replace(/[\s<].*/, ""), n.error("end tag name: " + b + " is not complete:" + F.tagName), h = C + 1 + b.length) : b.match(/\s</) && (b = b.replace(/[\s<].*/, ""), n.error("end tag name: " + b + " maybe not complete"), h = C + 1 + b.length);
+          var G = F.localNSMap, Ve = F.tagName == b, te = Ve || F.tagName && F.tagName.toLowerCase() == b.toLowerCase();
+          if (te) {
+            if (a.endElement(F.uri, F.localName, b), G)
+              for (var dt in G)
+                Object.prototype.hasOwnProperty.call(G, dt) && a.endPrefixMapping(dt);
+            Ve || n.fatalError("end tag name: " + b + " is not match the current start tagName:" + F.tagName);
+          } else
+            _.push(F);
+          h++;
           break;
         case "?":
-          locator && position2(tagStart);
-          end = parseInstruction(source, tagStart, domBuilder);
+          E && c(C), h = tc(t, C, a);
           break;
         case "!":
-          locator && position2(tagStart);
-          end = parseDCC(source, tagStart, domBuilder, errorHandler);
+          E && c(C), h = ec(t, C, a, n);
           break;
         default:
-          locator && position2(tagStart);
-          var el = new ElementAttributes();
-          var currentNSMap = parseStack[parseStack.length - 1].currentNSMap;
-          var end = parseElementStartPart(source, tagStart, el, currentNSMap, entityReplacer, errorHandler);
-          var len = el.length;
-          if (!el.closed && fixSelfClosed(source, end, el.tagName, closeMap)) {
-            el.closed = true;
-            if (!entityMap.nbsp) {
-              errorHandler.warning("unclosed xml attribute");
+          E && c(C);
+          var V = new Mn(), lt = _[_.length - 1].currentNSMap, h = Qi(t, C, V, lt, s, n), ze = V.length;
+          if (!V.closed && Zi(t, h, V.tagName, A) && (V.closed = !0, r.nbsp || n.warning("unclosed xml attribute")), E && ze) {
+            for (var ar = fa(E, {}), nr = 0; nr < ze; nr++) {
+              var Qr = V[nr];
+              c(Qr.offset), Qr.locator = fa(E, {});
             }
-          }
-          if (locator && len) {
-            var locator2 = copyLocator(locator, {});
-            for (var i = 0; i < len; i++) {
-              var a = el[i];
-              position2(a.offset);
-              a.locator = copyLocator(locator, {});
-            }
-            domBuilder.locator = locator2;
-            if (appendElement$1(el, domBuilder, currentNSMap)) {
-              parseStack.push(el);
-            }
-            domBuilder.locator = locator;
-          } else {
-            if (appendElement$1(el, domBuilder, currentNSMap)) {
-              parseStack.push(el);
-            }
-          }
-          if (NAMESPACE$1.isHTML(el.uri) && !el.closed) {
-            end = parseHtmlSpecialContent(source, end, el.tagName, entityReplacer, domBuilder);
-          } else {
-            end++;
-          }
+            a.locator = ar, Na(V, a, lt) && _.push(V), a.locator = E;
+          } else
+            Na(V, a, lt) && _.push(V);
+          Rt.isHTML(V.uri) && !V.closed ? h = Ji(t, h, V.tagName, s, a) : h++;
       }
-    } catch (e) {
-      if (e instanceof ParseError$1) {
-        throw e;
-      }
-      errorHandler.error("element parse error: " + e);
-      end = -1;
+    } catch (x) {
+      if (x instanceof ut)
+        throw x;
+      n.error("element parse error: " + x), h = -1;
     }
-    if (end > start) {
-      start = end;
-    } else {
-      appendText(Math.max(tagStart, start) + 1);
-    }
+    h > N ? N = h : i(Math.max(C, N) + 1);
   }
 }
-function copyLocator(f, t) {
-  t.lineNumber = f.lineNumber;
-  t.columnNumber = f.columnNumber;
-  return t;
+function fa(t, e) {
+  return e.lineNumber = t.lineNumber, e.columnNumber = t.columnNumber, e;
 }
-function parseElementStartPart(source, start, el, currentNSMap, entityReplacer, errorHandler) {
-  function addAttribute(qname, value2, startIndex) {
-    if (el.attributeNames.hasOwnProperty(qname)) {
-      errorHandler.fatalError("Attribute " + qname + " redefined");
-    }
-    el.addValue(
-      qname,
+function Qi(t, e, r, a, n, o) {
+  function s(E, _, A) {
+    r.attributeNames.hasOwnProperty(E) && o.fatalError("Attribute " + E + " redefined"), r.addValue(
+      E,
       // @see https://www.w3.org/TR/xml/#AVNormalize
       // since the xmldom sax parser does not "interpret" DTD the following is not implemented:
       // - recursive replacement of (DTD) entity references
       // - trimming and collapsing multiple spaces into a single one for attributes that are not of type CDATA
-      value2.replace(/[\t\n\r]/g, " ").replace(/&#?\w+;/g, entityReplacer),
-      startIndex
+      _.replace(/[\t\n\r]/g, " ").replace(/&#?\w+;/g, n),
+      A
     );
   }
-  var attrName;
-  var value;
-  var p = ++start;
-  var s = S_TAG;
-  while (true) {
-    var c = source.charAt(p);
-    switch (c) {
+  for (var i, c, l = ++e, d = _t; ; ) {
+    var m = t.charAt(l);
+    switch (m) {
       case "=":
-        if (s === S_ATTR) {
-          attrName = source.slice(start, p);
-          s = S_EQ;
-        } else if (s === S_ATTR_SPACE) {
-          s = S_EQ;
-        } else {
+        if (d === Le)
+          i = t.slice(e, l), d = Tt;
+        else if (d === He)
+          d = Tt;
+        else
           throw new Error("attribute equal must after attrName");
-        }
         break;
       case "'":
       case '"':
-        if (s === S_EQ || s === S_ATTR) {
-          if (s === S_ATTR) {
-            errorHandler.warning('attribute value must after "="');
-            attrName = source.slice(start, p);
-          }
-          start = p + 1;
-          p = source.indexOf(c, start);
-          if (p > 0) {
-            value = source.slice(start, p);
-            addAttribute(attrName, value, start - 1);
-            s = S_ATTR_END;
-          } else {
-            throw new Error("attribute value no end '" + c + "' match");
-          }
-        } else if (s == S_ATTR_NOQUOT_VALUE) {
-          value = source.slice(start, p);
-          addAttribute(attrName, value, start);
-          errorHandler.warning('attribute "' + attrName + '" missed start quot(' + c + ")!!");
-          start = p + 1;
-          s = S_ATTR_END;
-        } else {
+        if (d === Tt || d === Le)
+          if (d === Le && (o.warning('attribute value must after "="'), i = t.slice(e, l)), e = l + 1, l = t.indexOf(m, e), l > 0)
+            c = t.slice(e, l), s(i, c, e - 1), d = Ye;
+          else
+            throw new Error("attribute value no end '" + m + "' match");
+        else if (d == Ke)
+          c = t.slice(e, l), s(i, c, e), o.warning('attribute "' + i + '" missed start quot(' + m + ")!!"), e = l + 1, d = Ye;
+        else
           throw new Error('attribute value must after "="');
-        }
         break;
       case "/":
-        switch (s) {
-          case S_TAG:
-            el.setTagName(source.slice(start, p));
-          case S_ATTR_END:
-          case S_TAG_SPACE:
-          case S_TAG_CLOSE:
-            s = S_TAG_CLOSE;
-            el.closed = true;
-          case S_ATTR_NOQUOT_VALUE:
-          case S_ATTR:
+        switch (d) {
+          case _t:
+            r.setTagName(t.slice(e, l));
+          case Ye:
+          case ft:
+          case xt:
+            d = xt, r.closed = !0;
+          case Ke:
+          case Le:
             break;
-          case S_ATTR_SPACE:
-            el.closed = true;
+          case He:
+            r.closed = !0;
             break;
           default:
             throw new Error("attribute invalid close char('/')");
         }
         break;
       case "":
-        errorHandler.error("unexpected end of input");
-        if (s == S_TAG) {
-          el.setTagName(source.slice(start, p));
-        }
-        return p;
+        return o.error("unexpected end of input"), d == _t && r.setTagName(t.slice(e, l)), l;
       case ">":
-        switch (s) {
-          case S_TAG:
-            el.setTagName(source.slice(start, p));
-          case S_ATTR_END:
-          case S_TAG_SPACE:
-          case S_TAG_CLOSE:
+        switch (d) {
+          case _t:
+            r.setTagName(t.slice(e, l));
+          case Ye:
+          case ft:
+          case xt:
             break;
-          case S_ATTR_NOQUOT_VALUE:
-          case S_ATTR:
-            value = source.slice(start, p);
-            if (value.slice(-1) === "/") {
-              el.closed = true;
-              value = value.slice(0, -1);
-            }
-          case S_ATTR_SPACE:
-            if (s === S_ATTR_SPACE) {
-              value = attrName;
-            }
-            if (s == S_ATTR_NOQUOT_VALUE) {
-              errorHandler.warning('attribute "' + value + '" missed quot(")!');
-              addAttribute(attrName, value, start);
-            } else {
-              if (!NAMESPACE$1.isHTML(currentNSMap[""]) || !value.match(/^(?:disabled|checked|selected)$/i)) {
-                errorHandler.warning('attribute "' + value + '" missed value!! "' + value + '" instead!!');
-              }
-              addAttribute(value, value, start);
-            }
+          case Ke:
+          case Le:
+            c = t.slice(e, l), c.slice(-1) === "/" && (r.closed = !0, c = c.slice(0, -1));
+          case He:
+            d === He && (c = i), d == Ke ? (o.warning('attribute "' + c + '" missed quot(")!'), s(i, c, e)) : ((!Rt.isHTML(a[""]) || !c.match(/^(?:disabled|checked|selected)$/i)) && o.warning('attribute "' + c + '" missed value!! "' + c + '" instead!!'), s(c, c, e));
             break;
-          case S_EQ:
+          case Tt:
             throw new Error("attribute value missed!!");
         }
-        return p;
+        return l;
       case "":
-        c = " ";
+        m = " ";
       default:
-        if (c <= " ") {
-          switch (s) {
-            case S_TAG:
-              el.setTagName(source.slice(start, p));
-              s = S_TAG_SPACE;
+        if (m <= " ")
+          switch (d) {
+            case _t:
+              r.setTagName(t.slice(e, l)), d = ft;
               break;
-            case S_ATTR:
-              attrName = source.slice(start, p);
-              s = S_ATTR_SPACE;
+            case Le:
+              i = t.slice(e, l), d = He;
               break;
-            case S_ATTR_NOQUOT_VALUE:
-              var value = source.slice(start, p);
-              errorHandler.warning('attribute "' + value + '" missed quot(")!!');
-              addAttribute(attrName, value, start);
-            case S_ATTR_END:
-              s = S_TAG_SPACE;
+            case Ke:
+              var c = t.slice(e, l);
+              o.warning('attribute "' + c + '" missed quot(")!!'), s(i, c, e);
+            case Ye:
+              d = ft;
               break;
           }
-        } else {
-          switch (s) {
-            case S_ATTR_SPACE:
-              el.tagName;
-              if (!NAMESPACE$1.isHTML(currentNSMap[""]) || !attrName.match(/^(?:disabled|checked|selected)$/i)) {
-                errorHandler.warning('attribute "' + attrName + '" missed value!! "' + attrName + '" instead2!!');
-              }
-              addAttribute(attrName, attrName, start);
-              start = p;
-              s = S_ATTR;
+        else
+          switch (d) {
+            case He:
+              r.tagName, (!Rt.isHTML(a[""]) || !i.match(/^(?:disabled|checked|selected)$/i)) && o.warning('attribute "' + i + '" missed value!! "' + i + '" instead2!!'), s(i, i, e), e = l, d = Le;
               break;
-            case S_ATTR_END:
-              errorHandler.warning('attribute space is required"' + attrName + '"!!');
-            case S_TAG_SPACE:
-              s = S_ATTR;
-              start = p;
+            case Ye:
+              o.warning('attribute space is required"' + i + '"!!');
+            case ft:
+              d = Le, e = l;
               break;
-            case S_EQ:
-              s = S_ATTR_NOQUOT_VALUE;
-              start = p;
+            case Tt:
+              d = Ke, e = l;
               break;
-            case S_TAG_CLOSE:
+            case xt:
               throw new Error("elements closed character '/' and '>' must be connected to");
           }
-        }
     }
-    p++;
+    l++;
   }
 }
-function appendElement$1(el, domBuilder, currentNSMap) {
-  var tagName = el.tagName;
-  var localNSMap = null;
-  var i = el.length;
-  while (i--) {
-    var a = el[i];
-    var qName = a.qName;
-    var value = a.value;
-    var nsp = qName.indexOf(":");
-    if (nsp > 0) {
-      var prefix = a.prefix = qName.slice(0, nsp);
-      var localName2 = qName.slice(nsp + 1);
-      var nsPrefix = prefix === "xmlns" && localName2;
-    } else {
-      localName2 = qName;
-      prefix = null;
-      nsPrefix = qName === "xmlns" && "";
-    }
-    a.localName = localName2;
-    if (nsPrefix !== false) {
-      if (localNSMap == null) {
-        localNSMap = {};
-        _copy(currentNSMap, currentNSMap = {});
-      }
-      currentNSMap[nsPrefix] = localNSMap[nsPrefix] = value;
-      a.uri = NAMESPACE$1.XMLNS;
-      domBuilder.startPrefixMapping(nsPrefix, value);
-    }
+function Na(t, e, r) {
+  for (var a = t.tagName, n = null, m = t.length; m--; ) {
+    var o = t[m], s = o.qName, i = o.value, E = s.indexOf(":");
+    if (E > 0)
+      var c = o.prefix = s.slice(0, E), l = s.slice(E + 1), d = c === "xmlns" && l;
+    else
+      l = s, c = null, d = s === "xmlns" && "";
+    o.localName = l, d !== !1 && (n == null && (n = {}, xn(r, r = {})), r[d] = n[d] = i, o.uri = Rt.XMLNS, e.startPrefixMapping(d, i));
   }
-  var i = el.length;
-  while (i--) {
-    a = el[i];
-    var prefix = a.prefix;
-    if (prefix) {
-      if (prefix === "xml") {
-        a.uri = NAMESPACE$1.XML;
-      }
-      if (prefix !== "xmlns") {
-        a.uri = currentNSMap[prefix || ""];
-      }
-    }
+  for (var m = t.length; m--; ) {
+    o = t[m];
+    var c = o.prefix;
+    c && (c === "xml" && (o.uri = Rt.XML), c !== "xmlns" && (o.uri = r[c || ""]));
   }
-  var nsp = tagName.indexOf(":");
-  if (nsp > 0) {
-    prefix = el.prefix = tagName.slice(0, nsp);
-    localName2 = el.localName = tagName.slice(nsp + 1);
-  } else {
-    prefix = null;
-    localName2 = el.localName = tagName;
-  }
-  var ns = el.uri = currentNSMap[prefix || ""];
-  domBuilder.startElement(ns, localName2, tagName, el);
-  if (el.closed) {
-    domBuilder.endElement(ns, localName2, tagName);
-    if (localNSMap) {
-      for (prefix in localNSMap) {
-        if (Object.prototype.hasOwnProperty.call(localNSMap, prefix)) {
-          domBuilder.endPrefixMapping(prefix);
-        }
-      }
-    }
-  } else {
-    el.currentNSMap = currentNSMap;
-    el.localNSMap = localNSMap;
-    return true;
-  }
+  var E = a.indexOf(":");
+  E > 0 ? (c = t.prefix = a.slice(0, E), l = t.localName = a.slice(E + 1)) : (c = null, l = t.localName = a);
+  var _ = t.uri = r[c || ""];
+  if (e.startElement(_, l, a, t), t.closed) {
+    if (e.endElement(_, l, a), n)
+      for (c in n)
+        Object.prototype.hasOwnProperty.call(n, c) && e.endPrefixMapping(c);
+  } else
+    return t.currentNSMap = r, t.localNSMap = n, !0;
 }
-function parseHtmlSpecialContent(source, elStartEnd, tagName, entityReplacer, domBuilder) {
-  if (/^(?:script|textarea)$/i.test(tagName)) {
-    var elEndStart = source.indexOf("</" + tagName + ">", elStartEnd);
-    var text = source.substring(elStartEnd + 1, elEndStart);
-    if (/[&<]/.test(text)) {
-      if (/^script$/i.test(tagName)) {
-        domBuilder.characters(text, 0, text.length);
-        return elEndStart;
-      }
-      text = text.replace(/&#?\w+;/g, entityReplacer);
-      domBuilder.characters(text, 0, text.length);
-      return elEndStart;
-    }
+function Ji(t, e, r, a, n) {
+  if (/^(?:script|textarea)$/i.test(r)) {
+    var o = t.indexOf("</" + r + ">", e), s = t.substring(e + 1, o);
+    if (/[&<]/.test(s))
+      return /^script$/i.test(r) ? (n.characters(s, 0, s.length), o) : (s = s.replace(/&#?\w+;/g, a), n.characters(s, 0, s.length), o);
   }
-  return elStartEnd + 1;
+  return e + 1;
 }
-function fixSelfClosed(source, elStartEnd, tagName, closeMap) {
-  var pos = closeMap[tagName];
-  if (pos == null) {
-    pos = source.lastIndexOf("</" + tagName + ">");
-    if (pos < elStartEnd) {
-      pos = source.lastIndexOf("</" + tagName);
-    }
-    closeMap[tagName] = pos;
-  }
-  return pos < elStartEnd;
+function Zi(t, e, r, a) {
+  var n = a[r];
+  return n == null && (n = t.lastIndexOf("</" + r + ">"), n < e && (n = t.lastIndexOf("</" + r)), a[r] = n), n < e;
 }
-function _copy(source, target) {
-  for (var n in source) {
-    if (Object.prototype.hasOwnProperty.call(source, n)) {
-      target[n] = source[n];
-    }
-  }
+function xn(t, e) {
+  for (var r in t)
+    Object.prototype.hasOwnProperty.call(t, r) && (e[r] = t[r]);
 }
-function parseDCC(source, start, domBuilder, errorHandler) {
-  var next = source.charAt(start + 2);
-  switch (next) {
+function ec(t, e, r, a) {
+  var n = t.charAt(e + 2);
+  switch (n) {
     case "-":
-      if (source.charAt(start + 3) === "-") {
-        var end = source.indexOf("-->", start + 4);
-        if (end > start) {
-          domBuilder.comment(source, start + 4, end - start - 4);
-          return end + 3;
-        } else {
-          errorHandler.error("Unclosed comment");
-          return -1;
-        }
-      } else {
+      if (t.charAt(e + 3) === "-") {
+        var o = t.indexOf("-->", e + 4);
+        return o > e ? (r.comment(t, e + 4, o - e - 4), o + 3) : (a.error("Unclosed comment"), -1);
+      } else
         return -1;
-      }
     default:
-      if (source.substr(start + 3, 6) == "CDATA[") {
-        var end = source.indexOf("]]>", start + 9);
-        domBuilder.startCDATA();
-        domBuilder.characters(source, start + 9, end - start - 9);
-        domBuilder.endCDATA();
-        return end + 3;
+      if (t.substr(e + 3, 6) == "CDATA[") {
+        var o = t.indexOf("]]>", e + 9);
+        return r.startCDATA(), r.characters(t, e + 9, o - e - 9), r.endCDATA(), o + 3;
       }
-      var matchs = split(source, start);
-      var len = matchs.length;
-      if (len > 1 && /!doctype/i.test(matchs[0][0])) {
-        var name = matchs[1][0];
-        var pubid = false;
-        var sysid = false;
-        if (len > 3) {
-          if (/^public$/i.test(matchs[2][0])) {
-            pubid = matchs[3][0];
-            sysid = len > 4 && matchs[4][0];
-          } else if (/^system$/i.test(matchs[2][0])) {
-            sysid = matchs[3][0];
-          }
-        }
-        var lastMatch = matchs[len - 1];
-        domBuilder.startDTD(name, pubid, sysid);
-        domBuilder.endDTD();
-        return lastMatch.index + lastMatch[0].length;
+      var s = rc(t, e), i = s.length;
+      if (i > 1 && /!doctype/i.test(s[0][0])) {
+        var c = s[1][0], l = !1, d = !1;
+        i > 3 && (/^public$/i.test(s[2][0]) ? (l = s[3][0], d = i > 4 && s[4][0]) : /^system$/i.test(s[2][0]) && (d = s[3][0]));
+        var m = s[i - 1];
+        return r.startDTD(c, l, d), r.endDTD(), m.index + m[0].length;
       }
   }
   return -1;
 }
-function parseInstruction(source, start, domBuilder) {
-  var end = source.indexOf("?>", start);
-  if (end) {
-    var match = source.substring(start, end).match(/^<\?(\S*)\s*([\s\S]*?)\s*$/);
-    if (match) {
-      match[0].length;
-      domBuilder.processingInstruction(match[1], match[2]);
-      return end + 2;
-    } else {
-      return -1;
-    }
+function tc(t, e, r) {
+  var a = t.indexOf("?>", e);
+  if (a) {
+    var n = t.substring(e, a).match(/^<\?(\S*)\s*([\s\S]*?)\s*$/);
+    return n ? (n[0].length, r.processingInstruction(n[1], n[2]), a + 2) : -1;
   }
   return -1;
 }
-function ElementAttributes() {
+function Mn() {
   this.attributeNames = {};
 }
-ElementAttributes.prototype = {
-  setTagName: function(tagName) {
-    if (!tagNamePattern.test(tagName)) {
-      throw new Error("invalid tagName:" + tagName);
-    }
-    this.tagName = tagName;
+Mn.prototype = {
+  setTagName: function(t) {
+    if (!Ta.test(t))
+      throw new Error("invalid tagName:" + t);
+    this.tagName = t;
   },
-  addValue: function(qName, value, offset) {
-    if (!tagNamePattern.test(qName)) {
-      throw new Error("invalid attribute:" + qName);
-    }
-    this.attributeNames[qName] = this.length;
-    this[this.length++] = { qName, value, offset };
+  addValue: function(t, e, r) {
+    if (!Ta.test(t))
+      throw new Error("invalid attribute:" + t);
+    this.attributeNames[t] = this.length, this[this.length++] = { qName: t, value: e, offset: r };
   },
   length: 0,
-  getLocalName: function(i) {
-    return this[i].localName;
+  getLocalName: function(t) {
+    return this[t].localName;
   },
-  getLocator: function(i) {
-    return this[i].locator;
+  getLocator: function(t) {
+    return this[t].locator;
   },
-  getQName: function(i) {
-    return this[i].qName;
+  getQName: function(t) {
+    return this[t].qName;
   },
-  getURI: function(i) {
-    return this[i].uri;
+  getURI: function(t) {
+    return this[t].uri;
   },
-  getValue: function(i) {
-    return this[i].value;
+  getValue: function(t) {
+    return this[t].value;
   }
   //	,getIndex:function(uri, localName)){
   //		if(localName){
@@ -9165,417 +7946,303 @@ ElementAttributes.prototype = {
   //	getType:function(uri,localName){}
   //	getType:function(i){},
 };
-function split(source, start) {
-  var match;
-  var buf = [];
-  var reg = /'[^']+'|"[^"]+"|[^\s<>\/=]+=?|(\/?\s*>|<)/g;
-  reg.lastIndex = start;
-  reg.exec(source);
-  while (match = reg.exec(source)) {
-    buf.push(match);
-    if (match[1]) return buf;
-  }
+function rc(t, e) {
+  var r, a = [], n = /'[^']+'|"[^"]+"|[^\s<>\/=]+=?|(\/?\s*>|<)/g;
+  for (n.lastIndex = e, n.exec(t); r = n.exec(t); )
+    if (a.push(r), r[1]) return a;
 }
-sax$1.XMLReader = XMLReader$1;
-sax$1.ParseError = ParseError$1;
-var conventions = conventions$2;
-var dom = dom$1;
-var entities = entities$1;
-var sax = sax$1;
-var DOMImplementation = dom.DOMImplementation;
-var NAMESPACE = conventions.NAMESPACE;
-var ParseError = sax.ParseError;
-var XMLReader = sax.XMLReader;
-function normalizeLineEndings(input) {
-  return input.replace(/\r[\n\u0085]/g, "\n").replace(/[\r\u0085\u2028]/g, "\n");
+qr.XMLReader = wn;
+qr.ParseError = ut;
+var ac = Se, nc = Ue, ga = Fn, Pn = qr, oc = nc.DOMImplementation, Aa = ac.NAMESPACE, sc = Pn.ParseError, ic = Pn.XMLReader;
+function Bn(t) {
+  return t.replace(/\r[\n\u0085]/g, `
+`).replace(/[\r\u0085\u2028]/g, `
+`);
 }
-function DOMParser$1(options2) {
-  this.options = options2 || { locator: {} };
+function Xn(t) {
+  this.options = t || { locator: {} };
 }
-DOMParser$1.prototype.parseFromString = function(source, mimeType) {
-  var options2 = this.options;
-  var sax2 = new XMLReader();
-  var domBuilder = options2.domBuilder || new DOMHandler();
-  var errorHandler = options2.errorHandler;
-  var locator = options2.locator;
-  var defaultNSMap = options2.xmlns || {};
-  var isHTML = /\/x?html?$/.test(mimeType);
-  var entityMap = isHTML ? entities.HTML_ENTITIES : entities.XML_ENTITIES;
-  if (locator) {
-    domBuilder.setDocumentLocator(locator);
-  }
-  sax2.errorHandler = buildErrorHandler(errorHandler, domBuilder, locator);
-  sax2.domBuilder = options2.domBuilder || domBuilder;
-  if (isHTML) {
-    defaultNSMap[""] = NAMESPACE.HTML;
-  }
-  defaultNSMap.xml = defaultNSMap.xml || NAMESPACE.XML;
-  var normalize = options2.normalizeLineEndings || normalizeLineEndings;
-  if (source && typeof source === "string") {
-    sax2.parse(
-      normalize(source),
-      defaultNSMap,
-      entityMap
-    );
-  } else {
-    sax2.errorHandler.error("invalid doc source");
-  }
-  return domBuilder.doc;
+Xn.prototype.parseFromString = function(t, e) {
+  var r = this.options, a = new ic(), n = r.domBuilder || new Ut(), o = r.errorHandler, s = r.locator, i = r.xmlns || {}, c = /\/x?html?$/.test(e), l = c ? ga.HTML_ENTITIES : ga.XML_ENTITIES;
+  s && n.setDocumentLocator(s), a.errorHandler = cc(o, n, s), a.domBuilder = r.domBuilder || n, c && (i[""] = Aa.HTML), i.xml = i.xml || Aa.XML;
+  var d = r.normalizeLineEndings || Bn;
+  return t && typeof t == "string" ? a.parse(
+    d(t),
+    i,
+    l
+  ) : a.errorHandler.error("invalid doc source"), n.doc;
 };
-function buildErrorHandler(errorImpl, domBuilder, locator) {
-  if (!errorImpl) {
-    if (domBuilder instanceof DOMHandler) {
-      return domBuilder;
-    }
-    errorImpl = domBuilder;
+function cc(t, e, r) {
+  if (!t) {
+    if (e instanceof Ut)
+      return e;
+    t = e;
   }
-  var errorHandler = {};
-  var isCallback = errorImpl instanceof Function;
-  locator = locator || {};
-  function build(key) {
-    var fn = errorImpl[key];
-    if (!fn && isCallback) {
-      fn = errorImpl.length == 2 ? function(msg) {
-        errorImpl(key, msg);
-      } : errorImpl;
-    }
-    errorHandler[key] = fn && function(msg) {
-      fn("[xmldom " + key + "]	" + msg + _locator(locator));
+  var a = {}, n = t instanceof Function;
+  r = r || {};
+  function o(s) {
+    var i = t[s];
+    !i && n && (i = t.length == 2 ? function(c) {
+      t(s, c);
+    } : t), a[s] = i && function(c) {
+      i("[xmldom " + s + "]	" + c + Lr(r));
     } || function() {
     };
   }
-  build("warning");
-  build("error");
-  build("fatalError");
-  return errorHandler;
+  return o("warning"), o("error"), o("fatalError"), a;
 }
-function DOMHandler() {
-  this.cdata = false;
+function Ut() {
+  this.cdata = !1;
 }
-function position(locator, node) {
-  node.lineNumber = locator.lineNumber;
-  node.columnNumber = locator.columnNumber;
+function We(t, e) {
+  e.lineNumber = t.lineNumber, e.columnNumber = t.columnNumber;
 }
-DOMHandler.prototype = {
+Ut.prototype = {
   startDocument: function() {
-    this.doc = new DOMImplementation().createDocument(null, null, null);
-    if (this.locator) {
-      this.doc.documentURI = this.locator.systemId;
+    this.doc = new oc().createDocument(null, null, null), this.locator && (this.doc.documentURI = this.locator.systemId);
+  },
+  startElement: function(t, e, r, a) {
+    var n = this.doc, o = n.createElementNS(t, r || e), s = a.length;
+    Mt(this, o), this.currentElement = o, this.locator && We(this.locator, o);
+    for (var i = 0; i < s; i++) {
+      var t = a.getURI(i), c = a.getValue(i), r = a.getQName(i), l = n.createAttributeNS(t, r);
+      this.locator && We(a.getLocator(i), l), l.value = l.nodeValue = c, o.setAttributeNode(l);
     }
   },
-  startElement: function(namespaceURI, localName2, qName, attrs) {
-    var doc = this.doc;
-    var el = doc.createElementNS(namespaceURI, qName || localName2);
-    var len = attrs.length;
-    appendElement(this, el);
-    this.currentElement = el;
-    this.locator && position(this.locator, el);
-    for (var i = 0; i < len; i++) {
-      var namespaceURI = attrs.getURI(i);
-      var value = attrs.getValue(i);
-      var qName = attrs.getQName(i);
-      var attr = doc.createAttributeNS(namespaceURI, qName);
-      this.locator && position(attrs.getLocator(i), attr);
-      attr.value = attr.nodeValue = value;
-      el.setAttributeNode(attr);
+  endElement: function(t, e, r) {
+    var a = this.currentElement;
+    a.tagName, this.currentElement = a.parentNode;
+  },
+  startPrefixMapping: function(t, e) {
+  },
+  endPrefixMapping: function(t) {
+  },
+  processingInstruction: function(t, e) {
+    var r = this.doc.createProcessingInstruction(t, e);
+    this.locator && We(this.locator, r), Mt(this, r);
+  },
+  ignorableWhitespace: function(t, e, r) {
+  },
+  characters: function(t, e, r) {
+    if (t = ha.apply(this, arguments), t) {
+      if (this.cdata)
+        var a = this.doc.createCDATASection(t);
+      else
+        var a = this.doc.createTextNode(t);
+      this.currentElement ? this.currentElement.appendChild(a) : /^\s*$/.test(t) && this.doc.appendChild(a), this.locator && We(this.locator, a);
     }
   },
-  endElement: function(namespaceURI, localName2, qName) {
-    var current = this.currentElement;
-    current.tagName;
-    this.currentElement = current.parentNode;
-  },
-  startPrefixMapping: function(prefix, uri) {
-  },
-  endPrefixMapping: function(prefix) {
-  },
-  processingInstruction: function(target, data) {
-    var ins = this.doc.createProcessingInstruction(target, data);
-    this.locator && position(this.locator, ins);
-    appendElement(this, ins);
-  },
-  ignorableWhitespace: function(ch, start, length) {
-  },
-  characters: function(chars, start, length) {
-    chars = _toString.apply(this, arguments);
-    if (chars) {
-      if (this.cdata) {
-        var charNode = this.doc.createCDATASection(chars);
-      } else {
-        var charNode = this.doc.createTextNode(chars);
-      }
-      if (this.currentElement) {
-        this.currentElement.appendChild(charNode);
-      } else if (/^\s*$/.test(chars)) {
-        this.doc.appendChild(charNode);
-      }
-      this.locator && position(this.locator, charNode);
-    }
-  },
-  skippedEntity: function(name) {
+  skippedEntity: function(t) {
   },
   endDocument: function() {
     this.doc.normalize();
   },
-  setDocumentLocator: function(locator) {
-    if (this.locator = locator) {
-      locator.lineNumber = 0;
-    }
+  setDocumentLocator: function(t) {
+    (this.locator = t) && (t.lineNumber = 0);
   },
   //LexicalHandler
-  comment: function(chars, start, length) {
-    chars = _toString.apply(this, arguments);
-    var comm = this.doc.createComment(chars);
-    this.locator && position(this.locator, comm);
-    appendElement(this, comm);
+  comment: function(t, e, r) {
+    t = ha.apply(this, arguments);
+    var a = this.doc.createComment(t);
+    this.locator && We(this.locator, a), Mt(this, a);
   },
   startCDATA: function() {
-    this.cdata = true;
+    this.cdata = !0;
   },
   endCDATA: function() {
-    this.cdata = false;
+    this.cdata = !1;
   },
-  startDTD: function(name, publicId, systemId) {
-    var impl = this.doc.implementation;
-    if (impl && impl.createDocumentType) {
-      var dt = impl.createDocumentType(name, publicId, systemId);
-      this.locator && position(this.locator, dt);
-      appendElement(this, dt);
-      this.doc.doctype = dt;
+  startDTD: function(t, e, r) {
+    var a = this.doc.implementation;
+    if (a && a.createDocumentType) {
+      var n = a.createDocumentType(t, e, r);
+      this.locator && We(this.locator, n), Mt(this, n), this.doc.doctype = n;
     }
   },
   /**
    * @see org.xml.sax.ErrorHandler
    * @link http://www.saxproject.org/apidoc/org/xml/sax/ErrorHandler.html
    */
-  warning: function(error) {
-    console.warn("[xmldom warning]	" + error, _locator(this.locator));
+  warning: function(t) {
+    console.warn("[xmldom warning]	" + t, Lr(this.locator));
   },
-  error: function(error) {
-    console.error("[xmldom error]	" + error, _locator(this.locator));
+  error: function(t) {
+    console.error("[xmldom error]	" + t, Lr(this.locator));
   },
-  fatalError: function(error) {
-    throw new ParseError(error, this.locator);
+  fatalError: function(t) {
+    throw new sc(t, this.locator);
   }
 };
-function _locator(l) {
-  if (l) {
-    return "\n@" + (l.systemId || "") + "#[line:" + l.lineNumber + ",col:" + l.columnNumber + "]";
-  }
+function Lr(t) {
+  if (t)
+    return `
+@` + (t.systemId || "") + "#[line:" + t.lineNumber + ",col:" + t.columnNumber + "]";
 }
-function _toString(chars, start, length) {
-  if (typeof chars == "string") {
-    return chars.substr(start, length);
-  } else {
-    if (chars.length >= start + length || start) {
-      return new java.lang.String(chars, start, length) + "";
-    }
-    return chars;
-  }
+function ha(t, e, r) {
+  return typeof t == "string" ? t.substr(e, r) : t.length >= e + r || e ? new java.lang.String(t, e, r) + "" : t;
 }
-"endDTD,startEntity,endEntity,attributeDecl,elementDecl,externalEntityDecl,internalEntityDecl,resolveEntity,getExternalSubset,notationDecl,unparsedEntityDecl".replace(/\w+/g, function(key) {
-  DOMHandler.prototype[key] = function() {
+"endDTD,startEntity,endEntity,attributeDecl,elementDecl,externalEntityDecl,internalEntityDecl,resolveEntity,getExternalSubset,notationDecl,unparsedEntityDecl".replace(/\w+/g, function(t) {
+  Ut.prototype[t] = function() {
     return null;
   };
 });
-function appendElement(hander, node) {
-  if (!hander.currentElement) {
-    hander.doc.appendChild(node);
-  } else {
-    hander.currentElement.appendChild(node);
-  }
+function Mt(t, e) {
+  t.currentElement ? t.currentElement.appendChild(e) : t.doc.appendChild(e);
 }
-domParser.__DOMHandler = DOMHandler;
-domParser.normalizeLineEndings = normalizeLineEndings;
-domParser.DOMParser = DOMParser$1;
-var DOMParser = domParser.DOMParser;
-const NFE_NAMESPACE$1 = "http://www.portalfiscal.inf.br/nfe";
-const DSIG_NAMESPACE = "http://www.w3.org/2000/09/xmldsig#";
-function escapeAttr(value) {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/\t/g, "&#x9;").replace(/\n/g, "&#xA;").replace(/\r/g, "&#xD;");
+tr.__DOMHandler = Ut;
+tr.normalizeLineEndings = Bn;
+tr.DOMParser = Xn;
+var $n = tr.DOMParser;
+const uc = "http://www.portalfiscal.inf.br/nfe", Ia = "http://www.w3.org/2000/09/xmldsig#";
+function dc(t) {
+  return t.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/\t/g, "&#x9;").replace(/\n/g, "&#xA;").replace(/\r/g, "&#xD;");
 }
-function escapeText(value) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#xD;");
+function lc(t) {
+  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#xD;");
 }
-function localName(node) {
-  return node.localName || node.nodeName.replace(/^.*:/, "");
+function Ca(t) {
+  return t.localName || t.nodeName.replace(/^.*:/, "");
 }
-function canonicalize(node) {
-  if (node.nodeType === 3) {
-    return escapeText(node.nodeValue ?? "");
-  }
-  if (node.nodeType !== 1) {
+function Gr(t) {
+  if (t.nodeType === 3)
+    return lc(t.nodeValue ?? "");
+  if (t.nodeType !== 1)
     return "";
+  const e = t, r = e.nodeName, a = [];
+  Ca(e) === "infNFe" && !e.getAttribute("xmlns") && a.push(`xmlns="${uc}"`);
+  const n = [];
+  for (let i = 0; i < e.attributes.length; i += 1) {
+    const c = e.attributes.item(i);
+    c && n.push({ name: c.name, value: c.value });
   }
-  const element = node;
-  const name = element.nodeName;
-  const attrs = [];
-  if (localName(element) === "infNFe" && !element.getAttribute("xmlns")) {
-    attrs.push(`xmlns="${NFE_NAMESPACE$1}"`);
-  }
-  const rawAttrs = [];
-  for (let index = 0; index < element.attributes.length; index += 1) {
-    const attr = element.attributes.item(index);
-    if (!attr) continue;
-    rawAttrs.push({ name: attr.name, value: attr.value });
-  }
-  rawAttrs.sort((left, right) => left.name.localeCompare(right.name)).forEach((attr) => {
-    if (attr.name === "xmlns" && localName(element) === "infNFe") return;
-    attrs.push(`${attr.name}="${escapeAttr(attr.value)}"`);
+  n.sort((i, c) => i.name.localeCompare(c.name)).forEach((i) => {
+    i.name === "xmlns" && Ca(e) === "infNFe" || a.push(`${i.name}="${dc(i.value)}"`);
   });
-  const open = attrs.length > 0 ? `<${name} ${attrs.join(" ")}>` : `<${name}>`;
-  let children = "";
-  for (let index = 0; index < element.childNodes.length; index += 1) {
-    children += canonicalize(element.childNodes.item(index));
-  }
-  return `${open}${children}</${name}>`;
+  const o = a.length > 0 ? `<${r} ${a.join(" ")}>` : `<${r}>`;
+  let s = "";
+  for (let i = 0; i < e.childNodes.length; i += 1)
+    s += Gr(e.childNodes.item(i));
+  return `${o}${s}</${r}>`;
 }
-function extractPemBody(pem, label) {
-  var _a;
-  const match = pem.match(new RegExp(`-----BEGIN ${label}-----([\\s\\S]*?)-----END ${label}-----`));
-  return ((_a = match == null ? void 0 : match[1]) == null ? void 0 : _a.replace(/\s+/g, "")) ?? "";
+function Ec(t, e) {
+  var a;
+  const r = t.match(new RegExp(`-----BEGIN ${e}-----([\\s\\S]*?)-----END ${e}-----`));
+  return ((a = r == null ? void 0 : r[1]) == null ? void 0 : a.replace(/\s+/g, "")) ?? "";
 }
-function extractPemBlock(pem, label) {
-  const match = pem.match(new RegExp(`-----BEGIN ${label}-----[\\s\\S]*?-----END ${label}-----`));
-  return (match == null ? void 0 : match[0]) ?? "";
+function va(t, e) {
+  const r = t.match(new RegExp(`-----BEGIN ${e}-----[\\s\\S]*?-----END ${e}-----`));
+  return (r == null ? void 0 : r[0]) ?? "";
 }
-function extractCertificate(config2) {
-  var _a;
-  const certificatePath = (_a = config2.certificatePath) == null ? void 0 : _a.trim();
-  if (!certificatePath) {
-    throw new FiscalError({
+function mc(t) {
+  var a;
+  const e = (a = t.certificatePath) == null ? void 0 : a.trim();
+  if (!e)
+    throw new I({
       code: "CERTIFICATE_NOT_CONFIGURED",
       message: "Caminho do certificado A1 nao configurado.",
       category: "CERTIFICATE"
     });
-  }
-  if (!fs$1.existsSync(certificatePath)) {
-    throw new FiscalError({
+  if (!Ee.existsSync(e))
+    throw new I({
       code: "CERTIFICATE_FILE_NOT_FOUND",
-      message: `Arquivo do certificado nao encontrado: ${certificatePath}`,
+      message: `Arquivo do certificado nao encontrado: ${e}`,
       category: "CERTIFICATE"
     });
-  }
-  if (!config2.certificatePassword) {
-    throw new FiscalError({
+  if (!t.certificatePassword)
+    throw new I({
       code: "CERTIFICATE_PASSWORD_REQUIRED",
       message: "Senha do certificado A1 nao configurada.",
       category: "CERTIFICATE"
     });
-  }
-  const extension = path$1.extname(certificatePath).toLowerCase();
-  if (![".pfx", ".p12"].includes(extension)) {
-    throw new FiscalError({
+  const r = st.extname(e).toLowerCase();
+  if (![".pfx", ".p12"].includes(r))
+    throw new I({
       code: "CERTIFICATE_FORMAT_NOT_SUPPORTED",
       message: "Assinatura NFC-e direta suporta certificado A1 .pfx/.p12.",
       category: "CERTIFICATE"
     });
-  }
   try {
-    const privateKeyPem = execFileSync(
+    const n = Ar(
       "openssl",
-      ["pkcs12", "-in", certificatePath, "-nocerts", "-nodes", "-passin", `pass:${config2.certificatePassword}`],
+      ["pkcs12", "-in", e, "-nocerts", "-nodes", "-passin", `pass:${t.certificatePassword}`],
       { encoding: "utf8" }
-    );
-    const certificatePem = execFileSync(
+    ), o = Ar(
       "openssl",
-      ["pkcs12", "-in", certificatePath, "-clcerts", "-nokeys", "-passin", `pass:${config2.certificatePassword}`],
+      ["pkcs12", "-in", e, "-clcerts", "-nokeys", "-passin", `pass:${t.certificatePassword}`],
       { encoding: "utf8" }
-    );
-    const privateKeyBlock = extractPemBlock(privateKeyPem, "PRIVATE KEY") || extractPemBlock(privateKeyPem, "RSA PRIVATE KEY");
-    const certificateBody = extractPemBody(certificatePem, "CERTIFICATE");
-    if (!privateKeyBlock) {
+    ), s = va(n, "PRIVATE KEY") || va(n, "RSA PRIVATE KEY"), i = Ec(o, "CERTIFICATE");
+    if (!s)
       throw new Error("Chave privada nao encontrada no arquivo A1.");
-    }
-    if (!certificateBody) {
+    if (!i)
       throw new Error("Certificado publico nao encontrado no arquivo A1.");
-    }
-    return { privateKeyPem: privateKeyBlock, certificateBody };
-  } catch (error) {
-    throw new FiscalError({
+    return { privateKeyPem: s, certificateBody: i };
+  } catch (n) {
+    throw new I({
       code: "CERTIFICATE_PKCS12_EXTRACT_FAILED",
       message: "Falha ao extrair chave/certificado do A1 para assinatura XML.",
       category: "CERTIFICATE",
-      cause: error
+      cause: n
     });
   }
 }
-function findInfNFe(xml) {
-  const parserErrors = [];
-  const doc = new DOMParser({
+function pc(t) {
+  const e = [], r = new $n({
     errorHandler: {
-      warning: (message) => parserErrors.push(String(message)),
-      error: (message) => parserErrors.push(String(message)),
-      fatalError: (message) => parserErrors.push(String(message))
+      warning: (n) => e.push(String(n)),
+      error: (n) => e.push(String(n)),
+      fatalError: (n) => e.push(String(n))
     }
-  }).parseFromString(xml, "application/xml");
-  if (parserErrors.length > 0) {
-    throw new FiscalError({
+  }).parseFromString(t, "application/xml");
+  if (e.length > 0)
+    throw new I({
       code: "NFCE_XML_MALFORMED",
-      message: `XML NFC-e malformado antes da assinatura: ${parserErrors.join(" | ")}`,
+      message: `XML NFC-e malformado antes da assinatura: ${e.join(" | ")}`,
       category: "VALIDATION",
-      details: { parserErrors }
+      details: { parserErrors: e }
     });
-  }
-  const infNFe = doc.getElementsByTagName("infNFe").item(0);
-  if (!infNFe) {
-    throw new FiscalError({
+  const a = r.getElementsByTagName("infNFe").item(0);
+  if (!a)
+    throw new I({
       code: "NFCE_XML_INF_NFE_NOT_FOUND",
       message: "XML NFC-e nao contem grupo infNFe para assinatura.",
       category: "VALIDATION"
     });
-  }
-  return infNFe;
+  return a;
 }
-function canonicalizeXmlFragment(xml) {
-  const parserErrors = [];
-  const doc = new DOMParser({
+function _c(t) {
+  const e = [], r = new $n({
     errorHandler: {
-      warning: (message) => parserErrors.push(String(message)),
-      error: (message) => parserErrors.push(String(message)),
-      fatalError: (message) => parserErrors.push(String(message))
+      warning: (a) => e.push(String(a)),
+      error: (a) => e.push(String(a)),
+      fatalError: (a) => e.push(String(a))
     }
-  }).parseFromString(xml, "application/xml");
-  if (parserErrors.length > 0 || !doc.documentElement) {
-    throw new FiscalError({
+  }).parseFromString(t, "application/xml");
+  if (e.length > 0 || !r.documentElement)
+    throw new I({
       code: "NFCE_XML_SIGNATURE_FRAGMENT_INVALID",
-      message: `Fragmento XML de assinatura invalido: ${parserErrors.join(" | ")}`,
+      message: `Fragmento XML de assinatura invalido: ${e.join(" | ")}`,
       category: "VALIDATION",
-      details: { parserErrors }
+      details: { parserErrors: e }
     });
-  }
-  return canonicalize(doc.documentElement);
+  return Gr(r.documentElement);
 }
-function compactXml$2(xml) {
-  return xml.replace(/>\s+</g, "><").trim();
+function Tc(t) {
+  return t.replace(/>\s+</g, "><").trim();
 }
-class NfceXmlSigningService {
-  sign(xml, config2) {
-    const normalizedXml = compactXml$2(xml);
-    const infNFe = findInfNFe(normalizedXml);
-    const id = infNFe.getAttribute("Id");
-    if (!id) {
-      throw new FiscalError({
+class fc {
+  sign(e, r) {
+    const a = Tc(e), n = pc(a), o = n.getAttribute("Id");
+    if (!o)
+      throw new I({
         code: "NFCE_XML_ID_NOT_FOUND",
         message: "infNFe nao possui atributo Id para assinatura.",
         category: "VALIDATION"
       });
-    }
-    const { privateKeyPem, certificateBody } = extractCertificate(config2);
-    const canonicalInfNFe = canonicalize(infNFe);
-    const digestValue = createHash("sha1").update(canonicalInfNFe, "utf8").digest("base64");
-    const signedInfo = `<SignedInfo xmlns="${DSIG_NAMESPACE}"><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#${id}"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>${digestValue}</DigestValue></Reference></SignedInfo>`;
-    const canonicalSignedInfo = canonicalizeXmlFragment(signedInfo);
-    const signatureValue = createSign("RSA-SHA1").update(canonicalSignedInfo, "utf8").sign(privateKeyPem, "base64");
-    const signatureXml = `<Signature xmlns="${DSIG_NAMESPACE}">${signedInfo}<SignatureValue>${signatureValue}</SignatureValue><KeyInfo><X509Data><X509Certificate>${certificateBody}</X509Certificate></X509Data></KeyInfo></Signature>`;
-    if (normalizedXml.includes("</infNFeSupl>")) {
-      return normalizedXml.replace("</infNFeSupl>", `</infNFeSupl>${signatureXml}`);
-    }
-    return normalizedXml.replace("</infNFe>", `</infNFe>${signatureXml}`);
+    const { privateKeyPem: s, certificateBody: i } = mc(r), c = Gr(n), l = Za("sha1").update(c, "utf8").digest("base64"), d = `<SignedInfo xmlns="${Ia}"><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#${o}"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>${l}</DigestValue></Reference></SignedInfo>`, m = _c(d), E = To("RSA-SHA1").update(m, "utf8").sign(s, "base64"), _ = `<Signature xmlns="${Ia}">${d}<SignatureValue>${E}</SignatureValue><KeyInfo><X509Data><X509Certificate>${i}</X509Certificate></X509Data></KeyInfo></Signature>`;
+    return a.includes("</infNFeSupl>") ? a.replace("</infNFeSupl>", `</infNFeSupl>${_}`) : a.replace("</infNFe>", `</infNFe>${_}`);
   }
 }
-const nfceXmlSigningService = new NfceXmlSigningService();
-const SP_NFCE_ENDPOINTS = {
+const Nc = new fc(), gc = {
   homologation: {
     statusServico: "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeStatusServico4.asmx",
     autorizacao: "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeAutorizacao4.asmx",
@@ -9586,679 +8253,546 @@ const SP_NFCE_ENDPOINTS = {
     autorizacao: "https://nfce.fazenda.sp.gov.br/ws/NFeAutorizacao4.asmx",
     retAutorizacao: "https://nfce.fazenda.sp.gov.br/ws/NFeRetAutorizacao4.asmx"
   }
-};
-const IBGE_UF_CODES = {
+}, Ac = {
   SP: "35"
 };
-function resolveUf(config2) {
-  return (config2.uf ?? "SP").trim().toUpperCase();
+function Vr(t) {
+  return (t.uf ?? "SP").trim().toUpperCase();
 }
-function assertSpNfce(config2) {
-  const uf = resolveUf(config2);
-  if (uf !== "SP") {
-    throw new FiscalError({
+function hc(t) {
+  const e = Vr(t);
+  if (e !== "SP")
+    throw new I({
       code: "SEFAZ_UF_NOT_SUPPORTED",
-      message: `SEFAZ direta para NFC-e ainda esta configurada somente para SP. UF recebida: ${uf}.`,
+      message: `SEFAZ direta para NFC-e ainda esta configurada somente para SP. UF recebida: ${e}.`,
       category: "CONFIGURATION"
     });
-  }
 }
-function resolveSpNfceServiceUrl(config2, service) {
-  var _a;
-  assertSpNfce(config2);
-  const configuredBaseUrl = (_a = config2.sefazBaseUrl) == null ? void 0 : _a.trim();
-  const defaultUrl = SP_NFCE_ENDPOINTS[config2.environment][service];
-  if (!configuredBaseUrl) {
-    return defaultUrl;
-  }
-  let normalized = configuredBaseUrl.replace(/homologacao\.nfe\.fazenda\.sp\.gov\.br/gi, "homologacao.nfce.fazenda.sp.gov.br").replace(/\/\/nfe\.fazenda\.sp\.gov\.br/gi, "//nfce.fazenda.sp.gov.br");
-  if (!/nfce\.fazenda\.sp\.gov\.br/i.test(normalized)) {
-    return defaultUrl;
-  }
-  const serviceFileByName = {
+function zr(t, e) {
+  var s;
+  hc(t);
+  const r = (s = t.sefazBaseUrl) == null ? void 0 : s.trim(), a = gc[t.environment][e];
+  if (!r)
+    return a;
+  let n = r.replace(/homologacao\.nfe\.fazenda\.sp\.gov\.br/gi, "homologacao.nfce.fazenda.sp.gov.br").replace(/\/\/nfe\.fazenda\.sp\.gov\.br/gi, "//nfce.fazenda.sp.gov.br");
+  if (!/nfce\.fazenda\.sp\.gov\.br/i.test(n))
+    return a;
+  const o = {
     statusServico: "NFeStatusServico4.asmx",
     autorizacao: "NFeAutorizacao4.asmx",
     retAutorizacao: "NFeRetAutorizacao4.asmx"
   };
-  if (normalized.endsWith(".asmx")) {
-    normalized = normalized.replace(/NFe(?:StatusServico|Autorizacao|RetAutorizacao)4\.asmx$/i, serviceFileByName[service]);
-    normalized = normalized.replace(/nfe(?:statusservico|autorizacao|retautorizacao)4\.asmx$/i, serviceFileByName[service]);
-    return normalized;
-  }
-  return `${normalized.replace(/\/+$/, "")}/${serviceFileByName[service]}`;
+  return n.endsWith(".asmx") ? (n = n.replace(/NFe(?:StatusServico|Autorizacao|RetAutorizacao)4\.asmx$/i, o[e]), n = n.replace(/nfe(?:statusservico|autorizacao|retautorizacao)4\.asmx$/i, o[e]), n) : `${n.replace(/\/+$/, "")}/${o[e]}`;
 }
-function resolveStatusServicoUrl(config2) {
-  return resolveSpNfceServiceUrl(config2, "statusServico");
+function Ic(t) {
+  return zr(t, "statusServico");
 }
-function resolveAutorizacaoUrl(config2) {
-  return resolveSpNfceServiceUrl(config2, "autorizacao");
+function Cc(t) {
+  return zr(t, "autorizacao");
 }
-function resolveRetAutorizacaoUrl(config2) {
-  return resolveSpNfceServiceUrl(config2, "retAutorizacao");
+function vc(t) {
+  return zr(t, "retAutorizacao");
 }
-function validateSefazDirectConfig(config2) {
-  var _a, _b, _c;
-  if (config2.provider !== "sefaz-direct") {
-    throw new FiscalError({
+function Da(t) {
+  var e, r, a;
+  if (t.provider !== "sefaz-direct")
+    throw new I({
       code: "SEFAZ_PROVIDER_INVALID",
       message: "O teste SEFAZ direto exige provider sefaz-direct.",
       category: "CONFIGURATION"
     });
-  }
-  if (config2.environment !== "homologation" && config2.environment !== "production") {
-    throw new FiscalError({
+  if (t.environment !== "homologation" && t.environment !== "production")
+    throw new I({
       code: "SEFAZ_ENVIRONMENT_INVALID",
       message: "Ambiente fiscal invalido.",
       category: "CONFIGURATION"
     });
-  }
-  if ((config2.model ?? 65) !== 65) {
-    throw new FiscalError({
+  if ((t.model ?? 65) !== 65)
+    throw new I({
       code: "SEFAZ_MODEL_NOT_SUPPORTED",
       message: "O diagnostico atual suporta apenas NFC-e modelo 65.",
       category: "CONFIGURATION"
     });
-  }
-  if (!((_a = config2.certificatePath) == null ? void 0 : _a.trim())) {
-    throw new FiscalError({
+  if (!((e = t.certificatePath) != null && e.trim()))
+    throw new I({
       code: "CERTIFICATE_NOT_CONFIGURED",
       message: "Caminho do certificado A1 nao configurado.",
       category: "CERTIFICATE"
     });
-  }
-  if (!fs$1.existsSync(config2.certificatePath)) {
-    throw new FiscalError({
+  if (!Ee.existsSync(t.certificatePath))
+    throw new I({
       code: "CERTIFICATE_FILE_NOT_FOUND",
-      message: `Arquivo do certificado nao encontrado: ${config2.certificatePath}`,
+      message: `Arquivo do certificado nao encontrado: ${t.certificatePath}`,
       category: "CERTIFICATE"
     });
-  }
-  if (!config2.certificatePassword) {
-    throw new FiscalError({
+  if (!t.certificatePassword)
+    throw new I({
       code: "CERTIFICATE_PASSWORD_REQUIRED",
       message: "Senha do certificado A1 nao configurada.",
       category: "CERTIFICATE"
     });
-  }
-  if (!((_b = config2.cscId) == null ? void 0 : _b.trim())) {
-    throw new FiscalError({
+  if (!((r = t.cscId) != null && r.trim()))
+    throw new I({
       code: "CSC_ID_REQUIRED",
       message: "CSC ID nao configurado.",
       category: "CONFIGURATION"
     });
-  }
-  if (!((_c = config2.cscToken) == null ? void 0 : _c.trim())) {
-    throw new FiscalError({
+  if (!((a = t.cscToken) != null && a.trim()))
+    throw new I({
       code: "CSC_TOKEN_REQUIRED",
       message: "CSC Token nao configurado.",
       category: "CONFIGURATION"
     });
-  }
 }
-function buildStatusServicoSoap(config2) {
-  const uf = resolveUf(config2);
-  const cUf = IBGE_UF_CODES[uf];
-  if (!cUf) {
-    throw new FiscalError({
+function Dc(t) {
+  const e = Vr(t), r = Ac[e];
+  if (!r)
+    throw new I({
       code: "SEFAZ_UF_CODE_NOT_MAPPED",
-      message: `Codigo IBGE da UF ${uf} nao esta mapeado para consulta de status.`,
+      message: `Codigo IBGE da UF ${e} nao esta mapeado para consulta de status.`,
       category: "CONFIGURATION"
     });
-  }
-  const tpAmb = config2.environment === "production" ? "1" : "2";
-  return `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4"><consStatServ xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${tpAmb}</tpAmb><cUF>${cUf}</cUF><xServ>STATUS</xServ></consStatServ></nfeDadosMsg></soap12:Body></soap12:Envelope>`;
+  return `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4"><consStatServ xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${t.environment === "production" ? "1" : "2"}</tpAmb><cUF>${r}</cUF><xServ>STATUS</xServ></consStatServ></nfeDadosMsg></soap12:Body></soap12:Envelope>`;
 }
-const SOAP_ACTIONS = {
+const Sc = {
   status: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF",
   autorizacao: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4/nfeAutorizacaoLote",
   retAutorizacao: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4/nfeRetAutorizacaoLote"
 };
-function isLocalIssuerCertificateError(error) {
-  if (!(error instanceof FiscalError)) return false;
-  const details = error.details;
-  return error.code === "SEFAZ_NETWORK_OR_TLS_ERROR" && ((details == null ? void 0 : details.originalCode) === "UNABLE_TO_GET_ISSUER_CERT_LOCALLY" || (details == null ? void 0 : details.originalCode) === "SELF_SIGNED_CERT_IN_CHAIN" || /unable to get local issuer certificate|self-signed certificate/i.test((details == null ? void 0 : details.originalMessage) ?? error.message));
+function kn(t) {
+  if (!(t instanceof I)) return !1;
+  const e = t.details;
+  return t.code === "SEFAZ_NETWORK_OR_TLS_ERROR" && ((e == null ? void 0 : e.originalCode) === "UNABLE_TO_GET_ISSUER_CERT_LOCALLY" || (e == null ? void 0 : e.originalCode) === "SELF_SIGNED_CERT_IN_CHAIN" || /unable to get local issuer certificate|self-signed certificate/i.test((e == null ? void 0 : e.originalMessage) ?? t.message));
 }
-function postSoapWithCertificate(url, body, config2, options2 = {}) {
-  return new Promise((resolve, reject) => {
-    const startedAt = Date.now();
-    const soapAction = SOAP_ACTIONS[options2.action ?? "status"];
-    const serviceName = options2.serviceName ?? "SEFAZ";
-    const request = https.request(
-      url,
+function Yt(t, e, r, a = {}) {
+  return new Promise((n, o) => {
+    const s = Date.now(), i = Sc[a.action ?? "status"], c = a.serviceName ?? "SEFAZ", l = fo.request(
+      t,
       {
         method: "POST",
-        pfx: fs$1.readFileSync(config2.certificatePath),
-        passphrase: config2.certificatePassword ?? void 0,
-        ca: config2.caBundlePath ? fs$1.readFileSync(config2.caBundlePath) : void 0,
-        rejectUnauthorized: options2.allowUnauthorizedServerCertificate !== true,
+        pfx: Ee.readFileSync(r.certificatePath),
+        passphrase: r.certificatePassword ?? void 0,
+        ca: r.caBundlePath ? Ee.readFileSync(r.caBundlePath) : void 0,
+        rejectUnauthorized: a.allowUnauthorizedServerCertificate !== !0,
         headers: {
-          "content-type": `application/soap+xml; charset=utf-8; action="${soapAction}"`,
-          "content-length": Buffer.byteLength(body, "utf8"),
-          soapaction: soapAction
+          "content-type": `application/soap+xml; charset=utf-8; action="${i}"`,
+          "content-length": Buffer.byteLength(e, "utf8"),
+          soapaction: i
         },
         timeout: 3e4
       },
-      (response) => {
-        let data = "";
-        response.setEncoding("utf8");
-        response.on("data", (chunk) => {
-          data += chunk;
-        });
-        response.on("end", () => {
-          if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
-            const sefazMessage = data.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-            reject(new FiscalError({
+      (d) => {
+        let m = "";
+        d.setEncoding("utf8"), d.on("data", (E) => {
+          m += E;
+        }), d.on("end", () => {
+          if (!d.statusCode || d.statusCode < 200 || d.statusCode >= 300) {
+            const E = m.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+            o(new I({
               code: "SEFAZ_HTTP_ERROR",
-              message: `SEFAZ retornou HTTP ${response.statusCode ?? "sem status"} em ${Date.now() - startedAt}ms.${sefazMessage ? ` Corpo: ${sefazMessage.slice(0, 500)}` : ""}`,
+              message: `SEFAZ retornou HTTP ${d.statusCode ?? "sem status"} em ${Date.now() - s}ms.${E ? ` Corpo: ${E.slice(0, 500)}` : ""}`,
               category: "SEFAZ",
-              retryable: true,
+              retryable: !0,
               details: {
-                url,
-                statusCode: response.statusCode,
-                headers: response.headers,
-                body: data
+                url: t,
+                statusCode: d.statusCode,
+                headers: d.headers,
+                body: m
               }
             }));
             return;
           }
-          resolve(data);
+          n(m);
         });
       }
     );
-    request.on("timeout", () => {
-      request.destroy(new Error(`Timeout de 30000ms ao chamar ${serviceName}.`));
-    });
-    request.on("error", (error) => {
-      reject(new FiscalError({
+    l.on("timeout", () => {
+      l.destroy(new Error(`Timeout de 30000ms ao chamar ${c}.`));
+    }), l.on("error", (d) => {
+      o(new I({
         code: "SEFAZ_NETWORK_OR_TLS_ERROR",
-        message: `Falha de rede/TLS ao chamar SEFAZ: ${error.message}`,
+        message: `Falha de rede/TLS ao chamar SEFAZ: ${d.message}`,
         category: "NETWORK",
-        retryable: true,
-        cause: error,
+        retryable: !0,
+        cause: d,
         details: {
-          url,
-          originalCode: error.code ?? null,
-          originalMessage: error.message
+          url: t,
+          originalCode: d.code ?? null,
+          originalMessage: d.message
         }
       }));
-    });
-    request.write(body, "utf8");
-    request.end();
+    }), l.write(e, "utf8"), l.end();
   });
 }
-async function postStatusServicoSoap(url, body, config2) {
+async function Rc(t, e, r) {
   try {
     return {
-      rawResponse: await postSoapWithCertificate(url, body, config2, {
+      rawResponse: await Yt(t, e, r, {
         action: "status",
         serviceName: "NFeStatusServico4"
       }),
       tlsValidation: "verified",
       warning: null
     };
-  } catch (error) {
-    if (config2.environment === "homologation" && isLocalIssuerCertificateError(error)) {
+  } catch (a) {
+    if (r.environment === "homologation" && kn(a))
       return {
-        rawResponse: await postSoapWithCertificate(url, body, config2, {
+        rawResponse: await Yt(t, e, r, {
           action: "status",
           serviceName: "NFeStatusServico4",
-          allowUnauthorizedServerCertificate: true
+          allowUnauthorizedServerCertificate: !0
         }),
         tlsValidation: "bypassed-homologation",
         warning: "A cadeia TLS do servidor da SEFAZ nao foi validada pelo Node/Electron. O diagnostico repetiu a chamada em homologacao sem validar o certificado do servidor. Para producao, configure a cadeia de CA confiavel no ambiente."
       };
-    }
-    throw error;
+    throw a;
   }
 }
-async function postSefazSoap(url, body, config2, action) {
-  const serviceName = action === "autorizacao" ? "NFeAutorizacao4" : action === "retAutorizacao" ? "NFeRetAutorizacao4" : "NFeStatusServico4";
+async function Sa(t, e, r, a) {
+  const n = a === "autorizacao" ? "NFeAutorizacao4" : a === "retAutorizacao" ? "NFeRetAutorizacao4" : "NFeStatusServico4";
   try {
     return {
-      rawResponse: await postSoapWithCertificate(url, body, config2, { action, serviceName }),
+      rawResponse: await Yt(t, e, r, { action: a, serviceName: n }),
       tlsValidation: "verified",
       warning: null
     };
-  } catch (error) {
-    if (config2.environment === "homologation" && isLocalIssuerCertificateError(error)) {
+  } catch (o) {
+    if (r.environment === "homologation" && kn(o))
       return {
-        rawResponse: await postSoapWithCertificate(url, body, config2, {
-          action,
-          serviceName,
-          allowUnauthorizedServerCertificate: true
+        rawResponse: await Yt(t, e, r, {
+          action: a,
+          serviceName: n,
+          allowUnauthorizedServerCertificate: !0
         }),
         tlsValidation: "bypassed-homologation",
         warning: "A cadeia TLS do servidor da SEFAZ nao foi validada pelo Node/Electron. A chamada foi repetida em homologacao sem validar o certificado do servidor."
       };
-    }
-    throw error;
+    throw o;
   }
 }
-function extractXmlTag(xml, tagName) {
-  var _a;
-  const match = xml.match(new RegExp(`<[^:>]*:?${tagName}[^>]*>([^<]*)</[^:>]*:?${tagName}>`, "i"));
-  return ((_a = match == null ? void 0 : match[1]) == null ? void 0 : _a.trim()) ?? null;
+function de(t, e) {
+  var a;
+  const r = t.match(new RegExp(`<[^:>]*:?${e}[^>]*>([^<]*)</[^:>]*:?${e}>`, "i"));
+  return ((a = r == null ? void 0 : r[1]) == null ? void 0 : a.trim()) ?? null;
 }
-function extractXmlBlock(xml, tagName) {
-  const match = xml.match(new RegExp(`(<[^:>]*:?${tagName}[^>]*>[\\s\\S]*?</[^:>]*:?${tagName}>)`, "i"));
-  return (match == null ? void 0 : match[1]) ?? null;
+function Lc(t, e) {
+  const r = t.match(new RegExp(`(<[^:>]*:?${e}[^>]*>[\\s\\S]*?</[^:>]*:?${e}>)`, "i"));
+  return (r == null ? void 0 : r[1]) ?? null;
 }
-function stripXmlDeclaration(xml) {
-  return xml.replace(/^\s*<\?xml[^?]*\?>\s*/i, "").trim();
+function qn(t) {
+  return t.replace(/^\s*<\?xml[^?]*\?>\s*/i, "").trim();
 }
-function compactXml$1(xml) {
-  return xml.replace(/>\s+</g, "><").trim();
+function Wt(t) {
+  return t.replace(/>\s+</g, "><").trim();
 }
-function buildAutorizacaoSoap(signedXml) {
-  const idLote = String(Date.now()).slice(-15).padStart(15, "0");
-  const nfeXml = compactXml$1(stripXmlDeclaration(signedXml));
-  return compactXml$1(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4"><enviNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><idLote>${idLote}</idLote><indSinc>1</indSinc>` + nfeXml + `</enviNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>`);
+function yc(t) {
+  const e = String(Date.now()).slice(-15).padStart(15, "0"), r = Wt(qn(t));
+  return Wt(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4"><enviNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><idLote>${e}</idLote><indSinc>1</indSinc>` + r + "</enviNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>");
 }
-function buildAuthorizedXml(signedXml, protocolXml) {
-  if (!protocolXml) return null;
-  return compactXml$1(`<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">${stripXmlDeclaration(signedXml)}${protocolXml}</nfeProc>`);
+function Oc(t, e) {
+  return e ? Wt(`<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">${qn(t)}${e}</nfeProc>`) : null;
 }
-function buildRetAutorizacaoSoap(config2, receiptNumber) {
-  const tpAmb = config2.environment === "production" ? "1" : "2";
-  return compactXml$1(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4"><consReciNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${tpAmb}</tpAmb><nRec>${receiptNumber}</nRec></consReciNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>`);
+function bc(t, e) {
+  const r = t.environment === "production" ? "1" : "2";
+  return Wt(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4"><consReciNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${r}</tpAmb><nRec>${e}</nRec></consReciNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>`);
 }
-function mapAuthorizationResponse(request, signedXml, rawResponse, providerWarning) {
-  const loteStatus = extractXmlTag(rawResponse, "cStat");
-  const statusMessage = extractXmlTag(rawResponse, "xMotivo") ?? "Resposta de autorizacao recebida sem xMotivo.";
-  const protocolXml = extractXmlBlock(rawResponse, "protNFe");
-  const protocolStatus = protocolXml ? extractXmlTag(protocolXml, "cStat") : null;
-  const effectiveStatus = protocolStatus ?? loteStatus;
-  const effectiveMessage = protocolXml ? extractXmlTag(protocolXml, "xMotivo") ?? statusMessage : statusMessage;
-  const receiptNumber = extractXmlTag(rawResponse, "nRec");
-  const protocol = protocolXml ? extractXmlTag(protocolXml, "nProt") : null;
-  const authorizedAt = protocolXml ? extractXmlTag(protocolXml, "dhRecbto") : null;
-  const accessKey = protocolXml ? extractXmlTag(protocolXml, "chNFe") : request.accessKey;
-  if (effectiveStatus === "100" || effectiveStatus === "150") {
-    const xmlAuthorized = buildAuthorizedXml(signedXml, protocolXml);
+function Ra(t, e, r, a) {
+  const n = de(r, "cStat"), o = de(r, "xMotivo") ?? "Resposta de autorizacao recebida sem xMotivo.", s = Lc(r, "protNFe"), c = (s ? de(s, "cStat") : null) ?? n, l = s ? de(s, "xMotivo") ?? o : o, d = de(r, "nRec"), m = s ? de(s, "nProt") : null, E = s ? de(s, "dhRecbto") : null, _ = s ? de(s, "chNFe") : t.accessKey;
+  if (c === "100" || c === "150") {
+    const A = Oc(e, s);
     return {
       status: "AUTHORIZED",
       provider: "sefaz-direct",
-      accessKey,
-      protocol,
-      receiptNumber,
-      statusCode: effectiveStatus,
-      statusMessage: effectiveMessage,
-      authorizedAt,
-      issuedAt: request.issuedAt,
-      xmlBuilt: request.xmlBuilt ?? null,
-      xmlSigned: signedXml,
-      xmlSent: signedXml,
-      xmlAuthorized,
-      qrCodeUrl: request.qrCodeUrl ?? null,
-      rawResponse: { rawResponse, warning: providerWarning ?? null }
+      accessKey: _,
+      protocol: m,
+      receiptNumber: d,
+      statusCode: c,
+      statusMessage: l,
+      authorizedAt: E,
+      issuedAt: t.issuedAt,
+      xmlBuilt: t.xmlBuilt ?? null,
+      xmlSigned: e,
+      xmlSent: e,
+      xmlAuthorized: A,
+      qrCodeUrl: t.qrCodeUrl ?? null,
+      rawResponse: { rawResponse: r, warning: a ?? null }
     };
   }
-  if (loteStatus === "103" || loteStatus === "105") {
-    return {
-      status: "PENDING",
-      provider: "sefaz-direct",
-      accessKey: request.accessKey,
-      receiptNumber,
-      statusCode: loteStatus,
-      statusMessage,
-      issuedAt: request.issuedAt,
-      xmlBuilt: request.xmlBuilt ?? null,
-      xmlSigned: signedXml,
-      xmlSent: signedXml,
-      qrCodeUrl: request.qrCodeUrl ?? null,
-      rawResponse: { rawResponse, warning: providerWarning ?? null }
-    };
-  }
-  return {
+  return n === "103" || n === "105" ? {
+    status: "PENDING",
+    provider: "sefaz-direct",
+    accessKey: t.accessKey,
+    receiptNumber: d,
+    statusCode: n,
+    statusMessage: o,
+    issuedAt: t.issuedAt,
+    xmlBuilt: t.xmlBuilt ?? null,
+    xmlSigned: e,
+    xmlSent: e,
+    qrCodeUrl: t.qrCodeUrl ?? null,
+    rawResponse: { rawResponse: r, warning: a ?? null }
+  } : {
     status: "REJECTED",
     provider: "sefaz-direct",
-    accessKey: request.accessKey,
-    receiptNumber,
-    protocol,
-    statusCode: effectiveStatus ?? "SEFAZ_AUTHORIZATION_REJECTED",
-    statusMessage: effectiveMessage,
-    issuedAt: request.issuedAt,
-    xmlBuilt: request.xmlBuilt ?? null,
-    xmlSigned: signedXml,
-    xmlSent: signedXml,
-    qrCodeUrl: request.qrCodeUrl ?? null,
-    rawResponse: { rawResponse, warning: providerWarning ?? null }
+    accessKey: t.accessKey,
+    receiptNumber: d,
+    protocol: m,
+    statusCode: c ?? "SEFAZ_AUTHORIZATION_REJECTED",
+    statusMessage: l,
+    issuedAt: t.issuedAt,
+    xmlBuilt: t.xmlBuilt ?? null,
+    xmlSigned: e,
+    xmlSent: e,
+    qrCodeUrl: t.qrCodeUrl ?? null,
+    rawResponse: { rawResponse: r, warning: a ?? null }
   };
 }
-class SefazDirectFiscalProvider {
+class Uc {
   constructor() {
-    __publicField(this, "providerId", "sefaz-direct");
+    ce(this, "providerId", "sefaz-direct");
   }
-  async authorizeNfce(request, config2) {
-    validateSefazDirectConfig(config2);
-    if (!request.xmlBuilt) {
-      throw new FiscalError({
+  async authorizeNfce(e, r) {
+    if (Da(r), !e.xmlBuilt)
+      throw new I({
         code: "NFCE_XML_NOT_BUILT",
         message: "XML NFC-e gerado nao foi informado ao provider SEFAZ.",
         category: "VALIDATION"
       });
-    }
-    const url = resolveAutorizacaoUrl(config2);
-    const startedAt = Date.now();
-    logger.info(`[SEFAZ_DIRECT] Iniciando autorizacao NFC-e. saleId=${request.saleId} accessKey=${request.accessKey ?? "sem-chave"} ambiente=${config2.environment} endpoint=${url}`);
-    logger.info(`[SEFAZ_DIRECT] Assinando XML NFC-e. saleId=${request.saleId}`);
-    const signedXml = nfceXmlSigningService.sign(request.xmlBuilt, config2);
-    logger.info(`[SEFAZ_DIRECT] XML NFC-e assinado. saleId=${request.saleId}`);
-    const soapRequest = buildAutorizacaoSoap(signedXml);
-    logger.info(`[SEFAZ_DIRECT] Enviando lote NFeAutorizacao4. saleId=${request.saleId} endpoint=${url}`);
-    const response = await postSefazSoap(url, soapRequest, config2, "autorizacao");
-    const result = mapAuthorizationResponse(request, signedXml, response.rawResponse, response.warning);
-    logger.info(`[SEFAZ_DIRECT] Resposta NFeAutorizacao4. saleId=${request.saleId} cStat=${result.statusCode ?? "sem-cStat"} status=${result.status} motivo=${result.statusMessage}`);
-    if (result.status === "PENDING" && result.receiptNumber) {
-      const retUrl = resolveRetAutorizacaoUrl(config2);
-      const retRequest = buildRetAutorizacaoSoap(config2, result.receiptNumber);
-      logger.info(`[SEFAZ_DIRECT] Consultando NFeRetAutorizacao4. saleId=${request.saleId} nRec=${result.receiptNumber} endpoint=${retUrl}`);
-      const retResponse = await postSefazSoap(retUrl, retRequest, config2, "retAutorizacao");
-      const retResult = mapAuthorizationResponse(request, signedXml, retResponse.rawResponse, retResponse.warning ?? response.warning);
-      logger.info(`[SEFAZ_DIRECT] Resposta NFeRetAutorizacao4. saleId=${request.saleId} cStat=${retResult.statusCode ?? "sem-cStat"} status=${retResult.status} motivo=${retResult.statusMessage}`);
-      return {
-        ...retResult,
+    const a = Cc(r), n = Date.now();
+    f.info(`[SEFAZ_DIRECT] Iniciando autorizacao NFC-e. saleId=${e.saleId} accessKey=${e.accessKey ?? "sem-chave"} ambiente=${r.environment} endpoint=${a}`), f.info(`[SEFAZ_DIRECT] Assinando XML NFC-e. saleId=${e.saleId}`);
+    const o = Nc.sign(e.xmlBuilt, r);
+    f.info(`[SEFAZ_DIRECT] XML NFC-e assinado. saleId=${e.saleId}`);
+    const s = yc(o);
+    f.info(`[SEFAZ_DIRECT] Enviando lote NFeAutorizacao4. saleId=${e.saleId} endpoint=${a}`);
+    const i = await Sa(a, s, r, "autorizacao"), c = Ra(e, o, i.rawResponse, i.warning);
+    if (f.info(`[SEFAZ_DIRECT] Resposta NFeAutorizacao4. saleId=${e.saleId} cStat=${c.statusCode ?? "sem-cStat"} status=${c.status} motivo=${c.statusMessage}`), c.status === "PENDING" && c.receiptNumber) {
+      const l = vc(r), d = bc(r, c.receiptNumber);
+      f.info(`[SEFAZ_DIRECT] Consultando NFeRetAutorizacao4. saleId=${e.saleId} nRec=${c.receiptNumber} endpoint=${l}`);
+      const m = await Sa(l, d, r, "retAutorizacao"), E = Ra(e, o, m.rawResponse, m.warning ?? i.warning);
+      return f.info(`[SEFAZ_DIRECT] Resposta NFeRetAutorizacao4. saleId=${e.saleId} cStat=${E.statusCode ?? "sem-cStat"} status=${E.status} motivo=${E.statusMessage}`), {
+        ...E,
         rawResponse: {
-          ...typeof retResult.rawResponse === "object" && retResult.rawResponse ? retResult.rawResponse : {},
-          authorizationUrl: url,
-          retAutorizacaoUrl: retUrl,
-          responseTimeMs: Date.now() - startedAt
+          ...typeof E.rawResponse == "object" && E.rawResponse ? E.rawResponse : {},
+          authorizationUrl: a,
+          retAutorizacaoUrl: l,
+          responseTimeMs: Date.now() - n
         }
       };
     }
     return {
-      ...result,
+      ...c,
       rawResponse: {
-        ...typeof result.rawResponse === "object" && result.rawResponse ? result.rawResponse : {},
-        url,
-        responseTimeMs: Date.now() - startedAt
+        ...typeof c.rawResponse == "object" && c.rawResponse ? c.rawResponse : {},
+        url: a,
+        responseTimeMs: Date.now() - n
       }
     };
   }
-  async cancelNfce(_request, _config) {
-    throw new FiscalError({
+  async cancelNfce(e, r) {
+    throw new I({
       code: "SEFAZ_DIRECT_NOT_IMPLEMENTED",
       message: "Provider SEFAZ direto ainda não implementado.",
       category: "PROVIDER"
     });
   }
-  async consultStatus(_request, _config) {
-    throw new FiscalError({
+  async consultStatus(e, r) {
+    throw new I({
       code: "SEFAZ_DIRECT_NOT_IMPLEMENTED",
       message: "Provider SEFAZ direto ainda não implementado.",
       category: "PROVIDER"
     });
   }
-  async testStatusServico(config2) {
-    validateSefazDirectConfig(config2);
-    const url = resolveStatusServicoUrl(config2);
-    const rawRequest = buildStatusServicoSoap(config2);
-    const startedAt = Date.now();
-    const response = await postStatusServicoSoap(url, rawRequest, config2);
-    const responseTimeMs = Date.now() - startedAt;
-    const rawResponse = response.rawResponse;
-    const statusCode = extractXmlTag(rawResponse, "cStat");
-    const statusMessage = extractXmlTag(rawResponse, "xMotivo") ?? "Resposta recebida da SEFAZ sem xMotivo.";
+  async testStatusServico(e) {
+    Da(e);
+    const r = Ic(e), a = Dc(e), n = Date.now(), o = await Rc(r, a, e), s = Date.now() - n, i = o.rawResponse, c = de(i, "cStat"), l = de(i, "xMotivo") ?? "Resposta recebida da SEFAZ sem xMotivo.";
     return {
       provider: "sefaz-direct",
-      environment: config2.environment,
-      uf: resolveUf(config2),
+      environment: e.environment,
+      uf: Vr(e),
       model: 65,
       service: "NFeStatusServico4",
-      url,
-      success: statusCode === "107",
-      statusCode,
-      statusMessage,
-      responseTimeMs,
-      rawRequest,
-      rawResponse,
+      url: r,
+      success: c === "107",
+      statusCode: c,
+      statusMessage: l,
+      responseTimeMs: s,
+      rawRequest: a,
+      rawResponse: i,
       checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      tlsValidation: response.tlsValidation,
-      warning: response.warning
+      tlsValidation: o.tlsValidation,
+      warning: o.warning
     };
   }
 }
-class FiscalProviderFactory {
+class Fc {
   constructor() {
-    __publicField(this, "providers");
+    ce(this, "providers");
     this.providers = {
-      mock: new MockFiscalProvider(),
-      "sefaz-direct": new SefazDirectFiscalProvider(),
-      gateway: new GatewayFiscalProvider()
+      mock: new xi(),
+      "sefaz-direct": new Uc(),
+      gateway: new Fi()
     };
   }
-  resolve(config2) {
-    return this.providers[config2.provider];
+  resolve(e) {
+    return this.providers[e.provider];
   }
 }
-class SqliteFiscalQueueService {
-  constructor(repository2, processor) {
-    __publicField(this, "workerId");
-    this.repository = repository2;
-    this.processor = processor;
-    this.workerId = `main-${process.pid}`;
+class wc {
+  constructor(e, r) {
+    ce(this, "workerId");
+    this.repository = e, this.processor = r, this.workerId = `main-${process.pid}`;
   }
-  async enqueue(request) {
-    return this.repository.enqueue(request);
+  async enqueue(e) {
+    return this.repository.enqueue(e);
   }
   async processNext() {
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const item = this.repository.claimNextQueueItem(now, this.workerId);
-    if (!item) {
-      logger.info("[FiscalQueue] Nenhum item pronto para processamento.");
-      return null;
-    }
-    return this.processClaimedItem(item);
+    const e = (/* @__PURE__ */ new Date()).toISOString(), r = this.repository.claimNextQueueItem(e, this.workerId);
+    return r ? this.processClaimedItem(r) : (f.info("[FiscalQueue] Nenhum item pronto para processamento."), null);
   }
-  async processById(queueId) {
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const item = this.repository.claimQueueItemById(queueId, now, this.workerId);
-    if (!item) {
-      logger.warn(`[FiscalQueue] Item ${queueId} nao encontrado ou nao esta pronto para processamento.`);
-      return this.repository.findQueueItemById(queueId);
-    }
-    return this.processClaimedItem(item);
+  async processById(e) {
+    const r = (/* @__PURE__ */ new Date()).toISOString(), a = this.repository.claimQueueItemById(e, r, this.workerId);
+    return a ? this.processClaimedItem(a) : (f.warn(`[FiscalQueue] Item ${e} nao encontrado ou nao esta pronto para processamento.`), this.repository.findQueueItemById(e));
   }
-  async processClaimedItem(item) {
-    logger.info(`[FiscalQueue] Iniciando job ${item.id} (${item.operation}).`);
+  async processClaimedItem(e) {
+    f.info(`[FiscalQueue] Iniciando job ${e.id} (${e.operation}).`);
     try {
-      const result = await this.processor(item);
-      if (result.status === "AUTHORIZED" || result.status === "REJECTED" || result.status === "CANCELLED" || result.status === "COMPLETED") {
-        this.repository.markQueueItemDone(item.id, (/* @__PURE__ */ new Date()).toISOString(), result.result);
-      } else if (result.status === "FAILED_RETRYABLE" || result.status === "PENDING_EXTERNAL") {
-        this.repository.markQueueItemFailed(
-          item.id,
-          result.statusCode ?? result.status,
-          result.statusMessage ?? "Aguardando novo processamento fiscal.",
-          result.nextRetryAt ?? new Date(Date.now() + Math.max(item.attempts, 1) * 6e4).toISOString(),
-          (/* @__PURE__ */ new Date()).toISOString(),
-          result.result
-        );
-      } else {
-        this.repository.markQueueItemFailed(
-          item.id,
-          result.statusCode ?? result.status,
-          result.statusMessage ?? "Falha fiscal definitiva.",
-          null,
-          (/* @__PURE__ */ new Date()).toISOString(),
-          result.result
-        );
-      }
-      logger.info(`[FiscalQueue] Job ${item.id} concluido com status ${result.status}.`);
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_QUEUE_PROCESS_FAILED");
-      const nextRetryAt = fiscalError.retryable ? new Date(Date.now() + item.attempts * 6e4).toISOString() : null;
+      const r = await this.processor(e);
+      r.status === "AUTHORIZED" || r.status === "REJECTED" || r.status === "CANCELLED" || r.status === "COMPLETED" ? this.repository.markQueueItemDone(e.id, (/* @__PURE__ */ new Date()).toISOString(), r.result) : r.status === "FAILED_RETRYABLE" || r.status === "PENDING_EXTERNAL" ? this.repository.markQueueItemFailed(
+        e.id,
+        r.statusCode ?? r.status,
+        r.statusMessage ?? "Aguardando novo processamento fiscal.",
+        r.nextRetryAt ?? new Date(Date.now() + Math.max(e.attempts, 1) * 6e4).toISOString(),
+        (/* @__PURE__ */ new Date()).toISOString(),
+        r.result
+      ) : this.repository.markQueueItemFailed(
+        e.id,
+        r.statusCode ?? r.status,
+        r.statusMessage ?? "Falha fiscal definitiva.",
+        null,
+        (/* @__PURE__ */ new Date()).toISOString(),
+        r.result
+      ), f.info(`[FiscalQueue] Job ${e.id} concluido com status ${r.status}.`);
+    } catch (r) {
+      const a = Z(r, "FISCAL_QUEUE_PROCESS_FAILED"), n = a.retryable ? new Date(Date.now() + e.attempts * 6e4).toISOString() : null;
       this.repository.markQueueItemFailed(
-        item.id,
-        fiscalError.code,
-        fiscalError.message,
-        nextRetryAt,
+        e.id,
+        a.code,
+        a.message,
+        n,
         (/* @__PURE__ */ new Date()).toISOString(),
         {
-          success: false,
-          statusCode: fiscalError.code,
-          statusMessage: fiscalError.message,
-          category: fiscalError.category,
-          details: fiscalError.details ?? null
+          success: !1,
+          statusCode: a.code,
+          statusMessage: a.message,
+          category: a.category,
+          details: a.details ?? null
         }
-      );
-      logger.error(`[FiscalQueue] Job ${item.id} falhou: ${fiscalError.code} - ${fiscalError.message}`);
+      ), f.error(`[FiscalQueue] Job ${e.id} falhou: ${a.code} - ${a.message}`);
     }
-    return this.repository.findQueueItemById(item.id);
+    return this.repository.findQueueItemById(e.id);
   }
-  async retry(queueId) {
-    const item = this.repository.findQueueItemById(queueId);
-    if (!item) {
-      return null;
-    }
-    this.repository.markQueueItemFailed(
-      queueId,
-      item.lastErrorCode ?? "MANUAL_RETRY",
-      item.lastErrorMessage ?? "Reprocessamento manual.",
+  async retry(e) {
+    const r = this.repository.findQueueItemById(e);
+    return r ? (this.repository.markQueueItemFailed(
+      e,
+      r.lastErrorCode ?? "MANUAL_RETRY",
+      r.lastErrorMessage ?? "Reprocessamento manual.",
       (/* @__PURE__ */ new Date()).toISOString(),
       (/* @__PURE__ */ new Date()).toISOString()
-    );
-    return this.processNext();
+    ), this.processNext()) : null;
   }
-  async list(limit = 20) {
-    return this.repository.listQueueItems(limit);
+  async list(e = 20) {
+    return this.repository.listQueueItems(e);
   }
   async getSummary() {
     return this.repository.summarizeQueue();
   }
 }
-function normalizeDigits(value) {
-  return String(value ?? "").replace(/\D/g, "");
+function La(t) {
+  return String(t ?? "").replace(/\D/g, "");
 }
-function normalizeText(value) {
-  return String(value ?? "").trim().toUpperCase();
+function j(t) {
+  return String(t ?? "").trim().toUpperCase();
 }
-function isValidNcm(value) {
-  return /^\d{8}$/.test(value);
+function xc(t) {
+  return /^\d{8}$/.test(t);
 }
-function isValidCfop(value) {
-  return /^\d{4}$/.test(value);
+function Mc(t) {
+  return /^\d{4}$/.test(t);
 }
-function isValidOrigin(value) {
-  return /^[0-8]$/.test(value);
+function Pc(t) {
+  return /^[0-8]$/.test(t);
 }
-function isValidCest(value) {
-  return /^\d{7}$/.test(value);
+function Bc(t) {
+  return /^\d{7}$/.test(t);
 }
-function isValidGtin(value) {
-  return /^(SEM GTIN|\d{8}|\d{12,14})$/.test(value);
+function Xc(t) {
+  return /^(SEM GTIN|\d{8}|\d{12,14})$/.test(t);
 }
-function almostEqual(left, right) {
-  return Math.abs(left - right) < 0.01;
+function ya(t, e) {
+  return Math.abs(t - e) < 0.01;
 }
-function paymentLabel(method) {
-  const labels = {
+function $c(t) {
+  return {
     DINHEIRO: "Dinheiro",
     PIX: "PIX",
     DEBITO: "Cartão de débito",
     CREDITO: "Cartão de crédito",
     VOUCHER: "Voucher",
     OUTROS: "Outros"
-  };
-  return labels[method];
+  }[t];
 }
-class FiscalPreTransmissionValidator {
-  validateAuthorizeRequest(request, config2) {
-    const issues = [];
-    const store = storeRepository.findById(request.companyId);
-    if (!store) {
-      issues.push({
-        code: "STORE_NOT_FOUND",
-        message: `Store fiscal ${request.companyId} não encontrada.`,
-        field: "companyId",
-        severity: "error"
-      });
-    }
-    if (!request.series || request.series <= 0) {
-      issues.push({
-        code: "SERIES_INVALID",
-        message: "Série fiscal inválida.",
-        field: "series",
-        severity: "error"
-      });
-    }
-    if (!request.number || request.number <= 0) {
-      issues.push({
-        code: "NUMBER_INVALID",
-        message: "Número fiscal inválido.",
-        field: "number",
-        severity: "error"
-      });
-    }
-    if (!request.issuedAt) {
-      issues.push({
-        code: "ISSUED_AT_REQUIRED",
-        message: "Data/hora de emissão não informada.",
-        field: "issuedAt",
-        severity: "error"
-      });
-    }
-    this.validateEmitter(request, config2, (store == null ? void 0 : store.environment) ?? null, issues);
-    this.validatePayments(request, issues);
-    this.validateItems(request, issues);
-    this.validateRuntimeConfig(request, config2, issues);
-    if (issues.some((issue) => issue.severity === "error")) {
-      const message = issues.filter((issue) => issue.severity === "error").map((issue) => issue.message).join(" | ");
-      throw new FiscalError({
+class kc {
+  validateAuthorizeRequest(e, r) {
+    const a = [], n = se.findById(e.companyId);
+    if (n || a.push({
+      code: "STORE_NOT_FOUND",
+      message: `Store fiscal ${e.companyId} não encontrada.`,
+      field: "companyId",
+      severity: "error"
+    }), (!e.series || e.series <= 0) && a.push({
+      code: "SERIES_INVALID",
+      message: "Série fiscal inválida.",
+      field: "series",
+      severity: "error"
+    }), (!e.number || e.number <= 0) && a.push({
+      code: "NUMBER_INVALID",
+      message: "Número fiscal inválido.",
+      field: "number",
+      severity: "error"
+    }), e.issuedAt || a.push({
+      code: "ISSUED_AT_REQUIRED",
+      message: "Data/hora de emissão não informada.",
+      field: "issuedAt",
+      severity: "error"
+    }), this.validateEmitter(e, r, (n == null ? void 0 : n.environment) ?? null, a), this.validatePayments(e, a), this.validateItems(e, a), this.validateRuntimeConfig(e, r, a), a.some((o) => o.severity === "error")) {
+      const o = a.filter((s) => s.severity === "error").map((s) => s.message).join(" | ");
+      throw new I({
         code: "FISCAL_PREREQUISITES_NOT_MET",
-        message: message || "A venda não está pronta para emissão fiscal.",
+        message: o || "A venda não está pronta para emissão fiscal.",
         category: "VALIDATION",
-        retryable: false,
-        details: issues
+        retryable: !1,
+        details: a
       });
     }
   }
-  validateEmitter(request, config2, storeEnvironment, issues) {
-    const emitter = request.emitter;
-    if (normalizeDigits(emitter.cnpj).length !== 14) {
-      issues.push({ code: "EMITTER_CNPJ_INVALID", message: "CNPJ do emitente inválido.", field: "emitter.cnpj", severity: "error" });
-    }
-    if (!normalizeText(emitter.stateRegistration)) {
-      issues.push({ code: "EMITTER_IE_REQUIRED", message: "IE do emitente é obrigatória.", field: "emitter.stateRegistration", severity: "error" });
-    }
-    if (!normalizeText(emitter.taxRegimeCode)) {
-      issues.push({ code: "EMITTER_CRT_REQUIRED", message: "CRT do emitente é obrigatório.", field: "emitter.taxRegimeCode", severity: "error" });
-    }
-    if (!normalizeText(emitter.legalName)) {
-      issues.push({ code: "EMITTER_LEGAL_NAME_REQUIRED", message: "Razão social do emitente é obrigatória.", field: "emitter.legalName", severity: "error" });
-    }
-    if (!normalizeText(emitter.tradeName)) {
-      issues.push({ code: "EMITTER_TRADE_NAME_REQUIRED", message: "Nome fantasia do emitente é obrigatório.", field: "emitter.tradeName", severity: "error" });
-    }
-    if (!normalizeText(emitter.address.street) || !normalizeText(emitter.address.number) || !normalizeText(emitter.address.neighborhood)) {
-      issues.push({ code: "EMITTER_ADDRESS_INCOMPLETE", message: "Endereço do emitente está incompleto.", field: "emitter.address", severity: "error" });
-    }
-    if (!normalizeText(emitter.address.city) || !normalizeText(emitter.address.state)) {
-      issues.push({ code: "EMITTER_CITY_STATE_REQUIRED", message: "Cidade e UF do emitente são obrigatórias.", field: "emitter.address.city", severity: "error" });
-    }
-    if (normalizeDigits(emitter.address.cityIbgeCode).length !== 7) {
-      issues.push({ code: "EMITTER_CITY_IBGE_INVALID", message: "Código IBGE do município do emitente é inválido.", field: "emitter.address.cityIbgeCode", severity: "error" });
-    }
-    if (request.environment !== config2.environment) {
-      issues.push({
-        code: "ENVIRONMENT_MISMATCH",
-        message: "Ambiente do request diverge da configuração fiscal ativa.",
-        field: "environment",
-        severity: "error"
-      });
-    }
-    if (storeEnvironment && request.environment !== storeEnvironment) {
-      issues.push({
-        code: "STORE_ENVIRONMENT_MISMATCH",
-        message: "Ambiente fiscal da store diverge do request de emissão.",
-        field: "environment",
-        severity: "error"
-      });
-    }
+  validateEmitter(e, r, a, n) {
+    const o = e.emitter;
+    La(o.cnpj).length !== 14 && n.push({ code: "EMITTER_CNPJ_INVALID", message: "CNPJ do emitente inválido.", field: "emitter.cnpj", severity: "error" }), j(o.stateRegistration) || n.push({ code: "EMITTER_IE_REQUIRED", message: "IE do emitente é obrigatória.", field: "emitter.stateRegistration", severity: "error" }), j(o.taxRegimeCode) || n.push({ code: "EMITTER_CRT_REQUIRED", message: "CRT do emitente é obrigatório.", field: "emitter.taxRegimeCode", severity: "error" }), j(o.legalName) || n.push({ code: "EMITTER_LEGAL_NAME_REQUIRED", message: "Razão social do emitente é obrigatória.", field: "emitter.legalName", severity: "error" }), j(o.tradeName) || n.push({ code: "EMITTER_TRADE_NAME_REQUIRED", message: "Nome fantasia do emitente é obrigatório.", field: "emitter.tradeName", severity: "error" }), (!j(o.address.street) || !j(o.address.number) || !j(o.address.neighborhood)) && n.push({ code: "EMITTER_ADDRESS_INCOMPLETE", message: "Endereço do emitente está incompleto.", field: "emitter.address", severity: "error" }), (!j(o.address.city) || !j(o.address.state)) && n.push({ code: "EMITTER_CITY_STATE_REQUIRED", message: "Cidade e UF do emitente são obrigatórias.", field: "emitter.address.city", severity: "error" }), La(o.address.cityIbgeCode).length !== 7 && n.push({ code: "EMITTER_CITY_IBGE_INVALID", message: "Código IBGE do município do emitente é inválido.", field: "emitter.address.cityIbgeCode", severity: "error" }), e.environment !== r.environment && n.push({
+      code: "ENVIRONMENT_MISMATCH",
+      message: "Ambiente do request diverge da configuração fiscal ativa.",
+      field: "environment",
+      severity: "error"
+    }), a && e.environment !== a && n.push({
+      code: "STORE_ENVIRONMENT_MISMATCH",
+      message: "Ambiente fiscal da store diverge do request de emissão.",
+      field: "environment",
+      severity: "error"
+    });
   }
-  validatePayments(request, issues) {
-    if (request.payments.length === 0) {
-      issues.push({
+  validatePayments(e, r) {
+    if (e.payments.length === 0) {
+      r.push({
         code: "PAYMENTS_REQUIRED",
         message: "A venda precisa ter ao menos um pagamento fiscal.",
         field: "payments",
@@ -10266,54 +8800,41 @@ class FiscalPreTransmissionValidator {
       });
       return;
     }
-    const totalPayments = request.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-    if (!almostEqual(totalPayments, request.totals.finalAmount)) {
-      issues.push({
-        code: "PAYMENTS_TOTAL_MISMATCH",
-        message: "A soma dos pagamentos não corresponde ao total da venda.",
-        field: "payments",
+    const a = e.payments.reduce((o, s) => o + Number(s.amount || 0), 0);
+    ya(a, e.totals.finalAmount) || r.push({
+      code: "PAYMENTS_TOTAL_MISMATCH",
+      message: "A soma dos pagamentos não corresponde ao total da venda.",
+      field: "payments",
+      severity: "error"
+    }), e.payments.forEach((o, s) => {
+      o.amount <= 0 && r.push({
+        code: "PAYMENT_AMOUNT_INVALID",
+        message: `Pagamento ${s + 1} (${$c(o.method)}) com valor inválido.`,
+        field: `payments[${s}].amount`,
+        severity: "error"
+      }), (o.changeAmount ?? 0) > 0 && o.method !== "DINHEIRO" && r.push({
+        code: "PAYMENT_CHANGE_REQUIRES_CASH",
+        message: "Troco só pode ser informado em pagamento em dinheiro.",
+        field: `payments[${s}].changeAmount`,
+        severity: "error"
+      }), o.method === "DINHEIRO" && (o.receivedAmount ?? 0) < o.amount && r.push({
+        code: "CASH_RECEIVED_AMOUNT_INVALID",
+        message: `Pagamento ${s + 1} em dinheiro com valor recebido menor que o valor pago.`,
+        field: `payments[${s}].receivedAmount`,
         severity: "error"
       });
-    }
-    request.payments.forEach((payment, index) => {
-      if (payment.amount <= 0) {
-        issues.push({
-          code: "PAYMENT_AMOUNT_INVALID",
-          message: `Pagamento ${index + 1} (${paymentLabel(payment.method)}) com valor inválido.`,
-          field: `payments[${index}].amount`,
-          severity: "error"
-        });
-      }
-      if ((payment.changeAmount ?? 0) > 0 && payment.method !== "DINHEIRO") {
-        issues.push({
-          code: "PAYMENT_CHANGE_REQUIRES_CASH",
-          message: `Troco só pode ser informado em pagamento em dinheiro.`,
-          field: `payments[${index}].changeAmount`,
-          severity: "error"
-        });
-      }
-      if (payment.method === "DINHEIRO" && (payment.receivedAmount ?? 0) < payment.amount) {
-        issues.push({
-          code: "CASH_RECEIVED_AMOUNT_INVALID",
-          message: `Pagamento ${index + 1} em dinheiro com valor recebido menor que o valor pago.`,
-          field: `payments[${index}].receivedAmount`,
-          severity: "error"
-        });
-      }
     });
-    const totalChange = request.payments.reduce((sum, payment) => sum + Number(payment.changeAmount ?? 0), 0);
-    if (!almostEqual(totalChange, request.totals.changeAmount)) {
-      issues.push({
-        code: "PAYMENTS_CHANGE_MISMATCH",
-        message: "O troco dos pagamentos diverge do troco total da venda.",
-        field: "payments",
-        severity: "error"
-      });
-    }
+    const n = e.payments.reduce((o, s) => o + Number(s.changeAmount ?? 0), 0);
+    ya(n, e.totals.changeAmount) || r.push({
+      code: "PAYMENTS_CHANGE_MISMATCH",
+      message: "O troco dos pagamentos diverge do troco total da venda.",
+      field: "payments",
+      severity: "error"
+    });
   }
-  validateItems(request, issues) {
-    if (request.items.length === 0) {
-      issues.push({
+  validateItems(e, r) {
+    if (e.items.length === 0) {
+      r.push({
         code: "ITEMS_REQUIRED",
         message: "A venda precisa ter itens para emissão NFC-e.",
         field: "items",
@@ -10321,63 +8842,21 @@ class FiscalPreTransmissionValidator {
       });
       return;
     }
-    request.items.forEach((item, index) => {
-      const itemId = item.id ?? null;
-      if (!isValidNcm(item.tax.ncm)) {
-        issues.push({ code: "ITEM_NCM_INVALID", message: "NCM ausente ou inválido.", field: `items[${index}].tax.ncm`, severity: "error", itemIndex: index, itemId });
-      }
-      if (!isValidCfop(item.tax.cfop)) {
-        issues.push({ code: "ITEM_CFOP_INVALID", message: "CFOP ausente ou inválido.", field: `items[${index}].tax.cfop`, severity: "error", itemIndex: index, itemId });
-      }
-      if (!isValidOrigin(item.tax.originCode)) {
-        issues.push({ code: "ITEM_ORIGIN_INVALID", message: "Origem fiscal ausente ou inválida.", field: `items[${index}].tax.originCode`, severity: "error", itemIndex: index, itemId });
-      }
-      if (!item.tax.csosn && !item.tax.icmsCst) {
-        issues.push({ code: "ITEM_ICMS_CLASSIFICATION_REQUIRED", message: "CST/CSOSN de ICMS é obrigatório.", field: `items[${index}].tax`, severity: "error", itemIndex: index, itemId });
-      }
-      if (!normalizeText(item.tax.pisCst)) {
-        issues.push({ code: "ITEM_PIS_CST_REQUIRED", message: "CST de PIS é obrigatório.", field: `items[${index}].tax.pisCst`, severity: "error", itemIndex: index, itemId });
-      }
-      if (!normalizeText(item.tax.cofinsCst)) {
-        issues.push({ code: "ITEM_COFINS_CST_REQUIRED", message: "CST de COFINS é obrigatório.", field: `items[${index}].tax.cofinsCst`, severity: "error", itemIndex: index, itemId });
-      }
-      if (item.tax.cest && !isValidCest(item.tax.cest)) {
-        issues.push({ code: "ITEM_CEST_INVALID", message: "CEST informado é inválido.", field: `items[${index}].tax.cest`, severity: "error", itemIndex: index, itemId });
-      }
-      if (item.gtin && !isValidGtin(item.gtin)) {
-        issues.push({ code: "ITEM_GTIN_INVALID", message: "GTIN informado é inválido.", field: `items[${index}].gtin`, severity: "error", itemIndex: index, itemId });
-      }
+    e.items.forEach((a, n) => {
+      const o = a.id ?? null;
+      xc(a.tax.ncm) || r.push({ code: "ITEM_NCM_INVALID", message: "NCM ausente ou inválido.", field: `items[${n}].tax.ncm`, severity: "error", itemIndex: n, itemId: o }), Mc(a.tax.cfop) || r.push({ code: "ITEM_CFOP_INVALID", message: "CFOP ausente ou inválido.", field: `items[${n}].tax.cfop`, severity: "error", itemIndex: n, itemId: o }), Pc(a.tax.originCode) || r.push({ code: "ITEM_ORIGIN_INVALID", message: "Origem fiscal ausente ou inválida.", field: `items[${n}].tax.originCode`, severity: "error", itemIndex: n, itemId: o }), !a.tax.csosn && !a.tax.icmsCst && r.push({ code: "ITEM_ICMS_CLASSIFICATION_REQUIRED", message: "CST/CSOSN de ICMS é obrigatório.", field: `items[${n}].tax`, severity: "error", itemIndex: n, itemId: o }), j(a.tax.pisCst) || r.push({ code: "ITEM_PIS_CST_REQUIRED", message: "CST de PIS é obrigatório.", field: `items[${n}].tax.pisCst`, severity: "error", itemIndex: n, itemId: o }), j(a.tax.cofinsCst) || r.push({ code: "ITEM_COFINS_CST_REQUIRED", message: "CST de COFINS é obrigatório.", field: `items[${n}].tax.cofinsCst`, severity: "error", itemIndex: n, itemId: o }), a.tax.cest && !Bc(a.tax.cest) && r.push({ code: "ITEM_CEST_INVALID", message: "CEST informado é inválido.", field: `items[${n}].tax.cest`, severity: "error", itemIndex: n, itemId: o }), a.gtin && !Xc(a.gtin) && r.push({ code: "ITEM_GTIN_INVALID", message: "GTIN informado é inválido.", field: `items[${n}].gtin`, severity: "error", itemIndex: n, itemId: o });
     });
   }
-  validateRuntimeConfig(request, config2, issues) {
-    if (config2.provider !== "mock") {
-      if (!normalizeText(config2.cscId)) {
-        issues.push({ code: "CSC_ID_REQUIRED", message: "CSC ID é obrigatório para NFC-e real.", field: "config.cscId", severity: "error" });
-      }
-      if (!normalizeText(config2.cscToken)) {
-        issues.push({ code: "CSC_TOKEN_REQUIRED", message: "CSC Token é obrigatório para NFC-e real.", field: "config.cscToken", severity: "error" });
-      }
-    }
-    if (config2.provider === "gateway") {
-      if (!normalizeText(config2.gatewayBaseUrl)) {
-        issues.push({ code: "GATEWAY_BASE_URL_REQUIRED", message: "URL base do gateway fiscal não configurada.", field: "config.gatewayBaseUrl", severity: "error" });
-      }
-      if (!normalizeText(config2.gatewayApiKey)) {
-        issues.push({ code: "GATEWAY_API_KEY_REQUIRED", message: "API key do gateway fiscal não configurada.", field: "config.gatewayApiKey", severity: "error" });
-      }
-    }
-    if (request.environment === "production" && config2.provider === "mock") {
-      issues.push({
-        code: "MOCK_PROVIDER_NOT_ALLOWED_IN_PRODUCTION",
-        message: "Provider mock não pode ser usado em produção.",
-        field: "config.provider",
-        severity: "error"
-      });
-    }
+  validateRuntimeConfig(e, r, a) {
+    r.provider !== "mock" && (j(r.cscId) || a.push({ code: "CSC_ID_REQUIRED", message: "CSC ID é obrigatório para NFC-e real.", field: "config.cscId", severity: "error" }), j(r.cscToken) || a.push({ code: "CSC_TOKEN_REQUIRED", message: "CSC Token é obrigatório para NFC-e real.", field: "config.cscToken", severity: "error" })), r.provider === "gateway" && (j(r.gatewayBaseUrl) || a.push({ code: "GATEWAY_BASE_URL_REQUIRED", message: "URL base do gateway fiscal não configurada.", field: "config.gatewayBaseUrl", severity: "error" }), j(r.gatewayApiKey) || a.push({ code: "GATEWAY_API_KEY_REQUIRED", message: "API key do gateway fiscal não configurada.", field: "config.gatewayApiKey", severity: "error" })), e.environment === "production" && r.provider === "mock" && a.push({
+      code: "MOCK_PROVIDER_NOT_ALLOWED_IN_PRODUCTION",
+      message: "Provider mock não pode ser usado em produção.",
+      field: "config.provider",
+      severity: "error"
+    });
   }
 }
-const fiscalPreTransmissionValidator = new FiscalPreTransmissionValidator();
-const UF_CODES = {
+const qc = new kc(), Gc = {
   AC: "12",
   AL: "27",
   AP: "16",
@@ -10406,848 +8885,662 @@ const UF_CODES = {
   SE: "28",
   TO: "17"
 };
-function onlyDigits$1(value) {
-  return String(value ?? "").replace(/\D/g, "");
+function Vc(t) {
+  return String(t ?? "").replace(/\D/g, "");
 }
-function leftPad(value, length) {
-  return onlyDigits$1(value).padStart(length, "0").slice(-length);
+function lr(t, e) {
+  return Vc(t).padStart(e, "0").slice(-e);
 }
-function modulo11CheckDigit(base) {
-  let weight = 2;
-  let sum = 0;
-  for (let index = base.length - 1; index >= 0; index -= 1) {
-    sum += Number(base[index]) * weight;
-    weight = weight === 9 ? 2 : weight + 1;
-  }
-  const mod = sum % 11;
-  const digit = 11 - mod;
-  return digit >= 10 ? "0" : String(digit);
+function zc(t) {
+  let e = 2, r = 0;
+  for (let o = t.length - 1; o >= 0; o -= 1)
+    r += Number(t[o]) * e, e = e === 9 ? 2 : e + 1;
+  const n = 11 - r % 11;
+  return n >= 10 ? "0" : String(n);
 }
-function yearMonthFromIssuedAt(issuedAt) {
-  const date = new Date(issuedAt);
-  if (Number.isNaN(date.getTime())) {
+function jc(t) {
+  const e = new Date(t);
+  if (Number.isNaN(e.getTime()))
     throw new Error("Data de emissao invalida para gerar chave de acesso.");
-  }
-  return `${String(date.getFullYear()).slice(-2)}${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return `${String(e.getFullYear()).slice(-2)}${String(e.getMonth() + 1).padStart(2, "0")}`;
 }
-class NfceAccessKeyService {
-  generate(input) {
-    var _a;
-    const ufCode = UF_CODES[input.uf.toUpperCase()];
-    if (!ufCode) {
-      throw new Error(`UF sem codigo IBGE configurado para chave NFC-e: ${input.uf}`);
-    }
-    const cnpj = leftPad(input.cnpj, 14);
-    if (cnpj.length !== 14 || /^0+$/.test(cnpj)) {
+class Hc {
+  generate(e) {
+    var i;
+    const r = Gc[e.uf.toUpperCase()];
+    if (!r)
+      throw new Error(`UF sem codigo IBGE configurado para chave NFC-e: ${e.uf}`);
+    const a = lr(e.cnpj, 14);
+    if (a.length !== 14 || /^0+$/.test(a))
       throw new Error("CNPJ invalido para gerar chave de acesso NFC-e.");
-    }
-    const numericCode = ((_a = input.numericCode) == null ? void 0 : _a.replace(/\D/g, "").padStart(8, "0").slice(-8)) ?? crypto$1.randomInt(0, 1e8).toString().padStart(8, "0");
-    const base = [
-      ufCode,
-      yearMonthFromIssuedAt(input.issuedAt),
-      cnpj,
+    const n = ((i = e.numericCode) == null ? void 0 : i.replace(/\D/g, "").padStart(8, "0").slice(-8)) ?? br.randomInt(0, 1e8).toString().padStart(8, "0"), o = [
+      r,
+      jc(e.issuedAt),
+      a,
       "65",
-      leftPad(input.series, 3),
-      leftPad(input.number, 9),
-      String(input.emissionType),
-      numericCode
-    ].join("");
-    const checkDigit = modulo11CheckDigit(base);
+      lr(e.series, 3),
+      lr(e.number, 9),
+      String(e.emissionType),
+      n
+    ].join(""), s = zc(o);
     return {
-      accessKey: `${base}${checkDigit}`,
-      numericCode,
-      checkDigit,
-      ufCode,
-      yearMonth: base.slice(2, 6)
+      accessKey: `${o}${s}`,
+      numericCode: n,
+      checkDigit: s,
+      ufCode: r,
+      yearMonth: o.slice(2, 6)
     };
   }
 }
-const nfceAccessKeyService = new NfceAccessKeyService();
-const NFE_NAMESPACE = "http://www.portalfiscal.inf.br/nfe";
-const PROC_VERSION = "GalbertoPDV-0.1.0";
-const HOMOLOGATION_FIRST_ITEM_DESCRIPTION = "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
-const HOMOLOGATION_CUSTOMER_NAME = "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
-function escapeXml(value) {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+const Kc = new Hc(), Yc = "http://www.portalfiscal.inf.br/nfe", Wc = "GalbertoPDV-0.1.0", Qc = "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL", Jc = "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
+function v(t) {
+  return String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
-function compactXml(xml) {
-  return xml.replace(/>\s+</g, "><").trim();
+function Zc(t) {
+  return t.replace(/>\s+</g, "><").trim();
 }
-function normalizeCscId(value) {
-  const digits = onlyDigits(value);
-  if (!digits) return "";
-  return String(Number(digits));
+function Gn(t) {
+  const e = k(t);
+  return e ? String(Number(e)) : "";
 }
-function buildSpNfcePublicUrls(environment) {
-  const host = environment === "production" ? "www.nfce.fazenda.sp.gov.br" : "www.homologacao.nfce.fazenda.sp.gov.br";
+function Vn(t) {
+  const e = t === "production" ? "www.nfce.fazenda.sp.gov.br" : "www.homologacao.nfce.fazenda.sp.gov.br";
   return {
-    qrCodeBaseUrl: `https://${host}/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx`,
-    publicConsultUrl: `https://${host}/consulta`
+    qrCodeBaseUrl: `https://${e}/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx`,
+    publicConsultUrl: `https://${e}/consulta`
   };
 }
-function sha1Hex(value) {
-  return createHash("sha1").update(value, "utf8").digest("hex").toUpperCase();
+function eu(t) {
+  return Za("sha1").update(t, "utf8").digest("hex").toUpperCase();
 }
-function buildQrCodeUrl(context, accessKey) {
-  const cscId = normalizeCscId(context.cscId);
-  const cscToken = String(context.cscToken ?? "").trim();
-  const tpAmb = context.environment === "production" ? "1" : "2";
-  const qrCodeVersion = "2";
-  const { qrCodeBaseUrl } = buildSpNfcePublicUrls(context.environment);
-  const hash = sha1Hex(`${accessKey}|${qrCodeVersion}|${tpAmb}|${cscId}${cscToken}`);
-  const parameter = `${accessKey}|${qrCodeVersion}|${tpAmb}|${cscId}|${hash}`;
-  return `${qrCodeBaseUrl}?p=${parameter}`;
+function zn(t, e) {
+  const r = Gn(t.cscId), a = String(t.cscToken ?? "").trim(), n = t.environment === "production" ? "1" : "2", o = "2", { qrCodeBaseUrl: s } = Vn(t.environment), i = eu(`${e}|${o}|${n}|${r}${a}`), c = `${e}|${o}|${n}|${r}|${i}`;
+  return `${s}?p=${c}`;
 }
-function onlyDigits(value) {
-  return String(value ?? "").replace(/\D/g, "");
+function k(t) {
+  return String(t ?? "").replace(/\D/g, "");
 }
-function money(value) {
-  return Number(value ?? 0).toFixed(2);
+function oe(t) {
+  return Number(t ?? 0).toFixed(2);
 }
-function moneyToCents(value) {
-  return Math.round(Number(value ?? 0) * 100);
+function $(t) {
+  return Math.round(Number(t ?? 0) * 100);
 }
-function centsToMoney(value) {
-  return (value / 100).toFixed(2);
+function Oa(t) {
+  return (t / 100).toFixed(2);
 }
-function cloneItemWithFiscalAmounts(item, discountCents) {
-  const grossCents = moneyToCents(item.grossAmount);
-  const safeDiscountCents = Math.max(0, Math.min(discountCents, grossCents));
+function Er(t, e) {
+  const r = $(t.grossAmount), a = Math.max(0, Math.min(e, r));
   return {
-    ...item,
-    discountAmount: safeDiscountCents / 100,
-    totalAmount: Math.max(grossCents - safeDiscountCents, 0) / 100
+    ...t,
+    discountAmount: a / 100,
+    totalAmount: Math.max(r - a, 0) / 100
   };
 }
-function sumItemDiscountCents(items) {
-  return items.reduce((sum, item) => sum + moneyToCents(item.discountAmount), 0);
+function jr(t) {
+  return t.reduce((e, r) => e + $(r.discountAmount), 0);
 }
-function allocateTotalDiscountAcrossItems(items, totalDiscountAmount) {
-  const totalDiscountCents = moneyToCents(totalDiscountAmount);
-  const currentDiscountCents = sumItemDiscountCents(items);
-  const extraDiscountCents = totalDiscountCents - currentDiscountCents;
-  if (extraDiscountCents <= 0 || items.length === 0) {
-    return items.map((item) => cloneItemWithFiscalAmounts(item, moneyToCents(item.discountAmount)));
-  }
-  const itemStates = items.map((item) => {
-    const grossCents = moneyToCents(item.grossAmount);
-    const currentCents = Math.max(0, Math.min(moneyToCents(item.discountAmount), grossCents));
+function tu(t, e) {
+  const r = $(e), a = jr(t), n = r - a;
+  if (n <= 0 || t.length === 0)
+    return t.map((l) => Er(l, $(l.discountAmount)));
+  const o = t.map((l) => {
+    const d = $(l.grossAmount), m = Math.max(0, Math.min($(l.discountAmount), d));
     return {
-      item,
-      grossCents,
-      currentCents,
-      remainingCents: Math.max(grossCents - currentCents, 0),
+      item: l,
+      grossCents: d,
+      currentCents: m,
+      remainingCents: Math.max(d - m, 0),
       allocatedExtraCents: 0
     };
-  });
-  const totalRemainingCents = itemStates.reduce((sum, item) => sum + item.remainingCents, 0);
-  if (totalRemainingCents <= 0) {
-    return itemStates.map((state) => cloneItemWithFiscalAmounts(state.item, state.currentCents));
+  }), s = o.reduce((l, d) => l + d.remainingCents, 0);
+  if (s <= 0)
+    return o.map((l) => Er(l.item, l.currentCents));
+  let i = 0;
+  for (const l of o) {
+    const d = Math.floor(n * l.remainingCents / s);
+    l.allocatedExtraCents = Math.min(d, l.remainingCents), i += l.allocatedExtraCents;
   }
-  let allocatedCents = 0;
-  for (const state of itemStates) {
-    const proportionalCents = Math.floor(extraDiscountCents * state.remainingCents / totalRemainingCents);
-    state.allocatedExtraCents = Math.min(proportionalCents, state.remainingCents);
-    allocatedCents += state.allocatedExtraCents;
+  let c = n - i;
+  for (const l of o) {
+    if (c <= 0) break;
+    const d = l.remainingCents - l.allocatedExtraCents;
+    if (d <= 0) continue;
+    const m = Math.min(d, c);
+    l.allocatedExtraCents += m, c -= m;
   }
-  let remainderCents = extraDiscountCents - allocatedCents;
-  for (const state of itemStates) {
-    if (remainderCents <= 0) break;
-    const capacityCents = state.remainingCents - state.allocatedExtraCents;
-    if (capacityCents <= 0) continue;
-    const incrementCents = Math.min(capacityCents, remainderCents);
-    state.allocatedExtraCents += incrementCents;
-    remainderCents -= incrementCents;
-  }
-  return itemStates.map((state) => cloneItemWithFiscalAmounts(
-    state.item,
-    state.currentCents + state.allocatedExtraCents
+  return o.map((l) => Er(
+    l.item,
+    l.currentCents + l.allocatedExtraCents
   ));
 }
-function quantity(value) {
-  return Number(value ?? 0).toFixed(4);
+function ba(t) {
+  return Number(t ?? 0).toFixed(4);
 }
-function normalizeIsoWithTimezone(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const pad = (part) => String(part).padStart(2, "0");
-  const offsetMinutes = -date.getTimezoneOffset();
-  const sign = offsetMinutes >= 0 ? "+" : "-";
-  const absoluteOffset = Math.abs(offsetMinutes);
-  const offset = `${sign}${pad(Math.floor(absoluteOffset / 60))}:${pad(absoluteOffset % 60)}`;
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${offset}`;
+function ru(t) {
+  const e = new Date(t);
+  if (Number.isNaN(e.getTime())) return t;
+  const r = (i) => String(i).padStart(2, "0"), a = -e.getTimezoneOffset(), n = a >= 0 ? "+" : "-", o = Math.abs(a), s = `${n}${r(Math.floor(o / 60))}:${r(o % 60)}`;
+  return `${e.getFullYear()}-${r(e.getMonth() + 1)}-${r(e.getDate())}T${r(e.getHours())}:${r(e.getMinutes())}:${r(e.getSeconds())}${s}`;
 }
-function gtin(value) {
-  const normalized = String(value ?? "").trim();
-  return normalized.length > 0 ? normalized : "SEM GTIN";
+function au(t) {
+  const e = String(t ?? "").trim();
+  return e.length > 0 ? e : "SEM GTIN";
 }
-function paymentCode(method) {
-  const map = {
+function nu(t) {
+  return {
     DINHEIRO: "01",
     CREDITO: "03",
     DEBITO: "04",
     VOUCHER: "99",
     PIX: "17",
     OUTROS: "99"
-  };
-  return map[method] ?? "99";
+  }[t] ?? "99";
 }
-function paymentCardXml(code) {
-  if (!["03", "04", "17"].includes(code)) {
-    return "";
-  }
-  return "<card><tpIntegra>2</tpIntegra></card>";
+function ou(t) {
+  return ["03", "04", "17"].includes(t) ? "<card><tpIntegra>2</tpIntegra></card>" : "";
 }
-function paymentXmlAmountCents(payment) {
-  if (payment.method === "DINHEIRO" && payment.receivedAmount != null) {
-    return moneyToCents(payment.receivedAmount);
-  }
-  return moneyToCents(payment.amount);
+function jn(t) {
+  return t.method === "DINHEIRO" && t.receivedAmount != null ? $(t.receivedAmount) : $(t.amount);
 }
-function isSimpleNationalCrt(taxRegimeCode) {
-  return ["1", "4"].includes(String(taxRegimeCode ?? "").trim());
+function Hr(t) {
+  return ["1", "4"].includes(String(t ?? "").trim());
 }
-function shouldTotalizeIcmsBase(item, context) {
-  if (isSimpleNationalCrt(context.emitter.taxRegimeCode)) {
-    return false;
-  }
-  const cst = item.tax.icmsCst || "00";
-  return !["40", "41", "50"].includes(cst);
+function su(t, e) {
+  if (Hr(e.emitter.taxRegimeCode))
+    return !1;
+  const r = t.tax.icmsCst || "00";
+  return !["40", "41", "50"].includes(r);
 }
-function calculateIcmsTotals(items, context) {
-  return items.reduce(
-    (totals, item) => {
-      if (shouldTotalizeIcmsBase(item, context)) {
-        totals.baseAmount += Number(item.totalAmount ?? 0);
-      }
-      return totals;
-    },
+function iu(t, e) {
+  return t.reduce(
+    (r, a) => (su(a, e) && (r.baseAmount += Number(a.totalAmount ?? 0)), r),
     { baseAmount: 0, amount: 0 }
   );
 }
-function icmsXml(item, context) {
-  const origin = escapeXml(item.tax.originCode || "0");
-  if (isSimpleNationalCrt(context.emitter.taxRegimeCode)) {
-    const csosn = item.tax.csosn || "102";
-    return `<ICMS><ICMSSN102><orig>${origin}</orig><CSOSN>${escapeXml(csosn)}</CSOSN></ICMSSN102></ICMS>`;
+function cu(t, e) {
+  const r = v(t.tax.originCode || "0");
+  if (Hr(e.emitter.taxRegimeCode)) {
+    const n = t.tax.csosn || "102";
+    return `<ICMS><ICMSSN102><orig>${r}</orig><CSOSN>${v(n)}</CSOSN></ICMSSN102></ICMS>`;
   }
-  const cst = item.tax.icmsCst || "00";
-  if (["40", "41", "50"].includes(cst)) {
-    return `<ICMS><ICMS40><orig>${origin}</orig><CST>${escapeXml(cst)}</CST></ICMS40></ICMS>`;
-  }
-  return `<ICMS><ICMS00><orig>${origin}</orig><CST>${escapeXml(cst)}</CST><modBC>3</modBC><vBC>${money(item.totalAmount)}</vBC><pICMS>0.00</pICMS><vICMS>0.00</vICMS></ICMS00></ICMS>`;
+  const a = t.tax.icmsCst || "00";
+  return ["40", "41", "50"].includes(a) ? `<ICMS><ICMS40><orig>${r}</orig><CST>${v(a)}</CST></ICMS40></ICMS>` : `<ICMS><ICMS00><orig>${r}</orig><CST>${v(a)}</CST><modBC>3</modBC><vBC>${oe(t.totalAmount)}</vBC><pICMS>0.00</pICMS><vICMS>0.00</vICMS></ICMS00></ICMS>`;
 }
-function pisXml(item) {
-  const cst = item.tax.pisCst || "49";
-  if (["04", "05", "06", "07", "08", "09"].includes(cst)) {
-    return `<PIS><PISNT><CST>${escapeXml(cst)}</CST></PISNT></PIS>`;
-  }
-  if (["01", "02"].includes(cst)) {
-    return `<PIS><PISAliq><CST>${escapeXml(cst)}</CST><vBC>${money(item.totalAmount)}</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISAliq></PIS>`;
-  }
-  return `<PIS><PISOutr><CST>${escapeXml(cst)}</CST><vBC>0.00</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISOutr></PIS>`;
+function uu(t) {
+  const e = t.tax.pisCst || "49";
+  return ["04", "05", "06", "07", "08", "09"].includes(e) ? `<PIS><PISNT><CST>${v(e)}</CST></PISNT></PIS>` : ["01", "02"].includes(e) ? `<PIS><PISAliq><CST>${v(e)}</CST><vBC>${oe(t.totalAmount)}</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISAliq></PIS>` : `<PIS><PISOutr><CST>${v(e)}</CST><vBC>0.00</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISOutr></PIS>`;
 }
-function cofinsXml(item) {
-  const cst = item.tax.cofinsCst || "49";
-  if (["04", "05", "06", "07", "08", "09"].includes(cst)) {
-    return `<COFINS><COFINSNT><CST>${escapeXml(cst)}</CST></COFINSNT></COFINS>`;
-  }
-  if (["01", "02"].includes(cst)) {
-    return `<COFINS><COFINSAliq><CST>${escapeXml(cst)}</CST><vBC>${money(item.totalAmount)}</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSAliq></COFINS>`;
-  }
-  return `<COFINS><COFINSOutr><CST>${escapeXml(cst)}</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>`;
+function du(t) {
+  const e = t.tax.cofinsCst || "49";
+  return ["04", "05", "06", "07", "08", "09"].includes(e) ? `<COFINS><COFINSNT><CST>${v(e)}</CST></COFINSNT></COFINS>` : ["01", "02"].includes(e) ? `<COFINS><COFINSAliq><CST>${v(e)}</CST><vBC>${oe(t.totalAmount)}</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSAliq></COFINS>` : `<COFINS><COFINSOutr><CST>${v(e)}</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>`;
 }
-function itemXml(item, index, context) {
-  const itemCode = item.id || String(index + 1);
-  const itemGtin = gtin(item.gtin);
-  const discount = item.discountAmount > 0 ? `<vDesc>${money(item.discountAmount)}</vDesc>` : "";
-  const description = context.environment === "homologation" && index === 0 ? HOMOLOGATION_FIRST_ITEM_DESCRIPTION : item.description;
-  return `<det nItem="${index + 1}">
+function lu(t, e, r) {
+  const a = t.id || String(e + 1), n = au(t.gtin), o = t.discountAmount > 0 ? `<vDesc>${oe(t.discountAmount)}</vDesc>` : "", s = r.environment === "homologation" && e === 0 ? Qc : t.description;
+  return `<det nItem="${e + 1}">
 <prod>
-<cProd>${escapeXml(itemCode)}</cProd>
-<cEAN>${escapeXml(itemGtin)}</cEAN>
-<xProd>${escapeXml(description)}</xProd>
-<NCM>${escapeXml(onlyDigits(item.tax.ncm))}</NCM>
-${item.tax.cest ? `<CEST>${escapeXml(onlyDigits(item.tax.cest))}</CEST>` : ""}
-<CFOP>${escapeXml(onlyDigits(item.tax.cfop))}</CFOP>
-<uCom>${escapeXml(item.unit)}</uCom>
-<qCom>${quantity(item.quantity)}</qCom>
-<vUnCom>${money(item.unitPrice)}</vUnCom>
-<vProd>${money(item.grossAmount)}</vProd>
-<cEANTrib>${escapeXml(itemGtin)}</cEANTrib>
-<uTrib>${escapeXml(item.unit)}</uTrib>
-<qTrib>${quantity(item.quantity)}</qTrib>
-<vUnTrib>${money(item.unitPrice)}</vUnTrib>
-${discount}
+<cProd>${v(a)}</cProd>
+<cEAN>${v(n)}</cEAN>
+<xProd>${v(s)}</xProd>
+<NCM>${v(k(t.tax.ncm))}</NCM>
+${t.tax.cest ? `<CEST>${v(k(t.tax.cest))}</CEST>` : ""}
+<CFOP>${v(k(t.tax.cfop))}</CFOP>
+<uCom>${v(t.unit)}</uCom>
+<qCom>${ba(t.quantity)}</qCom>
+<vUnCom>${oe(t.unitPrice)}</vUnCom>
+<vProd>${oe(t.grossAmount)}</vProd>
+<cEANTrib>${v(n)}</cEANTrib>
+<uTrib>${v(t.unit)}</uTrib>
+<qTrib>${ba(t.quantity)}</qTrib>
+<vUnTrib>${oe(t.unitPrice)}</vUnTrib>
+${o}
 <indTot>1</indTot>
 </prod>
 <imposto>
-${icmsXml(item, context)}
-${pisXml(item)}
-${cofinsXml(item)}
+${cu(t, r)}
+${uu(t)}
+${du(t)}
 </imposto>
 </det>`;
 }
-function customerXml(customer, environment) {
-  const document = onlyDigits(customer == null ? void 0 : customer.cpfCnpj);
-  if (!document) return "";
-  const documentTag = document.length === 14 ? "CNPJ" : "CPF";
-  const customerName = environment === "homologation" ? HOMOLOGATION_CUSTOMER_NAME : customer == null ? void 0 : customer.name;
-  const name = customerName ? `<xNome>${escapeXml(customerName)}</xNome>` : "";
+function Eu(t, e) {
+  const r = k(t == null ? void 0 : t.cpfCnpj);
+  if (!r) return "";
+  const a = r.length === 14 ? "CNPJ" : "CPF", n = e === "homologation" ? Jc : t == null ? void 0 : t.name, o = n ? `<xNome>${v(n)}</xNome>` : "";
   return `<dest>
-<${documentTag}>${document}</${documentTag}>
-${name}
+<${a}>${r}</${a}>
+${o}
 <indIEDest>9</indIEDest>
 </dest>`;
 }
-function calculatePaymentTotals(payments, finalAmount) {
-  const paidAmountCents = payments.reduce((sum, payment) => sum + paymentXmlAmountCents(payment), 0);
-  const finalAmountCents = moneyToCents(finalAmount);
-  const changeAmountCents = paidAmountCents - finalAmountCents;
-  return { paidAmountCents, finalAmountCents, changeAmountCents };
+function Hn(t, e) {
+  const r = t.reduce((o, s) => o + jn(s), 0), a = $(e), n = r - a;
+  return { paidAmountCents: r, finalAmountCents: a, changeAmountCents: n };
 }
-function paymentsXml(payments, finalAmount) {
-  const paymentTotals = calculatePaymentTotals(payments, finalAmount);
-  const details = payments.map((payment) => {
-    const code = paymentCode(payment.method);
-    const description = code === "99" && payment.description ? `<xPag>${escapeXml(payment.description)}</xPag>` : "";
-    return `<detPag><indPag>0</indPag><tPag>${code}</tPag>${description}<vPag>${centsToMoney(paymentXmlAmountCents(payment))}</vPag>${paymentCardXml(code)}</detPag>`;
-  }).join("");
-  return `<pag>${details}${paymentTotals.changeAmountCents > 0 ? `<vTroco>${centsToMoney(paymentTotals.changeAmountCents)}</vTroco>` : ""}</pag>`;
+function mu(t, e) {
+  const r = Hn(t, e);
+  return `<pag>${t.map((n) => {
+    const o = nu(n.method), s = o === "99" && n.description ? `<xPag>${v(n.description)}</xPag>` : "";
+    return `<detPag><indPag>0</indPag><tPag>${o}</tPag>${s}<vPag>${Oa(jn(n))}</vPag>${ou(o)}</detPag>`;
+  }).join("")}${r.changeAmountCents > 0 ? `<vTroco>${Oa(r.changeAmountCents)}</vTroco>` : ""}</pag>`;
 }
-function technicalResponsibleXml(input) {
-  if (!input) return "";
-  return `<infRespTec>
-<CNPJ>${onlyDigits(input.cnpj)}</CNPJ>
-<xContato>${escapeXml(input.contactName)}</xContato>
-<email>${escapeXml(input.email)}</email>
-<fone>${onlyDigits(input.phone)}</fone>
-${input.csrtId ? `<idCSRT>${escapeXml(input.csrtId)}</idCSRT>` : ""}
-${input.csrtHash ? `<hashCSRT>${escapeXml(input.csrtHash)}</hashCSRT>` : ""}
-</infRespTec>`;
+function pu(t) {
+  return t ? `<infRespTec>
+<CNPJ>${k(t.cnpj)}</CNPJ>
+<xContato>${v(t.contactName)}</xContato>
+<email>${v(t.email)}</email>
+<fone>${k(t.phone)}</fone>
+${t.csrtId ? `<idCSRT>${v(t.csrtId)}</idCSRT>` : ""}
+${t.csrtHash ? `<hashCSRT>${v(t.csrtHash)}</hashCSRT>` : ""}
+</infRespTec>` : "";
 }
-function infNFeSuplXml(context, accessKey) {
-  const qrCodeUrl = buildQrCodeUrl(context, accessKey);
-  const { publicConsultUrl } = buildSpNfcePublicUrls(context.environment);
-  return `<infNFeSupl><qrCode><![CDATA[${qrCodeUrl}]]></qrCode><urlChave>${escapeXml(publicConsultUrl)}</urlChave></infNFeSupl>`;
+function _u(t, e) {
+  const r = zn(t, e), { publicConsultUrl: a } = Vn(t.environment);
+  return `<infNFeSupl><qrCode><![CDATA[${r}]]></qrCode><urlChave>${v(a)}</urlChave></infNFeSupl>`;
 }
-function validateDocument(model) {
-  const errors = [];
-  const warnings = [];
-  const { input, effectiveItems } = model;
-  const addError = (code, message, field) => errors.push({ code, message, field, severity: "error" });
-  const addWarning = (code, message, field) => warnings.push({ code, message, field, severity: "warning" });
-  if (model.accessKey.accessKey.length !== 44) addError("ACCESS_KEY_INVALID", "Chave de acesso deve ter 44 digitos.", "accessKey");
-  if (!input.items.length) addError("ITEMS_REQUIRED", "NFC-e deve possuir ao menos um item.", "items");
-  if (!input.payments.length) addError("PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments");
-  if (!onlyDigits(input.fiscalContext.emitter.cnpj)) addError("EMITTER_CNPJ_REQUIRED", "CNPJ do emitente e obrigatorio.", "fiscalContext.emitter.cnpj");
-  if (!onlyDigits(input.fiscalContext.emitter.address.cityIbgeCode)) addError("CMUNFG_REQUIRED", "Codigo IBGE do municipio de fato gerador e obrigatorio.", "fiscalContext.emitter.address.cityIbgeCode");
-  if (!normalizeCscId(input.fiscalContext.cscId)) addError("CSC_ID_REQUIRED", "CSC ID e obrigatorio para gerar QR Code NFC-e.", "fiscalContext.cscId");
-  if (!String(input.fiscalContext.cscToken ?? "").trim()) addError("CSC_TOKEN_REQUIRED", "CSC Token e obrigatorio para gerar QR Code NFC-e.", "fiscalContext.cscToken");
-  input.items.forEach((item, index) => {
-    if (onlyDigits(item.tax.ncm).length !== 8) addError("ITEM_NCM_INVALID", "NCM deve ter 8 digitos.", `items[${index}].tax.ncm`);
-    if (onlyDigits(item.tax.cfop).length !== 4) addError("ITEM_CFOP_INVALID", "CFOP deve ter 4 digitos.", `items[${index}].tax.cfop`);
-    if (moneyToCents(item.discountAmount) > moneyToCents(item.grossAmount)) {
-      addError("ITEM_DISCOUNT_EXCEEDS_GROSS", "Desconto do item nao pode ser maior que o valor bruto.", `items[${index}].discountAmount`);
-    }
-    if (isSimpleNationalCrt(input.fiscalContext.emitter.taxRegimeCode) && item.tax.csosn && !["102", "103", "300", "400"].includes(item.tax.csosn)) {
-      addWarning("ITEM_CSOSN_LIMITED_SUPPORT", `CSOSN ${item.tax.csosn} sera serializado no grupo ICMSSN102; valide a regra fiscal antes de transmitir.`, `items[${index}].tax.csosn`);
-    }
+function Tu(t) {
+  const e = [], r = [], { input: a, effectiveItems: n } = t, o = (A, N, C) => e.push({ code: A, message: N, field: C, severity: "error" }), s = (A, N, C) => r.push({ code: A, message: N, field: C, severity: "warning" });
+  t.accessKey.accessKey.length !== 44 && o("ACCESS_KEY_INVALID", "Chave de acesso deve ter 44 digitos.", "accessKey"), a.items.length || o("ITEMS_REQUIRED", "NFC-e deve possuir ao menos um item.", "items"), a.payments.length || o("PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments"), k(a.fiscalContext.emitter.cnpj) || o("EMITTER_CNPJ_REQUIRED", "CNPJ do emitente e obrigatorio.", "fiscalContext.emitter.cnpj"), k(a.fiscalContext.emitter.address.cityIbgeCode) || o("CMUNFG_REQUIRED", "Codigo IBGE do municipio de fato gerador e obrigatorio.", "fiscalContext.emitter.address.cityIbgeCode"), Gn(a.fiscalContext.cscId) || o("CSC_ID_REQUIRED", "CSC ID e obrigatorio para gerar QR Code NFC-e.", "fiscalContext.cscId"), String(a.fiscalContext.cscToken ?? "").trim() || o("CSC_TOKEN_REQUIRED", "CSC Token e obrigatorio para gerar QR Code NFC-e.", "fiscalContext.cscToken"), a.items.forEach((A, N) => {
+    k(A.tax.ncm).length !== 8 && o("ITEM_NCM_INVALID", "NCM deve ter 8 digitos.", `items[${N}].tax.ncm`), k(A.tax.cfop).length !== 4 && o("ITEM_CFOP_INVALID", "CFOP deve ter 4 digitos.", `items[${N}].tax.cfop`), $(A.discountAmount) > $(A.grossAmount) && o("ITEM_DISCOUNT_EXCEEDS_GROSS", "Desconto do item nao pode ser maior que o valor bruto.", `items[${N}].discountAmount`), Hr(a.fiscalContext.emitter.taxRegimeCode) && A.tax.csosn && !["102", "103", "300", "400"].includes(A.tax.csosn) && s("ITEM_CSOSN_LIMITED_SUPPORT", `CSOSN ${A.tax.csosn} sera serializado no grupo ICMSSN102; valide a regra fiscal antes de transmitir.`, `items[${N}].tax.csosn`);
   });
-  const productsAmountCents = moneyToCents(input.totals.productsAmount);
-  const finalAmountCents = moneyToCents(input.totals.finalAmount);
-  const discountAmountCents = moneyToCents(input.totals.discountAmount);
-  const effectiveItemsDiscountCents = sumItemDiscountCents(effectiveItems);
-  const effectiveItemsTotalCents = effectiveItems.reduce((sum, item) => sum + moneyToCents(item.totalAmount), 0);
-  if (discountAmountCents !== effectiveItemsDiscountCents) {
-    addError("TOTAL_DISCOUNT_DIFFERS_FROM_ITEMS", "Desconto total da NFC-e deve ser igual a soma dos descontos dos itens.", "totals.discountAmount");
-  }
-  if (productsAmountCents - discountAmountCents !== finalAmountCents) {
-    addError("TOTAL_FINAL_AMOUNT_INVALID", "Valor final deve ser valor dos produtos menos desconto total.", "totals.finalAmount");
-  }
-  if (effectiveItemsTotalCents !== finalAmountCents) {
-    addError("ITEM_TOTALS_DIFFERS_FROM_FINAL_AMOUNT", "Somatorio liquido dos itens deve ser igual ao valor final da NFC-e.", "items");
-  }
-  const paymentTotals = calculatePaymentTotals(input.payments, input.totals.finalAmount);
-  if (paymentTotals.paidAmountCents < paymentTotals.finalAmountCents) {
-    addError("PAYMENTS_TOTAL_UNDERPAID", "A soma dos pagamentos da NFC-e e menor que o valor total da nota.", "payments");
-  }
-  const expectedChangeCents = Math.max(paymentTotals.changeAmountCents, 0);
-  if (moneyToCents(input.totals.changeAmount) !== expectedChangeCents) {
-    addError("PAYMENTS_CHANGE_INVALID", "Troco informado diverge de soma(detPag/vPag) - vNF.", "totals.changeAmount");
-  }
-  return { ok: errors.length === 0, errors, warnings };
+  const i = $(a.totals.productsAmount), c = $(a.totals.finalAmount), l = $(a.totals.discountAmount), d = jr(n), m = n.reduce((A, N) => A + $(N.totalAmount), 0);
+  l !== d && o("TOTAL_DISCOUNT_DIFFERS_FROM_ITEMS", "Desconto total da NFC-e deve ser igual a soma dos descontos dos itens.", "totals.discountAmount"), i - l !== c && o("TOTAL_FINAL_AMOUNT_INVALID", "Valor final deve ser valor dos produtos menos desconto total.", "totals.finalAmount"), m !== c && o("ITEM_TOTALS_DIFFERS_FROM_FINAL_AMOUNT", "Somatorio liquido dos itens deve ser igual ao valor final da NFC-e.", "items");
+  const E = Hn(a.payments, a.totals.finalAmount);
+  E.paidAmountCents < E.finalAmountCents && o("PAYMENTS_TOTAL_UNDERPAID", "A soma dos pagamentos da NFC-e e menor que o valor total da nota.", "payments");
+  const _ = Math.max(E.changeAmountCents, 0);
+  return $(a.totals.changeAmount) !== _ && o("PAYMENTS_CHANGE_INVALID", "Troco informado diverge de soma(detPag/vPag) - vNF.", "totals.changeAmount"), { ok: e.length === 0, errors: e, warnings: r };
 }
-function serializeDocument(model) {
-  const { input, accessKey } = model;
-  const context = input.fiscalContext;
-  const emitter = context.emitter;
-  const address = emitter.address;
-  const tpAmb = context.environment === "production" ? "1" : "2";
-  const tpEmis = 1;
-  const items = model.effectiveItems;
-  const icmsTotals = calculateIcmsTotals(items, context);
-  const totalDiscountAmount = sumItemDiscountCents(items) / 100;
+function fu(t) {
+  const { input: e, accessKey: r } = t, a = e.fiscalContext, n = a.emitter, o = n.address, s = a.environment === "production" ? "1" : "2", i = 1, c = t.effectiveItems, l = iu(c, a), d = jr(c) / 100;
   return `<?xml version="1.0" encoding="UTF-8"?>
-<NFe xmlns="${NFE_NAMESPACE}">
-<infNFe versao="4.00" Id="NFe${accessKey.accessKey}">
+<NFe xmlns="${Yc}">
+<infNFe versao="4.00" Id="NFe${r.accessKey}">
 <ide>
-<cUF>${accessKey.ufCode}</cUF>
-<cNF>${accessKey.numericCode}</cNF>
-<natOp>${escapeXml(input.sale.natureOperation || "VENDA")}</natOp>
+<cUF>${r.ufCode}</cUF>
+<cNF>${r.numericCode}</cNF>
+<natOp>${v(e.sale.natureOperation || "VENDA")}</natOp>
 <mod>65</mod>
-<serie>${input.sale.series}</serie>
-<nNF>${input.sale.number}</nNF>
-<dhEmi>${escapeXml(normalizeIsoWithTimezone(input.sale.issuedAt))}</dhEmi>
+<serie>${e.sale.series}</serie>
+<nNF>${e.sale.number}</nNF>
+<dhEmi>${v(ru(e.sale.issuedAt))}</dhEmi>
 <tpNF>1</tpNF>
 <idDest>1</idDest>
-<cMunFG>${onlyDigits(address.cityIbgeCode)}</cMunFG>
+<cMunFG>${k(o.cityIbgeCode)}</cMunFG>
 <tpImp>4</tpImp>
-<tpEmis>${tpEmis}</tpEmis>
-<cDV>${accessKey.checkDigit}</cDV>
-<tpAmb>${tpAmb}</tpAmb>
+<tpEmis>${i}</tpEmis>
+<cDV>${r.checkDigit}</cDV>
+<tpAmb>${s}</tpAmb>
 <finNFe>1</finNFe>
 <indFinal>1</indFinal>
 <indPres>1</indPres>
 <procEmi>0</procEmi>
-<verProc>${escapeXml(PROC_VERSION)}</verProc>
+<verProc>${v(Wc)}</verProc>
 </ide>
 <emit>
-<CNPJ>${onlyDigits(emitter.cnpj)}</CNPJ>
-<xNome>${escapeXml(emitter.legalName)}</xNome>
-${emitter.tradeName ? `<xFant>${escapeXml(emitter.tradeName)}</xFant>` : ""}
+<CNPJ>${k(n.cnpj)}</CNPJ>
+<xNome>${v(n.legalName)}</xNome>
+${n.tradeName ? `<xFant>${v(n.tradeName)}</xFant>` : ""}
 <enderEmit>
-<xLgr>${escapeXml(address.street)}</xLgr>
-<nro>${escapeXml(address.number)}</nro>
-<xBairro>${escapeXml(address.neighborhood)}</xBairro>
-<cMun>${onlyDigits(address.cityIbgeCode)}</cMun>
-<xMun>${escapeXml(address.city)}</xMun>
-<UF>${escapeXml(address.state)}</UF>
-<CEP>${onlyDigits(address.zipCode)}</CEP>
+<xLgr>${v(o.street)}</xLgr>
+<nro>${v(o.number)}</nro>
+<xBairro>${v(o.neighborhood)}</xBairro>
+<cMun>${k(o.cityIbgeCode)}</cMun>
+<xMun>${v(o.city)}</xMun>
+<UF>${v(o.state)}</UF>
+<CEP>${k(o.zipCode)}</CEP>
 <cPais>1058</cPais>
 <xPais>BRASIL</xPais>
 </enderEmit>
-<IE>${onlyDigits(emitter.stateRegistration)}</IE>
-<CRT>${escapeXml(emitter.taxRegimeCode)}</CRT>
+<IE>${k(n.stateRegistration)}</IE>
+<CRT>${v(n.taxRegimeCode)}</CRT>
 </emit>
-${customerXml(input.customer, context.environment)}
-${items.map((item, index) => itemXml(item, index, context)).join("")}
+${Eu(e.customer, a.environment)}
+${c.map((m, E) => lu(m, E, a)).join("")}
 <total>
 <ICMSTot>
-<vBC>${money(icmsTotals.baseAmount)}</vBC>
-<vICMS>${money(icmsTotals.amount)}</vICMS>
+<vBC>${oe(l.baseAmount)}</vBC>
+<vICMS>${oe(l.amount)}</vICMS>
 <vICMSDeson>0.00</vICMSDeson>
 <vFCP>0.00</vFCP>
 <vBCST>0.00</vBCST>
 <vST>0.00</vST>
 <vFCPST>0.00</vFCPST>
 <vFCPSTRet>0.00</vFCPSTRet>
-<vProd>${money(input.totals.productsAmount)}</vProd>
+<vProd>${oe(e.totals.productsAmount)}</vProd>
 <vFrete>0.00</vFrete>
 <vSeg>0.00</vSeg>
-<vDesc>${money(totalDiscountAmount)}</vDesc>
+<vDesc>${oe(d)}</vDesc>
 <vII>0.00</vII>
 <vIPI>0.00</vIPI>
 <vIPIDevol>0.00</vIPIDevol>
 <vPIS>0.00</vPIS>
 <vCOFINS>0.00</vCOFINS>
 <vOutro>0.00</vOutro>
-<vNF>${money(input.totals.finalAmount)}</vNF>
+<vNF>${oe(e.totals.finalAmount)}</vNF>
 </ICMSTot>
 </total>
 <transp><modFrete>9</modFrete></transp>
-${paymentsXml(input.payments, input.totals.finalAmount)}
-${input.sale.additionalInfo ? `<infAdic><infCpl>${escapeXml(input.sale.additionalInfo)}</infCpl></infAdic>` : ""}
-${technicalResponsibleXml(input.technicalResponsible)}
+${mu(e.payments, e.totals.finalAmount)}
+${e.sale.additionalInfo ? `<infAdic><infCpl>${v(e.sale.additionalInfo)}</infCpl></infAdic>` : ""}
+${pu(e.technicalResponsible)}
 </infNFe>
-${infNFeSuplXml(context, accessKey.accessKey)}
+${_u(a, r.accessKey)}
 </NFe>`;
 }
-class NfceXmlBuilderService {
-  build(input) {
-    const accessKey = nfceAccessKeyService.generate({
-      uf: input.fiscalContext.uf,
-      issuedAt: input.sale.issuedAt,
-      cnpj: input.fiscalContext.emitter.cnpj,
+class Nu {
+  build(e) {
+    const r = Kc.generate({
+      uf: e.fiscalContext.uf,
+      issuedAt: e.sale.issuedAt,
+      cnpj: e.fiscalContext.emitter.cnpj,
       model: 65,
-      series: input.sale.series,
-      number: input.sale.number,
+      series: e.sale.series,
+      number: e.sale.number,
       emissionType: 1,
-      environment: input.fiscalContext.environment
-    });
-    const effectiveItems = allocateTotalDiscountAcrossItems(input.items, input.totals.discountAmount);
-    const model = { accessKey, input, effectiveItems };
-    const validation = validateDocument(model);
-    if (!validation.ok) {
+      environment: e.fiscalContext.environment
+    }), a = tu(e.items, e.totals.discountAmount), n = { accessKey: r, input: e, effectiveItems: a }, o = Tu(n);
+    if (!o.ok)
       return {
-        accessKey: accessKey.accessKey,
-        numericCode: accessKey.numericCode,
-        checkDigit: accessKey.checkDigit,
+        accessKey: r.accessKey,
+        numericCode: r.numericCode,
+        checkDigit: r.checkDigit,
         xml: "",
         qrCodeUrl: null,
-        validation
+        validation: o
       };
-    }
-    const qrCodeUrl = buildQrCodeUrl(input.fiscalContext, accessKey.accessKey);
+    const s = zn(e.fiscalContext, r.accessKey);
     return {
-      accessKey: accessKey.accessKey,
-      numericCode: accessKey.numericCode,
-      checkDigit: accessKey.checkDigit,
-      xml: compactXml(serializeDocument(model)),
-      qrCodeUrl,
-      validation
+      accessKey: r.accessKey,
+      numericCode: r.numericCode,
+      checkDigit: r.checkDigit,
+      xml: Zc(fu(n)),
+      qrCodeUrl: s,
+      validation: o
     };
   }
-  buildAuthorizeXml(request, fiscalContext) {
+  buildAuthorizeXml(e, r) {
     return this.build({
-      fiscalContext,
+      fiscalContext: r,
       sale: {
-        id: request.saleId,
-        issuedAt: request.issuedAt,
-        series: request.series,
-        number: request.number,
-        additionalInfo: request.additionalInfo
+        id: e.saleId,
+        issuedAt: e.issuedAt,
+        series: e.series,
+        number: e.number,
+        additionalInfo: e.additionalInfo
       },
-      customer: request.customer,
-      items: request.items,
-      payments: request.payments,
-      totals: request.totals
+      customer: e.customer,
+      items: e.items,
+      payments: e.payments,
+      totals: e.totals
     });
   }
 }
-const nfceXmlBuilderService = new NfceXmlBuilderService();
-class DefaultFiscalService {
-  constructor(repository2, queueService2, certificateService2, danfeService2, configService2, resolveProvider) {
-    this.repository = repository2;
-    this.queueService = queueService2;
-    this.certificateService = certificateService2;
-    this.danfeService = danfeService2;
-    this.configService = configService2;
-    this.resolveProvider = resolveProvider;
+const Kn = new Nu();
+class gu {
+  constructor(e, r, a, n, o, s) {
+    this.repository = e, this.queueService = r, this.certificateService = a, this.danfeService = n, this.configService = o, this.resolveProvider = s;
   }
   async getConfig() {
     return this.configService.getConfigView();
   }
-  async saveConfig(input) {
-    return this.configService.saveConfig(input);
+  async saveConfig(e) {
+    return this.configService.saveConfig(e);
   }
-  async authorizeNfce(request) {
-    const existing = this.repository.findBySaleId(request.saleId);
-    if ((existing == null ? void 0 : existing.status) === "AUTHORIZED") {
+  async authorizeNfce(e) {
+    const r = this.repository.findBySaleId(e.saleId);
+    if ((r == null ? void 0 : r.status) === "AUTHORIZED")
       return {
         status: "AUTHORIZED",
         provider: this.configService.getConfig().provider,
-        accessKey: existing.accessKey,
-        protocol: existing.authorizationProtocol,
-        statusCode: existing.statusCode,
-        statusMessage: existing.statusMessage ?? "Documento já autorizado.",
-        authorizedAt: existing.authorizedAt,
-        xmlAuthorized: existing.xmlAuthorized,
-        xmlSent: existing.xmlSent,
-        qrCodeUrl: existing.qrCodeUrl
+        accessKey: r.accessKey,
+        protocol: r.authorizationProtocol,
+        statusCode: r.statusCode,
+        statusMessage: r.statusMessage ?? "Documento já autorizado.",
+        authorizedAt: r.authorizedAt,
+        xmlAuthorized: r.xmlAuthorized,
+        xmlSent: r.xmlSent,
+        qrCodeUrl: r.qrCodeUrl
       };
-    }
-    const persisted = existing ?? this.repository.createPendingDocument(request);
-    const context = fiscalContextResolver.resolve(request.companyId);
-    const readiness = fiscalReadinessValidator.validateAuthorizeReadiness(context, request);
-    if (!readiness.ok) {
-      throw new FiscalError({
+    const a = r ?? this.repository.createPendingDocument(e), n = Oe.resolve(e.companyId), o = Ur.validateAuthorizeReadiness(n, e);
+    if (!o.ok)
+      throw new I({
         code: "FISCAL_READINESS_FAILED",
-        message: readiness.errors.map((issue) => issue.message).join(" | "),
+        message: o.errors.map((c) => c.message).join(" | "),
         category: "VALIDATION",
-        details: readiness
+        details: o
       });
-    }
-    const config2 = fiscalContextResolver.resolveProviderConfig(request.companyId);
-    fiscalPreTransmissionValidator.validateAuthorizeRequest(request, config2);
-    this.repository.updateStatus(persisted.id, "PENDING");
-    const builtXml = nfceXmlBuilderService.buildAuthorizeXml(request, context);
-    if (!builtXml.validation.ok) {
-      const message = builtXml.validation.errors.map((issue) => issue.message).join(" | ");
-      this.repository.updateStatus(persisted.id, "ERROR", "NFCE_XML_BUILD_FAILED", message);
-      throw new FiscalError({
+    const s = Oe.resolveProviderConfig(e.companyId);
+    qc.validateAuthorizeRequest(e, s), this.repository.updateStatus(a.id, "PENDING");
+    const i = Kn.buildAuthorizeXml(e, n);
+    if (!i.validation.ok) {
+      const c = i.validation.errors.map((l) => l.message).join(" | ");
+      throw this.repository.updateStatus(a.id, "ERROR", "NFCE_XML_BUILD_FAILED", c), new I({
         code: "NFCE_XML_BUILD_FAILED",
-        message,
+        message: c,
         category: "VALIDATION",
-        details: builtXml.validation
+        details: i.validation
       });
     }
-    this.repository.updateTransmissionArtifacts(persisted.id, {
-      issuedAt: request.issuedAt,
-      accessKey: builtXml.accessKey,
-      xmlBuilt: builtXml.xml
-    });
-    request.accessKey = builtXml.accessKey;
-    request.xmlBuilt = builtXml.xml;
-    request.qrCodeUrl = builtXml.qrCodeUrl ?? null;
+    this.repository.updateTransmissionArtifacts(a.id, {
+      issuedAt: e.issuedAt,
+      accessKey: i.accessKey,
+      xmlBuilt: i.xml
+    }), e.accessKey = i.accessKey, e.xmlBuilt = i.xml, e.qrCodeUrl = i.qrCodeUrl ?? null;
     try {
-      await this.certificateService.assertCertificateReady(config2);
-      const provider = this.resolveProvider(config2);
-      const response = await provider.authorizeNfce(request, config2);
-      const enrichedResponse = {
-        ...response,
-        issuedAt: response.issuedAt ?? request.issuedAt,
-        accessKey: builtXml.accessKey,
-        xmlBuilt: response.xmlBuilt ?? builtXml.xml,
-        qrCodeUrl: response.qrCodeUrl ?? builtXml.qrCodeUrl ?? null
+      await this.certificateService.assertCertificateReady(s);
+      const l = await this.resolveProvider(s).authorizeNfce(e, s), d = {
+        ...l,
+        issuedAt: l.issuedAt ?? e.issuedAt,
+        accessKey: i.accessKey,
+        xmlBuilt: l.xmlBuilt ?? i.xml,
+        qrCodeUrl: l.qrCodeUrl ?? i.qrCodeUrl ?? null
       };
-      if (enrichedResponse.status === "AUTHORIZED") {
-        const document = this.repository.markAsAuthorized(persisted.id, enrichedResponse);
-        const danfe = await this.danfeService.generate(document);
-        this.repository.updateDanfePath(document.id, danfe.danfePath);
-      } else {
-        this.repository.markAsRejected(persisted.id, enrichedResponse);
-      }
-      return enrichedResponse;
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_AUTHORIZE_FAILED");
-      this.repository.updateStatus(persisted.id, "ERROR", fiscalError.code, fiscalError.message);
-      if (request.offlineFallbackMode === "queue" || fiscalError.retryable) {
-        await this.queueService.enqueue({
-          saleId: request.saleId,
-          documentId: persisted.id,
+      if (d.status === "AUTHORIZED") {
+        const m = this.repository.markAsAuthorized(a.id, d), E = await this.danfeService.generate(m);
+        this.repository.updateDanfePath(m.id, E.danfePath);
+      } else
+        this.repository.markAsRejected(a.id, d);
+      return d;
+    } catch (c) {
+      const l = Z(c, "FISCAL_AUTHORIZE_FAILED");
+      if (this.repository.updateStatus(a.id, "ERROR", l.code, l.message), e.offlineFallbackMode === "queue" || l.retryable)
+        return await this.queueService.enqueue({
+          saleId: e.saleId,
+          documentId: a.id,
           operation: "AUTHORIZE_NFCE",
-          idempotencyKey: request.idempotencyKey,
-          payload: request
-        });
-        this.repository.updateStatus(persisted.id, "QUEUED", fiscalError.code, fiscalError.message);
-        return {
+          idempotencyKey: e.idempotencyKey,
+          payload: e
+        }), this.repository.updateStatus(a.id, "QUEUED", l.code, l.message), {
           status: "QUEUED",
-          provider: config2.provider,
-          statusCode: fiscalError.code,
-          statusMessage: fiscalError.message
+          provider: s.provider,
+          statusCode: l.code,
+          statusMessage: l.message
         };
-      }
-      throw fiscalError;
+      throw l;
     }
   }
-  async cancelNfce(request) {
-    const document = this.repository.findById(request.documentId);
-    if (!document) {
-      throw new FiscalError({
+  async cancelNfce(e) {
+    const r = this.repository.findById(e.documentId);
+    if (!r)
+      throw new I({
         code: "FISCAL_DOCUMENT_NOT_FOUND",
-        message: `Documento fiscal ${request.documentId} não encontrado.`,
+        message: `Documento fiscal ${e.documentId} não encontrado.`,
         category: "VALIDATION"
       });
-    }
-    if (document.status === "CANCELLED") {
+    if (r.status === "CANCELLED")
       return {
         status: "CANCELLED",
         provider: this.configService.getConfig().provider,
-        cancellationProtocol: document.cancellationProtocol,
-        cancelledAt: document.cancelledAt,
-        statusCode: document.statusCode,
-        statusMessage: document.statusMessage ?? "Documento já cancelado.",
-        xmlCancellation: document.xmlCancellation
+        cancellationProtocol: r.cancellationProtocol,
+        cancelledAt: r.cancelledAt,
+        statusCode: r.statusCode,
+        statusMessage: r.statusMessage ?? "Documento já cancelado.",
+        xmlCancellation: r.xmlCancellation
       };
-    }
-    const config2 = fiscalContextResolver.resolveProviderConfig(document.companyId);
-    const provider = this.resolveProvider(config2);
-    const response = await provider.cancelNfce(request, config2);
-    this.repository.markAsCancelled(document.id, request, response);
-    return response;
+    const a = Oe.resolveProviderConfig(r.companyId), o = await this.resolveProvider(a).cancelNfce(e, a);
+    return this.repository.markAsCancelled(r.id, e, o), o;
   }
-  async consultStatusByAccessKey(accessKey) {
-    const config2 = this.configService.getConfig();
-    const provider = this.resolveProvider(config2);
-    const response = await provider.consultStatus({ accessKey }, config2);
-    const document = this.repository.findByAccessKey(accessKey);
-    if (document) {
-      this.repository.updateStatus(document.id, response.status, response.statusCode, response.statusMessage);
-    }
-    return response;
+  async consultStatusByAccessKey(e) {
+    const r = this.configService.getConfig(), n = await this.resolveProvider(r).consultStatus({ accessKey: e }, r), o = this.repository.findByAccessKey(e);
+    return o && this.repository.updateStatus(o.id, n.status, n.statusCode, n.statusMessage), n;
   }
   async runStatusServiceDiagnostic() {
-    const config2 = this.configService.getConfig();
-    const idempotencyKey = `fiscal:test-status:${Date.now()}`;
-    logger.info(`[FiscalDiagnostic] Criando job ${idempotencyKey} para NFeStatusServico4.`);
-    const item = await this.queueService.enqueue({
+    const e = this.configService.getConfig(), r = `fiscal:test-status:${Date.now()}`;
+    f.info(`[FiscalDiagnostic] Criando job ${r} para NFeStatusServico4.`);
+    const a = await this.queueService.enqueue({
       saleId: 0,
       documentId: null,
       operation: "TEST_STATUS_NFCE",
-      idempotencyKey,
+      idempotencyKey: r,
       maxAttempts: 1,
       payload: {
         saleId: 0,
         operation: "TEST_STATUS_NFCE",
-        provider: config2.provider,
-        environment: config2.environment,
-        uf: config2.uf ?? "SP",
-        model: config2.model ?? 65,
+        provider: e.provider,
+        environment: e.environment,
+        uf: e.uf ?? "SP",
+        model: e.model ?? 65,
         requestedAt: (/* @__PURE__ */ new Date()).toISOString()
       }
     });
-    const processed = await this.queueService.processById(item.id);
-    return processed ?? item;
+    return await this.queueService.processById(a.id) ?? a;
   }
-  async getDanfe(documentId) {
-    const document = this.repository.findById(documentId);
-    if (!document) {
-      throw new FiscalError({
+  async getDanfe(e) {
+    const r = this.repository.findById(e);
+    if (!r)
+      throw new I({
         code: "DANFE_DOCUMENT_NOT_FOUND",
-        message: `Documento fiscal ${documentId} não encontrado.`,
+        message: `Documento fiscal ${e} não encontrado.`,
         category: "VALIDATION"
       });
-    }
-    const recovered = await this.danfeService.recover(document);
-    if (recovered) {
-      return recovered;
-    }
-    const generated = await this.danfeService.generate(document);
-    this.repository.updateDanfePath(documentId, generated.danfePath);
-    return generated;
+    const a = await this.danfeService.recover(r);
+    if (a)
+      return a;
+    const n = await this.danfeService.generate(r);
+    return this.repository.updateDanfePath(e, n.danfePath), n;
   }
-  async enqueuePending(request) {
-    return this.queueService.enqueue(request);
+  async enqueuePending(e) {
+    return this.queueService.enqueue(e);
   }
-  async reprocessQueueItem(queueId) {
-    return this.queueService.retry(queueId);
+  async reprocessQueueItem(e) {
+    return this.queueService.retry(e);
   }
-  async listQueue(limit = 20) {
-    return this.queueService.list(limit);
+  async listQueue(e = 20) {
+    return this.queueService.list(e);
   }
   async getQueueSummary() {
     return this.queueService.getSummary();
   }
 }
-const repository = new SqliteFiscalRepository();
-repository.ensureSchema();
-const configService = new FiscalSettingsService();
-const providerFactory = new FiscalProviderFactory();
-const certificateService = new FileSystemCertificateService();
-const danfeService = new HtmlDanfeService();
-let fiscalServiceRef;
-function mapAuthorizeQueueResult(response) {
-  if (response.status === "AUTHORIZED") {
-    return {
-      status: "AUTHORIZED",
-      statusCode: response.statusCode ?? null,
-      statusMessage: response.statusMessage
-    };
-  }
-  if (response.status === "REJECTED") {
-    return {
-      status: "REJECTED",
-      statusCode: response.statusCode ?? null,
-      statusMessage: response.statusMessage
-    };
-  }
-  if (response.status === "QUEUED" || response.status === "PENDING" || response.status === "CONTINGENCY") {
-    return {
-      status: "PENDING_EXTERNAL",
-      statusCode: response.statusCode ?? null,
-      statusMessage: response.statusMessage
-    };
-  }
-  return {
+const Kr = new Ui();
+Kr.ensureSchema();
+const Yn = new vi(), Wn = new Fc(), Yr = new _i(), Au = new pi();
+let Qt;
+function hu(t) {
+  return t.status === "AUTHORIZED" ? {
+    status: "AUTHORIZED",
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
+  } : t.status === "REJECTED" ? {
+    status: "REJECTED",
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
+  } : t.status === "QUEUED" || t.status === "PENDING" || t.status === "CONTINGENCY" ? {
+    status: "PENDING_EXTERNAL",
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
+  } : {
     status: "FAILED_RETRYABLE",
-    statusCode: response.statusCode ?? null,
-    statusMessage: response.statusMessage
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
   };
 }
-function mapCancelQueueResult(response) {
-  if (response.status === "CANCELLED") {
-    return {
-      status: "CANCELLED",
-      statusCode: response.statusCode ?? null,
-      statusMessage: response.statusMessage
-    };
-  }
-  return {
+function Iu(t) {
+  return t.status === "CANCELLED" ? {
+    status: "CANCELLED",
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
+  } : {
     status: "FAILED_FINAL",
-    statusCode: response.statusCode ?? null,
-    statusMessage: response.statusMessage
+    statusCode: t.statusCode ?? null,
+    statusMessage: t.statusMessage
   };
 }
-const queueService = new SqliteFiscalQueueService(repository, async (item) => {
-  const payload = item.payload;
-  if (item.operation === "AUTHORIZE_NFCE") {
-    const response = await fiscalServiceRef.authorizeNfce(payload);
-    return mapAuthorizeQueueResult(response);
+const Qn = new wc(Kr, async (t) => {
+  const e = t.payload;
+  if (t.operation === "AUTHORIZE_NFCE") {
+    const r = await Qt.authorizeNfce(e);
+    return hu(r);
   }
-  if (item.operation === "CANCEL_NFCE") {
-    const response = await fiscalServiceRef.cancelNfce(payload);
-    return mapCancelQueueResult(response);
+  if (t.operation === "CANCEL_NFCE") {
+    const r = await Qt.cancelNfce(e);
+    return Iu(r);
   }
-  if (item.operation === "TEST_STATUS_NFCE") {
-    const config2 = fiscalContextResolver.resolveProviderConfig();
-    logger.info(`[FiscalDiagnostic] Iniciando NFeStatusServico4 provider=${config2.provider} ambiente=${config2.environment} uf=${config2.uf ?? "SP"}.`);
-    await certificateService.assertCertificateReady(config2);
-    logger.info("[FiscalDiagnostic] Certificado validado com sucesso.");
-    const provider = providerFactory.resolve(config2);
-    const result = await provider.testStatusServico(config2);
-    logger.info(`[FiscalDiagnostic] NFeStatusServico4 finalizado url=${result.url} cStat=${result.statusCode ?? "sem cStat"} xMotivo=${result.statusMessage}.`);
-    return {
-      status: result.success ? "COMPLETED" : "FAILED_FINAL",
-      statusCode: result.statusCode ?? "SEFAZ_STATUS_FAILED",
-      statusMessage: result.statusMessage,
-      result
+  if (t.operation === "TEST_STATUS_NFCE") {
+    const r = Oe.resolveProviderConfig();
+    f.info(`[FiscalDiagnostic] Iniciando NFeStatusServico4 provider=${r.provider} ambiente=${r.environment} uf=${r.uf ?? "SP"}.`), await Yr.assertCertificateReady(r), f.info("[FiscalDiagnostic] Certificado validado com sucesso.");
+    const n = await Wn.resolve(r).testStatusServico(r);
+    return f.info(`[FiscalDiagnostic] NFeStatusServico4 finalizado url=${n.url} cStat=${n.statusCode ?? "sem cStat"} xMotivo=${n.statusMessage}.`), {
+      status: n.success ? "COMPLETED" : "FAILED_FINAL",
+      statusCode: n.statusCode ?? "SEFAZ_STATUS_FAILED",
+      statusMessage: n.statusMessage,
+      result: n
     };
   }
   return {
     status: "FAILED_FINAL",
     statusCode: "QUEUE_OPERATION_NOT_SUPPORTED",
-    statusMessage: `Operação de fila não suportada: ${item.operation}`
+    statusMessage: `Operação de fila não suportada: ${t.operation}`
   };
 });
-fiscalServiceRef = new DefaultFiscalService(
-  repository,
-  queueService,
-  certificateService,
-  danfeService,
-  configService,
-  (config2) => providerFactory.resolve(config2)
+Qt = new gu(
+  Kr,
+  Qn,
+  Yr,
+  Au,
+  Yn,
+  (t) => Wn.resolve(t)
 );
-const fiscalService = fiscalServiceRef;
-const fiscalConfigService = configService;
-const fiscalQueueService = queueService;
-const fiscalCertificateService = certificateService;
-const fiscalContextService = fiscalContextResolver;
-const fiscalReadinessService = fiscalReadinessValidator;
-const fiscalStoreConfigService = fiscalStoreService;
-let fiscalQueueWorkerStarted = false;
-function startFiscalQueueWorker(intervalMs = 15e3) {
-  if (fiscalQueueWorkerStarted) {
-    return;
-  }
-  fiscalQueueWorkerStarted = true;
-  setInterval(() => {
-    void fiscalQueueService.processNext();
-  }, intervalMs);
+const ue = Qt, Cu = Yn, Jn = Qn, vu = Yr, Ua = Oe, Du = Ur, Fa = Oi;
+let wa = !1;
+function Su(t = 15e3) {
+  wa || (wa = !0, setInterval(() => {
+    Jn.processNext();
+  }, t));
 }
-function mapDocument(row) {
+function mr(t) {
   return {
-    id: row.id,
-    saleId: row.sale_id,
-    storeId: row.store_id,
-    model: row.model,
-    series: row.series,
-    number: row.number,
-    accessKey: row.access_key,
-    environment: row.environment,
-    status: row.status,
-    issuedDatetime: row.issued_datetime,
-    xml: row.xml,
-    xmlSigned: row.xml_signed,
-    xmlAuthorized: row.xml_authorized,
-    xmlCancellation: row.xml_cancellation,
-    protocol: row.protocol,
-    receiptNumber: row.receipt_number,
-    qrCodeUrl: row.qr_code_url,
-    authorizationDatetime: row.authorization_datetime,
-    cancelDatetime: row.cancel_datetime,
-    contingencyType: row.contingency_type,
-    rejectionCode: row.rejection_code,
-    rejectionReason: row.rejection_reason,
-    danfePath: row.danfe_path,
-    provider: row.provider,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: t.id,
+    saleId: t.sale_id,
+    storeId: t.store_id,
+    model: t.model,
+    series: t.series,
+    number: t.number,
+    accessKey: t.access_key,
+    environment: t.environment,
+    status: t.status,
+    issuedDatetime: t.issued_datetime,
+    xml: t.xml,
+    xmlSigned: t.xml_signed,
+    xmlAuthorized: t.xml_authorized,
+    xmlCancellation: t.xml_cancellation,
+    protocol: t.protocol,
+    receiptNumber: t.receipt_number,
+    qrCodeUrl: t.qr_code_url,
+    authorizationDatetime: t.authorization_datetime,
+    cancelDatetime: t.cancel_datetime,
+    contingencyType: t.contingency_type,
+    rejectionCode: t.rejection_code,
+    rejectionReason: t.rejection_reason,
+    danfePath: t.danfe_path,
+    provider: t.provider,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-class FiscalDocumentRepository {
-  createPending(input) {
-    const result = db.prepare(`
+class Ru {
+  createPending(e) {
+    const r = u.prepare(`
       INSERT INTO fiscal_documents (
         sale_id, store_id, model, series, number, access_key, environment, status,
         issued_datetime, xml, xml_signed, xml_authorized, xml_cancellation, protocol, receipt_number, qr_code_url, authorization_datetime,
@@ -11255,37 +9548,34 @@ class FiscalDocumentRepository {
         provider, created_at, updated_at
       ) VALUES (?, ?, 65, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
-      input.saleId,
-      input.storeId,
-      input.series,
-      input.number,
-      input.accessKey ?? null,
-      input.environment,
-      input.status,
-      input.issuedDatetime ?? null,
-      input.xml ?? null,
-      input.xmlSigned ?? null,
-      input.xmlAuthorized ?? null,
-      input.xmlCancellation ?? null,
-      input.protocol ?? null,
-      input.receiptNumber ?? null,
-      input.qrCodeUrl ?? null,
-      input.authorizationDatetime ?? null,
-      input.cancelDatetime ?? null,
-      input.contingencyType ?? null,
-      input.rejectionCode ?? null,
-      input.rejectionReason ?? null,
-      input.danfePath ?? null,
-      input.provider ?? null
+      e.saleId,
+      e.storeId,
+      e.series,
+      e.number,
+      e.accessKey ?? null,
+      e.environment,
+      e.status,
+      e.issuedDatetime ?? null,
+      e.xml ?? null,
+      e.xmlSigned ?? null,
+      e.xmlAuthorized ?? null,
+      e.xmlCancellation ?? null,
+      e.protocol ?? null,
+      e.receiptNumber ?? null,
+      e.qrCodeUrl ?? null,
+      e.authorizationDatetime ?? null,
+      e.cancelDatetime ?? null,
+      e.contingencyType ?? null,
+      e.rejectionCode ?? null,
+      e.rejectionReason ?? null,
+      e.danfePath ?? null,
+      e.provider ?? null
     );
-    return this.findById(Number(result.lastInsertRowid));
+    return this.findById(Number(r.lastInsertRowid));
   }
-  upsertBySale(input) {
-    const existing = this.findBySaleId(input.saleId);
-    if (!existing) {
-      return this.createPending(input);
-    }
-    db.prepare(`
+  upsertBySale(e) {
+    const r = this.findBySaleId(e.saleId);
+    return r ? (u.prepare(`
       UPDATE fiscal_documents
       SET
         store_id = ?,
@@ -11312,45 +9602,44 @@ class FiscalDocumentRepository {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      input.storeId,
-      input.series,
-      input.number,
-      input.accessKey ?? existing.accessKey ?? null,
-      input.environment,
-      input.status,
-      input.issuedDatetime ?? existing.issuedDatetime ?? null,
-      input.xml ?? existing.xml ?? null,
-      input.xmlSigned ?? existing.xmlSigned ?? null,
-      input.xmlAuthorized ?? existing.xmlAuthorized ?? null,
-      input.xmlCancellation ?? existing.xmlCancellation ?? null,
-      input.protocol ?? existing.protocol ?? null,
-      input.receiptNumber ?? existing.receiptNumber ?? null,
-      input.qrCodeUrl ?? existing.qrCodeUrl ?? null,
-      input.authorizationDatetime ?? existing.authorizationDatetime ?? null,
-      input.cancelDatetime ?? existing.cancelDatetime ?? null,
-      input.contingencyType ?? existing.contingencyType ?? null,
-      input.rejectionCode ?? existing.rejectionCode ?? null,
-      input.rejectionReason ?? existing.rejectionReason ?? null,
-      input.danfePath ?? existing.danfePath ?? null,
-      input.provider ?? existing.provider ?? null,
-      existing.id
-    );
-    return this.findById(existing.id);
+      e.storeId,
+      e.series,
+      e.number,
+      e.accessKey ?? r.accessKey ?? null,
+      e.environment,
+      e.status,
+      e.issuedDatetime ?? r.issuedDatetime ?? null,
+      e.xml ?? r.xml ?? null,
+      e.xmlSigned ?? r.xmlSigned ?? null,
+      e.xmlAuthorized ?? r.xmlAuthorized ?? null,
+      e.xmlCancellation ?? r.xmlCancellation ?? null,
+      e.protocol ?? r.protocol ?? null,
+      e.receiptNumber ?? r.receiptNumber ?? null,
+      e.qrCodeUrl ?? r.qrCodeUrl ?? null,
+      e.authorizationDatetime ?? r.authorizationDatetime ?? null,
+      e.cancelDatetime ?? r.cancelDatetime ?? null,
+      e.contingencyType ?? r.contingencyType ?? null,
+      e.rejectionCode ?? r.rejectionCode ?? null,
+      e.rejectionReason ?? r.rejectionReason ?? null,
+      e.danfePath ?? r.danfePath ?? null,
+      e.provider ?? r.provider ?? null,
+      r.id
+    ), this.findById(r.id)) : this.createPending(e);
   }
-  findById(id) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1`).get(id);
-    return row ? mapDocument(row) : null;
+  findById(e) {
+    const r = u.prepare("SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1").get(e);
+    return r ? mr(r) : null;
   }
-  findBySaleId(saleId) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(saleId);
-    return row ? mapDocument(row) : null;
+  findBySaleId(e) {
+    const r = u.prepare("SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1").get(e);
+    return r ? mr(r) : null;
   }
-  findByAccessKey(accessKey) {
-    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1`).get(accessKey);
-    return row ? mapDocument(row) : null;
+  findByAccessKey(e) {
+    const r = u.prepare("SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1").get(e);
+    return r ? mr(r) : null;
   }
-  markCancelled(id, cancelDatetime, protocol) {
-    db.prepare(`
+  markCancelled(e, r, a) {
+    u.prepare(`
       UPDATE fiscal_documents
       SET
         status = 'CANCELLED',
@@ -11358,11 +9647,10 @@ class FiscalDocumentRepository {
         protocol = COALESCE(?, protocol),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(cancelDatetime, protocol ?? null, id);
+    `).run(r, a ?? null, e);
   }
 }
-const fiscalDocumentRepository = new FiscalDocumentRepository();
-const FiscalDocumentStatuses = {
+const ke = new Ru(), Ne = {
   DRAFT: "DRAFT",
   QUEUED: "QUEUED",
   SIGNING: "SIGNING",
@@ -11372,8 +9660,7 @@ const FiscalDocumentStatuses = {
   CANCELLED: "CANCELLED",
   CONTINGENCY: "CONTINGENCY",
   ERROR: "ERROR"
-};
-const FiscalEventTypes = {
+}, we = {
   XML_GENERATED: "XML_GENERATED",
   XML_SIGNED: "XML_SIGNED",
   AUTHORIZATION_REQUESTED: "AUTHORIZATION_REQUESTED",
@@ -11388,67 +9675,54 @@ const FiscalEventTypes = {
   CONTINGENCY_ACTIVATED: "CONTINGENCY_ACTIVATED",
   CONTINGENCY_SYNC_REQUESTED: "CONTINGENCY_SYNC_REQUESTED"
 };
-class FiscalNumberingService {
-  getOrReserveForSale(saleId, storeId) {
-    const existing = fiscalDocumentRepository.findBySaleId(saleId);
-    if (existing) {
-      return {
-        series: existing.series,
-        number: existing.number
-      };
-    }
-    return storeRepository.reserveNextNfceNumber(storeId);
+class Lu {
+  getOrReserveForSale(e, r) {
+    const a = ke.findBySaleId(e);
+    return a ? {
+      series: a.series,
+      number: a.number
+    } : se.reserveNextNfceNumber(r);
   }
 }
-const fiscalNumberingService = new FiscalNumberingService();
-function mapPaymentMethod(tpag) {
-  const map = {
+const yu = new Lu();
+function xa(t) {
+  return {
     "01": "DINHEIRO",
     "03": "CREDITO",
     "04": "DEBITO",
-    "10": "VOUCHER",
-    "17": "PIX"
-  };
-  return map[tpag] ?? "OUTROS";
+    10: "VOUCHER",
+    17: "PIX"
+  }[t] ?? "OUTROS";
 }
-function mapEnvironment(ambiente) {
-  return ambiente === 1 ? "production" : "homologation";
+function Ma(t) {
+  return t === 1 ? "production" : "homologation";
 }
-function resolvePrimaryPaymentMethod(payments) {
-  if (payments.length === 0) {
-    return "OUTROS";
-  }
-  const unique = new Set(payments.map((payment) => payment.method));
-  return unique.size === 1 ? payments[0].method : "OUTROS";
+function Ou(t) {
+  return t.length === 0 ? "OUTROS" : new Set(t.map((r) => r.method)).size === 1 ? t[0].method : "OUTROS";
 }
-function taxValue(primary, fallback, defaultValue = "") {
-  const value = String(primary ?? fallback ?? "").trim();
-  return value || defaultValue;
+function Qe(t, e, r = "") {
+  return String(t ?? e ?? "").trim() || r;
 }
-function isSimpleNationalStore(store) {
-  return ["1", "4"].includes(String(store.taxRegimeCode ?? "").trim());
+function bu(t) {
+  return ["1", "4"].includes(String(t.taxRegimeCode ?? "").trim());
 }
-function toTaxRegimeCode(value) {
-  const normalized = String(value ?? "").trim();
-  if (["1", "2", "3", "4"].includes(normalized)) {
-    return normalized;
-  }
-  throw new Error(`CRT/regime tributario invalido na company legada: ${normalized || "vazio"}.`);
+function Uu(t) {
+  const e = String(t ?? "").trim();
+  if (["1", "2", "3", "4"].includes(e))
+    return e;
+  throw new Error(`CRT/regime tributario invalido na company legada: ${e || "vazio"}.`);
 }
-function resolveIcmsTaxForStore(store, item) {
-  if (isSimpleNationalStore(store)) {
-    return {
-      csosn: item.csosn ?? "102",
-      icmsCst: item.icms_cst
-    };
-  }
-  return {
+function Pa(t, e) {
+  return bu(t) ? {
+    csosn: e.csosn ?? "102",
+    icmsCst: e.icms_cst
+  } : {
     csosn: null,
-    icmsCst: item.icms_cst ?? "00"
+    icmsCst: e.icms_cst ?? "00"
   };
 }
-function nowInSaoPauloIso() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
+function Fu() {
+  const t = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
     year: "numeric",
     month: "2-digit",
@@ -11456,17 +9730,16 @@ function nowInSaoPauloIso() {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false
-  }).formatToParts(/* @__PURE__ */ new Date());
-  const get = (type) => {
-    var _a;
-    return ((_a = parts.find((part) => part.type === type)) == null ? void 0 : _a.value) ?? "00";
+    hour12: !1
+  }).formatToParts(/* @__PURE__ */ new Date()), e = (r) => {
+    var a;
+    return ((a = t.find((n) => n.type === r)) == null ? void 0 : a.value) ?? "00";
   };
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}:${get("second")}-03:00`;
+  return `${e("year")}-${e("month")}-${e("day")}T${e("hour")}:${e("minute")}:${e("second")}-03:00`;
 }
-class PdvSaleFiscalAdapter {
+class wu {
   loadActiveCompany() {
-    const company = db.prepare(`
+    return u.prepare(`
       SELECT
         nome_fantasia,
         razao_social,
@@ -11488,56 +9761,52 @@ class PdvSaleFiscalAdapter {
       FROM company
       WHERE ativo = 1
       LIMIT 1
-    `).get();
-    return company ?? null;
+    `).get() ?? null;
   }
   resolveActiveStore() {
-    const existingStore = storeRepository.findActive();
-    if (existingStore) {
-      return existingStore;
-    }
-    const company = this.loadActiveCompany();
-    if (!company) {
+    const e = se.findActive();
+    if (e)
+      return e;
+    const r = this.loadActiveCompany();
+    if (!r)
       throw new Error("Nenhuma store ativa encontrada e não existe company ativa para criar o espelho fiscal.");
-    }
-    return storeRepository.create({
+    return se.create({
       code: "MAIN",
-      name: company.nome_fantasia,
-      legalName: company.razao_social,
-      cnpj: company.cnpj,
-      stateRegistration: company.inscricao_estadual,
-      taxRegimeCode: toTaxRegimeCode(company.crt),
-      environment: mapEnvironment(company.ambiente_emissao),
-      cscId: company.csc_id,
-      cscToken: company.csc_token,
-      defaultSeries: Number(company.serie_nfce ?? 1),
-      nextNfceNumber: Number(company.proximo_numero_nfce ?? 1),
-      addressStreet: company.rua,
-      addressNumber: company.numero,
-      addressNeighborhood: company.bairro,
-      addressCity: company.cidade,
-      addressState: company.uf,
-      addressZipCode: company.cep,
-      addressCityIbgeCode: company.cod_municipio_ibge,
-      active: true
+      name: r.nome_fantasia,
+      legalName: r.razao_social,
+      cnpj: r.cnpj,
+      stateRegistration: r.inscricao_estadual,
+      taxRegimeCode: Uu(r.crt),
+      environment: Ma(r.ambiente_emissao),
+      cscId: r.csc_id,
+      cscToken: r.csc_token,
+      defaultSeries: Number(r.serie_nfce ?? 1),
+      nextNfceNumber: Number(r.proximo_numero_nfce ?? 1),
+      addressStreet: r.rua,
+      addressNumber: r.numero,
+      addressNeighborhood: r.bairro,
+      addressCity: r.cidade,
+      addressState: r.uf,
+      addressZipCode: r.cep,
+      addressCityIbgeCode: r.cod_municipio_ibge,
+      active: !0
     });
   }
-  loadLegacySale(legacySaleId) {
-    const sale = db.prepare(`
+  loadLegacySale(e) {
+    const r = u.prepare(`
       SELECT
         id, ambiente, data_emissao, valor_produtos, valor_desconto,
         valor_total, valor_troco, cliente_nome, cpf_cliente, cnpj_cliente
       FROM vendas
       WHERE id = ?
       LIMIT 1
-    `).get(legacySaleId);
-    if (!sale) {
-      throw new Error(`Venda ${legacySaleId} não encontrada para emissão fiscal.`);
-    }
-    return sale;
+    `).get(e);
+    if (!r)
+      throw new Error(`Venda ${e} não encontrada para emissão fiscal.`);
+    return r;
   }
-  loadLegacyItems(legacySaleId) {
-    return db.prepare(`
+  loadLegacyItems(e) {
+    return u.prepare(`
       SELECT
         vi.id,
         vi.produto_id,
@@ -11565,405 +9834,365 @@ class PdvSaleFiscalAdapter {
         ON product.id = vi.produto_id
       WHERE vi.venda_id = ?
       ORDER BY vi.id ASC
-    `).all(legacySaleId);
+    `).all(e);
   }
-  loadLegacyPayments(legacySaleId) {
-    return db.prepare(`
+  loadLegacyPayments(e) {
+    return u.prepare(`
       SELECT id, tpag, valor, valor_recebido, troco, descricao_outro
       FROM venda_pagamento
       WHERE venda_id = ?
       ORDER BY id ASC
-    `).all(legacySaleId);
+    `).all(e);
   }
-  buildAuthorizeRequest(legacySaleId, storeId, series, number) {
-    const sale = this.loadLegacySale(legacySaleId);
-    const store = storeRepository.findById(storeId);
-    if (!store) {
-      throw new Error(`Store fiscal ${storeId} não encontrada para emissão.`);
-    }
-    const items = this.loadLegacyItems(legacySaleId);
-    const payments = this.loadLegacyPayments(legacySaleId).map((payment) => ({
-      method: mapPaymentMethod(payment.tpag),
-      amount: Number(payment.valor ?? 0),
-      receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : void 0,
-      changeAmount: payment.troco != null ? Number(payment.troco) : void 0,
-      description: payment.descricao_outro ?? null
-    }));
-    const fiscalIssuedAt = nowInSaoPauloIso();
+  buildAuthorizeRequest(e, r, a, n) {
+    const o = this.loadLegacySale(e), s = se.findById(r);
+    if (!s)
+      throw new Error(`Store fiscal ${r} não encontrada para emissão.`);
+    const i = this.loadLegacyItems(e), c = this.loadLegacyPayments(e).map((d) => ({
+      method: xa(d.tpag),
+      amount: Number(d.valor ?? 0),
+      receivedAmount: d.valor_recebido != null ? Number(d.valor_recebido) : void 0,
+      changeAmount: d.troco != null ? Number(d.troco) : void 0,
+      description: d.descricao_outro ?? null
+    })), l = Fu();
     return {
-      saleId: sale.id,
-      companyId: store.id,
-      number,
-      series,
-      environment: mapEnvironment(sale.ambiente),
-      paymentMethod: resolvePrimaryPaymentMethod(payments),
-      payments,
-      issuedAt: fiscalIssuedAt,
+      saleId: o.id,
+      companyId: s.id,
+      number: n,
+      series: a,
+      environment: Ma(o.ambiente),
+      paymentMethod: Ou(c),
+      payments: c,
+      issuedAt: l,
       emitter: {
-        cnpj: store.cnpj,
-        stateRegistration: store.stateRegistration,
-        legalName: store.legalName,
-        tradeName: store.name,
-        taxRegimeCode: store.taxRegimeCode,
+        cnpj: s.cnpj,
+        stateRegistration: s.stateRegistration,
+        legalName: s.legalName,
+        tradeName: s.name,
+        taxRegimeCode: s.taxRegimeCode,
         address: {
-          street: store.addressStreet,
-          number: store.addressNumber,
-          neighborhood: store.addressNeighborhood,
-          city: store.addressCity,
-          state: store.addressState,
-          zipCode: store.addressZipCode,
-          cityIbgeCode: store.addressCityIbgeCode
+          street: s.addressStreet,
+          number: s.addressNumber,
+          neighborhood: s.addressNeighborhood,
+          city: s.addressCity,
+          state: s.addressState,
+          zipCode: s.addressZipCode,
+          cityIbgeCode: s.addressCityIbgeCode
         }
       },
       customer: {
-        name: sale.cliente_nome ?? void 0,
-        cpfCnpj: sale.cpf_cliente ?? sale.cnpj_cliente ?? null
+        name: o.cliente_nome ?? void 0,
+        cpfCnpj: o.cpf_cliente ?? o.cnpj_cliente ?? null
       },
-      items: items.map((item) => {
-        const icmsTax = resolveIcmsTaxForStore(store, item);
+      items: i.map((d) => {
+        const m = Pa(s, d);
         return {
-          id: item.produto_id ?? item.codigo_produto,
-          description: item.nome_produto,
-          unit: item.unidade_comercial,
-          quantity: Number(item.quantidade_comercial ?? 0),
-          unitPrice: Number(item.valor_unitario_comercial ?? 0),
-          grossAmount: Number(item.valor_bruto ?? 0),
-          discountAmount: Number(item.valor_desconto ?? 0),
-          totalAmount: Number(item.subtotal ?? 0),
-          gtin: item.gtin,
+          id: d.produto_id ?? d.codigo_produto,
+          description: d.nome_produto,
+          unit: d.unidade_comercial,
+          quantity: Number(d.quantidade_comercial ?? 0),
+          unitPrice: Number(d.valor_unitario_comercial ?? 0),
+          grossAmount: Number(d.valor_bruto ?? 0),
+          discountAmount: Number(d.valor_desconto ?? 0),
+          totalAmount: Number(d.subtotal ?? 0),
+          gtin: d.gtin,
           tax: {
-            ncm: item.ncm ?? "",
-            cfop: taxValue(item.cfop, null, "5102"),
-            cest: item.cest,
-            originCode: taxValue(item.origin_code, null, "0"),
-            csosn: icmsTax.csosn,
-            icmsCst: icmsTax.icmsCst,
-            pisCst: item.pis_cst ?? "49",
-            cofinsCst: item.cofins_cst ?? "49"
+            ncm: d.ncm ?? "",
+            cfop: Qe(d.cfop, null, "5102"),
+            cest: d.cest,
+            originCode: Qe(d.origin_code, null, "0"),
+            csosn: m.csosn,
+            icmsCst: m.icmsCst,
+            pisCst: d.pis_cst ?? "49",
+            cofinsCst: d.cofins_cst ?? "49"
           }
         };
       }),
       totals: {
-        productsAmount: Number(sale.valor_produtos ?? 0),
-        discountAmount: Number(sale.valor_desconto ?? 0),
-        finalAmount: Number(sale.valor_total ?? 0),
-        receivedAmount: payments.reduce((sum, payment) => sum + Number(payment.receivedAmount ?? payment.amount ?? 0), 0),
-        changeAmount: payments.reduce((sum, payment) => sum + Number(payment.changeAmount ?? 0), 0) || Number(sale.valor_troco ?? 0)
+        productsAmount: Number(o.valor_produtos ?? 0),
+        discountAmount: Number(o.valor_desconto ?? 0),
+        finalAmount: Number(o.valor_total ?? 0),
+        receivedAmount: c.reduce((d, m) => d + Number(m.receivedAmount ?? m.amount ?? 0), 0),
+        changeAmount: c.reduce((d, m) => d + Number(m.changeAmount ?? 0), 0) || Number(o.valor_troco ?? 0)
       },
-      additionalInfo: `Venda PDV ${sale.id}`,
+      additionalInfo: `Venda PDV ${o.id}`,
       offlineFallbackMode: "queue",
-      idempotencyKey: `nfce-sale-${sale.id}`
+      idempotencyKey: `nfce-sale-${o.id}`
     };
   }
-  mirrorLegacySale(legacySaleId) {
-    const store = this.resolveActiveStore();
-    const sale = this.loadLegacySale(legacySaleId);
-    const items = this.loadLegacyItems(legacySaleId);
-    const payments = this.loadLegacyPayments(legacySaleId);
-    const externalReference = `legacy-sale:${legacySaleId}`;
-    const existing = salesRepository.findByExternalReference(externalReference);
-    const aggregate = existing ?? salesRepository.create({
-      storeId: store.id,
-      customerName: sale.cliente_nome ?? null,
-      customerDocument: sale.cpf_cliente ?? sale.cnpj_cliente ?? null,
+  mirrorLegacySale(e) {
+    const r = this.resolveActiveStore(), a = this.loadLegacySale(e), n = this.loadLegacyItems(e), o = this.loadLegacyPayments(e), s = `legacy-sale:${e}`, c = Xt.findByExternalReference(s) ?? Xt.create({
+      storeId: r.id,
+      customerName: a.cliente_nome ?? null,
+      customerDocument: a.cpf_cliente ?? a.cnpj_cliente ?? null,
       status: "PAID",
-      subtotalAmount: Number(sale.valor_produtos ?? 0),
-      discountAmount: Number(sale.valor_desconto ?? 0),
-      totalAmount: Number(sale.valor_total ?? 0),
-      changeAmount: Number(sale.valor_troco ?? 0),
-      externalReference,
-      items: items.map((item) => {
-        const icmsTax = resolveIcmsTaxForStore(store, item);
+      subtotalAmount: Number(a.valor_produtos ?? 0),
+      discountAmount: Number(a.valor_desconto ?? 0),
+      totalAmount: Number(a.valor_total ?? 0),
+      changeAmount: Number(a.valor_troco ?? 0),
+      externalReference: s,
+      items: n.map((E) => {
+        const _ = Pa(r, E);
         return {
-          productId: item.produto_id ?? item.codigo_produto,
-          description: item.nome_produto,
-          unit: item.unidade_comercial,
-          quantity: Number(item.quantidade_comercial ?? 0),
-          unitPrice: Number(item.valor_unitario_comercial ?? 0),
-          grossAmount: Number(item.valor_bruto ?? 0),
-          discountAmount: Number(item.valor_desconto ?? 0),
-          totalAmount: Number(item.subtotal ?? 0),
-          ncm: item.ncm ?? null,
-          cfop: taxValue(item.cfop, null, "5102"),
-          cest: item.cest,
-          originCode: taxValue(item.origin_code, null, "0"),
+          productId: E.produto_id ?? E.codigo_produto,
+          description: E.nome_produto,
+          unit: E.unidade_comercial,
+          quantity: Number(E.quantidade_comercial ?? 0),
+          unitPrice: Number(E.valor_unitario_comercial ?? 0),
+          grossAmount: Number(E.valor_bruto ?? 0),
+          discountAmount: Number(E.valor_desconto ?? 0),
+          totalAmount: Number(E.subtotal ?? 0),
+          ncm: E.ncm ?? null,
+          cfop: Qe(E.cfop, null, "5102"),
+          cest: E.cest,
+          originCode: Qe(E.origin_code, null, "0"),
           taxSnapshot: {
-            ncm: item.ncm,
-            cfop: taxValue(item.cfop, null, "5102"),
-            cest: item.cest,
-            originCode: taxValue(item.origin_code, null, "0"),
-            csosn: icmsTax.csosn,
-            icmsCst: icmsTax.icmsCst,
-            pisCst: item.pis_cst ?? "49",
-            cofinsCst: item.cofins_cst ?? "49"
+            ncm: E.ncm,
+            cfop: Qe(E.cfop, null, "5102"),
+            cest: E.cest,
+            originCode: Qe(E.origin_code, null, "0"),
+            csosn: _.csosn,
+            icmsCst: _.icmsCst,
+            pisCst: E.pis_cst ?? "49",
+            cofinsCst: E.cofins_cst ?? "49"
           }
         };
       }),
-      payments: payments.map((payment) => ({
-        method: mapPaymentMethod(payment.tpag),
-        amount: Number(payment.valor ?? 0),
-        receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : Number(payment.valor ?? 0),
-        changeAmount: Number(payment.troco ?? 0),
-        integrationReference: payment.descricao_outro ?? null
+      payments: o.map((E) => ({
+        method: xa(E.tpag),
+        amount: Number(E.valor ?? 0),
+        receivedAmount: E.valor_recebido != null ? Number(E.valor_recebido) : Number(E.valor ?? 0),
+        changeAmount: Number(E.troco ?? 0),
+        integrationReference: E.descricao_outro ?? null
       }))
-    });
-    const numbering = fiscalNumberingService.getOrReserveForSale(aggregate.sale.id, store.id);
-    const request = this.buildAuthorizeRequest(legacySaleId, store.id, numbering.series, numbering.number);
-    const persistedDocument = fiscalDocumentRepository.upsertBySale({
-      saleId: aggregate.sale.id,
-      storeId: store.id,
-      series: numbering.series,
-      number: numbering.number,
-      environment: request.environment,
-      status: FiscalDocumentStatuses.DRAFT,
-      issuedDatetime: request.issuedAt,
-      contingencyType: request.offlineFallbackMode === "queue" ? "queue" : null,
+    }), l = yu.getOrReserveForSale(c.sale.id, r.id), d = this.buildAuthorizeRequest(e, r.id, l.series, l.number), m = ke.upsertBySale({
+      saleId: c.sale.id,
+      storeId: r.id,
+      series: l.series,
+      number: l.number,
+      environment: d.environment,
+      status: Ne.DRAFT,
+      issuedDatetime: d.issuedAt,
+      contingencyType: d.offlineFallbackMode === "queue" ? "queue" : null,
       provider: null
     });
     return {
-      request,
-      store,
-      mirroredSale: aggregate,
-      mirroredFiscalDocument: persistedDocument
+      request: d,
+      store: r,
+      mirroredSale: c,
+      mirroredFiscalDocument: m
     };
   }
-  findMirroredSaleByLegacyId(legacySaleId) {
-    return salesRepository.findByExternalReference(`legacy-sale:${legacySaleId}`);
+  findMirroredSaleByLegacyId(e) {
+    return Xt.findByExternalReference(`legacy-sale:${e}`);
   }
 }
-const pdvSaleFiscalAdapter = new PdvSaleFiscalAdapter();
-function mapEvent(row) {
+const pr = new wu();
+function Ba(t) {
   return {
-    id: row.id,
-    fiscalDocumentId: row.fiscal_document_id,
-    eventType: row.event_type,
-    payloadJson: row.payload_json,
-    responseJson: row.response_json,
-    status: row.status,
-    createdAt: row.created_at
+    id: t.id,
+    fiscalDocumentId: t.fiscal_document_id,
+    eventType: t.event_type,
+    payloadJson: t.payload_json,
+    responseJson: t.response_json,
+    status: t.status,
+    createdAt: t.created_at
   };
 }
-class FiscalEventRepository {
-  create(input) {
-    const result = db.prepare(`
+class xu {
+  create(e) {
+    const r = u.prepare(`
       INSERT INTO fiscal_events (
         fiscal_document_id, event_type, payload_json, response_json, status, created_at
       ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).run(
-      input.fiscalDocumentId,
-      input.eventType,
-      input.payload ? serializeJson(input.payload) : null,
-      input.response ? serializeJson(input.response) : null,
-      input.status
+      e.fiscalDocumentId,
+      e.eventType,
+      e.payload ? vr(e.payload) : null,
+      e.response ? vr(e.response) : null,
+      e.status
     );
-    return this.findById(Number(result.lastInsertRowid));
+    return this.findById(Number(r.lastInsertRowid));
   }
-  findById(id) {
-    const row = db.prepare(`SELECT * FROM fiscal_events WHERE id = ? LIMIT 1`).get(id);
-    return row ? mapEvent(row) : null;
+  findById(e) {
+    const r = u.prepare("SELECT * FROM fiscal_events WHERE id = ? LIMIT 1").get(e);
+    return r ? Ba(r) : null;
   }
-  listByFiscalDocument(fiscalDocumentId) {
-    const rows = db.prepare(`
+  listByFiscalDocument(e) {
+    return u.prepare(`
       SELECT * FROM fiscal_events
       WHERE fiscal_document_id = ?
       ORDER BY created_at DESC, id DESC
-    `).all(fiscalDocumentId);
-    return rows.map(mapEvent);
+    `).all(e).map(Ba);
   }
 }
-const fiscalEventRepository = new FiscalEventRepository();
-class IssueFiscalDocumentForSaleService {
-  generateXml(legacySaleId) {
-    const mirrored = pdvSaleFiscalAdapter.mirrorLegacySale(legacySaleId);
-    const fiscalRequest = {
-      ...mirrored.request,
-      saleId: mirrored.mirroredSale.sale.id,
-      companyId: mirrored.store.id,
-      idempotencyKey: `nfce-sale-${mirrored.mirroredSale.sale.id}`
-    };
-    const context = fiscalContextResolver.resolve(mirrored.store.id);
-    const readiness = fiscalReadinessValidator.validateAuthorizeReadiness(context, fiscalRequest);
-    if (!readiness.ok) {
-      const message = readiness.errors.map((issue) => issue.message).join(" | ");
-      fiscalDocumentRepository.upsertBySale({
-        saleId: mirrored.mirroredSale.sale.id,
-        storeId: mirrored.store.id,
-        series: fiscalRequest.series,
-        number: fiscalRequest.number,
-        environment: fiscalRequest.environment,
-        status: FiscalDocumentStatuses.ERROR,
-        issuedDatetime: fiscalRequest.issuedAt,
+const xe = new xu();
+class Mu {
+  generateXml(e) {
+    const r = pr.mirrorLegacySale(e), a = {
+      ...r.request,
+      saleId: r.mirroredSale.sale.id,
+      companyId: r.store.id,
+      idempotencyKey: `nfce-sale-${r.mirroredSale.sale.id}`
+    }, n = Oe.resolve(r.store.id), o = Ur.validateAuthorizeReadiness(n, a);
+    if (!o.ok) {
+      const c = o.errors.map((l) => l.message).join(" | ");
+      return ke.upsertBySale({
+        saleId: r.mirroredSale.sale.id,
+        storeId: r.store.id,
+        series: a.series,
+        number: a.number,
+        environment: a.environment,
+        status: Ne.ERROR,
+        issuedDatetime: a.issuedAt,
         rejectionCode: "FISCAL_READINESS_FAILED",
-        rejectionReason: message
-      });
-      return {
-        success: false,
-        saleId: legacySaleId,
+        rejectionReason: c
+      }), {
+        success: !1,
+        saleId: e,
         fiscal: {
           status: "ERROR",
           statusCode: "FISCAL_READINESS_FAILED",
-          statusMessage: message,
-          documentId: mirrored.mirroredFiscalDocument.id
+          statusMessage: c,
+          documentId: r.mirroredFiscalDocument.id
         },
-        validation: readiness
+        validation: o
       };
     }
-    const built = nfceXmlBuilderService.buildAuthorizeXml(fiscalRequest, context);
-    const document = fiscalDocumentRepository.upsertBySale({
-      saleId: mirrored.mirroredSale.sale.id,
-      storeId: mirrored.store.id,
-      series: fiscalRequest.series,
-      number: fiscalRequest.number,
-      environment: fiscalRequest.environment,
-      status: built.validation.ok ? FiscalDocumentStatuses.DRAFT : FiscalDocumentStatuses.ERROR,
-      issuedDatetime: fiscalRequest.issuedAt,
-      accessKey: built.accessKey,
-      xml: built.xml || null,
-      rejectionCode: built.validation.ok ? null : "NFCE_XML_BUILD_FAILED",
-      rejectionReason: built.validation.ok ? null : built.validation.errors.map((issue) => issue.message).join(" | ")
+    const s = Kn.buildAuthorizeXml(a, n), i = ke.upsertBySale({
+      saleId: r.mirroredSale.sale.id,
+      storeId: r.store.id,
+      series: a.series,
+      number: a.number,
+      environment: a.environment,
+      status: s.validation.ok ? Ne.DRAFT : Ne.ERROR,
+      issuedDatetime: a.issuedAt,
+      accessKey: s.accessKey,
+      xml: s.xml || null,
+      rejectionCode: s.validation.ok ? null : "NFCE_XML_BUILD_FAILED",
+      rejectionReason: s.validation.ok ? null : s.validation.errors.map((c) => c.message).join(" | ")
     });
-    fiscalEventRepository.create({
-      fiscalDocumentId: document.id,
-      eventType: FiscalEventTypes.XML_GENERATED,
+    return xe.create({
+      fiscalDocumentId: i.id,
+      eventType: we.XML_GENERATED,
       payload: {
-        legacySaleId,
+        legacySaleId: e,
         action: "GENERATE_XML_ONLY",
-        accessKey: built.accessKey,
-        warnings: built.validation.warnings
+        accessKey: s.accessKey,
+        warnings: s.validation.warnings
       },
-      status: document.status
-    });
-    return {
-      success: built.validation.ok,
-      saleId: legacySaleId,
+      status: i.status
+    }), {
+      success: s.validation.ok,
+      saleId: e,
       fiscal: {
-        status: document.status,
-        accessKey: document.accessKey,
-        statusCode: built.validation.ok ? "XML_BUILT" : "NFCE_XML_BUILD_FAILED",
-        statusMessage: built.validation.ok ? "XML NFC-e gerado e persistido." : "Falha ao montar XML NFC-e.",
-        documentId: document.id
+        status: i.status,
+        accessKey: i.accessKey,
+        statusCode: s.validation.ok ? "XML_BUILT" : "NFCE_XML_BUILD_FAILED",
+        statusMessage: s.validation.ok ? "XML NFC-e gerado e persistido." : "Falha ao montar XML NFC-e.",
+        documentId: i.id
       },
-      validation: built.validation
+      validation: s.validation
     };
   }
-  async execute(legacySaleId) {
+  async execute(e) {
     try {
-      const mirrored = pdvSaleFiscalAdapter.mirrorLegacySale(legacySaleId);
-      const fiscalRequest = {
-        ...mirrored.request,
-        saleId: mirrored.mirroredSale.sale.id,
-        companyId: mirrored.store.id,
-        idempotencyKey: `nfce-sale-${mirrored.mirroredSale.sale.id}`
+      const r = pr.mirrorLegacySale(e), a = {
+        ...r.request,
+        saleId: r.mirroredSale.sale.id,
+        companyId: r.store.id,
+        idempotencyKey: `nfce-sale-${r.mirroredSale.sale.id}`
       };
-      fiscalEventRepository.create({
-        fiscalDocumentId: mirrored.mirroredFiscalDocument.id,
-        eventType: FiscalEventTypes.AUTHORIZATION_REQUESTED,
-        payload: { legacySaleId, request: fiscalRequest },
-        status: FiscalDocumentStatuses.TRANSMITTING
+      xe.create({
+        fiscalDocumentId: r.mirroredFiscalDocument.id,
+        eventType: we.AUTHORIZATION_REQUESTED,
+        payload: { legacySaleId: e, request: a },
+        status: Ne.TRANSMITTING
       });
-      const response = await fiscalService.authorizeNfce(fiscalRequest);
-      const document = fiscalDocumentRepository.findBySaleId(mirrored.mirroredSale.sale.id);
-      if (document) {
-        if (response.xmlSigned) {
-          fiscalEventRepository.create({
-            fiscalDocumentId: document.id,
-            eventType: FiscalEventTypes.XML_SIGNED,
-            payload: {
-              legacySaleId,
-              accessKey: response.accessKey,
-              provider: response.provider
-            },
-            status: FiscalDocumentStatuses.SIGNING
-          });
-        }
-        fiscalEventRepository.create({
-          fiscalDocumentId: document.id,
-          eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
-          payload: { legacySaleId, request: fiscalRequest },
-          response,
-          status: response.status
-        });
-        if (response.status === "AUTHORIZED") {
-          fiscalEventRepository.create({
-            fiscalDocumentId: document.id,
-            eventType: FiscalEventTypes.AUTHORIZED,
-            payload: { legacySaleId, accessKey: response.accessKey },
-            response,
-            status: FiscalDocumentStatuses.AUTHORIZED
-          });
-        }
-        if (response.status === "REJECTED") {
-          fiscalEventRepository.create({
-            fiscalDocumentId: document.id,
-            eventType: FiscalEventTypes.REJECTED,
-            payload: { legacySaleId, accessKey: response.accessKey },
-            response,
-            status: FiscalDocumentStatuses.REJECTED
-          });
-        }
-      }
-      return {
-        success: true,
-        saleId: legacySaleId,
+      const n = await ue.authorizeNfce(a), o = ke.findBySaleId(r.mirroredSale.sale.id);
+      return o && (n.xmlSigned && xe.create({
+        fiscalDocumentId: o.id,
+        eventType: we.XML_SIGNED,
+        payload: {
+          legacySaleId: e,
+          accessKey: n.accessKey,
+          provider: n.provider
+        },
+        status: Ne.SIGNING
+      }), xe.create({
+        fiscalDocumentId: o.id,
+        eventType: we.AUTHORIZATION_RESPONSE,
+        payload: { legacySaleId: e, request: a },
+        response: n,
+        status: n.status
+      }), n.status === "AUTHORIZED" && xe.create({
+        fiscalDocumentId: o.id,
+        eventType: we.AUTHORIZED,
+        payload: { legacySaleId: e, accessKey: n.accessKey },
+        response: n,
+        status: Ne.AUTHORIZED
+      }), n.status === "REJECTED" && xe.create({
+        fiscalDocumentId: o.id,
+        eventType: we.REJECTED,
+        payload: { legacySaleId: e, accessKey: n.accessKey },
+        response: n,
+        status: Ne.REJECTED
+      })), {
+        success: !0,
+        saleId: e,
         fiscal: {
-          status: response.status,
-          accessKey: response.accessKey,
-          protocol: response.protocol,
-          receiptNumber: response.receiptNumber,
-          qrCodeUrl: response.qrCodeUrl,
-          authorizedAt: response.authorizedAt,
-          statusCode: response.statusCode,
-          statusMessage: response.statusMessage,
-          documentId: (document == null ? void 0 : document.id) ?? null,
-          provider: response.provider
+          status: n.status,
+          accessKey: n.accessKey,
+          protocol: n.protocol,
+          receiptNumber: n.receiptNumber,
+          qrCodeUrl: n.qrCodeUrl,
+          authorizedAt: n.authorizedAt,
+          statusCode: n.statusCode,
+          statusMessage: n.statusMessage,
+          documentId: (o == null ? void 0 : o.id) ?? null,
+          provider: n.provider
         }
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "ISSUE_FISCAL_SALE_FAILED");
-      const mirroredSale = pdvSaleFiscalAdapter.findMirroredSaleByLegacyId(legacySaleId);
-      const document = mirroredSale ? fiscalDocumentRepository.findBySaleId(mirroredSale.sale.id) : fiscalDocumentRepository.findBySaleId(legacySaleId);
-      if (document) {
-        fiscalEventRepository.create({
-          fiscalDocumentId: document.id,
-          eventType: FiscalEventTypes.PROVIDER_ERROR,
-          payload: { legacySaleId },
-          response: {
-            status: "ERROR",
-            statusCode: fiscalError.code,
-            statusMessage: fiscalError.message
-          },
-          status: FiscalDocumentStatuses.ERROR
-        });
-      }
-      return {
-        success: false,
-        saleId: legacySaleId,
+    } catch (r) {
+      const a = Z(r, "ISSUE_FISCAL_SALE_FAILED"), n = pr.findMirroredSaleByLegacyId(e), o = n ? ke.findBySaleId(n.sale.id) : ke.findBySaleId(e);
+      return o && xe.create({
+        fiscalDocumentId: o.id,
+        eventType: we.PROVIDER_ERROR,
+        payload: { legacySaleId: e },
+        response: {
+          status: "ERROR",
+          statusCode: a.code,
+          statusMessage: a.message
+        },
+        status: Ne.ERROR
+      }), {
+        success: !1,
+        saleId: e,
         fiscal: {
           status: "ERROR",
-          statusCode: fiscalError.code,
-          statusMessage: fiscalError.message,
-          documentId: (document == null ? void 0 : document.id) ?? null
+          statusCode: a.code,
+          statusMessage: a.message,
+          documentId: (o == null ? void 0 : o.id) ?? null
         }
       };
     }
   }
 }
-const issueFiscalDocumentForSaleService = new IssueFiscalDocumentForSaleService();
-let currentSessionId = null;
-function setCurrentSession(id) {
-  currentSessionId = id;
+const Zn = new Mu();
+let eo = null;
+function Xa(t) {
+  eo = t;
 }
-function getCurrentSession() {
-  return currentSessionId;
+function Wr() {
+  return eo;
 }
-const ROLE_ALIASES = {
+const Pu = {
   admin: ["admin", "administrador", "administrator", "dono", "owner"],
   manager: ["gerente", "gestor", "manager", "supervisor"],
   cashier: ["caixa", "operador", "operador de caixa", "atendente", "vendedor"],
   stock: ["estoque", "almoxarife"],
   unknown: []
-};
-const ROLE_PERMISSIONS = {
+}, Bu = {
   admin: [
     "pdv:access",
     "home:access",
@@ -11993,21 +10222,20 @@ const ROLE_PERMISSIONS = {
   stock: ["home:access", "products:view", "products:manage"],
   unknown: []
 };
-function normalizeRole(role) {
-  const normalized = String(role ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  for (const [roleKey, aliases] of Object.entries(ROLE_ALIASES)) {
-    if (aliases.includes(normalized)) return roleKey;
-  }
+function Xu(t) {
+  const e = String(t ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  for (const [r, a] of Object.entries(Pu))
+    if (a.includes(e)) return r;
   return "unknown";
 }
-function getPermissionsForRole(role) {
-  return ROLE_PERMISSIONS[normalizeRole(role)];
+function $u(t) {
+  return Bu[Xu(t)];
 }
-function hasPermission(role, permission) {
-  return getPermissionsForRole(role).includes(permission);
+function to(t, e) {
+  return $u(t).includes(e);
 }
-function getPermissionDeniedMessage(permission) {
-  const messages = {
+function ku(t) {
+  return {
     "home:access": "Seu perfil não pode acessar a tela inicial.",
     "pdv:access": "Seu perfil não pode acessar o caixa.",
     "sales:view": "Seu perfil não pode consultar vendas.",
@@ -12020,375 +10248,321 @@ function getPermissionDeniedMessage(permission) {
     "printers:manage": "Somente gerente ou administrador pode gerenciar impressoras.",
     "integrations:manage": "Somente gerente ou administrador pode gerenciar integrações.",
     "fiscal:manage": "Somente gerente ou administrador pode gerenciar configurações fiscais."
-  };
-  return messages[permission];
+  }[t];
 }
-function getCurrentUser() {
-  const sessionId = getCurrentSession();
-  if (!sessionId) return null;
-  const user = db.prepare(`
+function ro() {
+  const t = Wr();
+  return t ? u.prepare(`
     SELECT u.id, u.nome, u.funcao, u.ativo
     FROM sessions s
     INNER JOIN usuarios u ON u.id = s.user_id
     WHERE s.id = ?
       AND s.active = 1
     LIMIT 1
-  `).get(sessionId);
-  return user ?? null;
+  `).get(t) ?? null : null;
 }
-function assertCurrentUserPermission(permission) {
-  const user = getCurrentUser();
-  if (!user || !user.ativo) {
+function g(t) {
+  const e = ro();
+  if (!e || !e.ativo)
     throw new Error("Sessão inválida ou usuário inativo.");
-  }
-  if (!hasPermission(user.funcao, permission)) {
-    throw new Error(getPermissionDeniedMessage(permission));
-  }
-  return user;
+  if (!to(e.funcao, t))
+    throw new Error(ku(t));
+  return e;
 }
-function currentUserHasPermission(permission) {
-  const user = getCurrentUser();
-  return Boolean(user && user.ativo && hasPermission(user.funcao, permission));
+function at(t) {
+  const e = ro();
+  return !!(e && e.ativo && to(e.funcao, t));
 }
-function registerFiscalHandlers() {
-  ipcMain.handle("fiscal:get-runtime-config", async () => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalService.getConfig();
-  });
-  ipcMain.handle("fiscal:get-context", async (_event, storeId) => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalContextService.resolve(storeId);
-  });
-  ipcMain.handle("fiscal:get-active-store", async () => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalStoreConfigService.getActiveStore();
-  });
-  ipcMain.handle("fiscal:save-active-store", async (_event, input) => {
+function qu() {
+  p.handle("fiscal:get-runtime-config", async () => (g("fiscal:manage"), ue.getConfig())), p.handle("fiscal:get-context", async (t, e) => (g("fiscal:manage"), Ua.resolve(e))), p.handle("fiscal:get-active-store", async () => (g("fiscal:manage"), Fa.getActiveStore())), p.handle("fiscal:save-active-store", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: fiscalStoreConfigService.saveActiveStore(input)
+      return g("fiscal:manage"), {
+        success: !0,
+        data: Fa.saveActiveStore(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_STORE_SAVE_FAILED");
+    } catch (r) {
+      const a = Z(r, "FISCAL_STORE_SAVE_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: a.code,
+          message: a.message,
+          category: a.category,
+          retryable: a.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:validate-readiness", async (_event, storeId) => {
-    assertCurrentUserPermission("fiscal:manage");
-    const context = fiscalContextService.resolve(storeId);
-    return fiscalReadinessService.validateContext(context);
-  });
-  ipcMain.handle("fiscal:save-runtime-config", async (_event, input) => {
+  }), p.handle("fiscal:validate-readiness", async (t, e) => {
+    g("fiscal:manage");
+    const r = Ua.resolve(e);
+    return Du.validateContext(r);
+  }), p.handle("fiscal:save-runtime-config", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return await fiscalService.saveConfig(input);
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_CONFIG_SAVE_FAILED");
+      return g("fiscal:manage"), await ue.saveConfig(e);
+    } catch (r) {
+      const a = Z(r, "FISCAL_CONFIG_SAVE_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: a.code,
+          message: a.message,
+          category: a.category,
+          retryable: a.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:get-certificate-info", async () => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalCertificateService.getCertificateInfo(fiscalConfigService.getConfig());
-  });
-  ipcMain.handle("fiscal:authorize-nfce", async (_event, request) => {
+  }), p.handle("fiscal:get-certificate-info", async () => (g("fiscal:manage"), vu.getCertificateInfo(Cu.getConfig()))), p.handle("fiscal:authorize-nfce", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: await fiscalService.authorizeNfce(request)
+      return g("fiscal:manage"), {
+        success: !0,
+        data: await ue.authorizeNfce(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_AUTHORIZE_FAILED");
+    } catch (r) {
+      const a = Z(r, "FISCAL_AUTHORIZE_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: a.code,
+          message: a.message,
+          category: a.category,
+          retryable: a.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:generate-nfce-xml-for-sale", async (_event, legacySaleId) => {
+  }), p.handle("fiscal:generate-nfce-xml-for-sale", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: issueFiscalDocumentForSaleService.generateXml(legacySaleId)
+      return g("fiscal:manage"), {
+        success: !0,
+        data: Zn.generateXml(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_XML_BUILD_FAILED");
+    } catch (r) {
+      const a = Z(r, "FISCAL_XML_BUILD_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: a.code,
+          message: a.message,
+          category: a.category,
+          retryable: a.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:cancel-nfce", async (_event, request) => {
+  }), p.handle("fiscal:cancel-nfce", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: await fiscalService.cancelNfce(request)
+      return g("fiscal:manage"), {
+        success: !0,
+        data: await ue.cancelNfce(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_CANCEL_FAILED");
+    } catch (r) {
+      const a = Z(r, "FISCAL_CANCEL_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: a.code,
+          message: a.message,
+          category: a.category,
+          retryable: a.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:consult-status", async (_event, accessKey) => {
+  }), p.handle("fiscal:consult-status", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: await fiscalService.consultStatusByAccessKey(accessKey)
+      return g("fiscal:manage"), {
+        success: !0,
+        data: await ue.consultStatusByAccessKey(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_CONSULT_FAILED");
+    } catch (r) {
+      const a = Z(r, "FISCAL_CONSULT_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: a.code,
+          message: a.message,
+          category: a.category,
+          retryable: a.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:get-danfe", async (_event, documentId) => {
+  }), p.handle("fiscal:get-danfe", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: await fiscalService.getDanfe(documentId)
+      return g("fiscal:manage"), {
+        success: !0,
+        data: await ue.getDanfe(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_DANFE_FAILED");
+    } catch (r) {
+      const a = Z(r, "FISCAL_DANFE_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: a.code,
+          message: a.message,
+          category: a.category,
+          retryable: a.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:get-queue-summary", async () => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalService.getQueueSummary();
-  });
-  ipcMain.handle("fiscal:list-queue", async (_event, limit = 20) => {
-    assertCurrentUserPermission("fiscal:manage");
-    return fiscalService.listQueue(limit);
-  });
-  ipcMain.handle("fiscal:reprocess-queue-item", async (_event, queueId) => {
+  }), p.handle("fiscal:get-queue-summary", async () => (g("fiscal:manage"), ue.getQueueSummary())), p.handle("fiscal:list-queue", async (t, e = 20) => (g("fiscal:manage"), ue.listQueue(e))), p.handle("fiscal:reprocess-queue-item", async (t, e) => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      return {
-        success: true,
-        data: await fiscalService.reprocessQueueItem(queueId)
+      return g("fiscal:manage"), {
+        success: !0,
+        data: await ue.reprocessQueueItem(e)
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_REPROCESS_FAILED");
+    } catch (r) {
+      const a = Z(r, "FISCAL_REPROCESS_FAILED");
       return {
-        success: false,
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: a.code,
+          message: a.message,
+          category: a.category,
+          retryable: a.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:process-next-queue-item", async () => {
+  }), p.handle("fiscal:process-next-queue-item", async () => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      logger.info("[FiscalIPC] fiscal:process-next-queue-item recebido.");
-      return {
-        success: true,
-        data: await fiscalQueueService.processNext()
+      return g("fiscal:manage"), f.info("[FiscalIPC] fiscal:process-next-queue-item recebido."), {
+        success: !0,
+        data: await Jn.processNext()
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_PROCESS_QUEUE_FAILED");
-      logger.error(`[FiscalIPC] Falha em fiscal:process-next-queue-item: ${fiscalError.code} - ${fiscalError.message}`);
-      return {
-        success: false,
+    } catch (t) {
+      const e = Z(t, "FISCAL_PROCESS_QUEUE_FAILED");
+      return f.error(`[FiscalIPC] Falha em fiscal:process-next-queue-item: ${e.code} - ${e.message}`), {
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: e.code,
+          message: e.message,
+          category: e.category,
+          retryable: e.retryable
         }
       };
     }
-  });
-  ipcMain.handle("fiscal:run-status-diagnostic", async () => {
+  }), p.handle("fiscal:run-status-diagnostic", async () => {
     try {
-      assertCurrentUserPermission("fiscal:manage");
-      logger.info("[FiscalIPC] fiscal:run-status-diagnostic recebido.");
-      return {
-        success: true,
-        data: await fiscalService.runStatusServiceDiagnostic()
+      return g("fiscal:manage"), f.info("[FiscalIPC] fiscal:run-status-diagnostic recebido."), {
+        success: !0,
+        data: await ue.runStatusServiceDiagnostic()
       };
-    } catch (error) {
-      const fiscalError = normalizeFiscalError(error, "FISCAL_STATUS_DIAGNOSTIC_FAILED");
-      logger.error(`[FiscalIPC] Falha em fiscal:run-status-diagnostic: ${fiscalError.code} - ${fiscalError.message}`);
-      return {
-        success: false,
+    } catch (t) {
+      const e = Z(t, "FISCAL_STATUS_DIAGNOSTIC_FAILED");
+      return f.error(`[FiscalIPC] Falha em fiscal:run-status-diagnostic: ${e.code} - ${e.message}`), {
+        success: !1,
         error: {
-          code: fiscalError.code,
-          message: fiscalError.message,
-          category: fiscalError.category,
-          retryable: fiscalError.retryable
+          code: e.code,
+          message: e.message,
+          category: e.category,
+          retryable: e.retryable
         }
       };
     }
   });
 }
-function mapPrintedDocument(row) {
+function $a(t) {
   return {
-    id: Number(row.id),
-    documentType: row.document_type,
-    referenceType: row.reference_type,
-    referenceId: Number(row.reference_id),
-    saleId: row.sale_id === null ? null : Number(row.sale_id),
-    cashSessionId: row.cash_session_id === null ? null : Number(row.cash_session_id),
-    printerId: row.printer_id === null ? null : Number(row.printer_id),
-    title: row.title,
-    status: row.status,
-    templateVersion: row.template_version,
-    payloadJson: row.payload_json,
-    contentHtml: row.content_html,
-    printCount: Number(row.print_count ?? 0),
-    lastPrintedAt: row.last_printed_at ?? null,
-    lastError: row.last_error ?? null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: Number(t.id),
+    documentType: t.document_type,
+    referenceType: t.reference_type,
+    referenceId: Number(t.reference_id),
+    saleId: t.sale_id === null ? null : Number(t.sale_id),
+    cashSessionId: t.cash_session_id === null ? null : Number(t.cash_session_id),
+    printerId: t.printer_id === null ? null : Number(t.printer_id),
+    title: t.title,
+    status: t.status,
+    templateVersion: t.template_version,
+    payloadJson: t.payload_json,
+    contentHtml: t.content_html,
+    printCount: Number(t.print_count ?? 0),
+    lastPrintedAt: t.last_printed_at ?? null,
+    lastError: t.last_error ?? null,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
   };
 }
-function mapPrintJob(row) {
+function ka(t) {
   return {
-    id: Number(row.id),
-    printedDocumentId: Number(row.printed_document_id),
-    printerId: row.printer_id === null ? null : Number(row.printer_id),
-    triggerSource: row.trigger_source,
-    status: row.status,
-    errorMessage: row.error_message ?? null,
-    copies: Number(row.copies ?? 1),
-    attemptedAt: row.attempted_at,
-    completedAt: row.completed_at ?? null
+    id: Number(t.id),
+    printedDocumentId: Number(t.printed_document_id),
+    printerId: t.printer_id === null ? null : Number(t.printer_id),
+    triggerSource: t.trigger_source,
+    status: t.status,
+    errorMessage: t.error_message ?? null,
+    copies: Number(t.copies ?? 1),
+    attemptedAt: t.attempted_at,
+    completedAt: t.completed_at ?? null
   };
 }
-function paymentLabelFromCode(code) {
-  const labels = {
+function Gu(t) {
+  return {
     "01": "Dinheiro",
     "02": "Cheque",
     "03": "Cartao de Credito",
     "04": "Cartao de Debito",
-    "10": "Vale Alimentacao",
-    "11": "Vale Refeicao",
-    "12": "Vale Presente",
-    "13": "Vale Combustivel",
-    "15": "Boleto",
-    "17": "PIX",
-    "99": "Outros"
-  };
-  return labels[code] ?? `Pagamento ${code}`;
+    10: "Vale Alimentacao",
+    11: "Vale Refeicao",
+    12: "Vale Presente",
+    13: "Vale Combustivel",
+    15: "Boleto",
+    17: "PIX",
+    99: "Outros"
+  }[t] ?? `Pagamento ${t}`;
 }
-function buildStoreAddress(row) {
-  const parts = [
-    row.endereco,
-    row.numero,
-    row.bairro,
-    row.cidade,
-    row.uf,
-    row.cep
+function Vu(t) {
+  const e = [
+    t.endereco,
+    t.numero,
+    t.bairro,
+    t.cidade,
+    t.uf,
+    t.cep
   ].filter(Boolean);
-  return parts.length > 0 ? parts.join(" - ") : null;
+  return e.length > 0 ? e.join(" - ") : null;
 }
-class PrintDocumentRepository {
-  mapPrinter(row) {
+class zu {
+  mapPrinter(e) {
     return {
-      id: Number(row.id),
-      name: row.name,
-      display_name: row.display_name ?? null,
-      brand: row.brand ?? null,
-      model: row.model ?? null,
-      connection_type: row.connection_type ?? null,
-      driver_name: row.driver_name ?? null,
-      driver_version: row.driver_version ?? null,
-      photo_path: row.photo_path ?? null,
-      notes: row.notes ?? null,
-      is_default: Number(row.is_default ?? 0),
-      installed_at: row.installed_at ?? null,
-      paper_width_mm: Number(row.paper_width_mm ?? 80),
-      content_width_mm: Number(row.content_width_mm ?? 76),
-      base_font_size_px: Number(row.base_font_size_px ?? 13),
-      line_height: Number(row.line_height ?? 1.5),
-      receipt_settings_json: row.receipt_settings_json ?? null
+      id: Number(e.id),
+      name: e.name,
+      display_name: e.display_name ?? null,
+      brand: e.brand ?? null,
+      model: e.model ?? null,
+      connection_type: e.connection_type ?? null,
+      driver_name: e.driver_name ?? null,
+      driver_version: e.driver_version ?? null,
+      photo_path: e.photo_path ?? null,
+      notes: e.notes ?? null,
+      is_default: Number(e.is_default ?? 0),
+      installed_at: e.installed_at ?? null,
+      paper_width_mm: Number(e.paper_width_mm ?? 80),
+      content_width_mm: Number(e.content_width_mm ?? 76),
+      base_font_size_px: Number(e.base_font_size_px ?? 13),
+      line_height: Number(e.line_height ?? 1.5),
+      receipt_settings_json: e.receipt_settings_json ?? null
     };
   }
-  findByReference(documentType, referenceType, referenceId) {
-    const row = db.prepare(`
+  findByReference(e, r, a) {
+    const n = u.prepare(`
       SELECT *
       FROM printed_documents
       WHERE document_type = ?
         AND reference_type = ?
         AND reference_id = ?
       LIMIT 1
-    `).get(documentType, referenceType, referenceId);
-    return row ? mapPrintedDocument(row) : null;
+    `).get(e, r, a);
+    return n ? $a(n) : null;
   }
-  findById(documentId) {
-    const row = db.prepare(`
+  findById(e) {
+    const r = u.prepare(`
       SELECT *
       FROM printed_documents
       WHERE id = ?
       LIMIT 1
-    `).get(documentId);
-    return row ? mapPrintedDocument(row) : null;
+    `).get(e);
+    return r ? $a(r) : null;
   }
-  upsertDocument(input) {
-    const existing = this.findByReference(input.documentType, input.referenceType, input.referenceId);
-    if (existing) {
-      db.prepare(`
+  upsertDocument(e) {
+    const r = this.findByReference(e.documentType, e.referenceType, e.referenceId);
+    if (r)
+      return u.prepare(`
         UPDATE printed_documents
         SET
           sale_id = ?,
@@ -12403,20 +10577,18 @@ class PrintDocumentRepository {
           updated_at = datetime('now')
         WHERE id = ?
       `).run(
-        input.saleId ?? null,
-        input.cashSessionId ?? null,
-        input.printerId ?? null,
-        input.title,
-        input.status,
-        input.templateVersion,
-        input.payloadJson,
-        input.contentHtml,
-        input.lastError ?? null,
-        existing.id
-      );
-      return this.findById(existing.id);
-    }
-    const result = db.prepare(`
+        e.saleId ?? null,
+        e.cashSessionId ?? null,
+        e.printerId ?? null,
+        e.title,
+        e.status,
+        e.templateVersion,
+        e.payloadJson,
+        e.contentHtml,
+        e.lastError ?? null,
+        r.id
+      ), this.findById(r.id);
+    const a = u.prepare(`
       INSERT INTO printed_documents (
         document_type,
         reference_type,
@@ -12433,23 +10605,23 @@ class PrintDocumentRepository {
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      input.documentType,
-      input.referenceType,
-      input.referenceId,
-      input.saleId ?? null,
-      input.cashSessionId ?? null,
-      input.printerId ?? null,
-      input.title,
-      input.status,
-      input.templateVersion,
-      input.payloadJson,
-      input.contentHtml,
-      input.lastError ?? null
+      e.documentType,
+      e.referenceType,
+      e.referenceId,
+      e.saleId ?? null,
+      e.cashSessionId ?? null,
+      e.printerId ?? null,
+      e.title,
+      e.status,
+      e.templateVersion,
+      e.payloadJson,
+      e.contentHtml,
+      e.lastError ?? null
     );
-    return this.findById(Number(result.lastInsertRowid));
+    return this.findById(Number(a.lastInsertRowid));
   }
-  markDocumentPrinted(documentId, printerId) {
-    db.prepare(`
+  markDocumentPrinted(e, r) {
+    u.prepare(`
       UPDATE printed_documents
       SET
         status = 'PRINTED',
@@ -12459,10 +10631,10 @@ class PrintDocumentRepository {
         last_error = NULL,
         updated_at = datetime('now')
       WHERE id = ?
-    `).run(printerId, documentId);
+    `).run(r, e);
   }
-  markDocumentFailed(documentId, status, errorMessage, printerId) {
-    db.prepare(`
+  markDocumentFailed(e, r, a, n) {
+    u.prepare(`
       UPDATE printed_documents
       SET
         status = ?,
@@ -12470,10 +10642,10 @@ class PrintDocumentRepository {
         last_error = ?,
         updated_at = datetime('now')
       WHERE id = ?
-    `).run(status, printerId, errorMessage, documentId);
+    `).run(r, n, a, e);
   }
-  createPrintJob(input) {
-    const result = db.prepare(`
+  createPrintJob(e) {
+    const r = u.prepare(`
       INSERT INTO print_jobs (
         printed_document_id,
         printer_id,
@@ -12484,60 +10656,57 @@ class PrintDocumentRepository {
       )
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      input.printedDocumentId,
-      input.printerId ?? null,
-      input.triggerSource,
-      input.status,
-      input.errorMessage ?? null,
-      input.copies ?? 1
-    );
-    const row = db.prepare(`
+      e.printedDocumentId,
+      e.printerId ?? null,
+      e.triggerSource,
+      e.status,
+      e.errorMessage ?? null,
+      e.copies ?? 1
+    ), a = u.prepare(`
       SELECT *
       FROM print_jobs
       WHERE id = ?
       LIMIT 1
-    `).get(result.lastInsertRowid);
-    return mapPrintJob(row);
+    `).get(r.lastInsertRowid);
+    return ka(a);
   }
-  listDocumentJobs(documentId) {
-    const rows = db.prepare(`
+  listDocumentJobs(e) {
+    return u.prepare(`
       SELECT *
       FROM print_jobs
       WHERE printed_document_id = ?
       ORDER BY id DESC
-    `).all(documentId);
-    return rows.map(mapPrintJob);
+    `).all(e).map(ka);
   }
   getDefaultPrinter() {
-    const row = db.prepare(`
+    const e = u.prepare(`
       SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
              notes, is_default, installed_at, paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json
       FROM printers
       WHERE is_default = 1
       LIMIT 1
     `).get();
-    if (!row) return null;
-    return this.mapPrinter(row);
+    return e ? this.mapPrinter(e) : null;
   }
-  findPrinterById(printerId) {
-    const row = db.prepare(`
+  findPrinterById(e) {
+    const r = u.prepare(`
       SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
              notes, is_default, installed_at, paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json
       FROM printers
       WHERE id = ?
       LIMIT 1
-    `).get(printerId);
-    return row ? this.mapPrinter(row) : null;
+    `).get(e);
+    return r ? this.mapPrinter(r) : null;
   }
-  buildTestSaleReceiptData(printer, settings) {
-    var _a;
-    const headerTitle = settings.templateMode === "custom" ? ((_a = settings.headerTitle) == null ? void 0 : _a.trim()) || printer.display_name || "Galberto PDV" : printer.display_name || "Galberto PDV";
+  buildTestSaleReceiptData(e, r) {
+    var n;
+    const a = r.templateMode === "custom" ? ((n = r.headerTitle) == null ? void 0 : n.trim()) || e.display_name || "Galberto PDV" : e.display_name || "Galberto PDV";
     return {
       saleId: 999999,
       emittedAt: (/* @__PURE__ */ new Date()).toISOString(),
       movedAt: (/* @__PURE__ */ new Date()).toISOString(),
       status: "FINALIZADA",
-      storeName: headerTitle,
+      storeName: a,
       storeLegalName: "GALBERTO PDV LTDA",
       storeDocument: "12.345.678/0001-99",
       storeAddress: "Rua Exemplo, 123 - Centro - Cidade/UF - 70000-000",
@@ -12592,14 +10761,14 @@ class PrintDocumentRepository {
       }
     };
   }
-  appendPrinterLog(printerId, message) {
-    db.prepare(`
+  appendPrinterLog(e, r) {
+    u.prepare(`
       INSERT INTO printer_logs (printer_id, message)
       VALUES (?, ?)
-    `).run(printerId, message);
+    `).run(e, r);
   }
-  loadSaleReceiptData(saleId) {
-    const sale = db.prepare(`
+  loadSaleReceiptData(e) {
+    const r = u.prepare(`
       SELECT
         v.id,
         v.data_emissao,
@@ -12632,11 +10801,10 @@ class PrintDocumentRepository {
       LEFT JOIN usuarios u ON CAST(u.id AS TEXT) = CAST(cs.operator_id AS TEXT)
       WHERE v.id = ?
       LIMIT 1
-    `).get(saleId);
-    if (!sale) {
-      throw new Error(`Venda não encontrada para impressão: ${saleId}`);
-    }
-    const items = db.prepare(`
+    `).get(e);
+    if (!r)
+      throw new Error(`Venda não encontrada para impressão: ${e}`);
+    const a = u.prepare(`
       SELECT
         produto_id,
         codigo_produto,
@@ -12649,8 +10817,7 @@ class PrintDocumentRepository {
       FROM venda_itens
       WHERE venda_id = ?
       ORDER BY id
-    `).all(saleId);
-    const payments = db.prepare(`
+    `).all(e), n = u.prepare(`
       SELECT
         tpag,
         valor,
@@ -12659,63 +10826,62 @@ class PrintDocumentRepository {
       FROM venda_pagamento
       WHERE venda_id = ?
       ORDER BY id
-    `).all(saleId);
-    const fiscal = db.prepare(`
+    `).all(e), o = u.prepare(`
       SELECT fd.status, fd.access_key, fd.protocol, fd.authorization_datetime, fd.qr_code_url
       FROM fiscal_documents fd
       INNER JOIN sales s ON s.id = fd.sale_id
       WHERE s.external_reference = ?
       ORDER BY fd.id DESC
       LIMIT 1
-    `).get(`legacy-sale:${saleId}`);
+    `).get(`legacy-sale:${e}`);
     return {
-      saleId: Number(sale.id),
-      emittedAt: sale.data_emissao,
-      movedAt: sale.data_movimento ?? null,
-      status: sale.status,
-      storeName: sale.nome_fantasia ?? sale.razao_social ?? "Galberto PDV",
-      storeLegalName: sale.razao_social ?? null,
-      storeDocument: sale.cnpj ?? null,
-      storeAddress: buildStoreAddress(sale),
-      operatorName: sale.operator_name ?? null,
-      operatorId: sale.operator_id === null ? null : String(sale.operator_id),
-      pdvId: sale.pdv_id ?? null,
-      customerName: sale.cliente_nome ?? null,
-      customerDocument: sale.cpf_cliente ?? null,
-      items: items.map((item) => ({
-        productId: String(item.produto_id),
-        code: item.codigo_produto ?? null,
-        description: item.nome_produto,
-        quantity: Number(item.quantidade_comercial ?? 0),
-        unitPrice: Number(item.valor_unitario_comercial ?? 0),
-        grossAmount: Number(item.valor_bruto ?? 0),
-        discountAmount: Number(item.valor_desconto ?? 0),
-        totalAmount: Number(item.subtotal ?? 0)
+      saleId: Number(r.id),
+      emittedAt: r.data_emissao,
+      movedAt: r.data_movimento ?? null,
+      status: r.status,
+      storeName: r.nome_fantasia ?? r.razao_social ?? "Galberto PDV",
+      storeLegalName: r.razao_social ?? null,
+      storeDocument: r.cnpj ?? null,
+      storeAddress: Vu(r),
+      operatorName: r.operator_name ?? null,
+      operatorId: r.operator_id === null ? null : String(r.operator_id),
+      pdvId: r.pdv_id ?? null,
+      customerName: r.cliente_nome ?? null,
+      customerDocument: r.cpf_cliente ?? null,
+      items: a.map((s) => ({
+        productId: String(s.produto_id),
+        code: s.codigo_produto ?? null,
+        description: s.nome_produto,
+        quantity: Number(s.quantidade_comercial ?? 0),
+        unitPrice: Number(s.valor_unitario_comercial ?? 0),
+        grossAmount: Number(s.valor_bruto ?? 0),
+        discountAmount: Number(s.valor_desconto ?? 0),
+        totalAmount: Number(s.subtotal ?? 0)
       })),
-      payments: payments.map((payment) => ({
-        paymentCode: payment.tpag,
-        paymentLabel: paymentLabelFromCode(payment.tpag),
-        amount: Number(payment.valor ?? 0),
-        receivedAmount: Number(payment.valor_recebido ?? payment.valor ?? 0),
-        changeAmount: Number(payment.troco ?? 0)
+      payments: n.map((s) => ({
+        paymentCode: s.tpag,
+        paymentLabel: Gu(s.tpag),
+        amount: Number(s.valor ?? 0),
+        receivedAmount: Number(s.valor_recebido ?? s.valor ?? 0),
+        changeAmount: Number(s.troco ?? 0)
       })),
-      subtotalAmount: Number(sale.valor_produtos ?? 0),
-      discountAmount: Number(sale.valor_desconto ?? 0),
-      totalAmount: Number(sale.valor_total ?? 0),
-      changeAmount: Number(sale.valor_troco ?? 0),
-      notes: sale.observacao ?? null,
-      fiscal: fiscal ? {
-        status: fiscal.status ?? null,
-        accessKey: fiscal.access_key ?? null,
-        protocol: fiscal.protocol ?? null,
-        statusMessage: fiscal.status ?? null,
-        authorizationDatetime: fiscal.authorization_datetime ?? null,
-        qrCodeUrl: fiscal.qr_code_url ?? null
+      subtotalAmount: Number(r.valor_produtos ?? 0),
+      discountAmount: Number(r.valor_desconto ?? 0),
+      totalAmount: Number(r.valor_total ?? 0),
+      changeAmount: Number(r.valor_troco ?? 0),
+      notes: r.observacao ?? null,
+      fiscal: o ? {
+        status: o.status ?? null,
+        accessKey: o.access_key ?? null,
+        protocol: o.protocol ?? null,
+        statusMessage: o.status ?? null,
+        authorizationDatetime: o.authorization_datetime ?? null,
+        qrCodeUrl: o.qr_code_url ?? null
       } : null
     };
   }
-  loadCashReceiptData(sessionId, documentType) {
-    const row = db.prepare(`
+  loadCashReceiptData(e, r) {
+    const a = u.prepare(`
       SELECT
         s.id,
         s.operator_id,
@@ -12745,144 +10911,135 @@ class PrintDocumentRepository {
       LEFT JOIN usuarios u ON CAST(u.id AS TEXT) = CAST(s.operator_id AS TEXT)
       WHERE s.id = ?
       LIMIT 1
-    `).get(sessionId);
-    if (!row) {
-      throw new Error(`Sessão de caixa não encontrada para impressão: ${sessionId}`);
-    }
+    `).get(e);
+    if (!a)
+      throw new Error(`Sessão de caixa não encontrada para impressão: ${e}`);
     return {
-      cashSessionId: Number(row.id),
-      documentType,
-      operatorName: row.operator_name ?? null,
-      operatorId: row.operator_id === null ? null : String(row.operator_id),
-      pdvId: row.pdv_id,
-      openingAmount: Number(row.opening_cash_amount ?? 0),
-      closingAmount: row.closing_cash_amount === null ? null : Number(row.closing_cash_amount),
-      expectedAmount: row.expected_cash_amount === null ? null : Number(row.expected_cash_amount),
-      differenceAmount: row.closing_difference === null ? null : Number(row.closing_difference),
-      totalSalesCash: Number(row.total_vendas_dinheiro ?? 0),
-      totalWithdrawals: Number(row.total_sangrias ?? 0),
-      openedAt: row.opened_at,
-      closedAt: row.closed_at ?? null,
-      openingNotes: row.opening_notes ?? null,
-      closingNotes: row.closing_notes ?? null
+      cashSessionId: Number(a.id),
+      documentType: r,
+      operatorName: a.operator_name ?? null,
+      operatorId: a.operator_id === null ? null : String(a.operator_id),
+      pdvId: a.pdv_id,
+      openingAmount: Number(a.opening_cash_amount ?? 0),
+      closingAmount: a.closing_cash_amount === null ? null : Number(a.closing_cash_amount),
+      expectedAmount: a.expected_cash_amount === null ? null : Number(a.expected_cash_amount),
+      differenceAmount: a.closing_difference === null ? null : Number(a.closing_difference),
+      totalSalesCash: Number(a.total_vendas_dinheiro ?? 0),
+      totalWithdrawals: Number(a.total_sangrias ?? 0),
+      openedAt: a.opened_at,
+      closedAt: a.closed_at ?? null,
+      openingNotes: a.opening_notes ?? null,
+      closingNotes: a.closing_notes ?? null
     };
   }
-  hasPrintedDocumentForSale(saleId) {
-    const row = db.prepare(`
+  hasPrintedDocumentForSale(e) {
+    const r = u.prepare(`
       SELECT COUNT(*) AS total
       FROM printed_documents
       WHERE sale_id = ?
         AND document_type = 'SALE_RECEIPT'
-    `).get(saleId);
-    return Number(row.total ?? 0) > 0;
+    `).get(e);
+    return Number(r.total ?? 0) > 0;
   }
-  logInfo(message) {
-    logger.info(`[printing] ${message}`);
+  logInfo(e) {
+    f.info(`[printing] ${e}`);
   }
 }
-const printDocumentRepository = new PrintDocumentRepository();
-class ElectronReceiptPrinter {
-  async printHtml(params) {
-    const paperWidthMm = Number(params.paperWidthMm ?? 80);
-    const viewportWidthPx = Math.max(360, Math.round(paperWidthMm / 25.4 * 96) + 48);
-    const printWindow = new BrowserWindow({
-      show: false,
-      width: viewportWidthPx,
+const U = new zu();
+class ju {
+  async printHtml(e) {
+    const r = Number(e.paperWidthMm ?? 80), a = Math.max(360, Math.round(r / 25.4 * 96) + 48), n = new H({
+      show: !1,
+      width: a,
       height: 1280,
       webPreferences: {
-        sandbox: true
+        sandbox: !0
       }
     });
     try {
-      const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(params.html)}`;
-      await printWindow.loadURL(dataUrl);
-      await new Promise((resolve, reject) => {
-        printWindow.webContents.print(
+      const o = `data:text/html;charset=utf-8,${encodeURIComponent(e.html)}`;
+      await n.loadURL(o), await new Promise((s, i) => {
+        n.webContents.print(
           {
-            silent: true,
-            printBackground: true,
-            deviceName: params.printerName,
+            silent: !0,
+            printBackground: !0,
+            deviceName: e.printerName,
             margins: {
               marginType: "none"
             }
           },
-          (success, failureReason) => {
-            if (!success) {
-              reject(new Error(failureReason || "Falha desconhecida na impressão."));
+          (c, l) => {
+            if (!c) {
+              i(new Error(l || "Falha desconhecida na impressão."));
               return;
             }
-            resolve();
+            s();
           }
         );
       });
-    } catch (error) {
-      logger.error(`[printing] erro ao imprimir "${params.title}": ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+    } catch (o) {
+      throw f.error(`[printing] erro ao imprimir "${e.title}": ${o instanceof Error ? o.message : String(o)}`), o;
     } finally {
-      if (!printWindow.isDestroyed()) {
-        printWindow.destroy();
-      }
+      n.isDestroyed() || n.destroy();
     }
   }
 }
-const electronReceiptPrinter = new ElectronReceiptPrinter();
-function escapeHtml(value) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const qa = new ju();
+function y(t) {
+  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-function formatMoney(value) {
-  return value.toLocaleString("pt-BR", {
+function K(t) {
+  return t.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL"
   });
 }
-function formatDateTime(value) {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString("pt-BR");
+function _r(t) {
+  if (!t) return "—";
+  const e = new Date(t);
+  return Number.isNaN(e.getTime()) ? t : e.toLocaleString("pt-BR");
 }
-function getReceiptSettings(printer) {
-  if (!(printer == null ? void 0 : printer.receipt_settings_json)) return {};
+function Hu(t) {
+  if (!(t != null && t.receipt_settings_json)) return {};
   try {
-    return JSON.parse(printer.receipt_settings_json);
+    return JSON.parse(t.receipt_settings_json);
   } catch {
     return {};
   }
 }
-function isCustomMode(settings) {
-  return settings.templateMode === "custom";
+function Ku(t) {
+  return t.templateMode === "custom";
 }
-function resolveLayout(printer) {
+function Yu(t) {
   return {
-    paperWidthMm: Number((printer == null ? void 0 : printer.paper_width_mm) ?? 80),
-    contentWidthMm: Number((printer == null ? void 0 : printer.content_width_mm) ?? 76),
-    baseFontSizePx: Number((printer == null ? void 0 : printer.base_font_size_px) ?? 14),
-    lineHeight: Number((printer == null ? void 0 : printer.line_height) ?? 1.55)
+    paperWidthMm: Number((t == null ? void 0 : t.paper_width_mm) ?? 80),
+    contentWidthMm: Number((t == null ? void 0 : t.content_width_mm) ?? 76),
+    baseFontSizePx: Number((t == null ? void 0 : t.base_font_size_px) ?? 14),
+    lineHeight: Number((t == null ? void 0 : t.line_height) ?? 1.55)
   };
 }
-function renderDocumentShell(title, body, printer) {
-  const layout = resolveLayout(printer);
-  const sidePadding = Math.max((layout.paperWidthMm - layout.contentWidthMm) / 2, 0);
+function Ga(t, e, r) {
+  const a = Yu(r), n = Math.max((a.paperWidthMm - a.contentWidthMm) / 2, 0);
   return `<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <title>${escapeHtml(title)}</title>
+    <title>${y(t)}</title>
     <style>
       @page {
-        size: ${layout.paperWidthMm}mm auto;
+        size: ${a.paperWidthMm}mm auto;
         margin: 0;
       }
 
       html, body {
         margin: 0;
         padding: 0;
-        width: ${layout.paperWidthMm}mm;
+        width: ${a.paperWidthMm}mm;
         font-family: "Courier New", monospace;
         color: #000000;
         background: #ffffff;
-        font-size: ${layout.baseFontSizePx}px;
-        line-height: ${layout.lineHeight};
+        font-size: ${a.baseFontSizePx}px;
+        line-height: ${a.lineHeight};
         font-weight: 600;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -12891,12 +11048,12 @@ function renderDocumentShell(title, body, printer) {
 
       body {
         box-sizing: border-box;
-        padding: 1.2mm ${sidePadding}mm 0.8mm;
+        padding: 1.2mm ${n}mm 0.8mm;
       }
 
       .receipt {
         box-sizing: border-box;
-        width: ${layout.contentWidthMm}mm;
+        width: ${a.contentWidthMm}mm;
         padding-bottom: 0;
       }
 
@@ -12937,118 +11094,112 @@ function renderDocumentShell(title, body, printer) {
       }
       .footer-note {
         margin-top: 6px;
-        font-size: ${Math.max(layout.baseFontSizePx - 2, 10)}px;
+        font-size: ${Math.max(a.baseFontSizePx - 2, 10)}px;
         color: #000000;
       }
     </style>
   </head>
-  <body><div class="receipt">${body}</div></body>
+  <body><div class="receipt">${e}</div></body>
 </html>`;
 }
-class ThermalReceiptRenderer {
-  renderSaleReceipt(data, printer) {
-    var _a, _b;
-    const settings = getReceiptSettings(printer);
-    const useCustomMode = isCustomMode(settings);
-    const itemsHtml = data.items.map((item) => `
+class Wu {
+  renderSaleReceipt(e, r) {
+    var c, l;
+    const a = Hu(r), n = Ku(a), o = e.items.map((d) => `
       <div class="item">
-        <div class="item-name">${escapeHtml(item.description)}</div>
+        <div class="item-name">${y(d.description)}</div>
         <div class="item-meta">
-          <span>${item.quantity.toFixed(3).replace(".", ",")} x ${formatMoney(item.unitPrice)}</span>
-          <span class="strong">${formatMoney(item.totalAmount)}</span>
+          <span>${d.quantity.toFixed(3).replace(".", ",")} x ${K(d.unitPrice)}</span>
+          <span class="strong">${K(d.totalAmount)}</span>
         </div>
-        ${item.discountAmount > 0 ? `<div class="muted">Desconto: ${formatMoney(item.discountAmount)}</div>` : ""}
-        ${(useCustomMode ? settings.showItemCodes !== false : true) && item.code ? `<div class="muted">Cod.: ${escapeHtml(item.code)}</div>` : ""}
+        ${d.discountAmount > 0 ? `<div class="muted">Desconto: ${K(d.discountAmount)}</div>` : ""}
+        ${(!n || a.showItemCodes !== !1) && d.code ? `<div class="muted">Cod.: ${y(d.code)}</div>` : ""}
       </div>
-    `).join("");
-    const paymentsHtml = data.payments.map((payment) => `
+    `).join(""), s = e.payments.map((d) => `
       <div class="row">
-        <span class="label">${escapeHtml(payment.paymentLabel)}</span>
-        <span class="value">${formatMoney(payment.amount)}</span>
+        <span class="label">${y(d.paymentLabel)}</span>
+        <span class="value">${K(d.amount)}</span>
       </div>
-    `).join("");
-    const body = `
+    `).join(""), i = `
       <div class="center">
-        ${useCustomMode && settings.showLogo && settings.logoPath ? `<div class="footer-note">LOGO: ${escapeHtml(settings.logoPath)}</div>` : ""}
-        <div class="strong">${escapeHtml(useCustomMode ? ((_a = settings.headerTitle) == null ? void 0 : _a.trim()) || data.storeName : data.storeName)}</div>
-        ${(useCustomMode ? settings.showLegalName !== false : true) && data.storeLegalName && data.storeLegalName !== data.storeName ? `<div>${escapeHtml(data.storeLegalName)}</div>` : ""}
-        ${(useCustomMode ? settings.showDocument !== false : true) && data.storeDocument ? `<div>CNPJ: ${escapeHtml(data.storeDocument)}</div>` : ""}
-        ${(useCustomMode ? settings.showAddress !== false : true) && data.storeAddress ? `<div>${escapeHtml(data.storeAddress)}</div>` : ""}
-        ${useCustomMode && settings.headerMessage ? `<div class="footer-note">${escapeHtml(settings.headerMessage)}</div>` : ""}
+        ${n && a.showLogo && a.logoPath ? `<div class="footer-note">LOGO: ${y(a.logoPath)}</div>` : ""}
+        <div class="strong">${y(n && ((c = a.headerTitle) == null ? void 0 : c.trim()) || e.storeName)}</div>
+        ${(!n || a.showLegalName !== !1) && e.storeLegalName && e.storeLegalName !== e.storeName ? `<div>${y(e.storeLegalName)}</div>` : ""}
+        ${(!n || a.showDocument !== !1) && e.storeDocument ? `<div>CNPJ: ${y(e.storeDocument)}</div>` : ""}
+        ${(!n || a.showAddress !== !1) && e.storeAddress ? `<div>${y(e.storeAddress)}</div>` : ""}
+        ${n && a.headerMessage ? `<div class="footer-note">${y(a.headerMessage)}</div>` : ""}
       </div>
 
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Venda</span><span class="value">#${data.saleId}</span></div>
-      <div class="row"><span class="label">Data/Hora</span><span class="value">${escapeHtml(formatDateTime(data.movedAt ?? data.emittedAt))}</span></div>
-      ${(useCustomMode ? settings.showOperator !== false : true) ? `<div class="row"><span class="label">Operador</span><span class="value">${escapeHtml(data.operatorName ?? "Não informado")}</span></div>` : ""}
-      <div class="row"><span class="label">PDV</span><span class="value">${escapeHtml(data.pdvId ?? "—")}</span></div>
-      ${(useCustomMode ? settings.showCustomer !== false : true) ? `<div class="row"><span class="label">Cliente</span><span class="value">${escapeHtml(data.customerName ?? "Consumidor final")}</span></div>` : ""}
-      ${(useCustomMode ? settings.showCustomer !== false : true) && data.customerDocument ? `<div class="row"><span class="label">Documento</span><span class="value">${escapeHtml(data.customerDocument)}</span></div>` : ""}
+      <div class="row"><span class="label">Venda</span><span class="value">#${e.saleId}</span></div>
+      <div class="row"><span class="label">Data/Hora</span><span class="value">${y(_r(e.movedAt ?? e.emittedAt))}</span></div>
+      ${!n || a.showOperator !== !1 ? `<div class="row"><span class="label">Operador</span><span class="value">${y(e.operatorName ?? "Não informado")}</span></div>` : ""}
+      <div class="row"><span class="label">PDV</span><span class="value">${y(e.pdvId ?? "—")}</span></div>
+      ${!n || a.showCustomer !== !1 ? `<div class="row"><span class="label">Cliente</span><span class="value">${y(e.customerName ?? "Consumidor final")}</span></div>` : ""}
+      ${(!n || a.showCustomer !== !1) && e.customerDocument ? `<div class="row"><span class="label">Documento</span><span class="value">${y(e.customerDocument)}</span></div>` : ""}
 
       <div class="separator"></div>
-      ${itemsHtml}
+      ${o}
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Subtotal</span><span class="value">${formatMoney(data.subtotalAmount)}</span></div>
-      ${data.discountAmount > 0 ? `<div class="row"><span class="label">Descontos</span><span class="value">${formatMoney(data.discountAmount)}</span></div>` : ""}
-      <div class="row"><span class="label strong">TOTAL</span><span class="value">${formatMoney(data.totalAmount)}</span></div>
-      ${data.changeAmount > 0 ? `<div class="row"><span class="label">Troco</span><span class="value">${formatMoney(data.changeAmount)}</span></div>` : ""}
+      <div class="row"><span class="label">Subtotal</span><span class="value">${K(e.subtotalAmount)}</span></div>
+      ${e.discountAmount > 0 ? `<div class="row"><span class="label">Descontos</span><span class="value">${K(e.discountAmount)}</span></div>` : ""}
+      <div class="row"><span class="label strong">TOTAL</span><span class="value">${K(e.totalAmount)}</span></div>
+      ${e.changeAmount > 0 ? `<div class="row"><span class="label">Troco</span><span class="value">${K(e.changeAmount)}</span></div>` : ""}
 
-      ${(useCustomMode ? settings.showPaymentBreakdown !== false : true) ? `
+      ${!n || a.showPaymentBreakdown !== !1 ? `
         <div class="separator"></div>
         <div class="strong">Pagamentos</div>
-        ${paymentsHtml}
+        ${s}
       ` : ""}
 
-      ${(useCustomMode ? settings.showFiscalSection !== false : true) && data.fiscal ? `
+      ${(!n || a.showFiscalSection !== !1) && e.fiscal ? `
         <div class="separator"></div>
         <div class="strong">Situação fiscal</div>
-        <div class="row"><span class="label">Status</span><span class="value">${escapeHtml(data.fiscal.status ?? "—")}</span></div>
-        ${data.fiscal.protocol ? `<div class="row"><span class="label">Protocolo</span><span class="value">${escapeHtml(data.fiscal.protocol)}</span></div>` : ""}
-        ${data.fiscal.accessKey ? `<div class="footer-note mono">Chave: ${escapeHtml(data.fiscal.accessKey)}</div>` : ""}
+        <div class="row"><span class="label">Status</span><span class="value">${y(e.fiscal.status ?? "—")}</span></div>
+        ${e.fiscal.protocol ? `<div class="row"><span class="label">Protocolo</span><span class="value">${y(e.fiscal.protocol)}</span></div>` : ""}
+        ${e.fiscal.accessKey ? `<div class="footer-note mono">Chave: ${y(e.fiscal.accessKey)}</div>` : ""}
       ` : ""}
 
-      ${data.notes ? `<div class="footer-note">Obs.: ${escapeHtml(data.notes)}</div>` : ""}
-      ${useCustomMode && settings.footerMessage ? `<div class="footer-note">${escapeHtml(settings.footerMessage)}</div>` : ""}
+      ${e.notes ? `<div class="footer-note">Obs.: ${y(e.notes)}</div>` : ""}
+      ${n && a.footerMessage ? `<div class="footer-note">${y(a.footerMessage)}</div>` : ""}
 
       <div class="separator"></div>
       <div class="center footer-note">
-        ${escapeHtml(useCustomMode ? ((_b = settings.thankYouMessage) == null ? void 0 : _b.trim()) || "Documento impresso pelo Galberto PDV" : "Documento impresso pelo Galberto PDV")}<br />
+        ${y(n && ((l = a.thankYouMessage) == null ? void 0 : l.trim()) || "Documento impresso pelo Galberto PDV")}<br />
         Guarde este comprovante para conferência.
       </div>
     `;
-    return renderDocumentShell(`Cupom de venda #${data.saleId}`, body, printer);
+    return Ga(`Cupom de venda #${e.saleId}`, i, r);
   }
-  renderCashReceipt(data, printer) {
-    const isClosing = data.documentType === "CASH_CLOSING_RECEIPT";
-    const title = isClosing ? "Comprovante de Fechamento de Caixa" : "Comprovante de Abertura de Caixa";
-    const body = `
+  renderCashReceipt(e, r) {
+    const a = e.documentType === "CASH_CLOSING_RECEIPT", n = a ? "Comprovante de Fechamento de Caixa" : "Comprovante de Abertura de Caixa", o = `
       <div class="center">
-        <div class="strong">${escapeHtml(title)}</div>
+        <div class="strong">${y(n)}</div>
       </div>
 
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Sessão</span><span class="value">#${data.cashSessionId}</span></div>
-      <div class="row"><span class="label">Operador</span><span class="value">${escapeHtml(data.operatorName ?? "Não informado")}</span></div>
-      <div class="row"><span class="label">PDV</span><span class="value">${escapeHtml(data.pdvId)}</span></div>
-      <div class="row"><span class="label">Aberto em</span><span class="value">${escapeHtml(formatDateTime(data.openedAt))}</span></div>
-      ${isClosing ? `<div class="row"><span class="label">Fechado em</span><span class="value">${escapeHtml(formatDateTime(data.closedAt))}</span></div>` : ""}
+      <div class="row"><span class="label">Sessão</span><span class="value">#${e.cashSessionId}</span></div>
+      <div class="row"><span class="label">Operador</span><span class="value">${y(e.operatorName ?? "Não informado")}</span></div>
+      <div class="row"><span class="label">PDV</span><span class="value">${y(e.pdvId)}</span></div>
+      <div class="row"><span class="label">Aberto em</span><span class="value">${y(_r(e.openedAt))}</span></div>
+      ${a ? `<div class="row"><span class="label">Fechado em</span><span class="value">${y(_r(e.closedAt))}</span></div>` : ""}
 
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Fundo inicial</span><span class="value">${formatMoney(data.openingAmount)}</span></div>
-      ${isClosing ? `
-        <div class="row"><span class="label">Vendas em dinheiro</span><span class="value">${formatMoney(data.totalSalesCash)}</span></div>
-        <div class="row"><span class="label">Sangrias</span><span class="value">${formatMoney(data.totalWithdrawals)}</span></div>
-        <div class="row"><span class="label">Valor esperado</span><span class="value">${formatMoney(data.expectedAmount ?? 0)}</span></div>
-        <div class="row"><span class="label">Valor contado</span><span class="value">${formatMoney(data.closingAmount ?? 0)}</span></div>
-        <div class="row"><span class="label">Diferença</span><span class="value">${formatMoney(data.differenceAmount ?? 0)}</span></div>
+      <div class="row"><span class="label">Fundo inicial</span><span class="value">${K(e.openingAmount)}</span></div>
+      ${a ? `
+        <div class="row"><span class="label">Vendas em dinheiro</span><span class="value">${K(e.totalSalesCash)}</span></div>
+        <div class="row"><span class="label">Sangrias</span><span class="value">${K(e.totalWithdrawals)}</span></div>
+        <div class="row"><span class="label">Valor esperado</span><span class="value">${K(e.expectedAmount ?? 0)}</span></div>
+        <div class="row"><span class="label">Valor contado</span><span class="value">${K(e.closingAmount ?? 0)}</span></div>
+        <div class="row"><span class="label">Diferença</span><span class="value">${K(e.differenceAmount ?? 0)}</span></div>
       ` : ""}
 
-      ${data.openingNotes ? `<div class="footer-note">Obs. abertura: ${escapeHtml(data.openingNotes)}</div>` : ""}
-      ${isClosing && data.closingNotes ? `<div class="footer-note">Obs. fechamento: ${escapeHtml(data.closingNotes)}</div>` : ""}
+      ${e.openingNotes ? `<div class="footer-note">Obs. abertura: ${y(e.openingNotes)}</div>` : ""}
+      ${a && e.closingNotes ? `<div class="footer-note">Obs. fechamento: ${y(e.closingNotes)}</div>` : ""}
 
       <div class="separator"></div>
       <div class="center footer-note">
@@ -13056,755 +11207,543 @@ class ThermalReceiptRenderer {
         Conferência operacional de caixa.
       </div>
     `;
-    return renderDocumentShell(title, body, printer);
+    return Ga(n, o, r);
   }
-  renderFromStoredDocument(document) {
-    return document.contentHtml;
+  renderFromStoredDocument(e) {
+    return e.contentHtml;
   }
 }
-const thermalReceiptRenderer = new ThermalReceiptRenderer();
-function createMessage(documentType, action, printerName) {
-  const labels = {
+const Nt = new Wu();
+function Tr(t, e, r) {
+  const n = {
     SALE_RECEIPT: "cupom da venda",
     CASH_OPENING_RECEIPT: "comprovante de abertura de caixa",
     CASH_CLOSING_RECEIPT: "comprovante de fechamento de caixa"
-  };
-  const label = labels[documentType];
-  if (action === "printed") {
-    return `${label} impresso${printerName ? ` em ${printerName}` : ""}.`;
-  }
-  if (action === "skipped") {
-    return `Nenhuma impressora padrão configurada para imprimir o ${label}.`;
-  }
-  return `Falha ao imprimir o ${label}.`;
+  }[t];
+  return e === "printed" ? `${n} impresso${r ? ` em ${r}` : ""}.` : e === "skipped" ? `Nenhuma impressora padrão configurada para imprimir o ${n}.` : `Falha ao imprimir o ${n}.`;
 }
-class PrintDocumentService {
-  async printTestReceipt(printerId) {
-    const printer = printDocumentRepository.findPrinterById(printerId);
-    if (!printer) {
+class Qu {
+  async printTestReceipt(e) {
+    const r = U.findPrinterById(e);
+    if (!r)
       return {
-        success: false,
+        success: !1,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
         message: "Impressora não encontrada para teste.",
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
-    }
-    const sample = printDocumentRepository.buildTestSaleReceiptData(printer, {});
-    const html = thermalReceiptRenderer.renderSaleReceipt(sample, printer);
+    const a = U.buildTestSaleReceiptData(r, {}), n = Nt.renderSaleReceipt(a, r);
     try {
-      await electronReceiptPrinter.printHtml({
-        html,
-        printerName: printer.name,
-        title: `Teste ${printer.display_name ?? printer.name}`,
-        paperWidthMm: printer.paper_width_mm
-      });
-      printDocumentRepository.appendPrinterLog(printer.id, "Impressão de teste enviada.");
-      return {
-        success: true,
+      return await qa.printHtml({
+        html: n,
+        printerName: r.name,
+        title: `Teste ${r.display_name ?? r.name}`,
+        paperWidthMm: r.paper_width_mm
+      }), U.appendPrinterLog(r.id, "Impressão de teste enviada."), {
+        success: !0,
         status: "SUCCESS",
         documentId: 0,
-        printerId: printer.id,
-        printerName: printer.display_name ?? printer.name,
-        message: `Teste de impressão enviado para ${printer.display_name ?? printer.name}.`,
+        printerId: r.id,
+        printerName: r.display_name ?? r.name,
+        message: `Teste de impressão enviado para ${r.display_name ?? r.name}.`,
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Falha desconhecida na impressão de teste.";
-      printDocumentRepository.appendPrinterLog(printer.id, `Teste de impressão falhou: ${errorMessage}`);
-      return {
-        success: false,
+    } catch (o) {
+      const s = o instanceof Error ? o.message : "Falha desconhecida na impressão de teste.";
+      return U.appendPrinterLog(r.id, `Teste de impressão falhou: ${s}`), {
+        success: !1,
         status: "FAILED",
         documentId: 0,
-        printerId: printer.id,
-        printerName: printer.display_name ?? printer.name,
-        message: errorMessage,
+        printerId: r.id,
+        printerName: r.display_name ?? r.name,
+        message: s,
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
     }
   }
-  async printSaleReceipt(saleId, options2) {
-    const saleData = printDocumentRepository.loadSaleReceiptData(saleId);
-    const printer = printDocumentRepository.getDefaultPrinter();
-    const mergedData = {
-      ...saleData,
-      fiscal: options2.fiscal ?? saleData.fiscal
-    };
-    const title = `Cupom de venda #${saleId}`;
-    const html = thermalReceiptRenderer.renderSaleReceipt(mergedData, printer);
-    const document = printDocumentRepository.upsertDocument({
+  async printSaleReceipt(e, r) {
+    const a = U.loadSaleReceiptData(e), n = U.getDefaultPrinter(), o = {
+      ...a,
+      fiscal: r.fiscal ?? a.fiscal
+    }, s = `Cupom de venda #${e}`, i = Nt.renderSaleReceipt(o, n), c = U.upsertDocument({
       documentType: "SALE_RECEIPT",
       referenceType: "SALE",
-      referenceId: saleId,
-      saleId,
-      title,
+      referenceId: e,
+      saleId: e,
+      title: s,
       status: "PENDING",
       templateVersion: "thermal-v1",
-      payloadJson: JSON.stringify(mergedData),
-      contentHtml: html,
+      payloadJson: JSON.stringify(o),
+      contentHtml: i,
       lastError: null
     });
-    return this.dispatchToPrinter(document, options2.triggerSource, false);
+    return this.dispatchToPrinter(c, r.triggerSource, !1);
   }
-  async printCashOpeningReceipt(sessionId, triggerSource) {
-    const data = printDocumentRepository.loadCashReceiptData(sessionId, "CASH_OPENING_RECEIPT");
-    return this.printCashReceipt(data, triggerSource, false);
+  async printCashOpeningReceipt(e, r) {
+    const a = U.loadCashReceiptData(e, "CASH_OPENING_RECEIPT");
+    return this.printCashReceipt(a, r, !1);
   }
-  async printCashClosingReceipt(sessionId, triggerSource) {
-    const data = printDocumentRepository.loadCashReceiptData(sessionId, "CASH_CLOSING_RECEIPT");
-    return this.printCashReceipt(data, triggerSource, false);
+  async printCashClosingReceipt(e, r) {
+    const a = U.loadCashReceiptData(e, "CASH_CLOSING_RECEIPT");
+    return this.printCashReceipt(a, r, !1);
   }
-  async reprintSaleReceipt(saleId) {
-    let document = printDocumentRepository.findByReference("SALE_RECEIPT", "SALE", saleId);
-    if (!document) {
-      return this.printSaleReceipt(saleId, { triggerSource: "MANUAL" });
-    }
-    const printer = printDocumentRepository.getDefaultPrinter();
+  async reprintSaleReceipt(e) {
+    let r = U.findByReference("SALE_RECEIPT", "SALE", e);
+    if (!r)
+      return this.printSaleReceipt(e, { triggerSource: "MANUAL" });
+    const a = U.getDefaultPrinter();
     try {
-      const payload = JSON.parse(document.payloadJson);
-      document = printDocumentRepository.upsertDocument({
-        documentType: document.documentType,
-        referenceType: document.referenceType,
-        referenceId: document.referenceId,
-        saleId: document.saleId,
-        cashSessionId: document.cashSessionId,
-        printerId: (printer == null ? void 0 : printer.id) ?? document.printerId,
-        title: document.title,
-        status: document.status,
-        templateVersion: document.templateVersion,
-        payloadJson: document.payloadJson,
-        contentHtml: thermalReceiptRenderer.renderSaleReceipt(payload, printer),
-        lastError: document.lastError
+      const n = JSON.parse(r.payloadJson);
+      r = U.upsertDocument({
+        documentType: r.documentType,
+        referenceType: r.referenceType,
+        referenceId: r.referenceId,
+        saleId: r.saleId,
+        cashSessionId: r.cashSessionId,
+        printerId: (a == null ? void 0 : a.id) ?? r.printerId,
+        title: r.title,
+        status: r.status,
+        templateVersion: r.templateVersion,
+        payloadJson: r.payloadJson,
+        contentHtml: Nt.renderSaleReceipt(n, a),
+        lastError: r.lastError
       });
     } catch {
-      document = printDocumentRepository.upsertDocument({
-        documentType: document.documentType,
-        referenceType: document.referenceType,
-        referenceId: document.referenceId,
-        saleId: document.saleId,
-        cashSessionId: document.cashSessionId,
-        printerId: (printer == null ? void 0 : printer.id) ?? document.printerId,
-        title: document.title,
-        status: document.status,
-        templateVersion: document.templateVersion,
-        payloadJson: document.payloadJson,
-        contentHtml: document.contentHtml,
-        lastError: document.lastError
+      r = U.upsertDocument({
+        documentType: r.documentType,
+        referenceType: r.referenceType,
+        referenceId: r.referenceId,
+        saleId: r.saleId,
+        cashSessionId: r.cashSessionId,
+        printerId: (a == null ? void 0 : a.id) ?? r.printerId,
+        title: r.title,
+        status: r.status,
+        templateVersion: r.templateVersion,
+        payloadJson: r.payloadJson,
+        contentHtml: r.contentHtml,
+        lastError: r.lastError
       });
     }
-    return this.dispatchToPrinter(document, "MANUAL", true);
+    return this.dispatchToPrinter(r, "MANUAL", !0);
   }
-  async printCashReceipt(data, triggerSource, reprint) {
-    const printer = printDocumentRepository.getDefaultPrinter();
-    const title = data.documentType === "CASH_OPENING_RECEIPT" ? `Abertura de caixa #${data.cashSessionId}` : `Fechamento de caixa #${data.cashSessionId}`;
-    const html = thermalReceiptRenderer.renderCashReceipt(data, printer);
-    const document = printDocumentRepository.upsertDocument({
-      documentType: data.documentType,
+  async printCashReceipt(e, r, a) {
+    const n = U.getDefaultPrinter(), o = e.documentType === "CASH_OPENING_RECEIPT" ? `Abertura de caixa #${e.cashSessionId}` : `Fechamento de caixa #${e.cashSessionId}`, s = Nt.renderCashReceipt(e, n), i = U.upsertDocument({
+      documentType: e.documentType,
       referenceType: "CASH_SESSION",
-      referenceId: data.cashSessionId,
-      cashSessionId: data.cashSessionId,
-      title,
+      referenceId: e.cashSessionId,
+      cashSessionId: e.cashSessionId,
+      title: o,
       status: "PENDING",
       templateVersion: "thermal-v1",
-      payloadJson: JSON.stringify(data),
-      contentHtml: html,
+      payloadJson: JSON.stringify(e),
+      contentHtml: s,
       lastError: null
     });
-    return this.dispatchToPrinter(document, triggerSource, reprint);
+    return this.dispatchToPrinter(i, r, a);
   }
-  async dispatchToPrinter(document, triggerSource, reprint) {
-    const printer = printDocumentRepository.getDefaultPrinter();
-    if (!printer) {
-      printDocumentRepository.markDocumentFailed(document.id, "PENDING", "Nenhuma impressora padrão configurada.", null);
-      const job = printDocumentRepository.createPrintJob({
-        printedDocumentId: document.id,
+  async dispatchToPrinter(e, r, a) {
+    const n = U.getDefaultPrinter();
+    if (!n) {
+      U.markDocumentFailed(e.id, "PENDING", "Nenhuma impressora padrão configurada.", null);
+      const o = U.createPrintJob({
+        printedDocumentId: e.id,
         printerId: null,
-        triggerSource,
+        triggerSource: r,
         status: "SKIPPED",
         errorMessage: "Nenhuma impressora padrão configurada."
       });
       return {
-        success: false,
+        success: !1,
         status: "SKIPPED",
-        documentId: document.id,
+        documentId: e.id,
         printerId: null,
         printerName: null,
-        message: createMessage(document.documentType, "skipped"),
-        jobId: job.id,
-        reprint
+        message: Tr(e.documentType, "skipped"),
+        jobId: o.id,
+        reprint: a
       };
     }
     try {
-      await electronReceiptPrinter.printHtml({
-        html: thermalReceiptRenderer.renderFromStoredDocument(document),
-        printerName: printer.name,
-        title: document.title,
-        paperWidthMm: printer.paper_width_mm
-      });
-      printDocumentRepository.markDocumentPrinted(document.id, printer.id);
-      printDocumentRepository.appendPrinterLog(printer.id, `${document.title} enviado para impressão.`);
-      const job = printDocumentRepository.createPrintJob({
-        printedDocumentId: document.id,
-        printerId: printer.id,
-        triggerSource,
+      await qa.printHtml({
+        html: Nt.renderFromStoredDocument(e),
+        printerName: n.name,
+        title: e.title,
+        paperWidthMm: n.paper_width_mm
+      }), U.markDocumentPrinted(e.id, n.id), U.appendPrinterLog(n.id, `${e.title} enviado para impressão.`);
+      const o = U.createPrintJob({
+        printedDocumentId: e.id,
+        printerId: n.id,
+        triggerSource: r,
         status: "SUCCESS"
       });
       return {
-        success: true,
+        success: !0,
         status: "SUCCESS",
-        documentId: document.id,
-        printerId: printer.id,
-        printerName: printer.display_name ?? printer.name,
-        message: createMessage(document.documentType, "printed", printer.display_name ?? printer.name),
-        jobId: job.id,
-        reprint
+        documentId: e.id,
+        printerId: n.id,
+        printerName: n.display_name ?? n.name,
+        message: Tr(e.documentType, "printed", n.display_name ?? n.name),
+        jobId: o.id,
+        reprint: a
       };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Falha desconhecida na impressão.";
-      printDocumentRepository.markDocumentFailed(document.id, "FAILED", errorMessage, printer.id);
-      printDocumentRepository.appendPrinterLog(printer.id, `${document.title} falhou: ${errorMessage}`);
-      const job = printDocumentRepository.createPrintJob({
-        printedDocumentId: document.id,
-        printerId: printer.id,
-        triggerSource,
+    } catch (o) {
+      const s = o instanceof Error ? o.message : "Falha desconhecida na impressão.";
+      U.markDocumentFailed(e.id, "FAILED", s, n.id), U.appendPrinterLog(n.id, `${e.title} falhou: ${s}`);
+      const i = U.createPrintJob({
+        printedDocumentId: e.id,
+        printerId: n.id,
+        triggerSource: r,
         status: "FAILED",
-        errorMessage
+        errorMessage: s
       });
       return {
-        success: false,
+        success: !1,
         status: "FAILED",
-        documentId: document.id,
-        printerId: printer.id,
-        printerName: printer.display_name ?? printer.name,
-        message: `${createMessage(document.documentType, "failed")} ${errorMessage}`,
-        jobId: job.id,
-        reprint
+        documentId: e.id,
+        printerId: n.id,
+        printerName: n.display_name ?? n.name,
+        message: `${Tr(e.documentType, "failed")} ${s}`,
+        jobId: i.id,
+        reprint: a
       };
     }
   }
 }
-const printDocumentService = new PrintDocumentService();
-function payloadHasDiscount(vendaPayload) {
-  const totalDiscount = Number((vendaPayload == null ? void 0 : vendaPayload.valorDesconto) ?? (vendaPayload == null ? void 0 : vendaPayload.valor_desconto) ?? 0);
-  const itemDiscount = Array.isArray(vendaPayload == null ? void 0 : vendaPayload.itens) ? vendaPayload.itens.some((item) => Number((item == null ? void 0 : item.valor_desconto) ?? (item == null ? void 0 : item.valorDesconto) ?? 0) > 0) : false;
-  return totalDiscount > 0 || itemDiscount;
+const Lt = new Qu();
+function Ju(t) {
+  const e = Number((t == null ? void 0 : t.valorDesconto) ?? (t == null ? void 0 : t.valor_desconto) ?? 0), r = Array.isArray(t == null ? void 0 : t.itens) ? t.itens.some((a) => Number((a == null ? void 0 : a.valor_desconto) ?? (a == null ? void 0 : a.valorDesconto) ?? 0) > 0) : !1;
+  return e > 0 || r;
 }
-function assertDiscountPermission(vendaPayload) {
-  if (payloadHasDiscount(vendaPayload) && !currentUserHasPermission("discounts:apply")) {
+function fr(t) {
+  if (Ju(t) && !at("discounts:apply"))
     throw new Error("Somente gerente ou administrador pode conceder descontos.");
-  }
 }
-function registerSalesHandlers() {
-  ipcMain.handle("vendas:finalizar-com-baixa-estoque", async (_, vendaPayload) => {
-    assertDiscountPermission(vendaPayload);
-    finalizarVendaComBaixaEstoque(vendaPayload);
-    const vendaId = typeof vendaPayload === "number" ? vendaPayload : vendaPayload.vendaId;
-    const fiscalResult = await issueFiscalDocumentForSaleService.execute(vendaId);
-    let printResult;
+function Zu() {
+  p.handle("vendas:finalizar-com-baixa-estoque", async (t, e) => {
+    fr(e), ws(e);
+    const r = typeof e == "number" ? e : e.vendaId, a = await Zn.execute(r);
+    let n;
     try {
-      printResult = await printDocumentService.printSaleReceipt(vendaId, {
+      n = await Lt.printSaleReceipt(r, {
         triggerSource: "AUTO",
-        fiscal: fiscalResult.fiscal ?? null
+        fiscal: a.fiscal ?? null
       });
-    } catch (error) {
-      printResult = {
-        success: false,
+    } catch (o) {
+      n = {
+        success: !1,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
-        message: error instanceof Error ? error.message : "Falha ao imprimir o cupom da venda.",
+        message: o instanceof Error ? o.message : "Falha ao imprimir o cupom da venda.",
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
     }
     return {
-      success: true,
-      vendaId,
-      fiscal: fiscalResult.fiscal,
-      print: printResult
+      success: !0,
+      vendaId: r,
+      fiscal: a.fiscal,
+      print: n
     };
-  });
-  ipcMain.handle("vendas:get", (_, params) => {
-    return listarVendas(params);
-  });
-  ipcMain.handle("vendas:cancelar", (_, venda) => {
-    return cancelarVenda(venda);
-  });
-  ipcMain.handle("vendas:buscarPorId", (_, vendaId) => {
-    return buscarVendaPorId(vendaId);
-  });
-  ipcMain.handle("vendas:finalizada-pendente-pagamento", (_, venda) => {
-    assertDiscountPermission(venda);
-    const vendaId = salvarVendaPendente(venda, "ABERTA_PAGAMENTO", (venda == null ? void 0 : venda.id) ?? null);
-    return vendaId;
-  });
-  ipcMain.handle("vendas:pausar", (_, venda) => {
-    assertDiscountPermission(venda);
-    const vendaId = salvarVendaPendente(venda, "PAUSADA", (venda == null ? void 0 : venda.id) ?? null);
-    return vendaId;
-  });
+  }), p.handle("vendas:get", (t, e) => Bs(e)), p.handle("vendas:cancelar", (t, e) => Fs(e)), p.handle("vendas:buscarPorId", (t, e) => Xs(e)), p.handle("vendas:finalizada-pendente-pagamento", (t, e) => (fr(e), ta(e, "ABERTA_PAGAMENTO", (e == null ? void 0 : e.id) ?? null))), p.handle("vendas:pausar", (t, e) => (fr(e), ta(e, "PAUSADA", (e == null ? void 0 : e.id) ?? null)));
 }
-let viewVendaWindow = null;
-let viewUsuarioWindow = null;
-let cadastrarUsuarioWindow = null;
-let editUserWindow = null;
-let searchProductWindow = null;
-let configAppWindow = null;
-let searchSalesWindow = null;
-let pdvWindow = null;
-const __dirname$2 = import.meta.dirname;
-process.env.APP_ROOT = path__default.join(__dirname$2, "..");
-function registerWindowHandlers() {
-  ipcMain.handle("app:open-external-url", async (_event, url) => {
-    await shell.openExternal(url);
-    return true;
-  });
-  ipcMain.on("window:open:sales-search", () => {
-    if (searchSalesWindow && !searchSalesWindow.isDestroyed()) {
-      searchSalesWindow.focus();
+let Je = null, Ze = null, et = null, tt = null, Te = null, rt = null, Me = null, Pe = null;
+const ge = import.meta.dirname;
+process.env.APP_ROOT = R.join(ge, "..");
+function ed() {
+  p.handle("app:open-external-url", async (c, l) => (await Wa.openExternal(l), !0)), p.on("window:open:sales-search", () => {
+    if (Me && !Me.isDestroyed()) {
+      Me.focus();
       return;
     }
-    createSearchSalesWindow();
+    t();
   });
-  function createSearchSalesWindow() {
-    searchSalesWindow = new BrowserWindow({
+  function t() {
+    Me = new H({
       title: "Vendas",
       width: 600,
       height: 530,
-      center: true,
-      maximizable: false,
+      center: !0,
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: R.join(ge, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    searchSalesWindow.maximize();
-    if (VITE_DEV_SERVER_URL) {
-      searchSalesWindow.loadURL(`${VITE_DEV_SERVER_URL}#/sales/search`);
-    } else {
-      searchSalesWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), Me.maximize(), P ? Me.loadURL(`${P}#/sales/search`) : Me.loadFile(R.join("dist/index.html"));
   }
-  function createPdvWindow() {
-    pdvWindow = new BrowserWindow({
+  function e() {
+    Pe = new H({
       title: "Galberto PDV",
       width: 1280,
       height: 820,
-      center: true,
-      maximizable: true,
+      center: !0,
+      maximizable: !0,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: R.join(ge, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    pdvWindow.maximize();
-    if (VITE_DEV_SERVER_URL) {
-      pdvWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv`);
-    } else {
-      pdvWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), Pe.maximize(), P ? Pe.loadURL(`${P}#/pdv`) : Pe.loadFile(R.join("dist/index.html"));
   }
-  function createViewVendaWindow(id) {
-    viewVendaWindow = new BrowserWindow({
+  function r(c) {
+    Je = new H({
       width: 764,
       height: 717,
-      title: `Venda #${id}`,
-      maximizable: false,
+      title: `Venda #${c}`,
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: R.join(ge, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    if (VITE_DEV_SERVER_URL) {
-      viewVendaWindow.loadURL(`${VITE_DEV_SERVER_URL}#/vendas/${id}`);
-    } else {
-      viewVendaWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), P ? Je.loadURL(`${P}#/vendas/${c}`) : Je.loadFile(R.join("dist/index.html"));
   }
-  function createSearchProductWindow() {
-    searchProductWindow = new BrowserWindow({
+  function a() {
+    Te = new H({
       title: "Search Product",
-      maximizable: true,
+      maximizable: !0,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: R.join(ge, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
+    }), P ? Te.loadURL(`${P}#/pdv/products/search`) : Te.loadFile(R.join("dist/index.html"), {
+      hash: "/pdv/products/search"
     });
-    if (VITE_DEV_SERVER_URL) {
-      searchProductWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv/products/search`);
-    } else {
-      searchProductWindow.loadFile(path__default.join("dist/index.html"), {
-        hash: `/pdv/products/search`
-      });
-    }
   }
-  function createViewUsuarioWindow(id) {
-    viewUsuarioWindow = new BrowserWindow({
+  function n(c) {
+    Ze = new H({
       width: 764,
       height: 717,
-      title: `Usuario #${id}`,
-      maximizable: false,
+      title: `Usuario #${c}`,
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: R.join(ge, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    if (VITE_DEV_SERVER_URL) {
-      viewUsuarioWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/usuarios/${id}`);
-    } else {
-      viewUsuarioWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), P ? Ze.loadURL(`${P}#/config/usuarios/${c}`) : Ze.loadFile(R.join("dist/index.html"));
   }
-  function createConfigWindow() {
-    configAppWindow = new BrowserWindow({
+  function o() {
+    rt = new H({
       width: 764,
       height: 717,
-      title: `Config PDV`,
-      maximizable: false,
+      title: "Config PDV",
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: R.join(ge, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
+    }), P ? rt.loadURL(`${P}#/pdv/config/app`) : rt.loadFile(R.join("dist/index.html"), {
+      hash: "/pdv/config/app"
     });
-    if (VITE_DEV_SERVER_URL) {
-      configAppWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv/config/app`);
-    } else {
-      configAppWindow.loadFile(path__default.join("dist/index.html"), {
-        hash: `/pdv/config/app`
-      });
-    }
   }
-  ipcMain.on("open-search-sales-window", () => {
-    if (searchProductWindow && !searchProductWindow.isDestroyed()) {
-      searchProductWindow.focus();
+  p.on("open-search-sales-window", () => {
+    if (Te && !Te.isDestroyed()) {
+      Te.focus();
       return;
     }
-    createSearchSalesWindow();
+    t();
+  }), p.on("window:open:config", () => {
+    if (at("config:access")) {
+      if (rt && !rt.isDestroyed()) {
+        rt.focus();
+        return;
+      }
+      o();
+    }
+  }), p.on("window:open:pdv", () => {
+    if (at("pdv:access")) {
+      if (Pe && !Pe.isDestroyed()) {
+        Pe.focus();
+        return;
+      }
+      e();
+    }
+  }), p.on("window:open:products-search", () => {
+    if (Te && !Te.isDestroyed()) {
+      Te.focus();
+      return;
+    }
+    a();
+  }), p.on("vendas:criar-janela-ver-vendas", (c, l) => {
+    if (Je && !Je.isDestroyed()) {
+      Je.focus();
+      return;
+    }
+    r(l);
+  }), p.on("usuarios:criar-janela-ver-usuario", (c, l) => {
+    if (at("users:manage")) {
+      if (Ze && !Ze.isDestroyed()) {
+        Ze.focus();
+        return;
+      }
+      n(l);
+    }
+  }), p.on("window:open:create-user", () => {
+    if (at("users:manage")) {
+      if (et && !et.isDestroyed()) {
+        et.focus();
+        return;
+      }
+      s();
+    }
+  }), p.on("window:open:edit-user", (c, l) => {
+    if (at("users:manage")) {
+      if (tt && !tt.isDestroyed()) {
+        tt.focus();
+        return;
+      }
+      i(l);
+    }
   });
-  ipcMain.on("window:open:config", () => {
-    if (!currentUserHasPermission("config:access")) {
-      return;
-    }
-    if (configAppWindow && !configAppWindow.isDestroyed()) {
-      configAppWindow.focus();
-      return;
-    }
-    createConfigWindow();
-  });
-  ipcMain.on("window:open:pdv", () => {
-    if (!currentUserHasPermission("pdv:access")) {
-      return;
-    }
-    if (pdvWindow && !pdvWindow.isDestroyed()) {
-      pdvWindow.focus();
-      return;
-    }
-    createPdvWindow();
-  });
-  ipcMain.on("window:open:products-search", () => {
-    if (searchProductWindow && !searchProductWindow.isDestroyed()) {
-      searchProductWindow.focus();
-      return;
-    }
-    createSearchProductWindow();
-  });
-  ipcMain.on("vendas:criar-janela-ver-vendas", (_, id) => {
-    if (viewVendaWindow && !viewVendaWindow.isDestroyed()) {
-      viewVendaWindow.focus();
-      return;
-    }
-    createViewVendaWindow(id);
-  });
-  ipcMain.on("usuarios:criar-janela-ver-usuario", (_, id) => {
-    if (!currentUserHasPermission("users:manage")) {
-      return;
-    }
-    if (viewUsuarioWindow && !viewUsuarioWindow.isDestroyed()) {
-      viewUsuarioWindow.focus();
-      return;
-    }
-    createViewUsuarioWindow(id);
-  });
-  ipcMain.on("window:open:create-user", () => {
-    if (!currentUserHasPermission("users:manage")) {
-      return;
-    }
-    if (cadastrarUsuarioWindow && !cadastrarUsuarioWindow.isDestroyed()) {
-      cadastrarUsuarioWindow.focus();
-      return;
-    }
-    createCadastroUsuarioWindow();
-  });
-  ipcMain.on("window:open:edit-user", (_, id) => {
-    if (!currentUserHasPermission("users:manage")) {
-      return;
-    }
-    if (editUserWindow && !editUserWindow.isDestroyed()) {
-      editUserWindow.focus();
-      return;
-    }
-    createEditUserWindow(id);
-  });
-  function createCadastroUsuarioWindow() {
-    cadastrarUsuarioWindow = new BrowserWindow({
+  function s() {
+    et = new H({
       width: 764,
       height: 717,
-      title: `Cadastrar Usuario`,
-      maximizable: false,
+      title: "Cadastrar Usuario",
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: R.join(ge, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    if (VITE_DEV_SERVER_URL) {
-      cadastrarUsuarioWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/usuarios/cadastrar_usuario`);
-    } else {
-      cadastrarUsuarioWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), P ? et.loadURL(`${P}#/config/usuarios/cadastrar_usuario`) : et.loadFile(R.join("dist/index.html"));
   }
-  function createEditUserWindow(id) {
-    editUserWindow = new BrowserWindow({
+  function i(c) {
+    tt = new H({
       width: 764,
       height: 717,
-      title: `Editar Usuario`,
-      maximizable: false,
+      title: "Editar Usuario",
+      maximizable: !1,
       webPreferences: {
-        preload: path__default.join(__dirname$2, "preload.mjs"),
-        contextIsolation: true,
-        nodeIntegration: false
+        preload: R.join(ge, "preload.mjs"),
+        contextIsolation: !0,
+        nodeIntegration: !1
       }
-    });
-    if (VITE_DEV_SERVER_URL) {
-      editUserWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/users/edit_user/${id}`);
-    } else {
-      editUserWindow.loadFile(path__default.join("dist/index.html"));
-    }
+    }), P ? tt.loadURL(`${P}#/config/users/edit_user/${c}`) : tt.loadFile(R.join("dist/index.html"));
   }
 }
-function registerProductHandlers() {
-  ipcMain.handle("produtos:get", (_, params) => {
-    return listarProdutos(params);
-  });
-  ipcMain.handle("get-products-by-id", (_, id) => {
-    if (!id) throw new Error("ID inválido");
-    return select_product_by_id(id);
-  });
-  ipcMain.handle("produtos:buscar-por-nome", (_, termo) => {
-    if (!termo) throw new Error("Nome Invalido");
-    return buscarProdutosPorNome(termo);
-  });
-  ipcMain.handle("produtos:buscar-por-codigo-de-barras", (_, codigo) => {
-    if (!codigo) throw new Error("Codigo de Barras invalido");
-    return buscarProdutoPorCodigoBarras(codigo);
-  });
-  ipcMain.handle("suggest-product-by-term", (_, term) => {
-    return selectSuggestionProduct(term);
-  });
+function td() {
+  p.handle("produtos:get", (t, e) => $s(e)), p.handle("get-products-by-id", (t, e) => {
+    if (!e) throw new Error("ID inválido");
+    return ks(e);
+  }), p.handle("produtos:buscar-por-nome", (t, e) => {
+    if (!e) throw new Error("Nome Invalido");
+    return qs(e);
+  }), p.handle("produtos:buscar-por-codigo-de-barras", (t, e) => {
+    if (!e) throw new Error("Codigo de Barras invalido");
+    return Gs(e);
+  }), p.handle("suggest-product-by-term", (t, e) => Vs(e));
 }
-function registerPrinterhandlers() {
-  ipcMain.handle("printer:buscar-impressoras", async () => {
-    assertCurrentUserPermission("printers:manage");
-    const win2 = BrowserWindow.getAllWindows()[0];
-    return win2.webContents.getPrintersAsync();
-  });
-  ipcMain.handle("printer:add-impressora", (_event, dados) => {
-    assertCurrentUserPermission("printers:manage");
-    return addPrinter(dados);
-  });
-  ipcMain.handle("printer:listar-cadastradas", () => {
-    assertCurrentUserPermission("printers:manage");
-    return listarPrinters();
-  });
-  ipcMain.handle("printer:get-padrao", () => {
-    return getPrinterPadrao();
-  });
-  ipcMain.handle("printer:remover", (_event, id) => {
-    assertCurrentUserPermission("printers:manage");
-    return removerPrinter(id);
-  });
-  ipcMain.handle("printer:definir-padrao", (_event, id) => {
-    assertCurrentUserPermission("printers:manage");
-    return definirPrinterPadrao(id);
-  });
-  ipcMain.handle("printer:atualizar-layout", (_event, id, dados) => {
-    assertCurrentUserPermission("printers:manage");
-    return atualizarLayoutPrinter(id, dados);
-  });
-  ipcMain.handle("printer:atualizar-personalizacao", (_event, id, receiptSettingsJson) => {
-    assertCurrentUserPermission("printers:manage");
-    return atualizarPersonalizacaoCupomPrinter(id, receiptSettingsJson);
-  });
-  ipcMain.handle("printer:test-print", (_event, printerId) => {
-    assertCurrentUserPermission("printers:manage");
-    return printDocumentService.printTestReceipt(printerId);
-  });
-  ipcMain.handle("printer:reprint-sale-receipt", (_event, saleId) => {
-    assertCurrentUserPermission("sales:view");
-    return printDocumentService.reprintSaleReceipt(saleId);
-  });
+function rd() {
+  p.handle("printer:buscar-impressoras", async () => (g("printers:manage"), H.getAllWindows()[0].webContents.getPrintersAsync())), p.handle("printer:add-impressora", (t, e) => (g("printers:manage"), zs(e))), p.handle("printer:listar-cadastradas", () => (g("printers:manage"), js())), p.handle("printer:get-padrao", () => Hs()), p.handle("printer:remover", (t, e) => (g("printers:manage"), Ws(e))), p.handle("printer:definir-padrao", (t, e) => (g("printers:manage"), Qs(e))), p.handle("printer:atualizar-layout", (t, e, r) => (g("printers:manage"), Ks(e, r))), p.handle("printer:atualizar-personalizacao", (t, e, r) => (g("printers:manage"), Ys(e, r))), p.handle("printer:test-print", (t, e) => (g("printers:manage"), Lt.printTestReceipt(e))), p.handle("printer:reprint-sale-receipt", (t, e) => (g("sales:view"), Lt.reprintSaleReceipt(e)));
 }
-function encerrarSessao(sessionId) {
-  db.prepare(`
+function ao(t) {
+  u.prepare(`
     UPDATE sessions
     SET active = 0,
         logout_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).run(sessionId);
+  `).run(t);
 }
-function registerAuthHandlers() {
-  ipcMain.handle("auth:login", (_event, username, password) => {
-    const user = autenticarUsuario(username, password);
-    setCurrentSession(user.sessionId);
-    return user;
-  });
-  ipcMain.handle("auth:buscar-usuario", (_, id) => {
-    if (!id) throw new Error("ID inválido");
-    assertCurrentUserPermission("users:manage");
-    return buscarUsuario(id);
-  });
-  ipcMain.handle("app:logoff-with-confirm", async () => {
-    logger.info("Logoff solicitado pelo usuario");
-    const { response } = await dialog.showMessageBox({
+function ad() {
+  p.handle("auth:login", (t, e, r) => {
+    const a = Xo(e, r);
+    return Xa(a.sessionId), a;
+  }), p.handle("auth:buscar-usuario", (t, e) => {
+    if (!e) throw new Error("ID inválido");
+    return g("users:manage"), Zs(e);
+  }), p.handle("app:logoff-with-confirm", async () => {
+    f.info("Logoff solicitado pelo usuario");
+    const { response: t } = await Qa.showMessageBox({
       type: "question",
       buttons: ["cancelar", "sair"],
       defaultId: 1,
       cancelId: 0,
       message: "Tem certeza que deseja encerrar sessao?"
     });
-    if (response === 1) {
-      const sessionId = getCurrentSession();
-      if (sessionId) {
-        encerrarSessao(sessionId);
-        setCurrentSession(null);
-      }
-      logger.info("logoff aprovado pelo usuario");
-      return true;
+    if (t === 1) {
+      const e = Wr();
+      return e && (ao(e), Xa(null)), f.info("logoff aprovado pelo usuario"), !0;
     }
-    return false;
+    return !1;
   });
 }
-function registerUserHandlers() {
-  ipcMain.handle("salvar-foto-usuario", async (_, dados) => {
-    assertCurrentUserPermission("users:manage");
-    const userData = app.getPath("userData");
-    const pasta = path__default.join(userData, "fotos");
-    if (!fs$2.existsSync(pasta)) fs$2.mkdirSync(pasta);
-    const extensao = path__default.extname(dados.nomeArquivo || "");
-    const baseName = path__default.basename(dados.nomeArquivo || "foto", extensao).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
-    const caminho = path__default.join(pasta, `${Date.now()}-${baseName}${extensao}`);
-    fs$2.writeFileSync(caminho, Buffer.from(dados.buffer));
-    return caminho;
-  });
-  ipcMain.handle("update-user", (_, data) => {
-    assertCurrentUserPermission("users:manage");
-    return updateUser(data);
-  });
-  ipcMain.handle("disable-user", (_, id) => {
-    assertCurrentUserPermission("users:manage");
-    return disableUser(id);
-  });
-  ipcMain.handle("enable-user", (_, id) => {
-    assertCurrentUserPermission("users:manage");
-    return enableUser(id);
-  });
-  ipcMain.handle("user:update-password", (_event, id, newPassword) => {
-    assertCurrentUserPermission("users:manage");
-    return alterarSenhaUsuario(id, newPassword);
-  });
-  ipcMain.handle("get-users", (_, params) => {
-    assertCurrentUserPermission("users:manage");
-    return selectUsers(params);
-  });
-  ipcMain.handle("usuarios:add", (_event, dados) => {
-    assertCurrentUserPermission("users:manage");
-    return addUsuario(dados);
-  });
-  ipcMain.handle("delete-user", (_event, id) => {
-    assertCurrentUserPermission("users:manage");
-    return removerUsuario(id);
-  });
+function nd() {
+  p.handle("salvar-foto-usuario", async (t, e) => {
+    g("users:manage");
+    const r = _e.getPath("userData"), a = R.join(r, "fotos");
+    or.existsSync(a) || or.mkdirSync(a);
+    const n = R.extname(e.nomeArquivo || ""), o = R.basename(e.nomeArquivo || "foto", n).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40), s = R.join(a, `${Date.now()}-${o}${n}`);
+    return or.writeFileSync(s, Buffer.from(e.buffer)), s;
+  }), p.handle("update-user", (t, e) => (g("users:manage"), ni(e))), p.handle("disable-user", (t, e) => (g("users:manage"), oi(e))), p.handle("enable-user", (t, e) => (g("users:manage"), si(e))), p.handle("user:update-password", (t, e, r) => (g("users:manage"), ri(e, r))), p.handle("get-users", (t, e) => (g("users:manage"), ei(e))), p.handle("usuarios:add", (t, e) => (g("users:manage"), ti(e))), p.handle("delete-user", (t, e) => (g("users:manage"), ai(e)));
 }
-function registerPosHandlers() {
-  ipcMain.handle("open-cash-session", async (_event, data) => {
-    console.log("Abrindo caixa com dados: ", data);
-    const session = insertCashSession(data);
-    let print;
+function od() {
+  p.handle("open-cash-session", async (t, e) => {
+    console.log("Abrindo caixa com dados: ", e);
+    const r = xs(e);
+    let a;
     try {
-      print = await printDocumentService.printCashOpeningReceipt(session.id, "AUTO");
-    } catch (error) {
-      print = {
-        success: false,
+      a = await Lt.printCashOpeningReceipt(r.id, "AUTO");
+    } catch (n) {
+      a = {
+        success: !1,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
-        message: error instanceof Error ? error.message : "Falha ao imprimir comprovante de abertura de caixa.",
+        message: n instanceof Error ? n.message : "Falha ao imprimir comprovante de abertura de caixa.",
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
     }
-    return { session, print };
-  });
-  ipcMain.handle("close-cash-session", async (_event, data) => {
-    console.log("Fechando caixa com dados: ", data);
-    const session = closeCashSession(data);
-    let print;
+    return { session: r, print: a };
+  }), p.handle("close-cash-session", async (t, e) => {
+    console.log("Fechando caixa com dados: ", e);
+    const r = Ps(e);
+    let a;
     try {
-      print = await printDocumentService.printCashClosingReceipt(session.id, "AUTO");
-    } catch (error) {
-      print = {
-        success: false,
+      a = await Lt.printCashClosingReceipt(r.id, "AUTO");
+    } catch (n) {
+      a = {
+        success: !1,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
-        message: error instanceof Error ? error.message : "Falha ao imprimir comprovante de fechamento de caixa.",
+        message: n instanceof Error ? n.message : "Falha ao imprimir comprovante de fechamento de caixa.",
         jobId: 0,
-        reprint: false
+        reprint: !1
       };
     }
-    return { session, print };
-  });
-  ipcMain.handle("get-open-cash-session", async (_event, data) => {
-    return getOpenCashSession(data);
-  });
-  ipcMain.handle("register-cash-withdrawal", async (_event, data) => {
-    assertCurrentUserPermission("cash:withdraw");
-    return registerCashWithdrawal(data);
-  });
-  ipcMain.on("pdv:selecionar-produto", (_event, produto) => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send("pdv:produto-selecionado", produto);
-    }
-  });
-  ipcMain.on("pdv:retomar-venda", (_event, venda) => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send("pdv:venda-retomada", venda);
-    }
+    return { session: r, print: a };
+  }), p.handle("get-open-cash-session", async (t, e) => ii(e)), p.handle("register-cash-withdrawal", async (t, e) => (g("cash:withdraw"), Ms(e))), p.on("pdv:selecionar-produto", (t, e) => {
+    for (const r of H.getAllWindows())
+      r.webContents.send("pdv:produto-selecionado", e);
+  }), p.on("pdv:retomar-venda", (t, e) => {
+    for (const r of H.getAllWindows())
+      r.webContents.send("pdv:venda-retomada", e);
   });
 }
-function generateRandomState(size = 32) {
-  return crypto$1.randomBytes(size).toString("hex");
+function sd(t = 32) {
+  return br.randomBytes(t).toString("hex");
 }
-function toBasicAuth(clientId, clientSecret) {
-  return Buffer.from(`${clientId}:${clientSecret}`, "utf8").toString("base64");
+function Nr(t, e) {
+  return Buffer.from(`${t}:${e}`, "utf8").toString("base64");
 }
-class IntegrationRepository {
-  getByIntegrationId(integrationId) {
-    const stmt = db.prepare(`
+class id {
+  getByIntegrationId(e) {
+    const a = u.prepare(`
       SELECT
         integration_id,
         access_token,
@@ -13816,24 +11755,20 @@ class IntegrationRepository {
         updated_at
       FROM integrations
       WHERE integration_id = ?
-    `);
-    const row = stmt.get(integrationId);
-    if (!row) {
-      return null;
-    }
-    return {
-      integrationId: row.integration_id,
-      accessToken: row.access_token,
-      refreshToken: row.refresh_token,
-      tokenType: row.token_type ?? "Bearer",
-      expiresAt: row.expires_at,
-      scope: row.scope,
-      raw: row.raw_json ? JSON.parse(row.raw_json) : null,
-      updatedAt: row.updated_at
-    };
+    `).get(e);
+    return a ? {
+      integrationId: a.integration_id,
+      accessToken: a.access_token,
+      refreshToken: a.refresh_token,
+      tokenType: a.token_type ?? "Bearer",
+      expiresAt: a.expires_at,
+      scope: a.scope,
+      raw: a.raw_json ? JSON.parse(a.raw_json) : null,
+      updatedAt: a.updated_at
+    } : null;
   }
-  save(token) {
-    const stmt = db.prepare(`
+  save(e) {
+    u.prepare(`
       INSERT INTO integrations (
         integration_id,
         access_token,
@@ -13853,353 +11788,255 @@ class IntegrationRepository {
         scope = excluded.scope,
         raw_json = excluded.raw_json,
         updated_at = excluded.updated_at
-    `);
-    stmt.run(
-      token.integrationId,
-      token.accessToken,
-      token.refreshToken,
-      token.tokenType,
-      token.expiresAt,
-      token.scope ?? null,
-      token.raw ? JSON.stringify(token.raw) : null,
-      token.updatedAt
+    `).run(
+      e.integrationId,
+      e.accessToken,
+      e.refreshToken,
+      e.tokenType,
+      e.expiresAt,
+      e.scope ?? null,
+      e.raw ? JSON.stringify(e.raw) : null,
+      e.updatedAt
     );
   }
-  delete(integrationId) {
-    const stmt = db.prepare(`
+  delete(e) {
+    u.prepare(`
       DELETE FROM integrations
       WHERE integration_id = ?
-    `);
-    stmt.run(integrationId);
+    `).run(e);
   }
-  isConnected(integrationId) {
-    const stmt = db.prepare(`
+  isConnected(e) {
+    return !!u.prepare(`
       SELECT 1
       FROM integrations
       WHERE integration_id = ?
       LIMIT 1
-    `);
-    const row = stmt.get(integrationId);
-    return !!row;
+    `).get(e);
   }
 }
-const integrationRepository = new IntegrationRepository();
-const BLING_AUTHORIZE_URL = "https://www.bling.com.br/Api/v3/oauth/authorize";
-const BLING_TOKEN_URL = "https://api.bling.com.br/Api/v3/oauth/token";
-const BLING_REVOKE_URL = "https://api.bling.com.br/oauth/revoke";
-function getRequiredEnv(name) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Variável de ambiente ausente: ${name}`);
-  }
-  return value;
+const Be = new id(), cd = "https://www.bling.com.br/Api/v3/oauth/authorize", Va = "https://api.bling.com.br/Api/v3/oauth/token", ud = "https://api.bling.com.br/oauth/revoke";
+function fe(t) {
+  const e = process.env[t];
+  if (!e)
+    throw new Error(`Variável de ambiente ausente: ${t}`);
+  return e;
 }
-function parseRedirectUri(redirectUri) {
-  const url = new URL$1(redirectUri);
-  if (url.protocol !== "http:") {
+function dd(t) {
+  const e = new hr(t);
+  if (e.protocol !== "http:")
     throw new Error(
       "Para callback local no Electron, use redirect URI no formato http://127.0.0.1:PORT/callback/bling"
     );
-  }
   return {
-    hostname: url.hostname,
-    port: Number(url.port),
-    pathname: url.pathname
+    hostname: e.hostname,
+    port: Number(e.port),
+    pathname: e.pathname
   };
 }
-class BlingOAuthService {
+class ld {
   async getStatus() {
-    const saved = integrationRepository.getByIntegrationId("bling");
-    if (!saved) {
+    const e = Be.getByIntegrationId("bling");
+    if (!e)
       return {
-        connected: false,
+        connected: !1,
         expiresAt: null
       };
-    }
     try {
       await this.getValidAccessToken();
-      const refreshed = integrationRepository.getByIntegrationId("bling");
+      const r = Be.getByIntegrationId("bling");
       return {
-        connected: true,
-        expiresAt: (refreshed == null ? void 0 : refreshed.expiresAt) ?? null
+        connected: !0,
+        expiresAt: (r == null ? void 0 : r.expiresAt) ?? null
       };
-    } catch (error) {
-      console.error("[BlingOAuthService.getStatus]", error);
-      return {
-        connected: false,
-        expiresAt: saved.expiresAt
+    } catch (r) {
+      return console.error("[BlingOAuthService.getStatus]", r), {
+        connected: !1,
+        expiresAt: e.expiresAt
       };
     }
   }
   async connect() {
-    const clientId = getRequiredEnv("BLING_CLIENT_ID");
-    const redirectUri = getRequiredEnv("BLING_REDIRECT_URI");
-    const state = generateRandomState(24);
-    const code = await this.requestAuthorizationCode({
-      clientId,
-      redirectUri,
-      state
+    const e = fe("BLING_CLIENT_ID"), r = fe("BLING_REDIRECT_URI"), a = sd(24), n = await this.requestAuthorizationCode({
+      clientId: e,
+      redirectUri: r,
+      state: a
     });
-    await this.exchangeCodeForToken(code);
-    return {
-      success: true,
+    return await this.exchangeCodeForToken(n), {
+      success: !0,
       message: "Bling conectado com sucesso."
     };
   }
   async disconnect() {
-    const clientId = getRequiredEnv("BLING_CLIENT_ID");
-    const clientSecret = getRequiredEnv("BLING_CLIENT_SECRET");
-    const saved = integrationRepository.getByIntegrationId("bling");
-    if (!saved) {
+    const e = fe("BLING_CLIENT_ID"), r = fe("BLING_CLIENT_SECRET"), a = Be.getByIntegrationId("bling");
+    if (!a)
       return {
-        success: true,
+        success: !0,
         message: "Bling já estava desconectado."
       };
-    }
     try {
-      const body = new URLSearchParams({
-        token: saved.refreshToken
+      const n = new URLSearchParams({
+        token: a.refreshToken
       });
-      await fetch(BLING_REVOKE_URL, {
+      await fetch(ud, {
         method: "POST",
         headers: {
-          Authorization: `Basic ${toBasicAuth(clientId, clientSecret)}`,
+          Authorization: `Basic ${Nr(e, r)}`,
           "Content-Type": "application/x-www-form-urlencoded",
           Accept: "application/json"
         },
-        body: body.toString()
+        body: n.toString()
       });
-    } catch (error) {
-      console.warn("[BlingOAuthService.disconnect] falha ao revogar remotamente:", error);
+    } catch (n) {
+      console.warn("[BlingOAuthService.disconnect] falha ao revogar remotamente:", n);
     }
-    integrationRepository.delete("bling");
-    return {
-      success: true,
+    return Be.delete("bling"), {
+      success: !0,
       message: "Bling desconectado com sucesso."
     };
   }
   async getValidAccessToken() {
-    const saved = integrationRepository.getByIntegrationId("bling");
-    if (!saved) {
+    const e = Be.getByIntegrationId("bling");
+    if (!e)
       throw new Error("Bling não está conectado.");
-    }
-    const expiresAtMs = new Date(saved.expiresAt).getTime();
-    const expired = expiresAtMs <= Date.now() + 6e4;
-    if (!expired) {
-      return saved.accessToken;
-    }
-    await this.refreshAccessToken(saved.refreshToken);
-    const refreshed = integrationRepository.getByIntegrationId("bling");
-    if (!refreshed) {
+    if (!(new Date(e.expiresAt).getTime() <= Date.now() + 6e4))
+      return e.accessToken;
+    await this.refreshAccessToken(e.refreshToken);
+    const n = Be.getByIntegrationId("bling");
+    if (!n)
       throw new Error("Falha ao renovar token do Bling.");
-    }
-    return refreshed.accessToken;
+    return n.accessToken;
   }
-  async requestAuthorizationCode(params) {
-    const { hostname, port, pathname } = parseRedirectUri(params.redirectUri);
-    const authorizeUrl = new URL$1(BLING_AUTHORIZE_URL);
-    authorizeUrl.searchParams.set("response_type", "code");
-    authorizeUrl.searchParams.set("client_id", params.clientId);
-    authorizeUrl.searchParams.set("state", params.state);
-    authorizeUrl.searchParams.set("redirect_uri", params.redirectUri);
-    return await new Promise((resolve, reject) => {
-      let finished = false;
-      const cleanup = (server2, timeout2) => {
-        clearTimeout(timeout2);
-        server2.close();
-      };
-      const server = http.createServer((req, res) => {
+  async requestAuthorizationCode(e) {
+    const { hostname: r, port: a, pathname: n } = dd(e.redirectUri), o = new hr(cd);
+    return o.searchParams.set("response_type", "code"), o.searchParams.set("client_id", e.clientId), o.searchParams.set("state", e.state), o.searchParams.set("redirect_uri", e.redirectUri), await new Promise((s, i) => {
+      let c = !1;
+      const l = (E, _) => {
+        clearTimeout(_), E.close();
+      }, d = No.createServer((E, _) => {
         try {
-          if (!req.url) {
+          if (!E.url)
             throw new Error("Callback sem URL.");
-          }
-          const callbackUrl = new URL$1(req.url, `http://${hostname}:${port}`);
-          if (callbackUrl.pathname !== pathname) {
-            res.statusCode = 404;
-            res.end("Not found");
+          const A = new hr(E.url, `http://${r}:${a}`);
+          if (A.pathname !== n) {
+            _.statusCode = 404, _.end("Not found");
             return;
           }
-          const error = callbackUrl.searchParams.get("error");
-          const code = callbackUrl.searchParams.get("code");
-          const state = callbackUrl.searchParams.get("state");
-          if (error) {
-            res.statusCode = 400;
-            res.end("Autorização recusada ou inválida.");
-            if (!finished) {
-              finished = true;
-              cleanup(server, timeout);
-              reject(new Error(`Bling retornou erro no callback: ${error}`));
-            }
+          const N = A.searchParams.get("error"), C = A.searchParams.get("code"), O = A.searchParams.get("state");
+          if (N) {
+            _.statusCode = 400, _.end("Autorização recusada ou inválida."), c || (c = !0, l(d, m), i(new Error(`Bling retornou erro no callback: ${N}`)));
             return;
           }
-          if (!code) {
-            res.statusCode = 400;
-            res.end("Authorization code não recebido.");
-            if (!finished) {
-              finished = true;
-              cleanup(server, timeout);
-              reject(new Error("Authorization code não recebido."));
-            }
+          if (!C) {
+            _.statusCode = 400, _.end("Authorization code não recebido."), c || (c = !0, l(d, m), i(new Error("Authorization code não recebido.")));
             return;
           }
-          if (state !== params.state) {
-            res.statusCode = 400;
-            res.end("State inválido.");
-            if (!finished) {
-              finished = true;
-              cleanup(server, timeout);
-              reject(new Error("State inválido no callback do Bling."));
-            }
+          if (O !== e.state) {
+            _.statusCode = 400, _.end("State inválido."), c || (c = !0, l(d, m), i(new Error("State inválido no callback do Bling.")));
             return;
           }
-          res.statusCode = 200;
-          res.setHeader("Content-Type", "text/html; charset=utf-8");
-          res.end(`
+          _.statusCode = 200, _.setHeader("Content-Type", "text/html; charset=utf-8"), _.end(`
             <html>
               <body style="font-family: Arial, sans-serif; padding: 24px;">
                 <h2>Integração concluída</h2>
                 <p>Você já pode fechar esta janela e voltar ao sistema.</p>
               </body>
             </html>
-          `);
-          if (!finished) {
-            finished = true;
-            cleanup(server, timeout);
-            resolve(code);
-          }
-        } catch (error) {
-          if (!finished) {
-            finished = true;
-            cleanup(server, timeout);
-            reject(error instanceof Error ? error : new Error("Erro desconhecido no callback."));
-          }
+          `), c || (c = !0, l(d, m), s(C));
+        } catch (A) {
+          c || (c = !0, l(d, m), i(A instanceof Error ? A : new Error("Erro desconhecido no callback.")));
         }
-      });
-      const timeout = setTimeout(() => {
-        if (!finished) {
-          finished = true;
-          cleanup(server, timeout);
-          reject(new Error("Tempo esgotado aguardando autorização do Bling."));
-        }
+      }), m = setTimeout(() => {
+        c || (c = !0, l(d, m), i(new Error("Tempo esgotado aguardando autorização do Bling.")));
       }, 12e4);
-      server.listen(port, hostname, async () => {
+      d.listen(a, r, async () => {
         try {
-          await shell.openExternal(authorizeUrl.toString());
-        } catch (error) {
-          if (!finished) {
-            finished = true;
-            cleanup(server, timeout);
-            reject(
-              error instanceof Error ? error : new Error("Falha ao abrir navegador para autorização.")
-            );
-          }
+          await Wa.openExternal(o.toString());
+        } catch (E) {
+          c || (c = !0, l(d, m), i(
+            E instanceof Error ? E : new Error("Falha ao abrir navegador para autorização.")
+          ));
         }
-      });
-      server.on("error", (error) => {
-        if (!finished) {
-          finished = true;
-          cleanup(server, timeout);
-          reject(error instanceof Error ? error : new Error("Erro ao iniciar servidor local."));
-        }
+      }), d.on("error", (E) => {
+        c || (c = !0, l(d, m), i(E instanceof Error ? E : new Error("Erro ao iniciar servidor local.")));
       });
     });
   }
-  async exchangeCodeForToken(code) {
-    const clientId = getRequiredEnv("BLING_CLIENT_ID");
-    const clientSecret = getRequiredEnv("BLING_CLIENT_SECRET");
-    const redirectUri = getRequiredEnv("BLING_REDIRECT_URI");
-    const body = new URLSearchParams({
+  async exchangeCodeForToken(e) {
+    const r = fe("BLING_CLIENT_ID"), a = fe("BLING_CLIENT_SECRET"), n = fe("BLING_REDIRECT_URI"), o = new URLSearchParams({
       grant_type: "authorization_code",
-      code,
-      redirect_uri: redirectUri
-    });
-    const response = await fetch(BLING_TOKEN_URL, {
+      code: e,
+      redirect_uri: n
+    }), s = await fetch(Va, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${toBasicAuth(clientId, clientSecret)}`,
+        Authorization: `Basic ${Nr(r, a)}`,
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
         "enable-jwt": "1"
       },
-      body: body.toString()
-    });
-    const text = await response.text();
-    if (!response.ok) {
-      throw new Error(`Falha ao trocar code por token no Bling: ${response.status} - ${text}`);
-    }
-    const data = JSON.parse(text);
-    this.persistToken(data);
+      body: o.toString()
+    }), i = await s.text();
+    if (!s.ok)
+      throw new Error(`Falha ao trocar code por token no Bling: ${s.status} - ${i}`);
+    const c = JSON.parse(i);
+    this.persistToken(c);
   }
-  async refreshAccessToken(refreshToken) {
-    const clientId = getRequiredEnv("BLING_CLIENT_ID");
-    const clientSecret = getRequiredEnv("BLING_CLIENT_SECRET");
-    const body = new URLSearchParams({
+  async refreshAccessToken(e) {
+    const r = fe("BLING_CLIENT_ID"), a = fe("BLING_CLIENT_SECRET"), n = new URLSearchParams({
       grant_type: "refresh_token",
-      refresh_token: refreshToken
-    });
-    const response = await fetch(BLING_TOKEN_URL, {
+      refresh_token: e
+    }), o = await fetch(Va, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${toBasicAuth(clientId, clientSecret)}`,
+        Authorization: `Basic ${Nr(r, a)}`,
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
         "enable-jwt": "1"
       },
-      body: body.toString()
-    });
-    const text = await response.text();
-    if (!response.ok) {
-      throw new Error(`Falha ao renovar token do Bling: ${response.status} - ${text}`);
-    }
-    const data = JSON.parse(text);
-    this.persistToken(data);
+      body: n.toString()
+    }), s = await o.text();
+    if (!o.ok)
+      throw new Error(`Falha ao renovar token do Bling: ${o.status} - ${s}`);
+    const i = JSON.parse(s);
+    this.persistToken(i);
   }
-  persistToken(data) {
-    const expiresAt = new Date(Date.now() + data.expires_in * 1e3).toISOString();
-    const payload = {
+  persistToken(e) {
+    const r = new Date(Date.now() + e.expires_in * 1e3).toISOString(), a = {
       integrationId: "bling",
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      tokenType: data.token_type,
-      expiresAt,
-      scope: data.scope ?? null,
-      raw: data,
+      accessToken: e.access_token,
+      refreshToken: e.refresh_token,
+      tokenType: e.token_type,
+      expiresAt: r,
+      scope: e.scope ?? null,
+      raw: e,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    integrationRepository.save(payload);
+    Be.save(a);
   }
 }
-const blingOAuthService = new BlingOAuthService();
-const BLING_API_BASE_URL = "https://api.bling.com.br/Api/v3";
-class BlingApiService {
+const $t = new ld(), Ed = "https://api.bling.com.br/Api/v3";
+class md {
   /**
    * Método genérico GET para a API da Bling.
    *
    * Permite passar query params dinamicamente.
    */
-  async get(path2, params) {
-    const accessToken = await blingOAuthService.getValidAccessToken();
-    const url = new URL(`${BLING_API_BASE_URL}${path2}`);
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== void 0 && value !== null) {
-          url.searchParams.append(key, String(value));
-        }
-      });
-    }
-    const response = await fetch(url.toString(), {
+  async get(e, r) {
+    const a = await $t.getValidAccessToken(), n = new URL(`${Ed}${e}`);
+    r && Object.entries(r).forEach(([i, c]) => {
+      c != null && n.searchParams.append(i, String(c));
+    });
+    const o = await fetch(n.toString(), {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${a}`,
         Accept: "application/json",
         "enable-jwt": "1"
       }
-    });
-    const text = await response.text();
-    if (!response.ok) {
-      throw new Error(`Erro na API do Bling: ${response.status} - ${text}`);
-    }
-    return JSON.parse(text);
+    }), s = await o.text();
+    if (!o.ok)
+      throw new Error(`Erro na API do Bling: ${o.status} - ${s}`);
+    return JSON.parse(s);
   }
   /**
    * Endpoint simples de teste da API.
@@ -14224,58 +12061,56 @@ class BlingApiService {
    * - page: número da página
    * - limit: quantidade de registros por página
    */
-  async getProducts(params) {
+  async getProducts(e) {
     return this.get("/produtos", {
-      pagina: (params == null ? void 0 : params.page) ?? 1,
-      limite: (params == null ? void 0 : params.limit) ?? 100,
-      criterio: params == null ? void 0 : params.criterio,
-      dataAlteracaoInicial: params == null ? void 0 : params.dataAlteracaoInicial
+      pagina: (e == null ? void 0 : e.page) ?? 1,
+      limite: (e == null ? void 0 : e.limit) ?? 100,
+      criterio: e == null ? void 0 : e.criterio,
+      dataAlteracaoInicial: e == null ? void 0 : e.dataAlteracaoInicial
     });
   }
-  async getProductById(id) {
-    return this.get(`/produtos/${id}`);
+  async getProductById(e) {
+    return this.get(`/produtos/${e}`);
   }
-  async getProductByCode(code) {
+  async getProductByCode(e) {
     return this.get("/produtos", {
-      codigos: code,
+      codigos: e,
       criterio: "5",
       limite: 10
     });
   }
-  async getCategories(params) {
+  async getCategories(e) {
     return this.get("/categorias/produtos", {
-      pagina: (params == null ? void 0 : params.page) ?? 1,
-      limite: (params == null ? void 0 : params.limit) ?? 100
+      pagina: (e == null ? void 0 : e.page) ?? 1,
+      limite: (e == null ? void 0 : e.limit) ?? 100
     });
   }
 }
-const blingApiService = new BlingApiService();
-function randomId() {
-  return crypto$1.randomUUID();
+const he = new md();
+function rr() {
+  return br.randomUUID();
 }
-function nowIso() {
+function ee() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
-function subtractMinutes(isoDate, minutes) {
-  const dt = new Date(isoDate);
-  dt.setMinutes(dt.getMinutes() - minutes);
-  return dt.toISOString();
+function za(t, e) {
+  const r = new Date(t);
+  return r.setMinutes(r.getMinutes() - e), r.toISOString();
 }
-class CategoryRepository {
-  countByIntegrationSource(integrationSource) {
-    const row = db.prepare(`
+class pd {
+  countByIntegrationSource(e) {
+    return u.prepare(`
       SELECT COUNT(*) as count FROM categories
       WHERE integration_source = ? AND deleted_at IS NULL
-    `).get(integrationSource);
-    return row.count;
+    `).get(e).count;
   }
-  upsert(category) {
-    if (!(category == null ? void 0 : category.externalId) || !(category == null ? void 0 : category.name)) {
-      console.warn("[CategoryRepository] Pulando categoria inválida:", category);
+  upsert(e) {
+    if (!(e != null && e.externalId) || !(e != null && e.name)) {
+      console.warn("[CategoryRepository] Pulando categoria inválida:", e);
       return;
     }
-    const now = nowIso();
-    db.prepare(`
+    const r = ee();
+    u.prepare(`
       INSERT INTO categories (
         id, external_id, integration_source, name, active,
         remote_updated_at, last_synced_at, sync_status,
@@ -14291,92 +12126,88 @@ class CategoryRepository {
         raw_json          = excluded.raw_json,
         updated_at        = excluded.updated_at
     `).run(
-      category.id ?? randomId(),
-      category.externalId,
-      category.integrationSource,
-      category.name,
-      category.active ?? 1,
-      category.remoteUpdatedAt ?? null,
-      category.lastSyncedAt,
-      category.syncStatus ?? "synced",
-      category.raw ? JSON.stringify(category.raw) : null,
-      category.createdAt ?? now,
-      category.updatedAt ?? now
+      e.id ?? rr(),
+      e.externalId,
+      e.integrationSource,
+      e.name,
+      e.active ?? 1,
+      e.remoteUpdatedAt ?? null,
+      e.lastSyncedAt,
+      e.syncStatus ?? "synced",
+      e.raw ? JSON.stringify(e.raw) : null,
+      e.createdAt ?? r,
+      e.updatedAt ?? r
     );
   }
-  upsertMany(categories) {
-    const run = db.transaction((items) => {
-      for (const item of items) this.upsert(item);
-    });
-    run(categories);
+  upsertMany(e) {
+    u.transaction((a) => {
+      for (const n of a) this.upsert(n);
+    })(e);
   }
-  getExternalIdsBySource(integrationSource, externalIds) {
-    if (externalIds.length === 0) return [];
-    const placeholders = externalIds.map(() => "?").join(",");
-    const rows = db.prepare(`
+  getExternalIdsBySource(e, r) {
+    if (r.length === 0) return [];
+    const a = r.map(() => "?").join(",");
+    return u.prepare(`
       SELECT external_id FROM categories
-      WHERE integration_source = ? AND external_id IN (${placeholders})
-    `).all(integrationSource, ...externalIds);
-    return rows.map((r) => r.external_id);
+      WHERE integration_source = ? AND external_id IN (${a})
+    `).all(e, ...r).map((o) => o.external_id);
   }
   /**
    * Retorna um Map de externalId -> localId para todas as categorias de uma fonte.
    * Usado pelo sync de produtos para linkar category_id sem fazer N queries.
    */
-  getAllExternalIdMap(integrationSource) {
-    const rows = db.prepare(`
+  getAllExternalIdMap(e) {
+    const r = u.prepare(`
       SELECT id, external_id FROM categories
       WHERE integration_source = ? AND deleted_at IS NULL
-    `).all(integrationSource);
-    return new Map(rows.map((r) => [r.external_id, r.id]));
+    `).all(e);
+    return new Map(r.map((a) => [a.external_id, a.id]));
   }
-  mapRow(row) {
-    let raw = null;
-    if (row.raw_json) {
+  mapRow(e) {
+    let r = null;
+    if (e.raw_json)
       try {
-        raw = JSON.parse(row.raw_json);
+        r = JSON.parse(e.raw_json);
       } catch {
-        raw = row.raw_json;
+        r = e.raw_json;
       }
-    }
     return {
-      id: row.id,
-      externalId: row.external_id,
-      integrationSource: row.integration_source,
-      name: row.name,
-      active: row.active,
-      remoteUpdatedAt: row.remote_updated_at,
-      lastSyncedAt: row.last_synced_at ?? "",
-      syncStatus: row.sync_status,
-      raw,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      id: e.id,
+      externalId: e.external_id,
+      integrationSource: e.integration_source,
+      name: e.name,
+      active: e.active,
+      remoteUpdatedAt: e.remote_updated_at,
+      lastSyncedAt: e.last_synced_at ?? "",
+      syncStatus: e.sync_status,
+      raw: r,
+      createdAt: e.created_at,
+      updatedAt: e.updated_at
     };
   }
 }
-const categoryRepository = new CategoryRepository();
-class SyncStateRepository {
-  get(integrationId, resource) {
-    const row = db.prepare(`
+const kt = new pd();
+class _d {
+  get(e, r) {
+    const a = u.prepare(`
       SELECT * FROM sync_states
       WHERE integration_id = ? AND resource = ?
       LIMIT 1
-    `).get(integrationId, resource);
-    if (!row) return null;
-    return {
-      integrationId: row.integration_id,
-      resource: row.resource,
-      lastSyncAt: row.last_sync_at,
-      lastSuccessAt: row.last_success_at,
-      checkpointCursor: row.checkpoint_cursor,
-      status: row.status,
-      errorMessage: row.error_message,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
+    `).get(e, r);
+    return a ? {
+      integrationId: a.integration_id,
+      resource: a.resource,
+      lastSyncAt: a.last_sync_at,
+      lastSuccessAt: a.last_success_at,
+      checkpointCursor: a.checkpoint_cursor,
+      status: a.status,
+      errorMessage: a.error_message,
+      createdAt: a.created_at,
+      updatedAt: a.updated_at
+    } : null;
   }
-  save(state) {
-    db.prepare(`
+  save(e) {
+    u.prepare(`
       INSERT INTO sync_states (
         id, integration_id, resource, last_sync_at, last_success_at,
         checkpoint_cursor, status, error_message, created_at, updated_at
@@ -14390,78 +12221,74 @@ class SyncStateRepository {
         error_message     = excluded.error_message,
         updated_at        = excluded.updated_at
     `).run(
-      randomId(),
-      state.integrationId,
-      state.resource,
-      state.lastSyncAt ?? null,
-      state.lastSuccessAt ?? null,
-      state.checkpointCursor ?? null,
-      state.status,
-      state.errorMessage ?? null,
-      state.createdAt,
-      state.updatedAt
+      rr(),
+      e.integrationId,
+      e.resource,
+      e.lastSyncAt ?? null,
+      e.lastSuccessAt ?? null,
+      e.checkpointCursor ?? null,
+      e.status,
+      e.errorMessage ?? null,
+      e.createdAt,
+      e.updatedAt
     );
   }
-  markRunning(integrationId, resource) {
-    const now = nowIso();
-    const current = this.get(integrationId, resource);
+  markRunning(e, r) {
+    const a = ee(), n = this.get(e, r);
     this.save({
-      integrationId,
-      resource,
-      lastSyncAt: now,
-      lastSuccessAt: (current == null ? void 0 : current.lastSuccessAt) ?? null,
-      checkpointCursor: (current == null ? void 0 : current.checkpointCursor) ?? null,
+      integrationId: e,
+      resource: r,
+      lastSyncAt: a,
+      lastSuccessAt: (n == null ? void 0 : n.lastSuccessAt) ?? null,
+      checkpointCursor: (n == null ? void 0 : n.checkpointCursor) ?? null,
       status: "running",
       errorMessage: null,
-      createdAt: (current == null ? void 0 : current.createdAt) ?? now,
-      updatedAt: now
+      createdAt: (n == null ? void 0 : n.createdAt) ?? a,
+      updatedAt: a
     });
   }
-  markSuccess(integrationId, resource, checkpointCursor) {
-    const now = nowIso();
-    const current = this.get(integrationId, resource);
+  markSuccess(e, r, a) {
+    const n = ee(), o = this.get(e, r);
     this.save({
-      integrationId,
-      resource,
-      lastSyncAt: now,
-      lastSuccessAt: now,
-      checkpointCursor: checkpointCursor ?? (current == null ? void 0 : current.checkpointCursor) ?? null,
+      integrationId: e,
+      resource: r,
+      lastSyncAt: n,
+      lastSuccessAt: n,
+      checkpointCursor: a ?? (o == null ? void 0 : o.checkpointCursor) ?? null,
       status: "success",
       errorMessage: null,
-      createdAt: (current == null ? void 0 : current.createdAt) ?? now,
-      updatedAt: now
+      createdAt: (o == null ? void 0 : o.createdAt) ?? n,
+      updatedAt: n
     });
   }
-  markError(integrationId, resource, errorMessage) {
-    const now = nowIso();
-    const current = this.get(integrationId, resource);
+  markError(e, r, a) {
+    const n = ee(), o = this.get(e, r);
     this.save({
-      integrationId,
-      resource,
-      lastSyncAt: (current == null ? void 0 : current.lastSyncAt) ?? null,
-      lastSuccessAt: (current == null ? void 0 : current.lastSuccessAt) ?? null,
-      checkpointCursor: (current == null ? void 0 : current.checkpointCursor) ?? null,
+      integrationId: e,
+      resource: r,
+      lastSyncAt: (o == null ? void 0 : o.lastSyncAt) ?? null,
+      lastSuccessAt: (o == null ? void 0 : o.lastSuccessAt) ?? null,
+      checkpointCursor: (o == null ? void 0 : o.checkpointCursor) ?? null,
       status: "error",
-      errorMessage,
-      createdAt: (current == null ? void 0 : current.createdAt) ?? now,
-      updatedAt: now
+      errorMessage: a,
+      createdAt: (o == null ? void 0 : o.createdAt) ?? n,
+      updatedAt: n
     });
   }
 }
-const syncStateRepository = new SyncStateRepository();
-class SyncLogRepository {
-  start(params) {
-    const id = randomId();
-    db.prepare(`
+const le = new _d();
+class Td {
+  start(e) {
+    const r = rr();
+    return u.prepare(`
       INSERT INTO sync_logs (
         id, integration_id, resource, mode, status,
         started_at, items_processed, items_created, items_updated, items_failed
       ) VALUES (?, ?, ?, ?, 'running', ?, 0, 0, 0, 0)
-    `).run(id, params.integrationId, params.resource, params.mode, params.startedAt);
-    return id;
+    `).run(r, e.integrationId, e.resource, e.mode, e.startedAt), r;
   }
-  finish(params) {
-    db.prepare(`
+  finish(e) {
+    u.prepare(`
       UPDATE sync_logs SET
         status          = ?,
         finished_at     = ?,
@@ -14472,178 +12299,134 @@ class SyncLogRepository {
         error_message   = ?
       WHERE id = ?
     `).run(
-      params.status,
-      params.finishedAt,
-      params.itemsProcessed,
-      params.itemsCreated,
-      params.itemsUpdated,
-      params.itemsFailed,
-      params.errorMessage ?? null,
-      params.id
+      e.status,
+      e.finishedAt,
+      e.itemsProcessed,
+      e.itemsCreated,
+      e.itemsUpdated,
+      e.itemsFailed,
+      e.errorMessage ?? null,
+      e.id
     );
   }
-  listByIntegration(integrationId, resource, limit = 20) {
-    const rows = db.prepare(`
+  listByIntegration(e, r, a = 20) {
+    return u.prepare(`
       SELECT * FROM sync_logs
       WHERE integration_id = ? AND resource = ?
       ORDER BY started_at DESC
       LIMIT ?
-    `).all(integrationId, resource, limit);
-    return rows.map((row) => ({
-      id: row.id,
-      integrationId: row.integration_id,
-      resource: row.resource,
-      mode: row.mode,
-      status: row.status,
-      startedAt: row.started_at,
-      finishedAt: row.finished_at,
-      itemsProcessed: row.items_processed,
-      itemsCreated: row.items_created,
-      itemsUpdated: row.items_updated,
-      itemsFailed: row.items_failed,
-      errorMessage: row.error_message
+    `).all(e, r, a).map((o) => ({
+      id: o.id,
+      integrationId: o.integration_id,
+      resource: o.resource,
+      mode: o.mode,
+      status: o.status,
+      startedAt: o.started_at,
+      finishedAt: o.finished_at,
+      itemsProcessed: o.items_processed,
+      itemsCreated: o.items_created,
+      itemsUpdated: o.items_updated,
+      itemsFailed: o.items_failed,
+      errorMessage: o.error_message
     }));
   }
 }
-const syncLogRepository = new SyncLogRepository();
-async function sleep(ms) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
+const be = new Td();
+async function yr(t) {
+  await new Promise((e) => setTimeout(e, t));
 }
-const INTEGRATION_ID$1 = "bling";
-const RESOURCE$1 = "categories";
-const PAGE_LIMIT$1 = 100;
-function getCategoryName(category) {
-  const candidates = [
-    category.nome,
-    category.descricao,
-    category.description
+const ye = "bling", gt = "categories", ja = 100;
+function fd(t) {
+  const e = [
+    t.nome,
+    t.descricao,
+    t.description
   ];
-  for (const value of candidates) {
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
+  for (const r of e)
+    if (typeof r == "string" && r.trim())
+      return r.trim();
   return null;
 }
-function mapBlingCategory(category, now) {
-  if (category == null) return null;
-  if (!category.id) return null;
-  const name = getCategoryName(category);
-  if (!name) return null;
-  return {
-    externalId: String(category.id),
-    integrationSource: INTEGRATION_ID$1,
-    name,
+function Nd(t, e) {
+  if (t == null || !t.id) return null;
+  const r = fd(t);
+  return r ? {
+    externalId: String(t.id),
+    integrationSource: ye,
+    name: r,
     active: 1,
-    lastSyncedAt: now,
+    lastSyncedAt: e,
     syncStatus: "synced",
-    raw: category,
-    updatedAt: now
-  };
+    raw: t,
+    updatedAt: e
+  } : null;
 }
-class SyncCategoriesFromBlingService {
+class gd {
   async execute() {
-    const state = syncStateRepository.get(INTEGRATION_ID$1, RESOURCE$1);
-    const localCount = categoryRepository.countByIntegrationSource(INTEGRATION_ID$1);
-    const isInitial = !state || !state.lastSuccessAt || localCount === 0;
-    const mode = isInitial ? "initial" : "incremental";
-    syncStateRepository.markRunning(INTEGRATION_ID$1, RESOURCE$1);
-    const startedAt = nowIso();
-    const logId = syncLogRepository.start({
-      integrationId: INTEGRATION_ID$1,
-      resource: RESOURCE$1,
-      mode,
-      startedAt
+    const e = le.get(ye, gt), r = kt.countByIntegrationSource(ye), n = !e || !e.lastSuccessAt || r === 0 ? "initial" : "incremental";
+    le.markRunning(ye, gt);
+    const o = ee(), s = be.start({
+      integrationId: ye,
+      resource: gt,
+      mode: n,
+      startedAt: o
     });
-    let totalProcessed = 0;
-    let totalCreated = 0;
-    let totalUpdated = 0;
-    let totalFailed = 0;
+    let i = 0, c = 0, l = 0, d = 0;
     try {
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const response = await blingApiService.getCategories({ page, limit: PAGE_LIMIT$1 });
-        const rawItems = Array.isArray(response.data) ? response.data : [];
-        const validRaw = rawItems.filter((c) => c != null);
-        const nullsInResponse = rawItems.length - validRaw.length;
-        totalFailed += nullsInResponse;
-        if (validRaw.length === 0 && page === 1) {
-          hasMore = false;
+      let m = 1, E = !0;
+      for (; E; ) {
+        const A = await he.getCategories({ page: m, limit: ja }), N = Array.isArray(A.data) ? A.data : [], C = N.filter((G) => G != null), O = N.length - C.length;
+        if (d += O, C.length === 0 && m === 1) {
+          E = !1;
           break;
         }
-        const now = nowIso();
-        const allMapped = validRaw.map((c) => mapBlingCategory(c, now));
-        const mapped = allMapped.filter((c) => c != null);
-        totalFailed += allMapped.length - mapped.length;
-        totalProcessed += rawItems.length;
-        if (rawItems.length > 0 && mapped.length === 0) {
-          console.warn("[SyncCategoriesFromBlingService] Nenhuma categoria válida mapeada. Exemplo de payload:", rawItems[0]);
-        }
-        if (mapped.length > 0) {
-          const externalIds = mapped.map((c) => c.externalId);
-          const existingIds = new Set(
-            categoryRepository.getExternalIdsBySource(INTEGRATION_ID$1, externalIds)
+        const J = ee(), b = C.map((G) => Nd(G, J)), F = b.filter((G) => G != null);
+        if (d += b.length - F.length, i += N.length, N.length > 0 && F.length === 0 && console.warn("[SyncCategoriesFromBlingService] Nenhuma categoria válida mapeada. Exemplo de payload:", N[0]), F.length > 0) {
+          const G = F.map((te) => te.externalId), Ve = new Set(
+            kt.getExternalIdsBySource(ye, G)
           );
-          for (const c of mapped) {
-            if (existingIds.has(c.externalId)) {
-              totalUpdated++;
-            } else {
-              totalCreated++;
-            }
-          }
-          categoryRepository.upsertMany(mapped);
+          for (const te of F)
+            Ve.has(te.externalId) ? l++ : c++;
+          kt.upsertMany(F);
         }
-        if (rawItems.length < PAGE_LIMIT$1) {
-          hasMore = false;
-        } else {
-          page++;
-          await sleep(350);
-        }
+        N.length < ja ? E = !1 : (m++, await yr(350));
       }
-      const finishedAt = nowIso();
-      syncStateRepository.markSuccess(INTEGRATION_ID$1, RESOURCE$1);
-      syncLogRepository.finish({
-        id: logId,
+      const _ = ee();
+      return le.markSuccess(ye, gt), be.finish({
+        id: s,
         status: "success",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed
-      });
-      return { mode, processed: totalProcessed, created: totalCreated, updated: totalUpdated, failed: totalFailed };
-    } catch (error) {
-      const finishedAt = nowIso();
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      syncStateRepository.markError(INTEGRATION_ID$1, RESOURCE$1, errorMessage);
-      syncLogRepository.finish({
-        id: logId,
+        finishedAt: _,
+        itemsProcessed: i,
+        itemsCreated: c,
+        itemsUpdated: l,
+        itemsFailed: d
+      }), { mode: n, processed: i, created: c, updated: l, failed: d };
+    } catch (m) {
+      const E = ee(), _ = m instanceof Error ? m.message : String(m);
+      throw le.markError(ye, gt, _), be.finish({
+        id: s,
         status: "failed",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed,
-        errorMessage
-      });
-      throw error;
+        finishedAt: E,
+        itemsProcessed: i,
+        itemsCreated: c,
+        itemsUpdated: l,
+        itemsFailed: d,
+        errorMessage: _
+      }), m;
     }
   }
 }
-const syncCategoriesFromBlingService = new SyncCategoriesFromBlingService();
-class ProductRepository {
-  countByIntegrationSource(integrationSource) {
-    const row = db.prepare(`
+const no = new gd();
+class Ad {
+  countByIntegrationSource(e) {
+    return u.prepare(`
       SELECT COUNT(*) as count FROM products
       WHERE integration_source = ? AND deleted_at IS NULL
-    `).get(integrationSource);
-    return row.count;
+    `).get(e).count;
   }
-  upsert(product) {
-    const now = nowIso();
-    const localId = product.id ?? randomId();
-    db.prepare(`
+  upsert(e) {
+    const r = ee(), a = e.id ?? rr();
+    u.prepare(`
       INSERT INTO products (
         id, external_id, integration_source, sku, barcode, category_id,
         name, unit, sale_price_cents, cost_price_cents, current_stock, minimum_stock,
@@ -14731,79 +12514,78 @@ class ProductRepository {
         raw_json          = excluded.raw_json,
         updated_at        = excluded.updated_at
     `).run(
-      localId,
-      product.externalId,
-      product.integrationSource,
-      product.sku ?? null,
-      product.barcode ?? null,
-      product.categoryId ?? null,
-      product.name,
-      product.unit ?? null,
-      product.salePriceCents,
-      product.costPriceCents,
-      product.currentStock ?? 0,
-      product.minimumStock ?? 0,
-      product.ncm ?? null,
-      product.cfop ?? null,
-      product.origin ?? null,
-      product.fixedIpiValueCents ?? null,
-      product.notes ?? null,
-      product.situation ?? null,
-      product.supplierCode ?? null,
-      product.supplierName ?? null,
-      product.location ?? null,
-      product.maximumStock ?? null,
-      product.netWeightKg ?? null,
-      product.grossWeightKg ?? null,
-      product.packagingBarcode ?? null,
-      product.widthCm ?? null,
-      product.heightCm ?? null,
-      product.depthCm ?? null,
-      product.expirationDate ?? null,
-      product.supplierProductDescription ?? null,
-      product.complementaryDescription ?? null,
-      product.itemsPerBox ?? null,
-      product.isVariation ?? null,
-      product.productionType ?? null,
-      product.ipiTaxClass ?? null,
-      product.serviceListCode ?? null,
-      product.itemType ?? null,
-      product.tagsGroup ?? null,
-      product.tags ?? null,
-      product.taxesJson ?? null,
-      product.parentCode ?? null,
-      product.integrationCode ?? null,
-      product.productGroup ?? null,
-      product.brand ?? null,
-      product.cest ?? null,
-      product.volumes ?? null,
-      product.shortDescription ?? null,
-      product.crossDockingDays ?? null,
-      product.externalImageUrls ?? null,
-      product.externalLink ?? null,
-      product.supplierWarrantyMonths ?? null,
-      product.cloneParentData ?? null,
-      product.productCondition ?? null,
-      product.freeShipping ?? null,
-      product.fciNumber ?? null,
-      product.department ?? null,
-      product.measurementUnit ?? null,
-      product.purchasePriceCents ?? null,
-      product.icmsStRetentionBaseCents ?? null,
-      product.icmsStRetentionValueCents ?? null,
-      product.icmsSubstituteOwnValueCents ?? null,
-      product.productCategoryName ?? null,
-      product.additionalInfo ?? null,
-      product.active,
-      product.remoteCreatedAt ?? null,
-      product.remoteUpdatedAt ?? null,
-      product.lastSyncedAt,
-      product.syncStatus ?? "synced",
-      product.raw ? JSON.stringify(product.raw) : null,
-      product.createdAt ?? now,
-      product.updatedAt ?? now
-    );
-    db.prepare(`
+      a,
+      e.externalId,
+      e.integrationSource,
+      e.sku ?? null,
+      e.barcode ?? null,
+      e.categoryId ?? null,
+      e.name,
+      e.unit ?? null,
+      e.salePriceCents,
+      e.costPriceCents,
+      e.currentStock ?? 0,
+      e.minimumStock ?? 0,
+      e.ncm ?? null,
+      e.cfop ?? null,
+      e.origin ?? null,
+      e.fixedIpiValueCents ?? null,
+      e.notes ?? null,
+      e.situation ?? null,
+      e.supplierCode ?? null,
+      e.supplierName ?? null,
+      e.location ?? null,
+      e.maximumStock ?? null,
+      e.netWeightKg ?? null,
+      e.grossWeightKg ?? null,
+      e.packagingBarcode ?? null,
+      e.widthCm ?? null,
+      e.heightCm ?? null,
+      e.depthCm ?? null,
+      e.expirationDate ?? null,
+      e.supplierProductDescription ?? null,
+      e.complementaryDescription ?? null,
+      e.itemsPerBox ?? null,
+      e.isVariation ?? null,
+      e.productionType ?? null,
+      e.ipiTaxClass ?? null,
+      e.serviceListCode ?? null,
+      e.itemType ?? null,
+      e.tagsGroup ?? null,
+      e.tags ?? null,
+      e.taxesJson ?? null,
+      e.parentCode ?? null,
+      e.integrationCode ?? null,
+      e.productGroup ?? null,
+      e.brand ?? null,
+      e.cest ?? null,
+      e.volumes ?? null,
+      e.shortDescription ?? null,
+      e.crossDockingDays ?? null,
+      e.externalImageUrls ?? null,
+      e.externalLink ?? null,
+      e.supplierWarrantyMonths ?? null,
+      e.cloneParentData ?? null,
+      e.productCondition ?? null,
+      e.freeShipping ?? null,
+      e.fciNumber ?? null,
+      e.department ?? null,
+      e.measurementUnit ?? null,
+      e.purchasePriceCents ?? null,
+      e.icmsStRetentionBaseCents ?? null,
+      e.icmsStRetentionValueCents ?? null,
+      e.icmsSubstituteOwnValueCents ?? null,
+      e.productCategoryName ?? null,
+      e.additionalInfo ?? null,
+      e.active,
+      e.remoteCreatedAt ?? null,
+      e.remoteUpdatedAt ?? null,
+      e.lastSyncedAt,
+      e.syncStatus ?? "synced",
+      e.raw ? JSON.stringify(e.raw) : null,
+      e.createdAt ?? r,
+      e.updatedAt ?? r
+    ), u.prepare(`
       INSERT INTO produtos (
         id, internal_code, gtin, nome, marca, preco_custo, preco_venda,
         estoque_atual, estoque_minimo, unidade_medida, ncm, ativo, created_at, updated_at
@@ -14823,368 +12605,343 @@ class ProductRepository {
         ativo = excluded.ativo,
         updated_at = excluded.updated_at
     `).run(
-      localId,
-      product.sku ?? null,
-      product.barcode ?? null,
-      product.name,
-      product.brand ?? null,
-      product.costPriceCents / 100,
-      product.salePriceCents / 100,
-      product.currentStock ?? 0,
-      product.minimumStock ?? 0,
-      product.measurementUnit ?? product.unit ?? null,
-      product.ncm ?? null,
-      product.active,
-      product.createdAt ?? now,
-      product.updatedAt ?? now
+      a,
+      e.sku ?? null,
+      e.barcode ?? null,
+      e.name,
+      e.brand ?? null,
+      e.costPriceCents / 100,
+      e.salePriceCents / 100,
+      e.currentStock ?? 0,
+      e.minimumStock ?? 0,
+      e.measurementUnit ?? e.unit ?? null,
+      e.ncm ?? null,
+      e.active,
+      e.createdAt ?? r,
+      e.updatedAt ?? r
     );
   }
-  upsertMany(products) {
-    const run = db.transaction((items) => {
-      for (const item of items) this.upsert(item);
-    });
-    run(products);
+  upsertMany(e) {
+    u.transaction((a) => {
+      for (const n of a) this.upsert(n);
+    })(e);
   }
-  getExternalIdsBySource(integrationSource, externalIds) {
-    if (externalIds.length === 0) return [];
-    const placeholders = externalIds.map(() => "?").join(",");
-    const rows = db.prepare(`
+  getExternalIdsBySource(e, r) {
+    if (r.length === 0) return [];
+    const a = r.map(() => "?").join(",");
+    return u.prepare(`
       SELECT external_id FROM products
-      WHERE integration_source = ? AND external_id IN (${placeholders})
-    `).all(integrationSource, ...externalIds);
-    return rows.map((r) => r.external_id);
+      WHERE integration_source = ? AND external_id IN (${a})
+    `).all(e, ...r).map((o) => o.external_id);
   }
-  getByExternalId(integrationSource, externalId) {
-    const row = db.prepare(`
+  getByExternalId(e, r) {
+    const a = u.prepare(`
       SELECT * FROM products
       WHERE integration_source = ? AND external_id = ?
       LIMIT 1
-    `).get(integrationSource, externalId);
-    return row ? this.mapRow(row) : null;
+    `).get(e, r);
+    return a ? this.mapRow(a) : null;
   }
-  listByIntegrationSource(integrationSource) {
-    const rows = db.prepare(`
+  listByIntegrationSource(e) {
+    return u.prepare(`
       SELECT * FROM products
       WHERE integration_source = ? AND deleted_at IS NULL
       ORDER BY name ASC
-    `).all(integrationSource);
-    return rows.map((row) => this.mapRow(row));
+    `).all(e).map((a) => this.mapRow(a));
   }
-  mapRow(row) {
-    let raw = null;
-    if (row.raw_json) {
+  mapRow(e) {
+    let r = null;
+    if (e.raw_json)
       try {
-        raw = JSON.parse(row.raw_json);
+        r = JSON.parse(e.raw_json);
       } catch {
-        raw = row.raw_json;
+        r = e.raw_json;
       }
-    }
     return {
-      id: row.id,
-      externalId: row.external_id,
-      integrationSource: row.integration_source,
-      sku: row.sku,
-      barcode: row.barcode,
-      categoryId: row.category_id,
-      name: row.name,
-      unit: row.unit,
-      salePriceCents: row.sale_price_cents,
-      costPriceCents: row.cost_price_cents,
-      currentStock: row.current_stock,
-      minimumStock: row.minimum_stock,
-      ncm: row.ncm,
-      cfop: row.cfop,
-      origin: row.origin,
-      fixedIpiValueCents: row.fixed_ipi_value_cents,
-      notes: row.notes,
-      situation: row.situation,
-      supplierCode: row.supplier_code,
-      supplierName: row.supplier_name,
-      location: row.location,
-      maximumStock: row.maximum_stock,
-      netWeightKg: row.net_weight_kg,
-      grossWeightKg: row.gross_weight_kg,
-      packagingBarcode: row.packaging_barcode,
-      widthCm: row.width_cm,
-      heightCm: row.height_cm,
-      depthCm: row.depth_cm,
-      expirationDate: row.expiration_date,
-      supplierProductDescription: row.supplier_product_description,
-      complementaryDescription: row.complementary_description,
-      itemsPerBox: row.items_per_box,
-      isVariation: row.is_variation,
-      productionType: row.production_type,
-      ipiTaxClass: row.ipi_tax_class,
-      serviceListCode: row.service_list_code,
-      itemType: row.item_type,
-      tagsGroup: row.tags_group,
-      tags: row.tags,
-      taxesJson: row.taxes_json,
-      parentCode: row.parent_code,
-      integrationCode: row.integration_code,
-      productGroup: row.product_group,
-      brand: row.brand,
-      cest: row.cest,
-      volumes: row.volumes,
-      shortDescription: row.short_description,
-      crossDockingDays: row.cross_docking_days,
-      externalImageUrls: row.external_image_urls,
-      externalLink: row.external_link,
-      supplierWarrantyMonths: row.supplier_warranty_months,
-      cloneParentData: row.clone_parent_data,
-      productCondition: row.product_condition,
-      freeShipping: row.free_shipping,
-      fciNumber: row.fci_number,
-      department: row.department,
-      measurementUnit: row.measurement_unit,
-      purchasePriceCents: row.purchase_price_cents,
-      icmsStRetentionBaseCents: row.icms_st_retention_base_cents,
-      icmsStRetentionValueCents: row.icms_st_retention_value_cents,
-      icmsSubstituteOwnValueCents: row.icms_substitute_own_value_cents,
-      productCategoryName: row.product_category_name,
-      additionalInfo: row.additional_info,
-      active: row.active,
-      remoteCreatedAt: row.remote_created_at,
-      remoteUpdatedAt: row.remote_updated_at,
-      lastSyncedAt: row.last_synced_at ?? "",
-      syncStatus: row.sync_status,
-      raw,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      id: e.id,
+      externalId: e.external_id,
+      integrationSource: e.integration_source,
+      sku: e.sku,
+      barcode: e.barcode,
+      categoryId: e.category_id,
+      name: e.name,
+      unit: e.unit,
+      salePriceCents: e.sale_price_cents,
+      costPriceCents: e.cost_price_cents,
+      currentStock: e.current_stock,
+      minimumStock: e.minimum_stock,
+      ncm: e.ncm,
+      cfop: e.cfop,
+      origin: e.origin,
+      fixedIpiValueCents: e.fixed_ipi_value_cents,
+      notes: e.notes,
+      situation: e.situation,
+      supplierCode: e.supplier_code,
+      supplierName: e.supplier_name,
+      location: e.location,
+      maximumStock: e.maximum_stock,
+      netWeightKg: e.net_weight_kg,
+      grossWeightKg: e.gross_weight_kg,
+      packagingBarcode: e.packaging_barcode,
+      widthCm: e.width_cm,
+      heightCm: e.height_cm,
+      depthCm: e.depth_cm,
+      expirationDate: e.expiration_date,
+      supplierProductDescription: e.supplier_product_description,
+      complementaryDescription: e.complementary_description,
+      itemsPerBox: e.items_per_box,
+      isVariation: e.is_variation,
+      productionType: e.production_type,
+      ipiTaxClass: e.ipi_tax_class,
+      serviceListCode: e.service_list_code,
+      itemType: e.item_type,
+      tagsGroup: e.tags_group,
+      tags: e.tags,
+      taxesJson: e.taxes_json,
+      parentCode: e.parent_code,
+      integrationCode: e.integration_code,
+      productGroup: e.product_group,
+      brand: e.brand,
+      cest: e.cest,
+      volumes: e.volumes,
+      shortDescription: e.short_description,
+      crossDockingDays: e.cross_docking_days,
+      externalImageUrls: e.external_image_urls,
+      externalLink: e.external_link,
+      supplierWarrantyMonths: e.supplier_warranty_months,
+      cloneParentData: e.clone_parent_data,
+      productCondition: e.product_condition,
+      freeShipping: e.free_shipping,
+      fciNumber: e.fci_number,
+      department: e.department,
+      measurementUnit: e.measurement_unit,
+      purchasePriceCents: e.purchase_price_cents,
+      icmsStRetentionBaseCents: e.icms_st_retention_base_cents,
+      icmsStRetentionValueCents: e.icms_st_retention_value_cents,
+      icmsSubstituteOwnValueCents: e.icms_substitute_own_value_cents,
+      productCategoryName: e.product_category_name,
+      additionalInfo: e.additional_info,
+      active: e.active,
+      remoteCreatedAt: e.remote_created_at,
+      remoteUpdatedAt: e.remote_updated_at,
+      lastSyncedAt: e.last_synced_at ?? "",
+      syncStatus: e.sync_status,
+      raw: r,
+      createdAt: e.created_at,
+      updatedAt: e.updated_at
     };
   }
 }
-const productRepository = new ProductRepository();
-const INTEGRATION_ID = "bling";
-const RESOURCE = "products";
-const PAGE_LIMIT = 100;
-const PRODUCT_LIST_CRITERION = "5";
-function getNestedValue(source, path2) {
-  if (!source || typeof source !== "object") return void 0;
-  let current = source;
-  for (const key of path2.split(".")) {
-    if (!current || typeof current !== "object" || !(key in current)) return void 0;
-    current = current[key];
+const gr = new Ad(), Ae = "bling", At = "products", Ha = 100, hd = "5";
+function Id(t, e) {
+  if (!t || typeof t != "object") return;
+  let r = t;
+  for (const a of e.split(".")) {
+    if (!r || typeof r != "object" || !(a in r)) return;
+    r = r[a];
   }
-  return current;
+  return r;
 }
-function pickValue(source, paths) {
-  for (const path2 of paths) {
-    const value = getNestedValue(source, path2);
-    if (value !== void 0 && value !== null && value !== "") {
-      return value;
-    }
+function T(t, e) {
+  for (const r of e) {
+    const a = Id(t, r);
+    if (a != null && a !== "")
+      return a;
   }
-  return void 0;
 }
-function toNullableString(value) {
-  if (value === void 0 || value === null) return null;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
+function S(t) {
+  if (t == null) return null;
+  if (typeof t == "string") {
+    const e = t.trim();
+    return e || null;
   }
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return null;
+  return typeof t == "number" || typeof t == "boolean" ? String(t) : null;
 }
-function normalizeNcm(value) {
-  var _a;
-  const digits = ((_a = toNullableString(value)) == null ? void 0 : _a.replace(/\D/g, "")) ?? null;
-  return digits && digits.length > 0 ? digits : null;
+function Cd(t) {
+  var r;
+  const e = ((r = S(t)) == null ? void 0 : r.replace(/\D/g, "")) ?? null;
+  return e && e.length > 0 ? e : null;
 }
-function normalizeCest(value) {
-  var _a;
-  const digits = ((_a = toNullableString(value)) == null ? void 0 : _a.replace(/\D/g, "")) ?? null;
-  return digits && digits.length > 0 ? digits : null;
+function vd(t) {
+  var r;
+  const e = ((r = S(t)) == null ? void 0 : r.replace(/\D/g, "")) ?? null;
+  return e && e.length > 0 ? e : null;
 }
-function normalizeOrigin(value) {
-  if (typeof value === "number") {
-    return Number.isInteger(value) && value >= 0 && value <= 8 ? String(value) : null;
-  }
-  const text = toNullableString(value);
-  if (text === null) return null;
-  const match = text.match(/[0-8]/);
-  return (match == null ? void 0 : match[0]) ?? null;
+function Dd(t) {
+  if (typeof t == "number")
+    return Number.isInteger(t) && t >= 0 && t <= 8 ? String(t) : null;
+  const e = S(t);
+  if (e === null) return null;
+  const r = e.match(/[0-8]/);
+  return (r == null ? void 0 : r[0]) ?? null;
 }
-function toNullableNumber(value) {
-  if (value === void 0 || value === null || value === "") return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    const normalized = trimmed.includes(",") ? trimmed.replace(/\./g, "").replace(",", ".") : trimmed;
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : null;
+function ne(t) {
+  if (t == null || t === "") return null;
+  if (typeof t == "number") return Number.isFinite(t) ? t : null;
+  if (typeof t == "string") {
+    const e = t.trim(), r = e.includes(",") ? e.replace(/\./g, "").replace(",", ".") : e, a = Number(r);
+    return Number.isFinite(a) ? a : null;
   }
   return null;
 }
-function toMoneyCents(value) {
-  const parsed = toNullableNumber(value);
-  return parsed == null ? null : Math.round(parsed * 100);
+function Xe(t) {
+  const e = ne(t);
+  return e == null ? null : Math.round(e * 100);
 }
-function toNullableInteger(value) {
-  const parsed = toNullableNumber(value);
-  return parsed == null ? null : Math.round(parsed);
+function Ka(t) {
+  const e = ne(t);
+  return e == null ? null : Math.round(e);
 }
-function toNullableBooleanInt(value) {
-  if (value === void 0 || value === null || value === "") return null;
-  if (typeof value === "boolean") return value ? 1 : 0;
-  if (typeof value === "number") return value === 0 ? 0 : 1;
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (["1", "true", "t", "sim", "s", "y", "yes", "a", "ativo"].includes(normalized)) return 1;
-    if (["0", "false", "f", "nao", "não", "n", "no", "i", "inativo"].includes(normalized)) return 0;
+function Pt(t) {
+  if (t == null || t === "") return null;
+  if (typeof t == "boolean") return t ? 1 : 0;
+  if (typeof t == "number") return t === 0 ? 0 : 1;
+  if (typeof t == "string") {
+    const e = t.trim().toLowerCase();
+    if (["1", "true", "t", "sim", "s", "y", "yes", "a", "ativo"].includes(e)) return 1;
+    if (["0", "false", "f", "nao", "não", "n", "no", "i", "inativo"].includes(e)) return 0;
   }
   return null;
 }
-function serializeStructuredValue(value) {
-  if (value === void 0 || value === null || value === "") return null;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
+function Bt(t) {
+  if (t == null || t === "") return null;
+  if (typeof t == "string") {
+    const e = t.trim();
+    return e || null;
   }
   try {
-    return JSON.stringify(value);
+    return JSON.stringify(t);
   } catch {
     return null;
   }
 }
-function resolveCategoryExternalId(product) {
-  const categoryId = pickValue(product, [
+function Sd(t) {
+  const e = T(t, [
     "categoria.id",
     "categoriaProduto.id",
     "categoriaProdutoId"
   ]);
-  return toNullableString(categoryId);
+  return S(e);
 }
-function toBlingDateTime(value) {
-  return value.replace("T", " ").slice(0, 19);
+function oo(t) {
+  return t.replace("T", " ").slice(0, 19);
 }
-function getIncrementalCursor(state) {
-  const baseCursor = (state == null ? void 0 : state.checkpointCursor) ?? (state == null ? void 0 : state.lastSuccessAt);
-  if (!baseCursor) return void 0;
-  const cursorDate = baseCursor.includes("T") ? subtractMinutes(baseCursor, 2) : subtractMinutes(baseCursor.replace(" ", "T") + "Z", 2);
-  return toBlingDateTime(cursorDate);
+function Rd(t) {
+  const e = (t == null ? void 0 : t.checkpointCursor) ?? (t == null ? void 0 : t.lastSuccessAt);
+  if (!e) return;
+  const r = e.includes("T") ? za(e, 2) : za(e.replace(" ", "T") + "Z", 2);
+  return oo(r);
 }
-function mapBlingProduct(product, now, categoryIdMap) {
-  const categoryExternalId = resolveCategoryExternalId(product);
-  const salePriceCents = toMoneyCents(pickValue(product, ["preco"])) ?? 0;
-  const costPriceCents = toMoneyCents(pickValue(product, ["precoCusto"])) ?? 0;
-  const purchasePriceCents = toMoneyCents(pickValue(product, ["precoCompra", "precoCusto"]));
-  const currentStock = toNullableNumber(pickValue(product, [
+function Ld(t, e, r) {
+  const a = Sd(t), n = Xe(T(t, ["preco"])) ?? 0, o = Xe(T(t, ["precoCusto"])) ?? 0, s = Xe(T(t, ["precoCompra", "precoCusto"])), i = ne(T(t, [
     "estoque.saldoVirtualTotal",
     "estoque.saldoFisicoTotal",
     "estoque"
-  ])) ?? 0;
-  const minimumStock = toNullableNumber(pickValue(product, [
+  ])) ?? 0, c = ne(T(t, [
     "estoque.minimo",
     "estoqueMinimo"
-  ])) ?? 0;
-  const activeFlag = toNullableBooleanInt(pickValue(product, ["situacao"])) ?? 0;
-  const supplierName = toNullableString(pickValue(product, [
+  ])) ?? 0, l = Pt(T(t, ["situacao"])) ?? 0, d = S(T(t, [
     "fornecedor.nome",
     "fornecedor"
-  ]));
-  const categoryName = toNullableString(pickValue(product, [
+  ])), m = S(T(t, [
     "categoria.nome",
     "categoriaProduto.nome",
     "categoriaProduto"
   ]));
   return {
     // Identificação do produto no Bling e origem da integração.
-    externalId: String(product.id),
-    integrationSource: INTEGRATION_ID,
+    externalId: String(t.id),
+    integrationSource: Ae,
     // Dados comerciais e de identificação. Campos ausentes viram null para manter padrão local.
-    sku: toNullableString(pickValue(product, ["codigo"])) ?? null,
-    barcode: toNullableString(pickValue(product, ["gtin", "codigo"])) ?? null,
-    categoryId: categoryExternalId ? categoryIdMap.get(categoryExternalId) ?? null : null,
-    name: product.nome,
-    unit: toNullableString(pickValue(product, ["unidade", "unidadeMedida"])) ?? null,
+    sku: S(T(t, ["codigo"])) ?? null,
+    barcode: S(T(t, ["gtin", "codigo"])) ?? null,
+    categoryId: a ? r.get(a) ?? null : null,
+    name: t.nome,
+    unit: S(T(t, ["unidade", "unidadeMedida"])) ?? null,
     // Valores monetários são armazenados em centavos para evitar problemas com ponto flutuante.
-    salePriceCents,
-    costPriceCents,
-    purchasePriceCents,
+    salePriceCents: n,
+    costPriceCents: o,
+    purchasePriceCents: s,
     // Estoque e limites locais.
-    currentStock,
-    minimumStock,
-    maximumStock: toNullableNumber(pickValue(product, [
+    currentStock: i,
+    minimumStock: c,
+    maximumStock: ne(T(t, [
       "estoque.maximo",
       "estoqueMaximo"
     ])),
     // Espelho ampliado do Bling.
-    ncm: normalizeNcm(pickValue(product, ["ncm", "tributacao.ncm", "tributos.ncm"])),
-    cfop: toNullableString(pickValue(product, ["cfop", "tributacao.cfop", "tributos.cfop", "cfopPadrao"])),
-    origin: normalizeOrigin(pickValue(product, ["origem", "tributacao.origem", "tributos.origem"])),
-    fixedIpiValueCents: toMoneyCents(pickValue(product, ["valorIpiFixo"])),
-    notes: toNullableString(pickValue(product, ["observacoes", "observacao"])),
-    situation: toNullableString(pickValue(product, ["situacao"])),
-    supplierCode: toNullableString(pickValue(product, ["codigoFornecedor"])),
-    supplierName,
-    location: toNullableString(pickValue(product, ["localizacao"])),
-    netWeightKg: toNullableNumber(pickValue(product, ["pesoLiquido"])),
-    grossWeightKg: toNullableNumber(pickValue(product, ["pesoBruto"])),
-    packagingBarcode: toNullableString(pickValue(product, ["gtinEmbalagem"])),
-    widthCm: toNullableNumber(pickValue(product, ["larguraProduto", "largura"])),
-    heightCm: toNullableNumber(pickValue(product, ["alturaProduto", "altura"])),
-    depthCm: toNullableNumber(pickValue(product, ["profundidadeProduto", "profundidade"])),
-    expirationDate: toNullableString(pickValue(product, ["dataValidade"])),
-    supplierProductDescription: toNullableString(pickValue(product, [
+    ncm: Cd(T(t, ["ncm", "tributacao.ncm", "tributos.ncm"])),
+    cfop: S(T(t, ["cfop", "tributacao.cfop", "tributos.cfop", "cfopPadrao"])),
+    origin: Dd(T(t, ["origem", "tributacao.origem", "tributos.origem"])),
+    fixedIpiValueCents: Xe(T(t, ["valorIpiFixo"])),
+    notes: S(T(t, ["observacoes", "observacao"])),
+    situation: S(T(t, ["situacao"])),
+    supplierCode: S(T(t, ["codigoFornecedor"])),
+    supplierName: d,
+    location: S(T(t, ["localizacao"])),
+    netWeightKg: ne(T(t, ["pesoLiquido"])),
+    grossWeightKg: ne(T(t, ["pesoBruto"])),
+    packagingBarcode: S(T(t, ["gtinEmbalagem"])),
+    widthCm: ne(T(t, ["larguraProduto", "largura"])),
+    heightCm: ne(T(t, ["alturaProduto", "altura"])),
+    depthCm: ne(T(t, ["profundidadeProduto", "profundidade"])),
+    expirationDate: S(T(t, ["dataValidade"])),
+    supplierProductDescription: S(T(t, [
       "descricaoFornecedor",
       "descricaoProdutoFornecedor"
     ])),
-    complementaryDescription: toNullableString(pickValue(product, ["descricaoComplementar"])),
-    itemsPerBox: toNullableNumber(pickValue(product, ["itensPorCaixa"])),
-    isVariation: toNullableBooleanInt(pickValue(product, ["produtoVariacao", "variacao"])),
-    productionType: toNullableString(pickValue(product, ["tipoProducao"])),
-    ipiTaxClass: toNullableString(pickValue(product, ["classeEnquadramentoIpi"])),
-    serviceListCode: toNullableString(pickValue(product, ["codigoListaServicos"])),
-    itemType: toNullableString(pickValue(product, ["tipoItem", "tipo"])),
-    tagsGroup: serializeStructuredValue(pickValue(product, ["grupoTags", "grupoDeTags"])),
-    tags: serializeStructuredValue(pickValue(product, ["tags"])),
-    taxesJson: serializeStructuredValue(pickValue(product, ["tributos"])),
-    parentCode: toNullableString(pickValue(product, ["codigoPai"])),
-    integrationCode: toNullableString(pickValue(product, ["codigoIntegracao"])),
-    productGroup: toNullableString(pickValue(product, ["grupoProdutos", "grupoProduto"])),
-    brand: toNullableString(pickValue(product, ["marca"])),
-    cest: normalizeCest(pickValue(product, ["cest", "tributacao.cest", "tributos.cest"])),
-    volumes: toNullableNumber(pickValue(product, ["volumes"])),
-    shortDescription: toNullableString(pickValue(product, ["descricaoCurta"])),
-    crossDockingDays: toNullableInteger(pickValue(product, ["crossDocking"])),
-    externalImageUrls: serializeStructuredValue(pickValue(product, ["urlImagensExternas", "imagensURL", "imagemURL"])),
-    externalLink: toNullableString(pickValue(product, ["linkExterno"])),
-    supplierWarrantyMonths: toNullableInteger(pickValue(product, ["mesesGarantiaFornecedor"])),
-    cloneParentData: toNullableBooleanInt(pickValue(product, ["clonarDadosPai"])),
-    productCondition: toNullableString(pickValue(product, ["condicaoProduto"])),
-    freeShipping: toNullableBooleanInt(pickValue(product, ["freteGratis"])),
-    fciNumber: toNullableString(pickValue(product, ["numeroFci", "numeroFCI"])),
-    department: toNullableString(pickValue(product, ["departamento"])),
-    measurementUnit: toNullableString(pickValue(product, ["unidadeMedida", "unidade"])),
-    icmsStRetentionBaseCents: toMoneyCents(pickValue(product, ["valorBaseIcmsStRetencao"])),
-    icmsStRetentionValueCents: toMoneyCents(pickValue(product, ["valorIcmsStRetencao"])),
-    icmsSubstituteOwnValueCents: toMoneyCents(pickValue(product, ["valorIcmsProprioSubstituto"])),
-    productCategoryName: categoryName,
-    additionalInfo: toNullableString(pickValue(product, ["informacoesAdicionais"])),
+    complementaryDescription: S(T(t, ["descricaoComplementar"])),
+    itemsPerBox: ne(T(t, ["itensPorCaixa"])),
+    isVariation: Pt(T(t, ["produtoVariacao", "variacao"])),
+    productionType: S(T(t, ["tipoProducao"])),
+    ipiTaxClass: S(T(t, ["classeEnquadramentoIpi"])),
+    serviceListCode: S(T(t, ["codigoListaServicos"])),
+    itemType: S(T(t, ["tipoItem", "tipo"])),
+    tagsGroup: Bt(T(t, ["grupoTags", "grupoDeTags"])),
+    tags: Bt(T(t, ["tags"])),
+    taxesJson: Bt(T(t, ["tributos"])),
+    parentCode: S(T(t, ["codigoPai"])),
+    integrationCode: S(T(t, ["codigoIntegracao"])),
+    productGroup: S(T(t, ["grupoProdutos", "grupoProduto"])),
+    brand: S(T(t, ["marca"])),
+    cest: vd(T(t, ["cest", "tributacao.cest", "tributos.cest"])),
+    volumes: ne(T(t, ["volumes"])),
+    shortDescription: S(T(t, ["descricaoCurta"])),
+    crossDockingDays: Ka(T(t, ["crossDocking"])),
+    externalImageUrls: Bt(T(t, ["urlImagensExternas", "imagensURL", "imagemURL"])),
+    externalLink: S(T(t, ["linkExterno"])),
+    supplierWarrantyMonths: Ka(T(t, ["mesesGarantiaFornecedor"])),
+    cloneParentData: Pt(T(t, ["clonarDadosPai"])),
+    productCondition: S(T(t, ["condicaoProduto"])),
+    freeShipping: Pt(T(t, ["freteGratis"])),
+    fciNumber: S(T(t, ["numeroFci", "numeroFCI"])),
+    department: S(T(t, ["departamento"])),
+    measurementUnit: S(T(t, ["unidadeMedida", "unidade"])),
+    icmsStRetentionBaseCents: Xe(T(t, ["valorBaseIcmsStRetencao"])),
+    icmsStRetentionValueCents: Xe(T(t, ["valorIcmsStRetencao"])),
+    icmsSubstituteOwnValueCents: Xe(T(t, ["valorIcmsProprioSubstituto"])),
+    productCategoryName: m,
+    additionalInfo: S(T(t, ["informacoesAdicionais"])),
     // No Bling, "A" representa produto ativo.
-    active: activeFlag,
+    active: l,
     // Datas e metadados de sincronização.
-    remoteCreatedAt: toNullableString(pickValue(product, ["dataCriacao"])),
-    remoteUpdatedAt: toNullableString(pickValue(product, ["dataAlteracao"])),
-    lastSyncedAt: now,
+    remoteCreatedAt: S(T(t, ["dataCriacao"])),
+    remoteUpdatedAt: S(T(t, ["dataAlteracao"])),
+    lastSyncedAt: e,
     syncStatus: "synced",
     // Guarda o payload original para auditoria/debug e futuras evoluções do mapeamento.
-    raw: product,
-    updatedAt: now
+    raw: t,
+    updatedAt: e
   };
 }
-function normalizeBlingProduct(item) {
-  if (!item || typeof item !== "object") return null;
-  const candidate = "produto" in item && item.produto && typeof item.produto === "object" ? item.produto : item;
-  if (!candidate || typeof candidate !== "object") return null;
-  const product = candidate;
-  if (!product.id || typeof product.nome !== "string" || !product.nome.trim()) {
-    return null;
-  }
-  return product;
+function Ya(t) {
+  if (!t || typeof t != "object") return null;
+  const e = "produto" in t && t.produto && typeof t.produto == "object" ? t.produto : t;
+  if (!e || typeof e != "object") return null;
+  const r = e;
+  return !r.id || typeof r.nome != "string" || !r.nome.trim() ? null : r;
 }
-class SyncProductsFromBlingService {
+class yd {
   /**
    * Executa a sincronização de produtos do Bling para o banco local.
    *
@@ -15196,352 +12953,208 @@ class SyncProductsFromBlingService {
    * 5. Atualiza estado e log de sincronização.
    */
   async execute() {
-    const state = syncStateRepository.get(INTEGRATION_ID, RESOURCE);
-    const localCount = productRepository.countByIntegrationSource(INTEGRATION_ID);
-    const isInitial = !state || !state.lastSuccessAt || localCount === 0;
-    const mode = isInitial ? "initial" : "incremental";
-    const dataAlteracaoInicial = isInitial ? void 0 : getIncrementalCursor(state);
-    syncStateRepository.markRunning(INTEGRATION_ID, RESOURCE);
-    const startedAt = nowIso();
-    const logId = syncLogRepository.start({
-      integrationId: INTEGRATION_ID,
-      resource: RESOURCE,
-      mode,
-      startedAt
+    const e = le.get(Ae, At), r = gr.countByIntegrationSource(Ae), a = !e || !e.lastSuccessAt || r === 0, n = a ? "initial" : "incremental", o = a ? void 0 : Rd(e);
+    le.markRunning(Ae, At);
+    const s = ee(), i = be.start({
+      integrationId: Ae,
+      resource: At,
+      mode: n,
+      startedAt: s
     });
-    let totalProcessed = 0;
-    let totalCreated = 0;
-    let totalUpdated = 0;
-    let totalFailed = 0;
-    let checkpointCursor = (state == null ? void 0 : state.checkpointCursor) ?? null;
+    let c = 0, l = 0, d = 0, m = 0, E = (e == null ? void 0 : e.checkpointCursor) ?? null;
     try {
-      const categoryIdMap = categoryRepository.getAllExternalIdMap(INTEGRATION_ID);
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const response = await blingApiService.getProducts({
-          page,
-          limit: PAGE_LIMIT,
-          criterio: PRODUCT_LIST_CRITERION,
-          dataAlteracaoInicial
-        });
-        const rawItems = Array.isArray(response.data) ? response.data : [];
-        const normalizedProducts = rawItems.map(normalizeBlingProduct);
-        const validRaw = normalizedProducts.filter((item) => item != null);
-        totalFailed += normalizedProducts.length - validRaw.length;
-        if (validRaw.length === 0) {
-          if (rawItems.length > 0) {
-            console.warn("[SyncProductsFromBlingService] Nenhum produto válido encontrado na página. Exemplo de payload:", rawItems[0]);
-          }
-          hasMore = false;
+      const _ = kt.getAllExternalIdMap(Ae);
+      let A = 1, N = !0;
+      for (; N; ) {
+        const O = await he.getProducts({
+          page: A,
+          limit: Ha,
+          criterio: hd,
+          dataAlteracaoInicial: o
+        }), J = Array.isArray(O.data) ? O.data : [], b = J.map(Ya), F = b.filter((h) => h != null);
+        if (m += b.length - F.length, F.length === 0) {
+          J.length > 0 && console.warn("[SyncProductsFromBlingService] Nenhum produto válido encontrado na página. Exemplo de payload:", J[0]), N = !1;
           break;
         }
-        const detailedProducts = [];
-        for (const product of validRaw) {
+        const G = [];
+        for (const h of F)
           try {
-            const detailResponse = await blingApiService.getProductById(product.id);
-            const detailed = normalizeBlingProduct(detailResponse.data) ?? product;
-            detailedProducts.push({ ...product, ...detailed });
-            await sleep(120);
-          } catch (detailError) {
-            console.warn(`[SyncProductsFromBlingService] Falha ao buscar detalhe do produto ${product.id}. Usando payload da listagem.`, detailError);
-            detailedProducts.push(product);
+            const ze = await he.getProductById(h.id), ar = Ya(ze.data) ?? h;
+            G.push({ ...h, ...ar }), await yr(120);
+          } catch (ze) {
+            console.warn(`[SyncProductsFromBlingService] Falha ao buscar detalhe do produto ${h.id}. Usando payload da listagem.`, ze), G.push(h);
           }
-        }
-        const now = nowIso();
-        const mapped = detailedProducts.map((product) => mapBlingProduct(product, now, categoryIdMap));
-        const missingFiscal = mapped.filter((product) => !product.ncm || !product.origin);
-        if (missingFiscal.length > 0) {
-          console.warn("[SyncProductsFromBlingService] Produtos sem NCM/origem apos detalhe do Bling:", missingFiscal.slice(0, 5).map((product) => ({
-            externalId: product.externalId,
-            sku: product.sku,
-            name: product.name,
-            ncm: product.ncm,
-            origin: product.origin,
-            rawKeys: product.raw && typeof product.raw === "object" ? Object.keys(product.raw) : [],
-            tributacao: product.raw && typeof product.raw === "object" ? product.raw.tributacao : void 0
-          })));
-        }
-        for (const product of mapped) {
-          if (product.remoteUpdatedAt && (!checkpointCursor || product.remoteUpdatedAt > checkpointCursor)) {
-            checkpointCursor = product.remoteUpdatedAt;
-          }
-        }
-        const externalIds = mapped.map((p) => p.externalId);
-        const existingIds = new Set(
-          productRepository.getExternalIdsBySource(INTEGRATION_ID, externalIds)
+        const Ve = ee(), te = G.map((h) => Ld(h, Ve, _)), dt = te.filter((h) => !h.ncm || !h.origin);
+        dt.length > 0 && console.warn("[SyncProductsFromBlingService] Produtos sem NCM/origem apos detalhe do Bling:", dt.slice(0, 5).map((h) => ({
+          externalId: h.externalId,
+          sku: h.sku,
+          name: h.name,
+          ncm: h.ncm,
+          origin: h.origin,
+          rawKeys: h.raw && typeof h.raw == "object" ? Object.keys(h.raw) : [],
+          tributacao: h.raw && typeof h.raw == "object" ? h.raw.tributacao : void 0
+        })));
+        for (const h of te)
+          h.remoteUpdatedAt && (!E || h.remoteUpdatedAt > E) && (E = h.remoteUpdatedAt);
+        const V = te.map((h) => h.externalId), lt = new Set(
+          gr.getExternalIdsBySource(Ae, V)
         );
-        for (const p of mapped) {
-          if (existingIds.has(p.externalId)) {
-            totalUpdated++;
-          } else {
-            totalCreated++;
-          }
-        }
-        if (mapped.length > 0) {
-          productRepository.upsertMany(mapped);
-        }
-        totalProcessed += rawItems.length;
-        if (rawItems.length < PAGE_LIMIT) {
-          hasMore = false;
-        } else {
-          page++;
-          await sleep(350);
-        }
+        for (const h of te)
+          lt.has(h.externalId) ? d++ : l++;
+        te.length > 0 && gr.upsertMany(te), c += J.length, J.length < Ha ? N = !1 : (A++, await yr(350));
       }
-      const finishedAt = nowIso();
-      syncStateRepository.markSuccess(
-        INTEGRATION_ID,
-        RESOURCE,
-        checkpointCursor ?? toBlingDateTime(finishedAt)
-      );
-      syncLogRepository.finish({
-        id: logId,
+      const C = ee();
+      return le.markSuccess(
+        Ae,
+        At,
+        E ?? oo(C)
+      ), be.finish({
+        id: i,
         status: "success",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed
-      });
-      return { mode, processed: totalProcessed, created: totalCreated, updated: totalUpdated, failed: totalFailed };
-    } catch (error) {
-      const finishedAt = nowIso();
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      syncStateRepository.markError(INTEGRATION_ID, RESOURCE, errorMessage);
-      syncLogRepository.finish({
-        id: logId,
+        finishedAt: C,
+        itemsProcessed: c,
+        itemsCreated: l,
+        itemsUpdated: d,
+        itemsFailed: m
+      }), { mode: n, processed: c, created: l, updated: d, failed: m };
+    } catch (_) {
+      const A = ee(), N = _ instanceof Error ? _.message : String(_);
+      throw le.markError(Ae, At, N), be.finish({
+        id: i,
         status: "failed",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed,
-        errorMessage
-      });
-      throw error;
+        finishedAt: A,
+        itemsProcessed: c,
+        itemsCreated: l,
+        itemsUpdated: d,
+        itemsFailed: m,
+        errorMessage: N
+      }), _;
     }
   }
 }
-const syncProductsFromBlingService = new SyncProductsFromBlingService();
-class SyncAllFromBlingService {
+const so = new yd();
+class Od {
   async execute() {
-    const categories = await syncCategoriesFromBlingService.execute();
-    const products = await syncProductsFromBlingService.execute();
-    return { categories, products };
+    const e = await no.execute(), r = await so.execute();
+    return { categories: e, products: r };
   }
 }
-const syncAllFromBlingService = new SyncAllFromBlingService();
-function registerIntegrationHandlers() {
-  ipcMain.handle("integrations:status", async (_event, integrationId) => {
-    assertCurrentUserPermission("integrations:manage");
-    if (integrationId !== "bling") {
-      return { connected: false };
-    }
-    return await blingOAuthService.getStatus();
-  });
-  ipcMain.handle("integrations:connect", async (_event, integrationId) => {
-    assertCurrentUserPermission("integrations:manage");
-    if (integrationId !== "bling") {
-      return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
-    }
+const bd = new Od();
+function Ud() {
+  p.handle("integrations:status", async (t, e) => (g("integrations:manage"), e !== "bling" ? { connected: !1 } : await $t.getStatus())), p.handle("integrations:connect", async (t, e) => {
+    if (g("integrations:manage"), e !== "bling")
+      return { success: !1, message: `Integração ${e} ainda não implementada.` };
     try {
-      return await blingOAuthService.connect();
-    } catch (error) {
-      console.error("[integrations:connect]", error);
-      return { success: false, message: error instanceof Error ? error.message : "Erro ao conectar com o Bling." };
+      return await $t.connect();
+    } catch (r) {
+      return console.error("[integrations:connect]", r), { success: !1, message: r instanceof Error ? r.message : "Erro ao conectar com o Bling." };
     }
-  });
-  ipcMain.handle("integrations:disconnect", async (_event, integrationId) => {
-    assertCurrentUserPermission("integrations:manage");
-    if (integrationId !== "bling") {
-      return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
-    }
+  }), p.handle("integrations:disconnect", async (t, e) => {
+    if (g("integrations:manage"), e !== "bling")
+      return { success: !1, message: `Integração ${e} ainda não implementada.` };
     try {
-      return await blingOAuthService.disconnect();
-    } catch (error) {
-      console.error("[integrations:disconnect]", error);
-      return { success: false, message: error instanceof Error ? error.message : "Erro ao desconectar Bling." };
+      return await $t.disconnect();
+    } catch (r) {
+      return console.error("[integrations:disconnect]", r), { success: !1, message: r instanceof Error ? r.message : "Erro ao desconectar Bling." };
     }
-  });
-  ipcMain.handle("integrations:bling:sync-all", async () => {
-    assertCurrentUserPermission("integrations:manage");
+  }), p.handle("integrations:bling:sync-all", async () => {
+    g("integrations:manage");
     try {
-      const result = await syncAllFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error("[integrations:bling:sync-all]", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Erro ao sincronizar."
+      return { success: !0, ...await bd.execute() };
+    } catch (t) {
+      return console.error("[integrations:bling:sync-all]", t), {
+        success: !1,
+        message: t instanceof Error ? t.message : "Erro ao sincronizar."
       };
     }
-  });
-  ipcMain.handle("integrations:bling:sync", async () => {
-    assertCurrentUserPermission("integrations:manage");
+  }), p.handle("integrations:bling:sync", async () => {
+    g("integrations:manage");
     try {
-      const result = await syncProductsFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error("[integrations:bling:sync]", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Erro ao sincronizar produtos."
+      return { success: !0, ...await so.execute() };
+    } catch (t) {
+      return console.error("[integrations:bling:sync]", t), {
+        success: !1,
+        message: t instanceof Error ? t.message : "Erro ao sincronizar produtos."
       };
     }
-  });
-  ipcMain.handle("integrations:bling:sync-categories", async () => {
-    assertCurrentUserPermission("integrations:manage");
+  }), p.handle("integrations:bling:sync-categories", async () => {
+    g("integrations:manage");
     try {
-      const result = await syncCategoriesFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error("[integrations:bling:sync-categories]", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Erro ao sincronizar categorias."
+      return { success: !0, ...await no.execute() };
+    } catch (t) {
+      return console.error("[integrations:bling:sync-categories]", t), {
+        success: !1,
+        message: t instanceof Error ? t.message : "Erro ao sincronizar categorias."
       };
     }
-  });
-  ipcMain.handle("integrations:bling:sync-status", () => {
-    assertCurrentUserPermission("integrations:manage");
-    return syncStateRepository.get("bling", "products");
-  });
-  ipcMain.handle("integrations:bling:sync-status-categories", () => {
-    assertCurrentUserPermission("integrations:manage");
-    return syncStateRepository.get("bling", "categories");
-  });
-  ipcMain.handle("integrations:bling:sync-logs", () => {
-    assertCurrentUserPermission("integrations:manage");
-    return syncLogRepository.listByIntegration("bling", "products", 10);
-  });
-  ipcMain.handle("integrations:bling:sync-logs-categories", () => {
-    assertCurrentUserPermission("integrations:manage");
-    return syncLogRepository.listByIntegration("bling", "categories", 10);
-  });
-  ipcMain.handle("integrations:bling:test", async () => {
-    assertCurrentUserPermission("integrations:manage");
-    return await blingApiService.getProducts({ page: 1, limit: 5 });
-  });
-  ipcMain.handle("integrations:bling:debug-product", async (_event, input) => {
-    assertCurrentUserPermission("integrations:manage");
-    if (input == null ? void 0 : input.id) {
-      return await blingApiService.getProductById(input.id);
-    }
-    if (input == null ? void 0 : input.code) {
-      const list = await blingApiService.getProductByCode(input.code);
-      const first = Array.isArray(list.data) ? list.data[0] : null;
-      if (!(first == null ? void 0 : first.id)) {
-        return { data: null, list };
-      }
-      return {
-        list,
-        detail: await blingApiService.getProductById(first.id)
-      };
+  }), p.handle("integrations:bling:sync-status", () => (g("integrations:manage"), le.get("bling", "products"))), p.handle("integrations:bling:sync-status-categories", () => (g("integrations:manage"), le.get("bling", "categories"))), p.handle("integrations:bling:sync-logs", () => (g("integrations:manage"), be.listByIntegration("bling", "products", 10))), p.handle("integrations:bling:sync-logs-categories", () => (g("integrations:manage"), be.listByIntegration("bling", "categories", 10))), p.handle("integrations:bling:test", async () => (g("integrations:manage"), await he.getProducts({ page: 1, limit: 5 }))), p.handle("integrations:bling:debug-product", async (t, e) => {
+    if (g("integrations:manage"), e != null && e.id)
+      return await he.getProductById(e.id);
+    if (e != null && e.code) {
+      const r = await he.getProductByCode(e.code), a = Array.isArray(r.data) ? r.data[0] : null;
+      return a != null && a.id ? {
+        list: r,
+        detail: await he.getProductById(a.id)
+      } : { data: null, list: r };
     }
     throw new Error("Informe id ou code para diagnosticar produto do Bling.");
-  });
-  ipcMain.handle("integrations:bling:test-categories", async () => {
-    assertCurrentUserPermission("integrations:manage");
-    return await blingApiService.getCategories({ page: 1, limit: 5 });
-  });
-  ipcMain.handle("integrations:bling:test-icmp", async () => {
-    assertCurrentUserPermission("integrations:manage");
-    return await blingApiService.ping();
-  });
+  }), p.handle("integrations:bling:test-categories", async () => (g("integrations:manage"), await he.getCategories({ page: 1, limit: 5 }))), p.handle("integrations:bling:test-icmp", async () => (g("integrations:manage"), await he.ping()));
 }
-const __dirname$1 = import.meta.dirname;
-process.env.APP_ROOT = path__default.join(__dirname$1, "..");
-const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path__default.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path__default.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path__default.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-let win = null;
-function createWindow() {
-  win = new BrowserWindow({
-    icon: path__default.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+const io = import.meta.dirname;
+process.env.APP_ROOT = R.join(io, "..");
+const P = process.env.VITE_DEV_SERVER_URL, zd = R.join(process.env.APP_ROOT, "dist-electron"), co = R.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = P ? R.join(process.env.APP_ROOT, "public") : co;
+let ae = null;
+function uo() {
+  ae = new H({
+    icon: R.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: path__default.join(__dirname$1, "preload.mjs"),
-      contextIsolation: true,
-      nodeIntegration: false
+      preload: R.join(io, "preload.mjs"),
+      contextIsolation: !0,
+      nodeIntegration: !1
     }
-  });
-  win.webContents.on("did-finish-load", () => {
-    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  });
-  win.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
-    logger.error(`Renderer falhou ao carregar: [${errorCode}] ${errorDescription}`);
-  });
-  win.webContents.on("render-process-gone", (_event, details) => {
-    logger.error(`Renderer process encerrado: ${details.reason}`);
-  });
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
-    win.loadFile(path__default.join(RENDERER_DIST, "index.html"));
-  }
-  win.maximize();
-  win.on(
+  }), ae.webContents.on("did-finish-load", () => {
+    ae == null || ae.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  }), ae.webContents.on("did-fail-load", (t, e, r) => {
+    f.error(`Renderer falhou ao carregar: [${e}] ${r}`);
+  }), ae.webContents.on("render-process-gone", (t, e) => {
+    f.error(`Renderer process encerrado: ${e.reason}`);
+  }), P ? ae.loadURL(P) : ae.loadFile(R.join(co, "index.html")), ae.maximize(), ae.on(
     "close",
     () => {
     }
   );
 }
-app.on("before-quit", () => {
-  const sessionId = getCurrentSession();
-  if (sessionId) {
-    encerrarSessao(sessionId);
-  }
+_e.on("before-quit", () => {
+  const t = Wr();
+  t && ao(t);
 });
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-    win = null;
-  }
+_e.on("window-all-closed", () => {
+  process.platform !== "darwin" && (_e.quit(), ae = null);
 });
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+_e.on("activate", () => {
+  H.getAllWindows().length === 0 && uo();
 });
-ipcMain.on("app:fechar-janela", () => {
-  const win2 = BrowserWindow.getFocusedWindow();
-  if (win2) {
-    win2.close();
-  }
+p.on("app:fechar-janela", () => {
+  const t = H.getFocusedWindow();
+  t && t.close();
 });
-ipcMain.handle("app:quit-with-confirm", async () => {
-  logger.info("Encerramento solicitado pelo usuário");
-  const { response } = await dialog.showMessageBox({
+p.handle("app:quit-with-confirm", async () => {
+  f.info("Encerramento solicitado pelo usuário");
+  const { response: t } = await Qa.showMessageBox({
     type: "question",
     buttons: ["Cancelar", "Sair"],
     defaultId: 1,
     cancelId: 0,
     message: "Tem certeza que deseja sair do sistema?"
   });
-  if (response === 1) {
-    app.quit();
-    return true;
-  }
-  return false;
+  return t === 1 ? (_e.quit(), !0) : !1;
 });
-app.whenReady().then(() => {
-  enableForeignKeys();
-  startFiscalQueueWorker();
-  registerWindowHandlers();
-  registerFiscalHandlers();
-  registerSalesHandlers();
-  registerProductHandlers();
-  registerPrinterhandlers();
-  registerAuthHandlers();
-  registerUserHandlers();
-  registerPosHandlers();
-  registerIntegrationHandlers();
-  createWindow();
-  logger.info("Criado janela principal do App");
+_e.whenReady().then(() => {
+  es(), Su(), ed(), qu(), Zu(), td(), rd(), ad(), nd(), od(), Ud(), uo(), f.info("Criado janela principal do App");
 });
 export {
-  MAIN_DIST,
-  RENDERER_DIST,
-  VITE_DEV_SERVER_URL
+  zd as MAIN_DIST,
+  co as RENDERER_DIST,
+  P as VITE_DEV_SERVER_URL
 };
