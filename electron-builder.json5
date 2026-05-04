@@ -1,6 +1,6 @@
 {
   appId: "br.com.galberto.pdv",
-  productName: "Galberto PDV",
+  productName: "Galberto-PDV",
   copyright: "Copyright © 2026 Galberto",
 
   directories: {
@@ -26,7 +26,9 @@
       }
     ],
     category: "Office",
-    icon: "build/icon.png"
+    icon: "icons",
+    maintainer: "Hostsource Tecnologia <isaque@hostsourcetecnologia.com.br>"
+
   },
 
   win: {
