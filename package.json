@@ -4,6 +4,8 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "description": "Galberto PDV",
+  "author": "Hostsource Tecnologia",
   "sideEffects": [
     "electron/db.ts"
   ],
