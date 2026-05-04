@@ -1,13 +1,13 @@
 var Is = Object.defineProperty;
 var Cs = (t, e, r) => e in t ? Is(t, e, { enumerable: !0, configurable: !0, writable: !0, value: r }) : t[e] = r;
-var ve = (t, e, r) => Cs(t, typeof e != "symbol" ? e + "" : e, r);
-import { app as Fe, ipcMain as p, BrowserWindow as ue, shell as Qn, dialog as Jn } from "electron";
+var Se = (t, e, r) => Cs(t, typeof e != "symbol" ? e + "" : e, r);
+import { app as Ce, ipcMain as p, BrowserWindow as ue, shell as Qn, dialog as Jn } from "electron";
 import * as Wr from "fs";
 import Or from "fs";
 import Ia from "path";
 import Ds from "os";
 import Zn from "crypto";
-import * as Ue from "node:fs";
+import * as we from "node:fs";
 import * as Ot from "node:path";
 import F from "node:path";
 import vs from "better-sqlite3";
@@ -257,7 +257,7 @@ var js = function(e) {
     )
   );
 })();
-const _a = Ia.join(Fe.getPath("userData"), "logs");
+const _a = Ia.join(Ce.getPath("userData"), "logs");
 Or.existsSync(_a) || Or.mkdirSync(_a, { recursive: !0 });
 function Qr(t, e) {
   const a = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", {
@@ -916,8 +916,11 @@ function ui(t) {
 function ci(t) {
   Ws(t), Qs(t, no) || Js(t), Zs(t), ui(t), oi(t), ii(t);
 }
-const oo = F.join(Fe.getPath("userData"), "galberto.db");
-console.log(" Criando/abrindo banco de dados em: ", oo);
+const oo = F.join(Ce.getPath("userData"), "galberto.db");
+console.log("SQLite path: ", oo);
+console.log("isPackaged:", Ce.isPackaged);
+console.log("app.getPath(userData):", Ce.getPath("userData"));
+console.log("process.cwd():", process.cwd());
 const d = new vs(oo);
 function li() {
   d.exec("PRAGMA foreign_keys = ON;"), N.info("-> Foreign keys ativadas");
@@ -3010,12 +3013,12 @@ function Vt(t) {
 }
 class Du {
   constructor() {
-    ve(this, "outputDir", Ot.join(Fe.getPath("userData"), "fiscal", "danfe"));
+    Se(this, "outputDir", Ot.join(Ce.getPath("userData"), "fiscal", "danfe"));
   }
   async generate(e) {
-    Ue.mkdirSync(this.outputDir, { recursive: !0 });
+    we.mkdirSync(this.outputDir, { recursive: !0 });
     const r = e.danfePath || Ot.join(this.outputDir, `nfce-${e.id}.html`), a = this.render(e);
-    return Ue.writeFileSync(r, a, "utf8"), {
+    return we.writeFileSync(r, a, "utf8"), {
       documentId: e.id,
       danfePath: r,
       contentType: "text/html",
@@ -3023,7 +3026,7 @@ class Du {
     };
   }
   async recover(e) {
-    return !e.danfePath || !Ue.existsSync(e.danfePath) ? null : {
+    return !e.danfePath || !we.existsSync(e.danfePath) ? null : {
       documentId: e.id,
       danfePath: e.danfePath,
       contentType: "text/html",
@@ -3098,10 +3101,10 @@ class Du {
 class D extends Error {
   constructor(r) {
     super(r.message);
-    ve(this, "code");
-    ve(this, "category");
-    ve(this, "retryable");
-    ve(this, "details");
+    Se(this, "code");
+    Se(this, "category");
+    Se(this, "retryable");
+    Se(this, "details");
     this.name = "FiscalError", this.code = r.code, this.category = r.category, this.retryable = r.retryable ?? !1, this.details = r.details, r.cause !== void 0 && (this.cause = r.cause);
   }
 }
@@ -3128,7 +3131,7 @@ class vu {
       return null;
     const a = Ot.extname(r).toLowerCase();
     if (a === ".pem" || a === ".crt" || a === ".cer")
-      return Ue.readFileSync(r, "utf8");
+      return we.readFileSync(r, "utf8");
     if (a === ".pfx" || a === ".p12") {
       if (!e.certificatePassword)
         throw new D({
@@ -3162,7 +3165,7 @@ class vu {
         type: "UNKNOWN",
         lastCheckedAt: a
       };
-    const n = Ue.existsSync(r);
+    const n = we.existsSync(r);
     let o = null;
     if (n)
       try {
@@ -3192,7 +3195,7 @@ class vu {
         message: "Certificado fiscal não configurado.",
         category: "CERTIFICATE"
       });
-    if (!Ue.existsSync(e.certificatePath))
+    if (!we.existsSync(e.certificatePath))
       throw new D({
         code: "CERTIFICATE_FILE_NOT_FOUND",
         message: `Arquivo do certificado não encontrado: ${e.certificatePath}`,
@@ -4213,7 +4216,7 @@ async function Nr(t, e) {
 }
 class qu {
   constructor() {
-    ve(this, "providerId", "gateway");
+    Se(this, "providerId", "gateway");
   }
   async authorizeNfce(e, r) {
     const a = await fetch(`${Ht(r)}/nfce/authorize`, {
@@ -4279,7 +4282,7 @@ function Vu(t) {
 }
 class zu {
   constructor() {
-    ve(this, "providerId", "mock");
+    Se(this, "providerId", "mock");
   }
   async authorizeNfce(e, r) {
     const a = (/* @__PURE__ */ new Date()).toISOString(), n = Vu(e);
@@ -4714,11 +4717,11 @@ var oc = "�", et = /[-\x09\x0A\x0D\x20-\x2C\x2E-\uD7FF\uE000-\uFFFD]/;
 Pt && (et = R("[", Ze(et), "\\u{10000}-\\u{10FFFF}", "]"));
 var sc = new RegExp("[^" + Ze(et) + "]", Pt ? "u" : ""), Sa = /[\x20\x09\x0D\x0A]/, ic = Ze(Sa), x = R(Sa, "+"), V = R(Sa, "*"), sr = /[:_a-zA-Z\xC0-\xD6\xD8-\xF6\xF8-\u02FF\u0370-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]/;
 Pt && (sr = R("[", Ze(sr), "\\u{10000}-\\u{10FFFF}", "]"));
-var uc = Ze(sr), Ra = R("[", uc, Ze(/[-.0-9\xB7]/), Ze(/[\u0300-\u036F\u203F-\u2040]/), "]"), Ce = R(sr, Ra, "*"), an = R(Ra, "+"), cc = R("&", Ce, ";"), lc = I(/&#[0-9]+;|&#x[0-9a-fA-F]+;/), ir = I(cc, "|", lc), ur = R("%", Ce, ";"), La = I(
+var uc = Ze(sr), Ra = R("[", uc, Ze(/[-.0-9\xB7]/), Ze(/[\u0300-\u036F\u203F-\u2040]/), "]"), De = R(sr, Ra, "*"), an = R(Ra, "+"), cc = R("&", De, ";"), lc = I(/&#[0-9]+;|&#x[0-9a-fA-F]+;/), ir = I(cc, "|", lc), ur = R("%", De, ";"), La = I(
   R('"', I(/[^%&"]/, "|", ur, "|", ir), "*", '"'),
   "|",
   R("'", I(/[^%&']/, "|", ur, "|", ir), "*", "'")
-), dc = I('"', I(/[^<&"]/, "|", ir), "*", '"', "|", "'", I(/[^<&']/, "|", ir), "*", "'"), Ec = bt(sr, ":"), mc = bt(Ra, ":"), nn = R(Ec, mc, "*"), Er = R(nn, I(":", nn), "?"), pc = R("^", Er, "$"), Tc = R("(", Er, ")"), Ut = I(/"[^"]*"|'[^']*'/), _c = R(/^<\?/, "(", Ce, ")", I(x, "(", et, "*?)"), "?", /\?>/), on = /[\x20\x0D\x0Aa-zA-Z0-9-'()+,./:=?;!*#@$_%]/, mr = I('"', on, '*"', "|", "'", bt(on, "'"), "*'"), Ao = "<!--", ho = "-->", fc = R(Ao, I(bt(et, "-"), "|", R("-", bt(et, "-"))), "*", ho), sn = "#PCDATA", Nc = I(
+), dc = I('"', I(/[^<&"]/, "|", ir), "*", '"', "|", "'", I(/[^<&']/, "|", ir), "*", "'"), Ec = bt(sr, ":"), mc = bt(Ra, ":"), nn = R(Ec, mc, "*"), Er = R(nn, I(":", nn), "?"), pc = R("^", Er, "$"), Tc = R("(", Er, ")"), Ut = I(/"[^"]*"|'[^']*'/), _c = R(/^<\?/, "(", De, ")", I(x, "(", et, "*?)"), "?", /\?>/), on = /[\x20\x0D\x0Aa-zA-Z0-9-'()+,./:=?;!*#@$_%]/, mr = I('"', on, '*"', "|", "'", bt(on, "'"), "*'"), Ao = "<!--", ho = "-->", fc = R(Ao, I(bt(et, "-"), "|", R("-", bt(et, "-"))), "*", ho), sn = "#PCDATA", Nc = I(
   R(/\(/, V, sn, I(V, /\|/, V, Er), "*", V, /\)\*/),
   "|",
   R(/\(/, V, sn, V, /\)/)
@@ -4726,14 +4729,14 @@ var uc = Ze(sr), Ra = R("[", uc, Ze(/[-.0-9\xB7]/), Ze(/[\u0300-\u036F\u203F-\u2
   /\([^>]+\)/,
   gc
   /*regg(choice, '|', seq), _children_quantity*/
-), hc = I("EMPTY", "|", "ANY", "|", Nc, "|", Ac), Ic = "<!ELEMENT", Cc = R(Ic, x, I(Er, "|", ur), x, I(hc, "|", ur), V, ">"), Dc = R("NOTATION", x, /\(/, V, Ce, I(V, /\|/, V, Ce), "*", V, /\)/), vc = R(/\(/, V, an, I(V, /\|/, V, an), "*", V, /\)/), Sc = I(Dc, "|", vc), Rc = I(/CDATA|ID|IDREF|IDREFS|ENTITY|ENTITIES|NMTOKEN|NMTOKENS/, "|", Sc), Lc = I(/#REQUIRED|#IMPLIED/, "|", I(I("#FIXED", x), "?", dc)), Oc = I(x, Ce, x, Rc, x, Lc), yc = "<!ATTLIST", bc = R(yc, x, Ce, Oc, "*", V, ">"), ga = "about:legacy-compat", Uc = I('"' + ga + '"', "|", "'" + ga + "'"), Oa = "SYSTEM", Br = "PUBLIC", Xr = I(I(Oa, x, Ut), "|", I(Br, x, mr, x, Ut)), wc = R(
+), hc = I("EMPTY", "|", "ANY", "|", Nc, "|", Ac), Ic = "<!ELEMENT", Cc = R(Ic, x, I(Er, "|", ur), x, I(hc, "|", ur), V, ">"), Dc = R("NOTATION", x, /\(/, V, De, I(V, /\|/, V, De), "*", V, /\)/), vc = R(/\(/, V, an, I(V, /\|/, V, an), "*", V, /\)/), Sc = I(Dc, "|", vc), Rc = I(/CDATA|ID|IDREF|IDREFS|ENTITY|ENTITIES|NMTOKEN|NMTOKENS/, "|", Sc), Lc = I(/#REQUIRED|#IMPLIED/, "|", I(I("#FIXED", x), "?", dc)), Oc = I(x, De, x, Rc, x, Lc), yc = "<!ATTLIST", bc = R(yc, x, De, Oc, "*", V, ">"), ga = "about:legacy-compat", Uc = I('"' + ga + '"', "|", "'" + ga + "'"), Oa = "SYSTEM", Br = "PUBLIC", Xr = I(I(Oa, x, Ut), "|", I(Br, x, mr, x, Ut)), wc = R(
   "^",
   I(
     I(Oa, x, "(?<SystemLiteralOnly>", Ut, ")"),
     "|",
     I(Br, x, "(?<PubidLiteral>", mr, ")", x, "(?<SystemLiteral>", Ut, ")")
   )
-), Fc = R("^", mr, "$"), xc = R("^", Ut, "$"), Mc = I(x, "NDATA", x, Ce), Pc = I(La, "|", I(Xr, Mc, "?")), Io = "<!ENTITY", Bc = R(Io, x, Ce, x, Pc, V, ">"), Xc = I(La, "|", Xr), kc = R(Io, x, "%", x, Ce, x, Xc, V, ">"), $c = I(Bc, "|", kc), Gc = R(Br, x, mr), qc = R("<!NOTATION", x, Ce, x, I(Xr, "|", Gc), V, ">"), ya = R(V, "=", V), un = /1[.]\d+/, Vc = R(x, "version", ya, I("'", un, "'", "|", '"', un, '"')), cn = /[A-Za-z][-A-Za-z0-9._]*/, zc = I(x, "encoding", ya, I('"', cn, '"', "|", "'", cn, "'")), Hc = I(x, "standalone", ya, I("'", I("yes", "|", "no"), "'", "|", '"', I("yes", "|", "no"), '"')), jc = R(/^<\?xml/, Vc, zc, "?", Hc, "?", V, /\?>/), Yc = "<!DOCTYPE", Kc = "<![CDATA[", Wc = "]]>", Qc = /<!\[CDATA\[/, Jc = /\]\]>/, Zc = R(et, "*?", Jc), el = R(Qc, Zc);
+), Fc = R("^", mr, "$"), xc = R("^", Ut, "$"), Mc = I(x, "NDATA", x, De), Pc = I(La, "|", I(Xr, Mc, "?")), Io = "<!ENTITY", Bc = R(Io, x, De, x, Pc, V, ">"), Xc = I(La, "|", Xr), kc = R(Io, x, "%", x, De, x, Xc, V, ">"), $c = I(Bc, "|", kc), Gc = R(Br, x, mr), qc = R("<!NOTATION", x, De, x, I(Xr, "|", Gc), V, ">"), ya = R(V, "=", V), un = /1[.]\d+/, Vc = R(x, "version", ya, I("'", un, "'", "|", '"', un, '"')), cn = /[A-Za-z][-A-Za-z0-9._]*/, zc = I(x, "encoding", ya, I('"', cn, '"', "|", "'", cn, "'")), Hc = I(x, "standalone", ya, I("'", I("yes", "|", "no"), "'", "|", '"', I("yes", "|", "no"), '"')), jc = R(/^<\?xml/, Vc, zc, "?", Hc, "?", V, /\?>/), Yc = "<!DOCTYPE", Kc = "<![CDATA[", Wc = "]]>", Qc = /<!\[CDATA\[/, Jc = /\]\]>/, Zc = R(et, "*?", Jc), el = R(Qc, Zc);
 C.chars = Ze;
 C.chars_without = bt;
 C.detectUnicodeSupport = go;
@@ -4755,7 +4758,7 @@ C.EntityDecl = $c;
 C.EntityValue = La;
 C.ExternalID = Xr;
 C.ExternalID_match = wc;
-C.Name = Ce;
+C.Name = De;
 C.NotationDecl = qc;
 C.Reference = ir;
 C.PEReference = ur;
@@ -4776,7 +4779,7 @@ C.InvalidChar = sc;
 C.UNICODE_REPLACEMENT_CHARACTER = oc;
 C.UNICODE_SUPPORT = Pt;
 C.XMLDecl = jc;
-var Ie = H, we = Ie.find, tl = Ie.hasDefaultHTMLNamespace, wt = Ie.hasOwn, rl = Ie.isHTMLMimeType, al = Ie.isHTMLRawTextElement, nl = Ie.isHTMLVoidElement, er = Ie.MIME_TYPE, xe = Ie.NAMESPACE, ie = Symbol(), Co = pt, _ = Co.DOMException, _e = Co.DOMExceptionName, ee = C;
+var Ie = H, Fe = Ie.find, tl = Ie.hasDefaultHTMLNamespace, wt = Ie.hasOwn, rl = Ie.isHTMLMimeType, al = Ie.isHTMLRawTextElement, nl = Ie.isHTMLVoidElement, er = Ie.MIME_TYPE, xe = Ie.NAMESPACE, ie = Symbol(), Co = pt, _ = Co.DOMException, _e = Co.DOMExceptionName, ee = C;
 function le(t) {
   if (t !== ie)
     throw new TypeError("Illegal constructor");
@@ -4951,7 +4954,7 @@ J.prototype[Symbol.iterator] = function() {
     }
   };
 };
-function ye(t, e) {
+function be(t, e) {
   this._node = t, this._refresh = e, kr(this);
 }
 function kr(t) {
@@ -4964,10 +4967,10 @@ function kr(t) {
     Bt(r, t), t._inc = e;
   }
 }
-ye.prototype.item = function(t) {
+be.prototype.item = function(t) {
   return kr(this), this[t] || null;
 };
-de(ye, J);
+de(be, J);
 function xt() {
 }
 function Oo(t, e) {
@@ -5882,9 +5885,9 @@ function xo(t) {
 }
 function mn(t, e) {
   var r = t.childNodes || [];
-  if (we(r, qe) || tt(e))
+  if (Fe(r, qe) || tt(e))
     return !1;
-  var a = we(r, tt);
+  var a = Fe(r, tt);
   return !(e && a && r.indexOf(a) > r.indexOf(e));
 }
 function pn(t, e) {
@@ -5892,9 +5895,9 @@ function pn(t, e) {
   function a(o) {
     return qe(o) && o !== e;
   }
-  if (we(r, a))
+  if (Fe(r, a))
     return !1;
-  var n = we(r, tt);
+  var n = Fe(r, tt);
   return !(e && n && r.indexOf(n) > r.indexOf(e));
 }
 function Tl(t, e, r) {
@@ -5919,7 +5922,7 @@ function _l(t, e, r) {
   var a = t.childNodes || [], n = e.childNodes || [];
   if (e.nodeType === U.DOCUMENT_FRAGMENT_NODE) {
     var o = n.filter(qe);
-    if (o.length > 1 || we(n, xo))
+    if (o.length > 1 || Fe(n, xo))
       throw new _(_.HIERARCHY_REQUEST_ERR, "More than one element or text in fragment");
     if (o.length === 1 && !mn(t, r))
       throw new _(_.HIERARCHY_REQUEST_ERR, "Element in fragment can not be inserted before doctype");
@@ -5927,9 +5930,9 @@ function _l(t, e, r) {
   if (qe(e) && !mn(t, r))
     throw new _(_.HIERARCHY_REQUEST_ERR, "Only one element can be added and only after doctype");
   if (tt(e)) {
-    if (we(a, tt))
+    if (Fe(a, tt))
       throw new _(_.HIERARCHY_REQUEST_ERR, "Only one doctype is allowed");
-    var s = we(a, qe);
+    var s = Fe(a, qe);
     if (r && a.indexOf(s) < a.indexOf(r))
       throw new _(_.HIERARCHY_REQUEST_ERR, "Doctype can only be inserted before an element");
     if (!r && s)
@@ -5940,7 +5943,7 @@ function Mo(t, e, r) {
   var a = t.childNodes || [], n = e.childNodes || [];
   if (e.nodeType === U.DOCUMENT_FRAGMENT_NODE) {
     var o = n.filter(qe);
-    if (o.length > 1 || we(n, xo))
+    if (o.length > 1 || Fe(n, xo))
       throw new _(_.HIERARCHY_REQUEST_ERR, "More than one element or text in fragment");
     if (o.length === 1 && !pn(t, r))
       throw new _(_.HIERARCHY_REQUEST_ERR, "Element in fragment can not be inserted before doctype");
@@ -5948,11 +5951,11 @@ function Mo(t, e, r) {
   if (qe(e) && !pn(t, r))
     throw new _(_.HIERARCHY_REQUEST_ERR, "Only one element can be added and only after doctype");
   if (tt(e)) {
-    if (we(a, function(u) {
+    if (Fe(a, function(u) {
       return tt(u) && u !== r;
     }))
       throw new _(_.HIERARCHY_REQUEST_ERR, "Only one doctype is allowed");
-    var s = we(a, qe);
+    var s = Fe(a, qe);
     if (r && a.indexOf(s) < a.indexOf(r))
       throw new _(_.HIERARCHY_REQUEST_ERR, "Doctype can only be inserted before an element");
   }
@@ -6328,7 +6331,7 @@ ze.prototype = {
    */
   getElementsByClassName: function(t) {
     var e = ln(t);
-    return new ye(this, function(r) {
+    return new be(this, function(r) {
       var a = [];
       return e.length > 0 && Sr(r, function(n) {
         if (n !== r && n.nodeType === Ae) {
@@ -6371,7 +6374,7 @@ ze.prototype = {
    */
   getElementsByTagName: function(t) {
     var e = (this.nodeType === yt ? this : this.ownerDocument).type === "html", r = t.toLowerCase();
-    return new ye(this, function(a) {
+    return new be(this, function(a) {
       var n = [];
       return Sr(a, function(o) {
         if (!(o === a || o.nodeType !== Ae))
@@ -6385,7 +6388,7 @@ ze.prototype = {
     });
   },
   getElementsByTagNameNS: function(t, e) {
-    return new ye(this, function(r) {
+    return new be(this, function(r) {
       var a = [];
       return Sr(r, function(n) {
         n !== r && n.nodeType === Ae && (t === "*" || n.namespaceURI === t) && (e === "*" || n.localName == e) && a.push(n);
@@ -6576,15 +6579,15 @@ function xa(t, e, r, a) {
             for (var X = 0; X < T; X++) {
               var K = m.item(X);
               if (Tn(K, u, B)) {
-                var W = K.prefix || "", Re = K.namespaceURI;
-                Ar(e, W ? "xmlns:" + W : "xmlns", Re), B.push({ prefix: W, namespace: Re });
+                var W = K.prefix || "", Le = K.namespaceURI;
+                Ar(e, W ? "xmlns:" + W : "xmlns", Le), B.push({ prefix: W, namespace: Le });
               }
-              var De = n ? n(K) : K;
-              De && (typeof De == "string" ? e.push(De) : Ar(e, De.name, De.value));
+              var ve = n ? n(K) : K;
+              ve && (typeof ve == "string" ? e.push(ve) : Ar(e, ve.name, ve.value));
             }
             if (h === g && Tn(c, u, B)) {
-              var Me = c.prefix || "", Re = c.namespaceURI;
-              Ar(e, Me ? "xmlns:" + Me : "xmlns", Re), B.push({ prefix: Me, namespace: Re });
+              var Me = c.prefix || "", Le = c.namespaceURI;
+              Ar(e, Me ? "xmlns:" + Me : "xmlns", Le), B.push({ prefix: Me, namespace: Le });
             }
             var S = !c.firstChild;
             if (S && (u || c.namespaceURI === xe.HTML) && (S = nl(h)), S)
@@ -6628,16 +6631,16 @@ function xa(t, e, r, a) {
             }
             return e.push(ee.COMMENT_START, c.data, ee.COMMENT_END), null;
           case Ro:
-            var Le = c.publicId, G = c.systemId;
+            var Oe = c.publicId, G = c.systemId;
             if (o) {
-              if (Le && !ee.PubidLiteral_match.test(Le))
+              if (Oe && !ee.PubidLiteral_match.test(Oe))
                 throw new _("DocumentType publicId is not a valid PubidLiteral", _e.InvalidStateError);
               if (G && G !== "." && !ee.SystemLiteral_match.test(G))
                 throw new _("DocumentType systemId is not a valid SystemLiteral", _e.InvalidStateError);
               if (c.internalSubset && c.internalSubset.indexOf("]>") !== -1)
                 throw new _('DocumentType internalSubset contains "]>"', _e.InvalidStateError);
             }
-            return e.push(ee.DOCTYPE_DECL_START, " ", c.name), Le ? (e.push(" ", ee.PUBLIC, " ", Le), G && G !== "." && e.push(" ", G)) : G && G !== "." && e.push(" ", ee.SYSTEM, " ", G), c.internalSubset && e.push(" [", c.internalSubset, "]"), e.push(">"), null;
+            return e.push(ee.DOCTYPE_DECL_START, " ", c.name), Oe ? (e.push(" ", ee.PUBLIC, " ", Oe), G && G !== "." && e.push(" ", G)) : G && G !== "." && e.push(" ", ee.SYSTEM, " ", G), c.internalSubset && e.push(" [", c.internalSubset, "]"), e.push(">"), null;
           case ba:
             if (o) {
               if (c.target.indexOf(":") !== -1 || c.target.toLowerCase() === "xml")
@@ -6709,7 +6712,7 @@ function ra(t) {
   return e;
 }
 try {
-  Object.defineProperty && (Object.defineProperty(ye.prototype, "length", {
+  Object.defineProperty && (Object.defineProperty(be.prototype, "length", {
     get: function() {
       return kr(this), this.$$length;
     }
@@ -6743,15 +6746,15 @@ try {
     }
   }), Object.defineProperty(ze.prototype, "children", {
     get: function() {
-      return new ye(this, ra);
+      return new be(this, ra);
     }
   }), Object.defineProperty(Ve.prototype, "children", {
     get: function() {
-      return new ye(this, ra);
+      return new be(this, ra);
     }
   }), Object.defineProperty(kt.prototype, "children", {
     get: function() {
-      return new ye(this, ra);
+      return new be(this, ra);
     }
   }), ko = function(t, e, r) {
     t["$$" + e] = r;
@@ -6770,7 +6773,7 @@ j.DOMImplementation = yo;
 j.Element = ze;
 j.Entity = Fa;
 j.EntityReference = Vr;
-j.LiveNodeList = ye;
+j.LiveNodeList = be;
 j.NamedNodeMap = xt;
 j.Node = U;
 j.NodeList = J;
@@ -8990,14 +8993,14 @@ function Il(t, e, r, a, n) {
             return;
           var W = g[g.length - 1] || a.currentElement.tagName || a.doc.documentElement.tagName || "";
           if (W !== K[1]) {
-            var Re = K[1].toLowerCase();
-            if (!o || W.toLowerCase() !== Re)
+            var Le = K[1].toLowerCase();
+            if (!o || W.toLowerCase() !== Le)
               return n.fatalError('Opening and ending tag mismatch: "' + W + '" != "' + X + '"');
           }
-          var De = h.pop();
+          var ve = h.pop();
           g.pop();
-          var Me = De.localNSMap;
-          if (a.endElement(De.uri, De.localName, W), Me)
+          var Me = ve.localNSMap;
+          if (a.endElement(ve.uri, ve.localName, W), Me)
             for (var S in Me)
               cr(Me, S) && a.endPrefixMapping(S);
           G++;
@@ -9010,15 +9013,15 @@ function Il(t, e, r, a, n) {
           break;
         default:
           m && T(P);
-          var k = new jo(), Le = h[h.length - 1].currentNSMap, G = Cl(t, P, k, Le, i, n, o), za = k.length;
+          var k = new jo(), Oe = h[h.length - 1].currentNSMap, G = Cl(t, P, k, Oe, i, n, o), za = k.length;
           if (k.closed || (o && Gt.isHTMLVoidElement(k.tagName) ? k.closed = !0 : g.push(k.tagName)), m && za) {
             for (var hs = Nn(m, {}), Kr = 0; Kr < za; Kr++) {
               var Ha = k[Kr];
               T(Ha.offset), Ha.locator = Nn(m, {});
             }
-            a.locator = hs, gn(k, a, Le) && h.push(k), a.locator = m;
+            a.locator = hs, gn(k, a, Oe) && h.push(k), a.locator = m;
           } else
-            gn(k, a, Le) && h.push(k);
+            gn(k, a, Oe) && h.push(k);
           o && !k.closed ? G = Dl(t, G, k.tagName, i, a) : G++;
       }
     } catch (w) {
@@ -9604,7 +9607,7 @@ function ql(t) {
       message: "Caminho do certificado A1 nao configurado.",
       category: "CERTIFICATE"
     });
-  if (!Ue.existsSync(e))
+  if (!we.existsSync(e))
     throw new D({
       code: "CERTIFICATE_FILE_NOT_FOUND",
       message: `Arquivo do certificado nao encontrado: ${e}`,
@@ -9781,7 +9784,7 @@ function Sn(t) {
       message: "Caminho do certificado A1 nao configurado.",
       category: "CERTIFICATE"
     });
-  if (!Ue.existsSync(t.certificatePath))
+  if (!we.existsSync(t.certificatePath))
     throw new D({
       code: "CERTIFICATE_FILE_NOT_FOUND",
       message: `Arquivo do certificado nao encontrado: ${t.certificatePath}`,
@@ -9832,9 +9835,9 @@ function Fr(t, e, r, a = {}) {
       t,
       {
         method: "POST",
-        pfx: Ue.readFileSync(r.certificatePath),
+        pfx: we.readFileSync(r.certificatePath),
         passphrase: r.certificatePassword ?? void 0,
-        ca: r.caBundlePath ? Ue.readFileSync(r.caBundlePath) : void 0,
+        ca: r.caBundlePath ? we.readFileSync(r.caBundlePath) : void 0,
         rejectUnauthorized: a.allowUnauthorizedServerCertificate !== !0,
         headers: {
           "content-type": `application/soap+xml; charset=utf-8; action="${i}"`,
@@ -9932,7 +9935,7 @@ async function Rn(t, e, r, a) {
     throw o;
   }
 }
-function Oe(t, e) {
+function ye(t, e) {
   var a;
   const r = t.match(new RegExp(`<[^:>]*:?${e}[^>]*>([^<]*)</[^:>]*:?${e}>`, "i"));
   return ((a = r == null ? void 0 : r[1]) == null ? void 0 : a.trim()) ?? null;
@@ -9959,7 +9962,7 @@ function id(t, e) {
   return xr(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4"><consReciNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${r}</tpAmb><nRec>${e}</nRec></consReciNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>`);
 }
 function Ln(t, e, r, a) {
-  const n = Oe(r, "cStat"), o = Oe(r, "xMotivo") ?? "Resposta de autorizacao recebida sem xMotivo.", s = nd(r, "protNFe"), u = (s ? Oe(s, "cStat") : null) ?? n, c = s ? Oe(s, "xMotivo") ?? o : o, l = Oe(r, "nRec"), E = s ? Oe(s, "nProt") : null, m = s ? Oe(s, "dhRecbto") : null, T = s ? Oe(s, "chNFe") : t.accessKey;
+  const n = ye(r, "cStat"), o = ye(r, "xMotivo") ?? "Resposta de autorizacao recebida sem xMotivo.", s = nd(r, "protNFe"), u = (s ? ye(s, "cStat") : null) ?? n, c = s ? ye(s, "xMotivo") ?? o : o, l = ye(r, "nRec"), E = s ? ye(s, "nProt") : null, m = s ? ye(s, "dhRecbto") : null, T = s ? ye(s, "chNFe") : t.accessKey;
   if (u === "100" || u === "150") {
     const h = sd(e, s);
     return {
@@ -10011,7 +10014,7 @@ function Ln(t, e, r, a) {
 }
 class ud {
   constructor() {
-    ve(this, "providerId", "sefaz-direct");
+    Se(this, "providerId", "sefaz-direct");
   }
   async authorizeNfce(e, r) {
     if (Sn(r), !e.xmlBuilt)
@@ -10066,7 +10069,7 @@ class ud {
   }
   async testStatusServico(e) {
     Sn(e);
-    const r = Jl(e), a = td(e), n = Date.now(), o = await ad(r, a, e), s = Date.now() - n, i = o.rawResponse, u = Oe(i, "cStat"), c = Oe(i, "xMotivo") ?? "Resposta recebida da SEFAZ sem xMotivo.";
+    const r = Jl(e), a = td(e), n = Date.now(), o = await ad(r, a, e), s = Date.now() - n, i = o.rawResponse, u = ye(i, "cStat"), c = ye(i, "xMotivo") ?? "Resposta recebida da SEFAZ sem xMotivo.";
     return {
       provider: "sefaz-direct",
       environment: e.environment,
@@ -10088,7 +10091,7 @@ class ud {
 }
 class cd {
   constructor() {
-    ve(this, "providers");
+    Se(this, "providers");
     this.providers = {
       mock: new zu(),
       "sefaz-direct": new ud(),
@@ -10101,7 +10104,7 @@ class cd {
 }
 class ld {
   constructor(e, r) {
-    ve(this, "workerId");
+    Se(this, "workerId");
     this.repository = e, this.processor = r, this.workerId = `main-${process.pid}`;
   }
   async enqueue(e) {
@@ -10963,7 +10966,7 @@ Mr = new Kd(
   ss,
   (t) => is.resolve(t)
 );
-const Se = Mr, Zd = ss, cs = us, eE = qa, wn = We, tE = Da, Fn = ku;
+const Re = Mr, Zd = ss, cs = us, eE = qa, wn = We, tE = Da, Fn = ku;
 let xn = !1;
 function rE(t = 15e3) {
   xn || (xn = !0, setInterval(() => {
@@ -11571,7 +11574,7 @@ class EE {
         payload: { legacySaleId: e, request: a },
         status: Xe.TRANSMITTING
       });
-      const n = await Se.authorizeNfce(a), o = lt.findBySaleId(r.mirroredSale.sale.id);
+      const n = await Re.authorizeNfce(a), o = lt.findBySaleId(r.mirroredSale.sale.id);
       return o && (n.xmlSigned && nt.create({
         fiscalDocumentId: o.id,
         eventType: at.XML_SIGNED,
@@ -11736,7 +11739,7 @@ function Rt(t) {
   return !!(e && e.ativo && Es(e.funcao, t));
 }
 function NE() {
-  p.handle("fiscal:get-runtime-config", async () => (A("fiscal:manage"), Se.getConfig())), p.handle("fiscal:get-context", async (t, e) => (A("fiscal:manage"), wn.resolve(e))), p.handle("fiscal:get-active-store", async () => (A("fiscal:manage"), Fn.getActiveStore())), p.handle("fiscal:save-active-store", async (t, e) => {
+  p.handle("fiscal:get-runtime-config", async () => (A("fiscal:manage"), Re.getConfig())), p.handle("fiscal:get-context", async (t, e) => (A("fiscal:manage"), wn.resolve(e))), p.handle("fiscal:get-active-store", async () => (A("fiscal:manage"), Fn.getActiveStore())), p.handle("fiscal:save-active-store", async (t, e) => {
     try {
       return A("fiscal:manage"), {
         success: !0,
@@ -11760,7 +11763,7 @@ function NE() {
     return tE.validateContext(r);
   }), p.handle("fiscal:save-runtime-config", async (t, e) => {
     try {
-      return A("fiscal:manage"), await Se.saveConfig(e);
+      return A("fiscal:manage"), await Re.saveConfig(e);
     } catch (r) {
       const a = me(r, "FISCAL_CONFIG_SAVE_FAILED");
       return {
@@ -11777,7 +11780,7 @@ function NE() {
     try {
       return A("fiscal:manage"), {
         success: !0,
-        data: await Se.authorizeNfce(e)
+        data: await Re.authorizeNfce(e)
       };
     } catch (r) {
       const a = me(r, "FISCAL_AUTHORIZE_FAILED");
@@ -11813,7 +11816,7 @@ function NE() {
     try {
       return A("fiscal:manage"), {
         success: !0,
-        data: await Se.cancelNfce(e)
+        data: await Re.cancelNfce(e)
       };
     } catch (r) {
       const a = me(r, "FISCAL_CANCEL_FAILED");
@@ -11831,7 +11834,7 @@ function NE() {
     try {
       return A("fiscal:manage"), {
         success: !0,
-        data: await Se.consultStatusByAccessKey(e)
+        data: await Re.consultStatusByAccessKey(e)
       };
     } catch (r) {
       const a = me(r, "FISCAL_CONSULT_FAILED");
@@ -11849,7 +11852,7 @@ function NE() {
     try {
       return A("fiscal:manage"), {
         success: !0,
-        data: await Se.getDanfe(e)
+        data: await Re.getDanfe(e)
       };
     } catch (r) {
       const a = me(r, "FISCAL_DANFE_FAILED");
@@ -11863,11 +11866,11 @@ function NE() {
         }
       };
     }
-  }), p.handle("fiscal:get-queue-summary", async () => (A("fiscal:manage"), Se.getQueueSummary())), p.handle("fiscal:list-queue", async (t, e = 20) => (A("fiscal:manage"), Se.listQueue(e))), p.handle("fiscal:reprocess-queue-item", async (t, e) => {
+  }), p.handle("fiscal:get-queue-summary", async () => (A("fiscal:manage"), Re.getQueueSummary())), p.handle("fiscal:list-queue", async (t, e = 20) => (A("fiscal:manage"), Re.listQueue(e))), p.handle("fiscal:reprocess-queue-item", async (t, e) => {
     try {
       return A("fiscal:manage"), {
         success: !0,
-        data: await Se.reprocessQueueItem(e)
+        data: await Re.reprocessQueueItem(e)
       };
     } catch (r) {
       const a = me(r, "FISCAL_REPROCESS_FAILED");
@@ -11903,7 +11906,7 @@ function NE() {
     try {
       return A("fiscal:manage"), N.info("[FiscalIPC] fiscal:run-status-diagnostic recebido."), {
         success: !0,
-        data: await Se.runStatusServiceDiagnostic()
+        data: await Re.runStatusServiceDiagnostic()
       };
     } catch (t) {
       const e = me(t, "FISCAL_STATUS_DIAGNOSTIC_FAILED");
@@ -12939,7 +12942,9 @@ function yE() {
         contextIsolation: !0,
         nodeIntegration: !1
       }
-    }), ot.maximize(), Q ? ot.loadURL(`${Q}#/sales/search`) : ot.loadFile(F.join("dist/index.html"));
+    }), ot.maximize(), Q ? ot.loadURL(`${Q}#/sales/search`) : ot.loadFile(F.join("dist/index.html"), {
+      hash: "/sales/search"
+    });
   }
   function e() {
     st = new ue({
@@ -12953,7 +12958,9 @@ function yE() {
         contextIsolation: !0,
         nodeIntegration: !1
       }
-    }), st.maximize(), Q ? st.loadURL(`${Q}#/pdv`) : st.loadFile(F.join("dist/index.html"));
+    }), st.maximize(), Q ? st.loadURL(`${Q}#/pdv`) : st.loadFile(F.join("dist/index.html"), {
+      hash: "/pdv"
+    });
   }
   function r(u) {
     It = new ue({
@@ -12966,7 +12973,9 @@ function yE() {
         contextIsolation: !0,
         nodeIntegration: !1
       }
-    }), Q ? It.loadURL(`${Q}#/vendas/${u}`) : It.loadFile(F.join("dist/index.html"));
+    }), Q ? It.loadURL(`${Q}#/vendas/${u}`) : It.loadFile(F.join("dist/index.html"), {
+      hash: `/vendas/${u}`
+    });
   }
   function a() {
     Pe = new ue({
@@ -12992,7 +13001,9 @@ function yE() {
         contextIsolation: !0,
         nodeIntegration: !1
       }
-    }), Q ? Ct.loadURL(`${Q}#/config/usuarios/${u}`) : Ct.loadFile(F.join("dist/index.html"));
+    }), Q ? Ct.loadURL(`${Q}#/config/usuarios/${u}`) : Ct.loadFile(F.join("dist/index.html"), {
+      hash: `/config/usuarios/${u}`
+    });
   }
   function o() {
     St = new ue({
@@ -13079,7 +13090,9 @@ function yE() {
         contextIsolation: !0,
         nodeIntegration: !1
       }
-    }), Q ? Dt.loadURL(`${Q}#/config/usuarios/cadastrar_usuario`) : Dt.loadFile(F.join("dist/index.html"));
+    }), Q ? Dt.loadURL(`${Q}#/config/usuarios/cadastrar_usuario`) : Dt.loadFile(F.join("dist/index.html"), {
+      hash: "/config/usuarios/cadastrar_usuario"
+    });
   }
   function i(u) {
     vt = new ue({
@@ -13092,7 +13105,9 @@ function yE() {
         contextIsolation: !0,
         nodeIntegration: !1
       }
-    }), Q ? vt.loadURL(`${Q}#/config/users/edit_user/${u}`) : vt.loadFile(F.join("dist/index.html"));
+    }), Q ? vt.loadURL(`${Q}#/config/users/edit_user/${u}`) : vt.loadFile(F.join("dist/index.html"), {
+      hash: `/config/users/edit_user/${u}`
+    });
   }
 }
 function bE() {
@@ -13144,7 +13159,7 @@ function wE() {
 function FE() {
   p.handle("salvar-foto-usuario", async (t, e) => {
     A("users:manage");
-    const r = Fe.getPath("userData"), a = F.join(r, "fotos");
+    const r = Ce.getPath("userData"), a = F.join(r, "fotos");
     Wr.existsSync(a) || Wr.mkdirSync(a);
     const n = F.extname(e.nomeArquivo || ""), o = F.basename(e.nomeArquivo || "foto", n).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40), s = F.join(a, `${Date.now()}-${o}${n}`);
     return Wr.writeFileSync(s, Buffer.from(e.buffer)), s;
@@ -13738,7 +13753,7 @@ class zE {
     });
   }
 }
-const be = new zE();
+const Ue = new zE();
 class HE {
   start(e) {
     const r = Yr();
@@ -13825,8 +13840,8 @@ function YE(t, e) {
 }
 class KE {
   async execute() {
-    const e = be.get(Ke, Qt), r = Lr.countByIntegrationSource(Ke), n = !e || !e.lastSuccessAt || r === 0 ? "initial" : "incremental";
-    be.markRunning(Ke, Qt);
+    const e = Ue.get(Ke, Qt), r = Lr.countByIntegrationSource(Ke), n = !e || !e.lastSuccessAt || r === 0 ? "initial" : "incremental";
+    Ue.markRunning(Ke, Qt);
     const o = pe(), s = Je.start({
       integrationId: Ke,
       resource: Qt,
@@ -13854,7 +13869,7 @@ class KE {
         g.length < jn ? m = !1 : (E++, await ha(350));
       }
       const T = pe();
-      return be.markSuccess(Ke, Qt), Je.finish({
+      return Ue.markSuccess(Ke, Qt), Je.finish({
         id: s,
         status: "success",
         finishedAt: T,
@@ -13865,7 +13880,7 @@ class KE {
       }), { mode: n, processed: i, created: u, updated: c, failed: l };
     } catch (E) {
       const m = pe(), T = E instanceof Error ? E.message : String(E);
-      throw be.markError(Ke, Qt, T), Je.finish({
+      throw Ue.markError(Ke, Qt, T), Je.finish({
         id: s,
         status: "failed",
         finishedAt: m,
@@ -14415,8 +14430,8 @@ class om {
    * 5. Atualiza estado e log de sincronização.
    */
   async execute() {
-    const e = be.get($e, Jt), r = Ea.countByIntegrationSource($e), a = !e || !e.lastSuccessAt || r === 0, n = a ? "initial" : "incremental", o = a ? void 0 : am(e);
-    be.markRunning($e, Jt);
+    const e = Ue.get($e, Jt), r = Ea.countByIntegrationSource($e), a = !e || !e.lastSuccessAt || r === 0, n = a ? "initial" : "incremental", o = a ? void 0 : am(e);
+    Ue.markRunning($e, Jt);
     const s = pe(), i = Je.start({
       integrationId: $e,
       resource: Jt,
@@ -14441,13 +14456,13 @@ class om {
         const X = [];
         for (const S of B)
           try {
-            const k = await Ge.getProductById(S.id), Le = Wn(k.data) ?? S;
-            X.push({ ...S, ...Le }), await ha(120);
+            const k = await Ge.getProductById(S.id), Oe = Wn(k.data) ?? S;
+            X.push({ ...S, ...Oe }), await ha(120);
           } catch (k) {
             console.warn(`[SyncProductsFromBlingService] Falha ao buscar detalhe do produto ${S.id}. Usando payload da listagem.`, k), X.push(S);
           }
-        const K = pe(), W = X.map((S) => nm(S, K, T)), Re = W.filter((S) => !S.ncm || !S.origin);
-        Re.length > 0 && console.warn("[SyncProductsFromBlingService] Produtos sem NCM/origem apos detalhe do Bling:", Re.slice(0, 5).map((S) => ({
+        const K = pe(), W = X.map((S) => nm(S, K, T)), Le = W.filter((S) => !S.ncm || !S.origin);
+        Le.length > 0 && console.warn("[SyncProductsFromBlingService] Produtos sem NCM/origem apos detalhe do Bling:", Le.slice(0, 5).map((S) => ({
           externalId: S.externalId,
           sku: S.sku,
           name: S.name,
@@ -14458,15 +14473,15 @@ class om {
         })));
         for (const S of W)
           S.remoteUpdatedAt && (!m || S.remoteUpdatedAt > m) && (m = S.remoteUpdatedAt);
-        const De = W.map((S) => S.externalId), Me = new Set(
-          Ea.getExternalIdsBySource($e, De)
+        const ve = W.map((S) => S.externalId), Me = new Set(
+          Ea.getExternalIdsBySource($e, ve)
         );
         for (const S of W)
           Me.has(S.externalId) ? l++ : c++;
         W.length > 0 && Ea.upsertMany(W), u += Y.length, Y.length < Yn ? g = !1 : (h++, await ha(350));
       }
       const y = pe();
-      return be.markSuccess(
+      return Ue.markSuccess(
         $e,
         Jt,
         m ?? _s(y)
@@ -14481,7 +14496,7 @@ class om {
       }), { mode: n, processed: u, created: c, updated: l, failed: E };
     } catch (T) {
       const h = pe(), g = T instanceof Error ? T.message : String(T);
-      throw be.markError($e, Jt, g), Je.finish({
+      throw Ue.markError($e, Jt, g), Je.finish({
         id: i,
         status: "failed",
         finishedAt: h,
@@ -14549,7 +14564,7 @@ function um() {
         message: t instanceof Error ? t.message : "Erro ao sincronizar categorias."
       };
     }
-  }), p.handle("integrations:bling:sync-status", () => (A("integrations:manage"), be.get("bling", "products"))), p.handle("integrations:bling:sync-status-categories", () => (A("integrations:manage"), be.get("bling", "categories"))), p.handle("integrations:bling:sync-logs", () => (A("integrations:manage"), Je.listByIntegration("bling", "products", 10))), p.handle("integrations:bling:sync-logs-categories", () => (A("integrations:manage"), Je.listByIntegration("bling", "categories", 10))), p.handle("integrations:bling:test", async () => (A("integrations:manage"), await Ge.getProducts({ page: 1, limit: 5 }))), p.handle("integrations:bling:debug-product", async (t, e) => {
+  }), p.handle("integrations:bling:sync-status", () => (A("integrations:manage"), Ue.get("bling", "products"))), p.handle("integrations:bling:sync-status-categories", () => (A("integrations:manage"), Ue.get("bling", "categories"))), p.handle("integrations:bling:sync-logs", () => (A("integrations:manage"), Je.listByIntegration("bling", "products", 10))), p.handle("integrations:bling:sync-logs-categories", () => (A("integrations:manage"), Je.listByIntegration("bling", "categories", 10))), p.handle("integrations:bling:test", async () => (A("integrations:manage"), await Ge.getProducts({ page: 1, limit: 5 }))), p.handle("integrations:bling:debug-product", async (t, e) => {
     if (A("integrations:manage"), e != null && e.id)
       return await Ge.getProductById(e.id);
     if (e != null && e.code) {
@@ -14587,14 +14602,14 @@ function As() {
     }
   );
 }
-Fe.on("before-quit", () => {
+Ce.on("before-quit", () => {
   const t = Va();
   t && ps(t);
 });
-Fe.on("window-all-closed", () => {
-  process.platform !== "darwin" && (Fe.quit(), fe = null);
+Ce.on("window-all-closed", () => {
+  process.platform !== "darwin" && (Ce.quit(), fe = null);
 });
-Fe.on("activate", () => {
+Ce.on("activate", () => {
   ue.getAllWindows().length === 0 && As();
 });
 p.on("app:fechar-janela", () => {
@@ -14610,9 +14625,9 @@ p.handle("app:quit-with-confirm", async () => {
     cancelId: 0,
     message: "Tem certeza que deseja sair do sistema?"
   });
-  return t === 1 ? (Fe.quit(), !0) : !1;
+  return t === 1 ? (Ce.quit(), !0) : !1;
 });
-Fe.whenReady().then(() => {
+Ce.whenReady().then(() => {
   li(), rE(), yE(), NE(), OE(), bE(), UE(), wE(), FE(), xE(), um(), As(), N.info("Criado janela principal do App");
 });
 export {

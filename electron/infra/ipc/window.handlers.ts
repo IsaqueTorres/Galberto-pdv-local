@@ -51,7 +51,9 @@ export default function registerWindowHandlers() {
       searchSalesWindow.loadURL(`${VITE_DEV_SERVER_URL}#/sales/search`)
     } else {
       // win.loadFile('dist/index.html')
-      searchSalesWindow.loadFile(path.join('dist/index.html'))
+      searchSalesWindow.loadFile(path.join('dist/index.html'), {
+        hash: `/sales/search`,
+      })
     }
   }
 
@@ -74,9 +76,9 @@ export default function registerWindowHandlers() {
     if (VITE_DEV_SERVER_URL) {
       pdvWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv`);
     } else {
-      pdvWindow.loadFile(path.join("dist/index.html")), {
+      pdvWindow.loadFile(path.join("dist/index.html"), {
         hash: "/pdv",
-      };
+      });
     }
   }
 
@@ -98,9 +100,9 @@ export default function registerWindowHandlers() {
       viewVendaWindow.loadURL(`${VITE_DEV_SERVER_URL}#/vendas/${id}`)
     } else {
       // win.loadFile('dist/index.html')
-      viewVendaWindow.loadFile(path.join('dist/index.html')), {
+      viewVendaWindow.loadFile(path.join('dist/index.html'), {
         hash: `/vendas/${id}`,
-      }
+      })
     }
   }
 
@@ -143,9 +145,9 @@ export default function registerWindowHandlers() {
       viewUsuarioWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/usuarios/${id}`)
     } else {
       // win.loadFile('dist/index.html')
-      viewUsuarioWindow.loadFile(path.join('dist/index.html')), {
+      viewUsuarioWindow.loadFile(path.join('dist/index.html'), {
         hash: `/config/usuarios/${id}`,
-      }
+      })
     }
   }
 
@@ -286,9 +288,9 @@ export default function registerWindowHandlers() {
       cadastrarUsuarioWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/usuarios/cadastrar_usuario`)
     } else {
       // win.loadFile('dist/index.html')
-      cadastrarUsuarioWindow.loadFile(path.join('dist/index.html')), {
+      cadastrarUsuarioWindow.loadFile(path.join('dist/index.html'), {
         hash: `/config/usuarios/cadastrar_usuario`,
-      }
+      })
     }
   }
 
@@ -309,9 +311,9 @@ export default function registerWindowHandlers() {
       editUserWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/users/edit_user/${id}`)
     } else {
       // win.loadFile('dist/index.html')
-      editUserWindow.loadFile(path.join('dist/index.html')), {
+      editUserWindow.loadFile(path.join('dist/index.html'), {
         hash: `/config/users/edit_user/${id}`,
-      }
+      })
     }
   }
 }

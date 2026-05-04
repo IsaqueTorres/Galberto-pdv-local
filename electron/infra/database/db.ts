@@ -13,7 +13,10 @@ import { Usuario } from "../../../src/types/Usuario";
 
 // caminho seguro em Linux, Windows e Mac
 const dbPath = path.join(app.getPath("userData"), "galberto.db");
-console.log(" Criando/abrindo banco de dados em: ", dbPath);
+console.log("SQLite path: ", dbPath);
+console.log('isPackaged:', app.isPackaged);
+console.log('app.getPath(userData):', app.getPath('userData'));
+console.log('process.cwd():', process.cwd());
 const db = new Database(dbPath);
 export default db;
 export type SQLiteDatabase = typeof db;

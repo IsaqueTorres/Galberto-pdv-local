@@ -12,4 +12,13 @@
 
 ### 2. OBJETIVO DESTA TAREFA
 
-O nosso PDV é um SaaS ou seja, o cliente usa e paga por mes. Porem nao temos ainda 
+Corrija o bugs que voce encontrou, Importante: não resolva ainda o problema de sessão com SQLite/Zustand/AuthContext. Nesta tarefa, corrija exclusivamente o bug de roteamento das janelas no build causado por `loadFile` com `hash` mal aplicado ou ausente.
+
+Contexto:
+- Projeto Electron + React + TypeScript + Vite.
+- Em desenvolvimento, as janelas abrem corretamente usando loadURL com hash, por exemplo `#/pdv`.
+- No app instalado/build Windows, algumas janelas estão abrindo na rota inicial `/`, que é a tela de login, fazendo parecer que o sistema perdeu a autenticação.
+- A investigação anterior mostrou que há chamadas incorretas de `loadFile`, onde o objeto `{ hash: "..." }` ficou fora da chamada por causa de vírgula/parênteses.
+
+
+
