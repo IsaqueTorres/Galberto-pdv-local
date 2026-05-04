@@ -58,6 +58,7 @@ export type NfceXmlBuildResult = {
 type NfceDocumentModel = {
   accessKey: NfceAccessKeyResult;
   input: NfceXmlBuilderInput;
+  effectiveItems: NfceItemInput[];
 };
 
 function escapeXml(value: string | number | null | undefined): string {
@@ -120,6 +121,70 @@ function moneyToCents(value: number | null | undefined): number {
 
 function centsToMoney(value: number): string {
   return (value / 100).toFixed(2);
+}
+
+function cloneItemWithFiscalAmounts(item: NfceItemInput, discountCents: number): NfceItemInput {
+  const grossCents = moneyToCents(item.grossAmount);
+  const safeDiscountCents = Math.max(0, Math.min(discountCents, grossCents));
+
+  return {
+    ...item,
+    discountAmount: safeDiscountCents / 100,
+    totalAmount: Math.max(grossCents - safeDiscountCents, 0) / 100,
+  };
+}
+
+function sumItemDiscountCents(items: NfceItemInput[]): number {
+  return items.reduce((sum, item) => sum + moneyToCents(item.discountAmount), 0);
+}
+
+function allocateTotalDiscountAcrossItems(items: NfceItemInput[], totalDiscountAmount: number): NfceItemInput[] {
+  const totalDiscountCents = moneyToCents(totalDiscountAmount);
+  const currentDiscountCents = sumItemDiscountCents(items);
+  const extraDiscountCents = totalDiscountCents - currentDiscountCents;
+
+  if (extraDiscountCents <= 0 || items.length === 0) {
+    return items.map((item) => cloneItemWithFiscalAmounts(item, moneyToCents(item.discountAmount)));
+  }
+
+  const itemStates = items.map((item) => {
+    const grossCents = moneyToCents(item.grossAmount);
+    const currentCents = Math.max(0, Math.min(moneyToCents(item.discountAmount), grossCents));
+    return {
+      item,
+      grossCents,
+      currentCents,
+      remainingCents: Math.max(grossCents - currentCents, 0),
+      allocatedExtraCents: 0,
+    };
+  });
+
+  const totalRemainingCents = itemStates.reduce((sum, item) => sum + item.remainingCents, 0);
+  if (totalRemainingCents <= 0) {
+    return itemStates.map((state) => cloneItemWithFiscalAmounts(state.item, state.currentCents));
+  }
+
+  let allocatedCents = 0;
+  for (const state of itemStates) {
+    const proportionalCents = Math.floor((extraDiscountCents * state.remainingCents) / totalRemainingCents);
+    state.allocatedExtraCents = Math.min(proportionalCents, state.remainingCents);
+    allocatedCents += state.allocatedExtraCents;
+  }
+
+  let remainderCents = extraDiscountCents - allocatedCents;
+  for (const state of itemStates) {
+    if (remainderCents <= 0) break;
+    const capacityCents = state.remainingCents - state.allocatedExtraCents;
+    if (capacityCents <= 0) continue;
+    const incrementCents = Math.min(capacityCents, remainderCents);
+    state.allocatedExtraCents += incrementCents;
+    remainderCents -= incrementCents;
+  }
+
+  return itemStates.map((state) => cloneItemWithFiscalAmounts(
+    state.item,
+    state.currentCents + state.allocatedExtraCents
+  ));
 }
 
 function quantity(value: number | null | undefined): string {
@@ -329,7 +394,7 @@ function infNFeSuplXml(context: FiscalContext, accessKey: string): string {
 function validateDocument(model: NfceDocumentModel): NfceXmlBuildResult['validation'] {
   const errors: FiscalReadinessIssue[] = [];
   const warnings: FiscalReadinessIssue[] = [];
-  const { input } = model;
+  const { input, effectiveItems } = model;
 
   const addError = (code: string, message: string, field: string) => errors.push({ code, message, field, severity: 'error' });
   const addWarning = (code: string, message: string, field: string) => warnings.push({ code, message, field, severity: 'warning' });
@@ -345,10 +410,31 @@ function validateDocument(model: NfceDocumentModel): NfceXmlBuildResult['validat
   input.items.forEach((item, index) => {
     if (onlyDigits(item.tax.ncm).length !== 8) addError('ITEM_NCM_INVALID', 'NCM deve ter 8 digitos.', `items[${index}].tax.ncm`);
     if (onlyDigits(item.tax.cfop).length !== 4) addError('ITEM_CFOP_INVALID', 'CFOP deve ter 4 digitos.', `items[${index}].tax.cfop`);
+    if (moneyToCents(item.discountAmount) > moneyToCents(item.grossAmount)) {
+      addError('ITEM_DISCOUNT_EXCEEDS_GROSS', 'Desconto do item nao pode ser maior que o valor bruto.', `items[${index}].discountAmount`);
+    }
     if (isSimpleNationalCrt(input.fiscalContext.emitter.taxRegimeCode) && item.tax.csosn && !['102', '103', '300', '400'].includes(item.tax.csosn)) {
       addWarning('ITEM_CSOSN_LIMITED_SUPPORT', `CSOSN ${item.tax.csosn} sera serializado no grupo ICMSSN102; valide a regra fiscal antes de transmitir.`, `items[${index}].tax.csosn`);
     }
   });
+
+  const productsAmountCents = moneyToCents(input.totals.productsAmount);
+  const finalAmountCents = moneyToCents(input.totals.finalAmount);
+  const discountAmountCents = moneyToCents(input.totals.discountAmount);
+  const effectiveItemsDiscountCents = sumItemDiscountCents(effectiveItems);
+  const effectiveItemsTotalCents = effectiveItems.reduce((sum, item) => sum + moneyToCents(item.totalAmount), 0);
+
+  if (discountAmountCents !== effectiveItemsDiscountCents) {
+    addError('TOTAL_DISCOUNT_DIFFERS_FROM_ITEMS', 'Desconto total da NFC-e deve ser igual a soma dos descontos dos itens.', 'totals.discountAmount');
+  }
+
+  if (productsAmountCents - discountAmountCents !== finalAmountCents) {
+    addError('TOTAL_FINAL_AMOUNT_INVALID', 'Valor final deve ser valor dos produtos menos desconto total.', 'totals.finalAmount');
+  }
+
+  if (effectiveItemsTotalCents !== finalAmountCents) {
+    addError('ITEM_TOTALS_DIFFERS_FROM_FINAL_AMOUNT', 'Somatorio liquido dos itens deve ser igual ao valor final da NFC-e.', 'items');
+  }
 
   const paymentTotals = calculatePaymentTotals(input.payments, input.totals.finalAmount);
   if (paymentTotals.paidAmountCents < paymentTotals.finalAmountCents) {
@@ -370,7 +456,9 @@ function serializeDocument(model: NfceDocumentModel): string {
   const address = emitter.address;
   const tpAmb = context.environment === 'production' ? '1' : '2';
   const tpEmis = 1;
-  const icmsTotals = calculateIcmsTotals(input.items, context);
+  const items = model.effectiveItems;
+  const icmsTotals = calculateIcmsTotals(items, context);
+  const totalDiscountAmount = sumItemDiscountCents(items) / 100;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <NFe xmlns="${NFE_NAMESPACE}">
@@ -415,7 +503,7 @@ ${emitter.tradeName ? `<xFant>${escapeXml(emitter.tradeName)}</xFant>` : ''}
 <CRT>${escapeXml(emitter.taxRegimeCode)}</CRT>
 </emit>
 ${customerXml(input.customer, context.environment)}
-${input.items.map((item, index) => itemXml(item, index, context)).join('')}
+${items.map((item, index) => itemXml(item, index, context)).join('')}
 <total>
 <ICMSTot>
 <vBC>${money(icmsTotals.baseAmount)}</vBC>
@@ -429,7 +517,7 @@ ${input.items.map((item, index) => itemXml(item, index, context)).join('')}
 <vProd>${money(input.totals.productsAmount)}</vProd>
 <vFrete>0.00</vFrete>
 <vSeg>0.00</vSeg>
-<vDesc>${money(input.totals.discountAmount)}</vDesc>
+<vDesc>${money(totalDiscountAmount)}</vDesc>
 <vII>0.00</vII>
 <vIPI>0.00</vIPI>
 <vIPIDevol>0.00</vIPIDevol>
@@ -461,7 +549,8 @@ export class NfceXmlBuilderService {
       environment: input.fiscalContext.environment,
     });
 
-    const model = { accessKey, input };
+    const effectiveItems = allocateTotalDiscountAcrossItems(input.items, input.totals.discountAmount);
+    const model = { accessKey, input, effectiveItems };
     const validation = validateDocument(model);
     if (!validation.ok) {
       return {

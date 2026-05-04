@@ -128,7 +128,7 @@ export default function TabelaProdutos() {
                                 >
                                     <td className="px-6 py-4">
                                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                                            {p.id}
+                                            {p.codigo_barras}
                                         </div>
                                     </td>
 

@@ -25,8 +25,7 @@ const paymentMethods: MeioPagamento[] = [
   "DINHEIRO",
   "PIX",
   "DEBITO",
-  "CREDITO",
-  "VOUCHER",
+  "CREDITO"
 ];
 
 export function PaymentModal({
