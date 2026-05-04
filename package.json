@@ -4,8 +4,9 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "description": "Galberto PDV",
+  "description": "Galberto PDV - sistema de ponto de venda desktop offline-first",
   "author": "Hostsource Tecnologia",
+  "email": "isaque@hostsourcetecnologia.com.br",
   "sideEffects": [
     "electron/db.ts"
   ],

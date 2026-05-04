@@ -1,43 +1,53 @@
-// @see - https://www.electron.build/configuration/configuration
 {
-  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "YourAppID",
-  "asar": true,
-  "productName": "YourAppName",
-  "directories": {
-    "output": "release/${version}"
+  appId: "br.com.galberto.pdv",
+  productName: "Galberto PDV",
+  copyright: "Copyright © 2026 Galberto",
+
+  directories: {
+    output: "release/${version}",
+    buildResources: "build"
   },
-  "files": [
-    "dist",
-    "dist-electron"
+
+  files: [
+    "dist/**/*",
+    "dist-electron/**/*",
+    "package.json"
   ],
-  "mac": {
-    "target": [
-      "dmg"
-    ],
-    "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
-  },
-  "win": {
-    "target": [
+
+  linux: {
+    target: [
       {
-        "target": "nsis",
-        "arch": [
-          "x64"
-        ]
+        target: "AppImage",
+        arch: ["x64"]
+      },
+      {
+        target: "rpm",
+        arch: ["x64"]
       }
     ],
-    "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
+    category: "Office",
+    icon: "build/icon.png"
   },
-  "nsis": {
-    "oneClick": false,
-    "perMachine": false,
-    "allowToChangeInstallationDirectory": true,
-    "deleteAppDataOnUninstall": false
-  },
-  "linux": {
-    "target": [
-      "AppImage"
+
+  win: {
+    target: [
+      {
+        target: "nsis",
+        arch: ["x64"]
+      }
     ],
-    "artifactName": "${productName}-Linux-${version}.${ext}"
-  }
+    icon: "build/icon.ico"
+  },
+
+  nsis: {
+    oneClick: false,
+    perMachine: false,
+    allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
+    shortcutName: "Galberto PDV",
+    artifactName: "Galberto-PDV-Setup-${version}.${ext}"
+  },
+
+  artifactName: "Galberto-PDV-${os}-${arch}-${version}.${ext}"
 }
