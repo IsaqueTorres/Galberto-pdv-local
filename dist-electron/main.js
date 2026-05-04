@@ -13333,7 +13333,7 @@ class $E {
     }
   }
   async connect() {
-    const e = Be("BLING_CLIENT_ID"), r = Be("BLING_REDIRECT_URI"), a = ME(24), n = await this.requestAuthorizationCode({
+    const e = Be("VITE_BLING_CLIENT_ID"), r = Be("VITE_BLING_REDIRECT_URI"), a = ME(24), n = await this.requestAuthorizationCode({
       clientId: e,
       redirectUri: r,
       state: a
@@ -13344,7 +13344,7 @@ class $E {
     };
   }
   async disconnect() {
-    const e = Be("BLING_CLIENT_ID"), r = Be("BLING_CLIENT_SECRET"), a = it.getByIntegrationId("bling");
+    const e = Be("VITE_BLING_CLIENT_ID"), r = Be("VITE_BLING_CLIENT_SECRET"), a = it.getByIntegrationId("bling");
     if (!a)
       return {
         success: !0,
@@ -13439,7 +13439,7 @@ class $E {
     });
   }
   async exchangeCodeForToken(e) {
-    const r = Be("BLING_CLIENT_ID"), a = Be("BLING_CLIENT_SECRET"), n = Be("BLING_REDIRECT_URI"), o = new URLSearchParams({
+    const r = Be("VITE_BLING_CLIENT_ID"), a = Be("VITE_BLING_CLIENT_SECRET"), n = Be("VITE_BLING_REDIRECT_URI"), o = new URLSearchParams({
       grant_type: "authorization_code",
       code: e,
       redirect_uri: n
@@ -13459,7 +13459,7 @@ class $E {
     this.persistToken(u);
   }
   async refreshAccessToken(e) {
-    const r = Be("BLING_CLIENT_ID"), a = Be("BLING_CLIENT_SECRET"), n = new URLSearchParams({
+    const r = Be("VITE_BLING_CLIENT_ID"), a = Be("VITE_BLING_CLIENT_SECRET"), n = new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: e
     }), o = await fetch(zn, {

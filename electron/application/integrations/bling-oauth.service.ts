@@ -81,8 +81,8 @@ export class BlingOAuthService {
   }
 
   async connect(): Promise<{ success: boolean; message: string }> {
-    const clientId = getRequiredEnv('BLING_CLIENT_ID');
-    const redirectUri = getRequiredEnv('BLING_REDIRECT_URI');
+    const clientId = getRequiredEnv('VITE_BLING_CLIENT_ID');
+    const redirectUri = getRequiredEnv('VITE_BLING_REDIRECT_URI');
 
     const state = generateRandomState(24);
 
@@ -101,8 +101,8 @@ export class BlingOAuthService {
   }
 
   async disconnect(): Promise<{ success: boolean; message: string }> {
-    const clientId = getRequiredEnv('BLING_CLIENT_ID');
-    const clientSecret = getRequiredEnv('BLING_CLIENT_SECRET');
+    const clientId = getRequiredEnv('VITE_BLING_CLIENT_ID');
+    const clientSecret = getRequiredEnv('VITE_BLING_CLIENT_SECRET');
     const saved = integrationRepository.getByIntegrationId('bling');
 
     if (!saved) {
@@ -298,9 +298,9 @@ export class BlingOAuthService {
   }
 
   private async exchangeCodeForToken(code: string): Promise<void> {
-    const clientId = getRequiredEnv('BLING_CLIENT_ID');
-    const clientSecret = getRequiredEnv('BLING_CLIENT_SECRET');
-    const redirectUri = getRequiredEnv('BLING_REDIRECT_URI');
+    const clientId = getRequiredEnv('VITE_BLING_CLIENT_ID');
+    const clientSecret = getRequiredEnv('VITE_BLING_CLIENT_SECRET');
+    const redirectUri = getRequiredEnv('VITE_BLING_REDIRECT_URI');
 
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
@@ -330,8 +330,8 @@ export class BlingOAuthService {
   }
 
   private async refreshAccessToken(refreshToken: string): Promise<void> {
-    const clientId = getRequiredEnv('BLING_CLIENT_ID');
-    const clientSecret = getRequiredEnv('BLING_CLIENT_SECRET');
+    const clientId = getRequiredEnv('VITE_BLING_CLIENT_ID');
+    const clientSecret = getRequiredEnv('VITE_BLING_CLIENT_SECRET');
 
     const body = new URLSearchParams({
       grant_type: 'refresh_token',
