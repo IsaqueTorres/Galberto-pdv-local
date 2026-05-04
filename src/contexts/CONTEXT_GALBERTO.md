@@ -12,10 +12,17 @@
 
     ### 2. OBJETIVO DESTA TAREFA
 
-Esses dados de conexao com o bling nunca mudam eles identificam o APP Galberto, e nao o cliente, entao nao deveriam estar embutidos no codigo?
+GPT o problema nao é mais errorHandler e sim "CERTIFICATE_READ_FAILED: Não foi possível validar o certificado digital informado".
 
-client_id
-client_secret
-api_key
+Ja validei que o certificado esta funcionando.
+    - ele consegue ser validado no cmd pelo openssl
+    - no linux ele conecta na SEFAZ e emite nfc-e no ambiente de homologacao.
 
-Oque vai ser diferete vai ser apenas o login e sennha do cliente, mas isso de qualquer forma ele vai fazer no navegador dele e nao no Galberto.
+openssl esta instalado.
+    - Ele é chamado com sucesso com o comando openssl version -a no cmd.
+
+o caminho do certificado esta correto
+    - sem "" no path
+    - existe o certificado no local
+
+No linux tudo funciona porem no windows nao funciona.

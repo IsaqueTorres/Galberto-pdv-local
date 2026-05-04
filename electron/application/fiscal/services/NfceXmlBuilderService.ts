@@ -192,6 +192,16 @@ function quantity(value: number | null | undefined): string {
 }
 
 function normalizeIsoWithTimezone(value: string): string {
+  const normalized = value.trim();
+  const alreadyHasTimezone = normalized.match(
+    /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?([+-]\d{2}:\d{2}|Z)$/
+  );
+
+  if (alreadyHasTimezone) {
+    const [, datePart, timePart, offset] = alreadyHasTimezone;
+    return `${datePart}T${timePart}${offset === 'Z' ? '+00:00' : offset}`;
+  }
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 

@@ -103,6 +103,18 @@ test('builder distributes sale-level discount to item vDesc for SEFAZ total cons
   assert.match(result.xml, /<vNF>0\.90<\/vNF>/);
 });
 
+test('builder preserves issuedAt timezone offset in dhEmi', () => {
+  const result = nfceXmlBuilderService.build(buildInput({
+    sale: {
+      ...buildInput().sale,
+      issuedAt: '2026-05-04T20:32:54-03:00',
+    },
+  }));
+
+  assert.equal(result.validation.ok, true);
+  assert.match(result.xml, /<dhEmi>2026-05-04T20:32:54-03:00<\/dhEmi>/);
+});
+
 test('builder preserves item discount and distributes only additional sale discount', () => {
   const input = buildInput({
     items: [

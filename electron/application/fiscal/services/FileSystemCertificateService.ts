@@ -1,10 +1,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { X509Certificate } from 'node:crypto';
 import type { CertificateService } from '../contracts/CertificateService';
 import { FiscalError } from '../errors/FiscalError';
 import type { CertificateInfo, FiscalProviderConfig } from '../types/fiscal.types';
+import { readPkcs12WithOpenSsl } from './OpenSslPkcs12';
 
 export class FileSystemCertificateService implements CertificateService {
   private readCertificatePem(config: FiscalProviderConfig): string | null {
@@ -28,16 +28,13 @@ export class FileSystemCertificateService implements CertificateService {
       }
 
       try {
-        return execFileSync(
-          'openssl',
-          ['pkcs12', '-in', certificatePath, '-clcerts', '-nokeys', '-passin', `pass:${config.certificatePassword}`],
-          { encoding: 'utf8' }
-        );
+        return readPkcs12WithOpenSsl(['-in', certificatePath, '-clcerts', '-nokeys'], config.certificatePassword);
       } catch (error) {
         throw new FiscalError({
           code: 'CERTIFICATE_READ_FAILED',
           message: 'Não foi possível validar o certificado digital informado.',
           category: 'CERTIFICATE',
+          details: (error as Error & { details?: unknown })?.details,
           cause: error,
         });
       }

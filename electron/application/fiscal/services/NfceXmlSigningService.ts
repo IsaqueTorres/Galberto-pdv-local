@@ -1,10 +1,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { createHash, createSign } from 'node:crypto';
 import { DOMParser } from '@xmldom/xmldom';
 import { FiscalError } from '../errors/FiscalError';
 import type { FiscalProviderConfig } from '../types/fiscal.types';
+import { readPkcs12WithOpenSsl } from './OpenSslPkcs12';
 
 const NFE_NAMESPACE = 'http://www.portalfiscal.inf.br/nfe';
 const DSIG_NAMESPACE = 'http://www.w3.org/2000/09/xmldsig#';
@@ -117,16 +117,8 @@ function extractCertificate(config: FiscalProviderConfig): { privateKeyPem: stri
   }
 
   try {
-    const privateKeyPem = execFileSync(
-      'openssl',
-      ['pkcs12', '-in', certificatePath, '-nocerts', '-nodes', '-passin', `pass:${config.certificatePassword}`],
-      { encoding: 'utf8' }
-    );
-    const certificatePem = execFileSync(
-      'openssl',
-      ['pkcs12', '-in', certificatePath, '-clcerts', '-nokeys', '-passin', `pass:${config.certificatePassword}`],
-      { encoding: 'utf8' }
-    );
+    const privateKeyPem = readPkcs12WithOpenSsl(['-in', certificatePath, '-nocerts', '-nodes'], config.certificatePassword);
+    const certificatePem = readPkcs12WithOpenSsl(['-in', certificatePath, '-clcerts', '-nokeys'], config.certificatePassword);
     const privateKeyBlock = extractPemBlock(privateKeyPem, 'PRIVATE KEY')
       || extractPemBlock(privateKeyPem, 'RSA PRIVATE KEY');
     const certificateBody = extractPemBody(certificatePem, 'CERTIFICATE');
@@ -145,6 +137,7 @@ function extractCertificate(config: FiscalProviderConfig): { privateKeyPem: stri
       code: 'CERTIFICATE_PKCS12_EXTRACT_FAILED',
       message: 'Falha ao extrair chave/certificado do A1 para assinatura XML.',
       category: 'CERTIFICATE',
+      details: (error as Error & { details?: unknown })?.details,
       cause: error,
     });
   }
@@ -153,11 +146,7 @@ function extractCertificate(config: FiscalProviderConfig): { privateKeyPem: stri
 function findInfNFe(xml: string): Element {
   const parserErrors: string[] = [];
   const doc = new DOMParser({
-    errorHandler: {
-      warning: (message) => parserErrors.push(String(message)),
-      error: (message) => parserErrors.push(String(message)),
-      fatalError: (message) => parserErrors.push(String(message)),
-    },
+    onError: (_level, message) => parserErrors.push(String(message)),
   }).parseFromString(xml, 'application/xml');
   if (parserErrors.length > 0) {
     throw new FiscalError({
@@ -182,11 +171,7 @@ function findInfNFe(xml: string): Element {
 function canonicalizeXmlFragment(xml: string): string {
   const parserErrors: string[] = [];
   const doc = new DOMParser({
-    errorHandler: {
-      warning: (message) => parserErrors.push(String(message)),
-      error: (message) => parserErrors.push(String(message)),
-      fatalError: (message) => parserErrors.push(String(message)),
-    },
+    onError: (_level, message) => parserErrors.push(String(message)),
   }).parseFromString(xml, 'application/xml');
 
   if (parserErrors.length > 0 || !doc.documentElement) {

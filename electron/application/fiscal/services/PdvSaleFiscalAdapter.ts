@@ -127,20 +127,25 @@ function resolveIcmsTaxForStore(store: StoreRecord, item: LegacySaleItemRow) {
   };
 }
 
-function nowInSaoPauloIso(): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date());
+function fiscalOffsetForUf(uf: string | null | undefined): string {
+  const normalizedUf = String(uf ?? '').trim().toUpperCase();
 
-  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '00';
-  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}-03:00`;
+  if (normalizedUf === 'AC') return '-05:00';
+  if (['AM', 'MS', 'MT', 'RO', 'RR'].includes(normalizedUf)) return '-04:00';
+
+  return '-03:00';
+}
+
+function nowInIssuerFiscalIso(uf: string | null | undefined): string {
+  // Usa os componentes do relogio visivel da maquina, mas grava o offset fiscal
+  // da UF do emitente. Isso evita Windows configurado em UTC-04 enviar NFC-e de SP
+  // como se fosse uma hora a frente no horario de Brasilia.
+  const emissionDate = new Date(Date.now() - 120_000);
+  const pad = (part: number) => String(part).padStart(2, '0');
+  const offset = fiscalOffsetForUf(uf);
+
+  return `${emissionDate.getFullYear()}-${pad(emissionDate.getMonth() + 1)}-${pad(emissionDate.getDate())}` +
+    `T${pad(emissionDate.getHours())}:${pad(emissionDate.getMinutes())}:${pad(emissionDate.getSeconds())}${offset}`;
 }
 
 export class PdvSaleFiscalAdapter {
@@ -286,7 +291,7 @@ export class PdvSaleFiscalAdapter {
       description: payment.descricao_outro ?? null,
     }));
 
-    const fiscalIssuedAt = nowInSaoPauloIso();
+    const fiscalIssuedAt = nowInIssuerFiscalIso(store.addressState);
 
     return {
       saleId: sale.id,
