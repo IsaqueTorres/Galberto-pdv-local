@@ -4,7 +4,6 @@ import ConfigUsuarios from './ConfigUsuarios'
 import ConfigPrinters from './ConfigPrinters'
 import ConfigERP from './ConfigERP'
 import ConfigFiscal from './ConfigFiscal'
-import ConfigPerfis from './ConfigPerfis'
 import { Tab } from './components/Tab'
 import { AbaConfig } from './types/config.types'
 import { useSessionStore } from '../../stores/session.store'
@@ -26,12 +25,6 @@ export default function Config() {
       label: 'Usuários',
       permission: 'users:manage',
       component: <ConfigUsuarios />,
-    },
-    {
-      key: 'Perfis',
-      label: 'Perfis',
-      permission: 'users:manage',
-      component: <ConfigPerfis />,
     },
     {
       key: 'Impressoras',
