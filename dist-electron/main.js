@@ -1,23 +1,27 @@
-var Rs = Object.defineProperty;
-var Ls = (t, e, r) => e in t ? Rs(t, e, { enumerable: !0, configurable: !0, writable: !0, value: r }) : t[e] = r;
-var Re = (t, e, r) => Ls(t, typeof e != "symbol" ? e + "" : e, r);
-import { app as De, ipcMain as p, BrowserWindow as ce, shell as to, dialog as ro } from "electron";
-import * as Wr from "fs";
-import Or from "fs";
-import Ia from "path";
-import Os from "os";
-import ao from "crypto";
-import * as he from "node:fs";
-import * as We from "node:path";
-import F from "node:path";
-import ys from "better-sqlite3";
-import Ca, { X509Certificate as ja, createHash as no, createSign as bs } from "node:crypto";
-import { execFileSync as Us } from "node:child_process";
-import * as ws from "node:https";
-import Fs from "node:http";
-import { URL as ma } from "node:url";
-var He = { exports: {} };
-const pa = Or, yr = Ia, xs = Os, Ms = ao, Ya = [
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+import { app, ipcMain, BrowserWindow, shell, dialog } from "electron";
+import * as fs$2 from "fs";
+import fs__default from "fs";
+import path$2 from "path";
+import require$$2 from "os";
+import require$$3 from "crypto";
+import * as fs$1 from "node:fs";
+import * as path$1 from "node:path";
+import path__default from "node:path";
+import Database from "better-sqlite3";
+import crypto$1, { X509Certificate, createHash, createSign } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import * as https from "node:https";
+import http from "node:http";
+import { URL as URL$1 } from "node:url";
+var main = { exports: {} };
+const fs = fs__default;
+const path = path$2;
+const os = require$$2;
+const crypto = require$$3;
+const TIPS = [
   "◈ encrypted .env [www.dotenvx.com]",
   "◈ secrets for agents [www.dotenvx.com]",
   "⌁ auth for agents [www.vestauth.com]",
@@ -27,309 +31,433 @@ const pa = Or, yr = Ia, xs = Os, Ms = ao, Ya = [
   "⌘ suppress logs { quiet: true }",
   "⌘ multiple files { path: ['.env.local', '.env'] }"
 ];
-function Ps() {
-  return Ya[Math.floor(Math.random() * Ya.length)];
+function _getRandomTip() {
+  return TIPS[Math.floor(Math.random() * TIPS.length)];
 }
-function Ot(t) {
-  return typeof t == "string" ? !["false", "0", "no", "off", ""].includes(t.toLowerCase()) : !!t;
+function parseBoolean(value) {
+  if (typeof value === "string") {
+    return !["false", "0", "no", "off", ""].includes(value.toLowerCase());
+  }
+  return Boolean(value);
 }
-function Bs() {
+function supportsAnsi() {
   return process.stdout.isTTY;
 }
-function Xs(t) {
-  return Bs() ? `\x1B[2m${t}\x1B[0m` : t;
+function dim(text) {
+  return supportsAnsi() ? `\x1B[2m${text}\x1B[0m` : text;
 }
-const ks = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
-function $s(t) {
-  const e = {};
-  let r = t.toString();
-  r = r.replace(/\r\n?/mg, `
-`);
-  let a;
-  for (; (a = ks.exec(r)) != null; ) {
-    const n = a[1];
-    let o = a[2] || "";
-    o = o.trim();
-    const s = o[0];
-    o = o.replace(/^(['"`])([\s\S]*)\1$/mg, "$2"), s === '"' && (o = o.replace(/\\n/g, `
-`), o = o.replace(/\\r/g, "\r")), e[n] = o;
+const LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
+function parse$1(src) {
+  const obj = {};
+  let lines = src.toString();
+  lines = lines.replace(/\r\n?/mg, "\n");
+  let match;
+  while ((match = LINE.exec(lines)) != null) {
+    const key = match[1];
+    let value = match[2] || "";
+    value = value.trim();
+    const maybeQuote = value[0];
+    value = value.replace(/^(['"`])([\s\S]*)\1$/mg, "$2");
+    if (maybeQuote === '"') {
+      value = value.replace(/\\n/g, "\n");
+      value = value.replace(/\\r/g, "\r");
+    }
+    obj[key] = value;
   }
-  return e;
+  return obj;
 }
-function Gs(t) {
-  t = t || {};
-  const e = io(t);
-  t.path = e;
-  const r = Z.configDotenv(t);
-  if (!r.parsed) {
-    const s = new Error(`MISSING_DATA: Cannot parse ${e} for an unknown reason`);
-    throw s.code = "MISSING_DATA", s;
+function _parseVault(options2) {
+  options2 = options2 || {};
+  const vaultPath = _vaultPath(options2);
+  options2.path = vaultPath;
+  const result = DotenvModule.configDotenv(options2);
+  if (!result.parsed) {
+    const err = new Error(`MISSING_DATA: Cannot parse ${vaultPath} for an unknown reason`);
+    err.code = "MISSING_DATA";
+    throw err;
   }
-  const a = so(t).split(","), n = a.length;
-  let o;
-  for (let s = 0; s < n; s++)
+  const keys = _dotenvKey(options2).split(",");
+  const length = keys.length;
+  let decrypted;
+  for (let i = 0; i < length; i++) {
     try {
-      const i = a[s].trim(), c = Vs(r, i);
-      o = Z.decrypt(c.ciphertext, c.key);
+      const key = keys[i].trim();
+      const attrs = _instructions(result, key);
+      decrypted = DotenvModule.decrypt(attrs.ciphertext, attrs.key);
       break;
-    } catch (i) {
-      if (s + 1 >= n)
-        throw i;
-    }
-  return Z.parse(o);
-}
-function qs(t) {
-  console.error(`⚠ ${t}`);
-}
-function tr(t) {
-  console.log(`┆ ${t}`);
-}
-function oo(t) {
-  console.log(`◇ ${t}`);
-}
-function so(t) {
-  return t && t.DOTENV_KEY && t.DOTENV_KEY.length > 0 ? t.DOTENV_KEY : process.env.DOTENV_KEY && process.env.DOTENV_KEY.length > 0 ? process.env.DOTENV_KEY : "";
-}
-function Vs(t, e) {
-  let r;
-  try {
-    r = new URL(e);
-  } catch (i) {
-    if (i.code === "ERR_INVALID_URL") {
-      const c = new Error("INVALID_DOTENV_KEY: Wrong format. Must be in valid uri format like dotenv://:key_1234@dotenvx.com/vault/.env.vault?environment=development");
-      throw c.code = "INVALID_DOTENV_KEY", c;
-    }
-    throw i;
-  }
-  const a = r.password;
-  if (!a) {
-    const i = new Error("INVALID_DOTENV_KEY: Missing key part");
-    throw i.code = "INVALID_DOTENV_KEY", i;
-  }
-  const n = r.searchParams.get("environment");
-  if (!n) {
-    const i = new Error("INVALID_DOTENV_KEY: Missing environment part");
-    throw i.code = "INVALID_DOTENV_KEY", i;
-  }
-  const o = `DOTENV_VAULT_${n.toUpperCase()}`, s = t.parsed[o];
-  if (!s) {
-    const i = new Error(`NOT_FOUND_DOTENV_ENVIRONMENT: Cannot locate environment ${o} in your .env.vault file.`);
-    throw i.code = "NOT_FOUND_DOTENV_ENVIRONMENT", i;
-  }
-  return { ciphertext: s, key: a };
-}
-function io(t) {
-  let e = null;
-  if (t && t.path && t.path.length > 0)
-    if (Array.isArray(t.path))
-      for (const r of t.path)
-        pa.existsSync(r) && (e = r.endsWith(".vault") ? r : `${r}.vault`);
-    else
-      e = t.path.endsWith(".vault") ? t.path : `${t.path}.vault`;
-  else
-    e = yr.resolve(process.cwd(), ".env.vault");
-  return pa.existsSync(e) ? e : null;
-}
-function Ka(t) {
-  return t[0] === "~" ? yr.join(xs.homedir(), t.slice(1)) : t;
-}
-function zs(t) {
-  const e = Ot(process.env.DOTENV_CONFIG_DEBUG || t && t.debug), r = Ot(process.env.DOTENV_CONFIG_QUIET || t && t.quiet);
-  (e || !r) && oo("loading env from encrypted .env.vault");
-  const a = Z._parseVault(t);
-  let n = process.env;
-  return t && t.processEnv != null && (n = t.processEnv), Z.populate(n, a, t), { parsed: a };
-}
-function Hs(t) {
-  const e = yr.resolve(process.cwd(), ".env");
-  let r = "utf8", a = process.env;
-  t && t.processEnv != null && (a = t.processEnv);
-  let n = Ot(a.DOTENV_CONFIG_DEBUG || t && t.debug), o = Ot(a.DOTENV_CONFIG_QUIET || t && t.quiet);
-  t && t.encoding ? r = t.encoding : n && tr("no encoding is specified (UTF-8 is used by default)");
-  let s = [e];
-  if (t && t.path)
-    if (!Array.isArray(t.path))
-      s = [Ka(t.path)];
-    else {
-      s = [];
-      for (const l of t.path)
-        s.push(Ka(l));
-    }
-  let i;
-  const c = {};
-  for (const l of s)
-    try {
-      const E = Z.parse(pa.readFileSync(l, { encoding: r }));
-      Z.populate(c, E, t);
-    } catch (E) {
-      n && tr(`failed to load ${l} ${E.message}`), i = E;
-    }
-  const u = Z.populate(a, c, t);
-  if (n = Ot(a.DOTENV_CONFIG_DEBUG || n), o = Ot(a.DOTENV_CONFIG_QUIET || o), n || !o) {
-    const l = Object.keys(u).length, E = [];
-    for (const m of s)
-      try {
-        const T = yr.relative(process.cwd(), m);
-        E.push(T);
-      } catch (T) {
-        n && tr(`failed to load ${m} ${T.message}`), i = T;
+    } catch (error) {
+      if (i + 1 >= length) {
+        throw error;
       }
-    oo(`injected env (${l}) from ${E.join(",")} ${Xs(`// tip: ${Ps()}`)}`);
+    }
   }
-  return i ? { parsed: c, error: i } : { parsed: c };
+  return DotenvModule.parse(decrypted);
 }
-function js(t) {
-  if (so(t).length === 0)
-    return Z.configDotenv(t);
-  const e = io(t);
-  return e ? Z._configVault(t) : (qs(`you set DOTENV_KEY but you are missing a .env.vault file at ${e}`), Z.configDotenv(t));
+function _warn(message) {
+  console.error(`⚠ ${message}`);
 }
-function Ys(t, e) {
-  const r = Buffer.from(e.slice(-64), "hex");
-  let a = Buffer.from(t, "base64");
-  const n = a.subarray(0, 12), o = a.subarray(-16);
-  a = a.subarray(12, -16);
+function _debug(message) {
+  console.log(`┆ ${message}`);
+}
+function _log(message) {
+  console.log(`◇ ${message}`);
+}
+function _dotenvKey(options2) {
+  if (options2 && options2.DOTENV_KEY && options2.DOTENV_KEY.length > 0) {
+    return options2.DOTENV_KEY;
+  }
+  if (process.env.DOTENV_KEY && process.env.DOTENV_KEY.length > 0) {
+    return process.env.DOTENV_KEY;
+  }
+  return "";
+}
+function _instructions(result, dotenvKey) {
+  let uri;
   try {
-    const s = Ms.createDecipheriv("aes-256-gcm", r, n);
-    return s.setAuthTag(o), `${s.update(a)}${s.final()}`;
-  } catch (s) {
-    const i = s instanceof RangeError, c = s.message === "Invalid key length", u = s.message === "Unsupported state or unable to authenticate data";
-    if (i || c) {
-      const l = new Error("INVALID_DOTENV_KEY: It must be 64 characters long (or more)");
-      throw l.code = "INVALID_DOTENV_KEY", l;
-    } else if (u) {
-      const l = new Error("DECRYPTION_FAILED: Please check your DOTENV_KEY");
-      throw l.code = "DECRYPTION_FAILED", l;
-    } else
-      throw s;
+    uri = new URL(dotenvKey);
+  } catch (error) {
+    if (error.code === "ERR_INVALID_URL") {
+      const err = new Error("INVALID_DOTENV_KEY: Wrong format. Must be in valid uri format like dotenv://:key_1234@dotenvx.com/vault/.env.vault?environment=development");
+      err.code = "INVALID_DOTENV_KEY";
+      throw err;
+    }
+    throw error;
+  }
+  const key = uri.password;
+  if (!key) {
+    const err = new Error("INVALID_DOTENV_KEY: Missing key part");
+    err.code = "INVALID_DOTENV_KEY";
+    throw err;
+  }
+  const environment = uri.searchParams.get("environment");
+  if (!environment) {
+    const err = new Error("INVALID_DOTENV_KEY: Missing environment part");
+    err.code = "INVALID_DOTENV_KEY";
+    throw err;
+  }
+  const environmentKey = `DOTENV_VAULT_${environment.toUpperCase()}`;
+  const ciphertext = result.parsed[environmentKey];
+  if (!ciphertext) {
+    const err = new Error(`NOT_FOUND_DOTENV_ENVIRONMENT: Cannot locate environment ${environmentKey} in your .env.vault file.`);
+    err.code = "NOT_FOUND_DOTENV_ENVIRONMENT";
+    throw err;
+  }
+  return { ciphertext, key };
+}
+function _vaultPath(options2) {
+  let possibleVaultPath = null;
+  if (options2 && options2.path && options2.path.length > 0) {
+    if (Array.isArray(options2.path)) {
+      for (const filepath of options2.path) {
+        if (fs.existsSync(filepath)) {
+          possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
+        }
+      }
+    } else {
+      possibleVaultPath = options2.path.endsWith(".vault") ? options2.path : `${options2.path}.vault`;
+    }
+  } else {
+    possibleVaultPath = path.resolve(process.cwd(), ".env.vault");
+  }
+  if (fs.existsSync(possibleVaultPath)) {
+    return possibleVaultPath;
+  }
+  return null;
+}
+function _resolveHome(envPath) {
+  return envPath[0] === "~" ? path.join(os.homedir(), envPath.slice(1)) : envPath;
+}
+function _configVault(options2) {
+  const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options2 && options2.debug);
+  const quiet = parseBoolean(process.env.DOTENV_CONFIG_QUIET || options2 && options2.quiet);
+  if (debug || !quiet) {
+    _log("loading env from encrypted .env.vault");
+  }
+  const parsed = DotenvModule._parseVault(options2);
+  let processEnv = process.env;
+  if (options2 && options2.processEnv != null) {
+    processEnv = options2.processEnv;
+  }
+  DotenvModule.populate(processEnv, parsed, options2);
+  return { parsed };
+}
+function configDotenv(options2) {
+  const dotenvPath = path.resolve(process.cwd(), ".env");
+  let encoding = "utf8";
+  let processEnv = process.env;
+  if (options2 && options2.processEnv != null) {
+    processEnv = options2.processEnv;
+  }
+  let debug = parseBoolean(processEnv.DOTENV_CONFIG_DEBUG || options2 && options2.debug);
+  let quiet = parseBoolean(processEnv.DOTENV_CONFIG_QUIET || options2 && options2.quiet);
+  if (options2 && options2.encoding) {
+    encoding = options2.encoding;
+  } else {
+    if (debug) {
+      _debug("no encoding is specified (UTF-8 is used by default)");
+    }
+  }
+  let optionPaths = [dotenvPath];
+  if (options2 && options2.path) {
+    if (!Array.isArray(options2.path)) {
+      optionPaths = [_resolveHome(options2.path)];
+    } else {
+      optionPaths = [];
+      for (const filepath of options2.path) {
+        optionPaths.push(_resolveHome(filepath));
+      }
+    }
+  }
+  let lastError;
+  const parsedAll = {};
+  for (const path2 of optionPaths) {
+    try {
+      const parsed = DotenvModule.parse(fs.readFileSync(path2, { encoding }));
+      DotenvModule.populate(parsedAll, parsed, options2);
+    } catch (e) {
+      if (debug) {
+        _debug(`failed to load ${path2} ${e.message}`);
+      }
+      lastError = e;
+    }
+  }
+  const populated = DotenvModule.populate(processEnv, parsedAll, options2);
+  debug = parseBoolean(processEnv.DOTENV_CONFIG_DEBUG || debug);
+  quiet = parseBoolean(processEnv.DOTENV_CONFIG_QUIET || quiet);
+  if (debug || !quiet) {
+    const keysCount = Object.keys(populated).length;
+    const shortPaths = [];
+    for (const filePath of optionPaths) {
+      try {
+        const relative = path.relative(process.cwd(), filePath);
+        shortPaths.push(relative);
+      } catch (e) {
+        if (debug) {
+          _debug(`failed to load ${filePath} ${e.message}`);
+        }
+        lastError = e;
+      }
+    }
+    _log(`injected env (${keysCount}) from ${shortPaths.join(",")} ${dim(`// tip: ${_getRandomTip()}`)}`);
+  }
+  if (lastError) {
+    return { parsed: parsedAll, error: lastError };
+  } else {
+    return { parsed: parsedAll };
   }
 }
-function Ks(t, e, r = {}) {
-  const a = !!(r && r.debug), n = !!(r && r.override), o = {};
-  if (typeof e != "object") {
-    const s = new Error("OBJECT_REQUIRED: Please check the processEnv argument being passed to populate");
-    throw s.code = "OBJECT_REQUIRED", s;
+function config(options2) {
+  if (_dotenvKey(options2).length === 0) {
+    return DotenvModule.configDotenv(options2);
   }
-  for (const s of Object.keys(e))
-    Object.prototype.hasOwnProperty.call(t, s) ? (n === !0 && (t[s] = e[s], o[s] = e[s]), a && tr(n === !0 ? `"${s}" is already defined and WAS overwritten` : `"${s}" is already defined and was NOT overwritten`)) : (t[s] = e[s], o[s] = e[s]);
-  return o;
+  const vaultPath = _vaultPath(options2);
+  if (!vaultPath) {
+    _warn(`you set DOTENV_KEY but you are missing a .env.vault file at ${vaultPath}`);
+    return DotenvModule.configDotenv(options2);
+  }
+  return DotenvModule._configVault(options2);
 }
-const Z = {
-  configDotenv: Hs,
-  _configVault: zs,
-  _parseVault: Gs,
-  config: js,
-  decrypt: Ys,
-  parse: $s,
-  populate: Ks
+function decrypt(encrypted, keyStr) {
+  const key = Buffer.from(keyStr.slice(-64), "hex");
+  let ciphertext = Buffer.from(encrypted, "base64");
+  const nonce = ciphertext.subarray(0, 12);
+  const authTag = ciphertext.subarray(-16);
+  ciphertext = ciphertext.subarray(12, -16);
+  try {
+    const aesgcm = crypto.createDecipheriv("aes-256-gcm", key, nonce);
+    aesgcm.setAuthTag(authTag);
+    return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
+  } catch (error) {
+    const isRange = error instanceof RangeError;
+    const invalidKeyLength = error.message === "Invalid key length";
+    const decryptionFailed = error.message === "Unsupported state or unable to authenticate data";
+    if (isRange || invalidKeyLength) {
+      const err = new Error("INVALID_DOTENV_KEY: It must be 64 characters long (or more)");
+      err.code = "INVALID_DOTENV_KEY";
+      throw err;
+    } else if (decryptionFailed) {
+      const err = new Error("DECRYPTION_FAILED: Please check your DOTENV_KEY");
+      err.code = "DECRYPTION_FAILED";
+      throw err;
+    } else {
+      throw error;
+    }
+  }
+}
+function populate(processEnv, parsed, options2 = {}) {
+  const debug = Boolean(options2 && options2.debug);
+  const override = Boolean(options2 && options2.override);
+  const populated = {};
+  if (typeof parsed !== "object") {
+    const err = new Error("OBJECT_REQUIRED: Please check the processEnv argument being passed to populate");
+    err.code = "OBJECT_REQUIRED";
+    throw err;
+  }
+  for (const key of Object.keys(parsed)) {
+    if (Object.prototype.hasOwnProperty.call(processEnv, key)) {
+      if (override === true) {
+        processEnv[key] = parsed[key];
+        populated[key] = parsed[key];
+      }
+      if (debug) {
+        if (override === true) {
+          _debug(`"${key}" is already defined and WAS overwritten`);
+        } else {
+          _debug(`"${key}" is already defined and was NOT overwritten`);
+        }
+      }
+    } else {
+      processEnv[key] = parsed[key];
+      populated[key] = parsed[key];
+    }
+  }
+  return populated;
+}
+const DotenvModule = {
+  configDotenv,
+  _configVault,
+  _parseVault,
+  config,
+  decrypt,
+  parse: parse$1,
+  populate
 };
-He.exports.configDotenv = Z.configDotenv;
-He.exports._configVault = Z._configVault;
-He.exports._parseVault = Z._parseVault;
-He.exports.config = Z.config;
-He.exports.decrypt = Z.decrypt;
-He.exports.parse = Z.parse;
-He.exports.populate = Z.populate;
-He.exports = Z;
-var Ws = He.exports;
-const mt = {};
-process.env.DOTENV_CONFIG_ENCODING != null && (mt.encoding = process.env.DOTENV_CONFIG_ENCODING);
-process.env.DOTENV_CONFIG_PATH != null && (mt.path = process.env.DOTENV_CONFIG_PATH);
-process.env.DOTENV_CONFIG_QUIET != null && (mt.quiet = process.env.DOTENV_CONFIG_QUIET);
-process.env.DOTENV_CONFIG_DEBUG != null && (mt.debug = process.env.DOTENV_CONFIG_DEBUG);
-process.env.DOTENV_CONFIG_OVERRIDE != null && (mt.override = process.env.DOTENV_CONFIG_OVERRIDE);
-process.env.DOTENV_CONFIG_DOTENV_KEY != null && (mt.DOTENV_KEY = process.env.DOTENV_CONFIG_DOTENV_KEY);
-var Qs = mt;
-const Js = /^dotenv_config_(encoding|path|quiet|debug|override|DOTENV_KEY)=(.+)$/;
-var Zs = function(e) {
-  const r = e.reduce(function(a, n) {
-    const o = n.match(Js);
-    return o && (a[o[1]] = o[2]), a;
+main.exports.configDotenv = DotenvModule.configDotenv;
+main.exports._configVault = DotenvModule._configVault;
+main.exports._parseVault = DotenvModule._parseVault;
+main.exports.config = DotenvModule.config;
+main.exports.decrypt = DotenvModule.decrypt;
+main.exports.parse = DotenvModule.parse;
+main.exports.populate = DotenvModule.populate;
+main.exports = DotenvModule;
+var mainExports = main.exports;
+const options = {};
+if (process.env.DOTENV_CONFIG_ENCODING != null) {
+  options.encoding = process.env.DOTENV_CONFIG_ENCODING;
+}
+if (process.env.DOTENV_CONFIG_PATH != null) {
+  options.path = process.env.DOTENV_CONFIG_PATH;
+}
+if (process.env.DOTENV_CONFIG_QUIET != null) {
+  options.quiet = process.env.DOTENV_CONFIG_QUIET;
+}
+if (process.env.DOTENV_CONFIG_DEBUG != null) {
+  options.debug = process.env.DOTENV_CONFIG_DEBUG;
+}
+if (process.env.DOTENV_CONFIG_OVERRIDE != null) {
+  options.override = process.env.DOTENV_CONFIG_OVERRIDE;
+}
+if (process.env.DOTENV_CONFIG_DOTENV_KEY != null) {
+  options.DOTENV_KEY = process.env.DOTENV_CONFIG_DOTENV_KEY;
+}
+var envOptions = options;
+const re = /^dotenv_config_(encoding|path|quiet|debug|override|DOTENV_KEY)=(.+)$/;
+var cliOptions = function optionMatcher(args) {
+  const options2 = args.reduce(function(acc, cur) {
+    const matches = cur.match(re);
+    if (matches) {
+      acc[matches[1]] = matches[2];
+    }
+    return acc;
   }, {});
-  return "quiet" in r || (r.quiet = "true"), r;
+  if (!("quiet" in options2)) {
+    options2.quiet = "true";
+  }
+  return options2;
 };
 (function() {
-  Ws.config(
+  mainExports.config(
     Object.assign(
       {},
-      Qs,
-      Zs(process.argv)
+      envOptions,
+      cliOptions(process.argv)
     )
   );
 })();
-const Ta = Ia.join(De.getPath("userData"), "logs");
-Or.existsSync(Ta) || Or.mkdirSync(Ta, { recursive: !0 });
-function Qr(t, e) {
-  const a = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", {
+const logDir = path$2.join(app.getPath("userData"), "logs");
+if (!fs__default.existsSync(logDir)) {
+  fs__default.mkdirSync(logDir, { recursive: true });
+}
+function writeLog(level, message) {
+  const date = /* @__PURE__ */ new Date();
+  const dateISO = date.toLocaleString("sv-SE", {
     timeZone: "America/Sao_Paulo"
-  }).replace(" ", "T"), n = `${a} [${t}] ${e}
-`, o = `${a.slice(0, 10)}.log`, s = Ia.join(Ta, o);
-  Or.appendFileSync(s, n, { encoding: "utf-8" });
+  }).replace(" ", "T");
+  const line = `${dateISO} [${level}] ${message}
+`;
+  const fileName = `${dateISO.slice(0, 10)}.log`;
+  const filePath = path$2.join(logDir, fileName);
+  fs__default.appendFileSync(filePath, line, { encoding: "utf-8" });
 }
-const N = {
-  info: (t) => Qr("INFO", t),
-  warn: (t) => Qr("WARN", t),
-  error: (t) => Qr("ERROR", t)
+const logger = {
+  info: (msg) => writeLog("INFO", msg),
+  warn: (msg) => writeLog("WARN", msg),
+  error: (msg) => writeLog("ERROR", msg)
 };
-function Pr(t) {
-  return ao.createHash("sha256").update(t).digest("hex");
+function hashSenha(senha) {
+  return require$$3.createHash("sha256").update(senha).digest("hex");
 }
-function ei(t, e) {
-  return Pr(t) === e;
+function compareSenha(senhaDigitada, hashBanco) {
+  return hashSenha(senhaDigitada) === hashBanco;
 }
-function ti(t, e) {
-  const r = d.prepare(`
+function autenticarUsuario(username, password) {
+  const user = db.prepare(`
     SELECT id, nome, funcao, email, username, password, ativo
     FROM usuarios
     WHERE username = ?
     LIMIT 1
-  `).get(t);
-  if (!r)
+  `).get(username);
+  if (!user) {
     throw new Error("Usuário inválido");
-  if (!ei(e, r.password))
+  }
+  if (!compareSenha(password, user.password)) {
     throw new Error("Senha inválida");
-  if (!r.ativo)
+  }
+  if (!user.ativo) {
     throw new Error("Usuário desabilitado");
-  const a = d.transaction(() => {
-    d.prepare(`
+  }
+  const sessionId = db.transaction(() => {
+    db.prepare(`
       UPDATE sessions
       SET active = 0,
           logout_at = CURRENT_TIMESTAMP
       WHERE user_id = ? AND active = 1
-    `).run(r.id);
-    const n = d.prepare(`
+    `).run(user.id);
+    const result = db.prepare(`
       INSERT INTO sessions (user_id)
       VALUES (?)
-    `).run(r.id);
-    return Number(n.lastInsertRowid);
+    `).run(user.id);
+    return Number(result.lastInsertRowid);
   })();
   return {
-    id: r.id,
-    nome: r.nome,
-    role: r.funcao,
-    email: r.email,
-    login: r.username,
-    sessionId: a
+    id: user.id,
+    nome: user.nome,
+    role: user.funcao,
+    email: user.email,
+    login: user.username,
+    sessionId
   };
 }
-const co = "2026-04-16-fiscal-persistence-v1";
-function ri(t) {
-  t.exec(`
+const MIGRATION_ID = "2026-04-16-fiscal-persistence-v1";
+function ensureMigrationsTable(database) {
+  database.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       id TEXT PRIMARY KEY,
       executed_at TEXT NOT NULL
     );
   `);
 }
-function ai(t, e) {
-  return !!t.prepare("SELECT 1 FROM schema_migrations WHERE id = ? LIMIT 1").get(e);
+function hasMigration(database, migrationId) {
+  const row = database.prepare(`SELECT 1 FROM schema_migrations WHERE id = ? LIMIT 1`).get(migrationId);
+  return Boolean(row);
 }
-function at(t, e, r) {
-  return t.prepare(`PRAGMA table_info(${e})`).all().some((n) => n.name === r);
+function hasColumn(database, table, column) {
+  const rows = database.prepare(`PRAGMA table_info(${table})`).all();
+  return rows.some((row) => row.name === column);
 }
-function ni(t) {
-  t.transaction(() => {
-    t.exec(`
+function executeMigration(database) {
+  const transaction = database.transaction(() => {
+    database.exec(`
       CREATE TABLE IF NOT EXISTS stores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT NOT NULL UNIQUE,
@@ -494,7 +622,8 @@ function ni(t) {
 
       CREATE INDEX IF NOT EXISTS idx_sync_queue_entity
       ON sync_queue(entity_type, entity_id, operation);
-    `), t.exec(`
+    `);
+    database.exec(`
       INSERT INTO stores (
         code,
         name,
@@ -543,11 +672,13 @@ function ni(t) {
       FROM company
       WHERE NOT EXISTS (SELECT 1 FROM stores)
       LIMIT 1;
-    `), t.prepare("INSERT INTO schema_migrations (id, executed_at) VALUES (?, CURRENT_TIMESTAMP)").run(co);
-  })();
+    `);
+    database.prepare(`INSERT INTO schema_migrations (id, executed_at) VALUES (?, CURRENT_TIMESTAMP)`).run(MIGRATION_ID);
+  });
+  transaction();
 }
-function oi(t) {
-  t.exec(`
+function ensureFiscalCoreSchema(database) {
+  database.exec(`
     CREATE TABLE IF NOT EXISTS stores (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code TEXT NOT NULL UNIQUE,
@@ -714,39 +845,40 @@ function oi(t) {
     ON sync_queue(entity_type, entity_id, operation);
   `);
 }
-function oe(t) {
-  if (typeof t != "string") return null;
-  const e = t.trim();
-  return e.length > 0 ? e : null;
+function normalizeText$1(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
-function si(t) {
-  return t === "sefaz-direct" || t === "gateway" || t === "mock" ? t : "mock";
+function normalizeProvider(value) {
+  return value === "sefaz-direct" || value === "gateway" || value === "mock" ? value : "mock";
 }
-function ii(t) {
-  return t === "production" || t === "homologation" ? t : null;
+function normalizeEnvironment(value) {
+  return value === "production" || value === "homologation" ? value : null;
 }
-function ci(t) {
-  return t === "online" || t === "offline-contingency" || t === "queue" ? t : "queue";
+function normalizeContingencyMode(value) {
+  return value === "online" || value === "offline-contingency" || value === "queue" ? value : "queue";
 }
-function ui(t) {
-  return t === "bypass-homologation-diagnostic" ? t : "strict";
+function normalizeTlsMode(value) {
+  return value === "bypass-homologation-diagnostic" ? value : "strict";
 }
-function li(t) {
-  const e = t.prepare(`
+function readLegacyFiscalConfig(database) {
+  const row = database.prepare(`
     SELECT raw_json
     FROM integrations
     WHERE integration_id = 'fiscal:nfce'
     LIMIT 1
   `).get();
-  if (!(e != null && e.raw_json)) return null;
+  if (!(row == null ? void 0 : row.raw_json)) return null;
   try {
-    return JSON.parse(e.raw_json);
-  } catch (r) {
-    return N.warn(`[FiscalMigration] Falha ao ler integrations.raw_json fiscal:nfce: ${r instanceof Error ? r.message : String(r)}`), null;
+    return JSON.parse(row.raw_json);
+  } catch (error) {
+    logger.warn(`[FiscalMigration] Falha ao ler integrations.raw_json fiscal:nfce: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
   }
 }
-function di(t) {
-  t.exec(`
+function ensureFiscalSettingsSchema(database) {
+  database.exec(`
     CREATE TABLE IF NOT EXISTS fiscal_settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       store_id INTEGER NOT NULL,
@@ -776,8 +908,10 @@ function di(t) {
     WHERE active = 1;
   `);
 }
-function Ei(t) {
-  t.prepare("SELECT id FROM stores WHERE active = 1 ORDER BY id ASC LIMIT 1").get() || t.exec(`
+function ensureStoreFromCompany(database) {
+  const store = database.prepare(`SELECT id FROM stores WHERE active = 1 ORDER BY id ASC LIMIT 1`).get();
+  if (store) return;
+  database.exec(`
     INSERT INTO stores (
       code,
       name,
@@ -829,36 +963,42 @@ function Ei(t) {
     LIMIT 1;
   `);
 }
-function mi(t) {
-  Ei(t);
-  const e = t.prepare(`
+function backfillFiscalSettings(database) {
+  ensureStoreFromCompany(database);
+  const store = database.prepare(`
     SELECT id, csc_id, csc_token, default_series
     FROM stores
     WHERE active = 1
     ORDER BY id ASC
     LIMIT 1
   `).get();
-  if (!e) {
-    N.warn("[FiscalMigration] Nenhuma store ativa encontrada para backfill de fiscal_settings.");
+  if (!store) {
+    logger.warn("[FiscalMigration] Nenhuma store ativa encontrada para backfill de fiscal_settings.");
     return;
   }
-  if (t.prepare(`
+  const existingSettings = database.prepare(`
     SELECT id
     FROM fiscal_settings
     WHERE store_id = ? AND active = 1
     LIMIT 1
-  `).get(e.id)) {
-    N.info(`[FiscalMigration] fiscal_settings ativo ja existe para store=${e.id}; backfill preservado.`);
+  `).get(store.id);
+  if (existingSettings) {
+    logger.info(`[FiscalMigration] fiscal_settings ativo ja existe para store=${store.id}; backfill preservado.`);
     return;
   }
-  const a = li(t), n = t.prepare(`
+  const legacy = readLegacyFiscalConfig(database);
+  const company = database.prepare(`
     SELECT cert_tipo, cert_path, cert_password, cert_validade, csc_id, csc_token, serie_nfce
     FROM company
     WHERE ativo = 1
     ORDER BY id ASC
     LIMIT 1
-  `).get(), o = ii(a == null ? void 0 : a.environment), s = oe(a == null ? void 0 : a.cscId) ?? oe(n == null ? void 0 : n.csc_id), i = oe(a == null ? void 0 : a.cscToken) ?? oe(n == null ? void 0 : n.csc_token), c = Number((a == null ? void 0 : a.defaultSeries) ?? (n == null ? void 0 : n.serie_nfce) ?? e.default_series ?? 1);
-  t.prepare(`
+  `).get();
+  const legacyEnvironment = normalizeEnvironment(legacy == null ? void 0 : legacy.environment);
+  const legacyCscId = normalizeText$1(legacy == null ? void 0 : legacy.cscId) ?? normalizeText$1(company == null ? void 0 : company.csc_id);
+  const legacyCscToken = normalizeText$1(legacy == null ? void 0 : legacy.cscToken) ?? normalizeText$1(company == null ? void 0 : company.csc_token);
+  const legacySeries = Number((legacy == null ? void 0 : legacy.defaultSeries) ?? (company == null ? void 0 : company.serie_nfce) ?? store.default_series ?? 1);
+  database.prepare(`
     UPDATE stores
     SET
       environment = COALESCE(?, environment),
@@ -868,13 +1008,14 @@ function mi(t) {
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(
-    o,
-    s,
-    i,
-    c,
-    c,
-    e.id
-  ), t.prepare(`
+    legacyEnvironment,
+    legacyCscId,
+    legacyCscToken,
+    legacySeries,
+    legacySeries,
+    store.id
+  );
+  database.prepare(`
     INSERT INTO fiscal_settings (
       store_id,
       provider,
@@ -894,39 +1035,70 @@ function mi(t) {
       updated_at
     ) VALUES (?, ?, 65, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).run(
-    e.id,
-    si(a == null ? void 0 : a.provider),
-    ci(a == null ? void 0 : a.contingencyMode),
-    oe(a == null ? void 0 : a.sefazBaseUrl),
-    oe(a == null ? void 0 : a.gatewayBaseUrl),
-    oe(a == null ? void 0 : a.gatewayApiKey),
-    oe(n == null ? void 0 : n.cert_tipo) ?? "A1",
-    oe(a == null ? void 0 : a.certificatePath) ?? oe(n == null ? void 0 : n.cert_path),
-    oe(a == null ? void 0 : a.certificatePassword) ?? oe(n == null ? void 0 : n.cert_password),
-    oe(a == null ? void 0 : a.certificateValidUntil) ?? oe(n == null ? void 0 : n.cert_validade),
-    oe(a == null ? void 0 : a.caBundlePath),
-    ui(a == null ? void 0 : a.tlsValidationMode)
-  ), N.info(`[FiscalMigration] fiscal_settings criado para store=${e.id} usando integrations/company como origem legada.`);
+    store.id,
+    normalizeProvider(legacy == null ? void 0 : legacy.provider),
+    normalizeContingencyMode(legacy == null ? void 0 : legacy.contingencyMode),
+    normalizeText$1(legacy == null ? void 0 : legacy.sefazBaseUrl),
+    normalizeText$1(legacy == null ? void 0 : legacy.gatewayBaseUrl),
+    normalizeText$1(legacy == null ? void 0 : legacy.gatewayApiKey),
+    normalizeText$1(company == null ? void 0 : company.cert_tipo) ?? "A1",
+    normalizeText$1(legacy == null ? void 0 : legacy.certificatePath) ?? normalizeText$1(company == null ? void 0 : company.cert_path),
+    normalizeText$1(legacy == null ? void 0 : legacy.certificatePassword) ?? normalizeText$1(company == null ? void 0 : company.cert_password),
+    normalizeText$1(legacy == null ? void 0 : legacy.certificateValidUntil) ?? normalizeText$1(company == null ? void 0 : company.cert_validade),
+    normalizeText$1(legacy == null ? void 0 : legacy.caBundlePath),
+    normalizeTlsMode(legacy == null ? void 0 : legacy.tlsValidationMode)
+  );
+  logger.info(`[FiscalMigration] fiscal_settings criado para store=${store.id} usando integrations/company como origem legada.`);
 }
-function pi(t) {
-  const e = [];
-  at(t, "fiscal_documents", "issued_datetime") || e.push("ALTER TABLE fiscal_documents ADD COLUMN issued_datetime TEXT"), at(t, "fiscal_documents", "xml_authorized") || e.push("ALTER TABLE fiscal_documents ADD COLUMN xml_authorized TEXT"), at(t, "fiscal_documents", "xml_cancellation") || e.push("ALTER TABLE fiscal_documents ADD COLUMN xml_cancellation TEXT"), at(t, "sync_queue", "result_json") || e.push("ALTER TABLE sync_queue ADD COLUMN result_json TEXT"), at(t, "sync_queue", "locked_at") || e.push("ALTER TABLE sync_queue ADD COLUMN locked_at TEXT"), at(t, "sync_queue", "locked_by") || e.push("ALTER TABLE sync_queue ADD COLUMN locked_by TEXT"), at(t, "sync_queue", "processed_at") || e.push("ALTER TABLE sync_queue ADD COLUMN processed_at TEXT"), e.length > 0 && t.exec(e.join(`;
-`));
+function ensureFiscalPersistenceColumns(database) {
+  const statements = [];
+  if (!hasColumn(database, "fiscal_documents", "issued_datetime")) {
+    statements.push(`ALTER TABLE fiscal_documents ADD COLUMN issued_datetime TEXT`);
+  }
+  if (!hasColumn(database, "fiscal_documents", "xml_authorized")) {
+    statements.push(`ALTER TABLE fiscal_documents ADD COLUMN xml_authorized TEXT`);
+  }
+  if (!hasColumn(database, "fiscal_documents", "xml_cancellation")) {
+    statements.push(`ALTER TABLE fiscal_documents ADD COLUMN xml_cancellation TEXT`);
+  }
+  if (!hasColumn(database, "sync_queue", "result_json")) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN result_json TEXT`);
+  }
+  if (!hasColumn(database, "sync_queue", "locked_at")) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN locked_at TEXT`);
+  }
+  if (!hasColumn(database, "sync_queue", "locked_by")) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN locked_by TEXT`);
+  }
+  if (!hasColumn(database, "sync_queue", "processed_at")) {
+    statements.push(`ALTER TABLE sync_queue ADD COLUMN processed_at TEXT`);
+  }
+  if (statements.length > 0) {
+    database.exec(statements.join(";\n"));
+  }
 }
-function Ti(t) {
-  ri(t), ai(t, co) || ni(t), oi(t), pi(t), di(t), mi(t);
+function runFiscalPersistenceMigrations(database) {
+  ensureMigrationsTable(database);
+  if (!hasMigration(database, MIGRATION_ID)) {
+    executeMigration(database);
+  }
+  ensureFiscalCoreSchema(database);
+  ensureFiscalPersistenceColumns(database);
+  ensureFiscalSettingsSchema(database);
+  backfillFiscalSettings(database);
 }
-const uo = F.join(De.getPath("userData"), "galberto.db");
-console.log("SQLite path: ", uo);
-console.log("isPackaged:", De.isPackaged);
-console.log("app.getPath(userData):", De.getPath("userData"));
+const dbPath = path__default.join(app.getPath("userData"), "galberto.db");
+console.log("SQLite path: ", dbPath);
+console.log("isPackaged:", app.isPackaged);
+console.log("app.getPath(userData):", app.getPath("userData"));
 console.log("process.cwd():", process.cwd());
-const d = new ys(uo);
-function _i() {
-  d.exec("PRAGMA foreign_keys = ON;"), N.info("-> Foreign keys ativadas");
+const db = new Database(dbPath);
+function enableForeignKeys() {
+  db.exec("PRAGMA foreign_keys = ON;");
+  logger.info("-> Foreign keys ativadas");
 }
-function fi() {
-  d.exec(`
+function createTableProducts() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
     external_id TEXT,
@@ -1041,71 +1213,77 @@ function fi() {
 
   CREATE INDEX IF NOT EXISTS idx_produtos_gtin
     ON produtos (gtin);
-  `), N.info("-> Tabela 'products' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'products' checada/criada");
 }
-function Ni() {
-  const t = [
-    "current_stock REAL NOT NULL DEFAULT 0",
-    "minimum_stock REAL NOT NULL DEFAULT 0",
-    "ncm TEXT",
-    "cfop TEXT",
-    "origin TEXT",
-    "fixed_ipi_value_cents INTEGER",
-    "notes TEXT",
-    "situation TEXT",
-    "supplier_code TEXT",
-    "supplier_name TEXT",
-    "location TEXT",
-    "maximum_stock REAL",
-    "net_weight_kg REAL",
-    "gross_weight_kg REAL",
-    "packaging_barcode TEXT",
-    "width_cm REAL",
-    "height_cm REAL",
-    "depth_cm REAL",
-    "expiration_date TEXT",
-    "supplier_product_description TEXT",
-    "complementary_description TEXT",
-    "items_per_box REAL",
-    "is_variation INTEGER",
-    "production_type TEXT",
-    "ipi_tax_class TEXT",
-    "service_list_code TEXT",
-    "item_type TEXT",
-    "tags_group TEXT",
-    "tags TEXT",
-    "taxes_json TEXT",
-    "parent_code TEXT",
-    "integration_code TEXT",
-    "product_group TEXT",
-    "brand TEXT",
-    "cest TEXT",
-    "volumes REAL",
-    "short_description TEXT",
-    "cross_docking_days INTEGER",
-    "external_image_urls TEXT",
-    "external_link TEXT",
-    "supplier_warranty_months INTEGER",
-    "clone_parent_data INTEGER",
-    "product_condition TEXT",
-    "free_shipping INTEGER",
-    "fci_number TEXT",
-    "department TEXT",
-    "measurement_unit TEXT",
-    "purchase_price_cents INTEGER",
-    "icms_st_retention_base_cents INTEGER",
-    "icms_st_retention_value_cents INTEGER",
-    "icms_substitute_own_value_cents INTEGER",
-    "product_category_name TEXT",
-    "additional_info TEXT"
-  ], e = d.prepare("PRAGMA table_info(products)").all(), r = new Set(e.map((a) => a.name));
-  for (const a of t) {
-    const [n] = a.split(" ");
-    r.has(n) || d.exec(`ALTER TABLE products ADD COLUMN ${a};`);
+function ensureProductsColumns() {
+  const productColumnDefinitions = [
+    `current_stock REAL NOT NULL DEFAULT 0`,
+    `minimum_stock REAL NOT NULL DEFAULT 0`,
+    `ncm TEXT`,
+    `cfop TEXT`,
+    `origin TEXT`,
+    `fixed_ipi_value_cents INTEGER`,
+    `notes TEXT`,
+    `situation TEXT`,
+    `supplier_code TEXT`,
+    `supplier_name TEXT`,
+    `location TEXT`,
+    `maximum_stock REAL`,
+    `net_weight_kg REAL`,
+    `gross_weight_kg REAL`,
+    `packaging_barcode TEXT`,
+    `width_cm REAL`,
+    `height_cm REAL`,
+    `depth_cm REAL`,
+    `expiration_date TEXT`,
+    `supplier_product_description TEXT`,
+    `complementary_description TEXT`,
+    `items_per_box REAL`,
+    `is_variation INTEGER`,
+    `production_type TEXT`,
+    `ipi_tax_class TEXT`,
+    `service_list_code TEXT`,
+    `item_type TEXT`,
+    `tags_group TEXT`,
+    `tags TEXT`,
+    `taxes_json TEXT`,
+    `parent_code TEXT`,
+    `integration_code TEXT`,
+    `product_group TEXT`,
+    `brand TEXT`,
+    `cest TEXT`,
+    `volumes REAL`,
+    `short_description TEXT`,
+    `cross_docking_days INTEGER`,
+    `external_image_urls TEXT`,
+    `external_link TEXT`,
+    `supplier_warranty_months INTEGER`,
+    `clone_parent_data INTEGER`,
+    `product_condition TEXT`,
+    `free_shipping INTEGER`,
+    `fci_number TEXT`,
+    `department TEXT`,
+    `measurement_unit TEXT`,
+    `purchase_price_cents INTEGER`,
+    `icms_st_retention_base_cents INTEGER`,
+    `icms_st_retention_value_cents INTEGER`,
+    `icms_substitute_own_value_cents INTEGER`,
+    `product_category_name TEXT`,
+    `additional_info TEXT`
+  ];
+  const columns = db.prepare(`PRAGMA table_info(products)`).all();
+  const columnNames = new Set(columns.map((column) => column.name));
+  for (const definition of productColumnDefinitions) {
+    const [columnName] = definition.split(" ");
+    if (!columnNames.has(columnName)) {
+      db.exec(`ALTER TABLE products ADD COLUMN ${definition};`);
+    }
   }
 }
-function gi() {
-  d.exec(`
+function syncLegacyProductsMirror() {
+  db.exec(`
     INSERT OR REPLACE INTO produtos (
       id, internal_code, gtin, nome, marca, preco_custo, preco_venda,
       estoque_atual, estoque_minimo, unidade_medida, ncm, ativo, created_at, updated_at
@@ -1129,8 +1307,8 @@ function gi() {
     LEFT JOIN produtos prod ON prod.id = p.id;
   `);
 }
-function Ai() {
-  d.exec(`
+function createTableCategories() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS categories (
     id TEXT PRIMARY KEY,
     external_id TEXT,
@@ -1152,10 +1330,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_categories_integration_external
 
 CREATE INDEX IF NOT EXISTS idx_categories_name
   ON categories (name);
-  `), N.info("-> Tabela 'categories' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'categories' checada/criada");
 }
-function hi() {
-  d.exec(`
+function createTableTaxProfile() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS tax_profiles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1197,10 +1377,12 @@ function hi() {
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
-  `), N.info("-> Tabela 'tax_profiles' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'tax_profiles' checada/criada");
 }
-function Ii() {
-  d.exec(`
+function createTableFornecedores() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS fornecedores (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       razao_social TEXT NOT NULL,
@@ -1223,10 +1405,12 @@ function Ii() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-  `), N.info("-> Tabela 'fornecedores' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'fornecedores' checada/criada");
 }
-function Ci() {
-  d.exec(`
+function createTableClientes() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS customers (
     id TEXT PRIMARY KEY,
     external_id TEXT,
@@ -1294,10 +1478,12 @@ CREATE INDEX IF NOT EXISTS idx_customers_cnpj
 
   CREATE INDEX IF NOT EXISTS idx_clientes_cnpj
     ON clientes (cnpj);
-  `), N.info("-> Created table customer");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Created table customer");
 }
-function Di() {
-  d.exec(`
+function createTableCompany() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS company (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1346,10 +1532,12 @@ function Di() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-  `), N.info("-> Tabela 'company' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'company' checada/criada");
 }
-function vi() {
-  d.exec(`
+function createTableVendas() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS vendas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1397,10 +1585,12 @@ function vi() {
 
       UNIQUE (modelo_documento, serie, numero, ambiente)
     );
-  `), N.info("-> Tabela 'vendas' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'vendas' checada/criada");
 }
-function Si() {
-  d.exec(`
+function createTableVendaItens() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS venda_itens (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -1440,10 +1630,12 @@ function Si() {
       FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE,
       FOREIGN KEY (produto_id) REFERENCES products(id)
     );
-  `), N.info("-> Tabela 'venda_itens' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'venda_itens' checada/criada");
 }
-function Ri() {
-  d.exec(`
+function createTableSaleItemTaxSnapshot() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS sale_item_tax_snapshot (
       sale_item_id INTEGER PRIMARY KEY,
 
@@ -1499,10 +1691,12 @@ function Ri() {
 
       FOREIGN KEY (sale_item_id) REFERENCES venda_itens(id) ON DELETE CASCADE
     );
-  `), N.info("-> Tabela 'sale_item_tax_snapshot' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'sale_item_tax_snapshot' checada/criada");
 }
-function Li() {
-  d.exec(`
+function createTableVendaPagamento() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS venda_pagamento (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       venda_id INTEGER NOT NULL,
@@ -1516,10 +1710,12 @@ function Li() {
 
       FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE
     );
-  `), N.info("-> Tabela 'venda_pagamento' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'venda_pagamento' checada/criada");
 }
-function Oi() {
-  d.exec(`
+function createTablePrinters() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS printers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -1542,32 +1738,34 @@ function Oi() {
       installed_at TEXT,
       notes TEXT
     );
-  `), N.info("-> Tabela 'printers' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'printers' checada/criada");
 }
-function yi() {
+function ensurePrintersColumns() {
   try {
-    d.exec("ALTER TABLE printers ADD COLUMN paper_width_mm REAL NOT NULL DEFAULT 80");
+    db.exec(`ALTER TABLE printers ADD COLUMN paper_width_mm REAL NOT NULL DEFAULT 80`);
   } catch {
   }
   try {
-    d.exec("ALTER TABLE printers ADD COLUMN content_width_mm REAL NOT NULL DEFAULT 76");
+    db.exec(`ALTER TABLE printers ADD COLUMN content_width_mm REAL NOT NULL DEFAULT 76`);
   } catch {
   }
   try {
-    d.exec("ALTER TABLE printers ADD COLUMN base_font_size_px REAL NOT NULL DEFAULT 13");
+    db.exec(`ALTER TABLE printers ADD COLUMN base_font_size_px REAL NOT NULL DEFAULT 13`);
   } catch {
   }
   try {
-    d.exec("ALTER TABLE printers ADD COLUMN line_height REAL NOT NULL DEFAULT 1.5");
+    db.exec(`ALTER TABLE printers ADD COLUMN line_height REAL NOT NULL DEFAULT 1.5`);
   } catch {
   }
   try {
-    d.exec("ALTER TABLE printers ADD COLUMN receipt_settings_json TEXT");
+    db.exec(`ALTER TABLE printers ADD COLUMN receipt_settings_json TEXT`);
   } catch {
   }
 }
-function bi() {
-  d.exec(`
+function createTablePrinterLogs() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS printer_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       printer_id INTEGER NOT NULL,
@@ -1575,10 +1773,12 @@ function bi() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (printer_id) REFERENCES printers(id) ON DELETE CASCADE
     );
-  `), N.info("-> Tabela 'printer_logs' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'printer_logs' checada/criada");
 }
-function Ui() {
-  d.exec(`
+function createTableUsuarios() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS usuarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome TEXT NOT NULL,
@@ -1591,10 +1791,12 @@ function Ui() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-  `), N.info("-> Tabela 'usuarios' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'usuarios' checada/criada");
 }
-function wi() {
-  d.exec(`
+function createTableSession() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -1603,10 +1805,12 @@ function wi() {
       active INTEGER DEFAULT 1,
       FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE
     );
-  `), N.info("-> Tabela 'sessions' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'sessions' checada/criada");
 }
-function Fi() {
-  const t = `CREATE TABLE IF NOT EXISTS stock_movements (
+function createTableStockMoviments() {
+  const sqlComand = `CREATE TABLE IF NOT EXISTS stock_movements (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 
   product_id TEXT NOT NULL,
@@ -1643,10 +1847,11 @@ function Fi() {
   FOREIGN KEY (reversed_by_user_id) REFERENCES usuarios(id)
 );
 `;
-  N.info("-> Tabela 'stock_movements' checada/criada"), d.exec(t);
+  logger.info("-> Tabela 'stock_movements' checada/criada");
+  db.exec(sqlComand);
 }
-function xi() {
-  d.exec(`
+function createTableCashRegisterSessions() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS cash_register_sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       operator_id INTEGER NOT NULL,
@@ -1661,28 +1866,30 @@ function xi() {
       opened_at TEXT NOT NULL,
       closed_at TEXT
     );
-  `), N.info("-> Tabela 'cash_register_sessions' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'cash_register_sessions' checada/criada");
 }
-function Mi() {
+function ensureCashRegisterSessionsColumns() {
   try {
-    d.exec("ALTER TABLE cash_register_sessions ADD COLUMN expected_cash_amount REAL");
+    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN expected_cash_amount REAL`);
   } catch {
   }
   try {
-    d.exec("ALTER TABLE cash_register_sessions ADD COLUMN closing_difference REAL");
+    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN closing_difference REAL`);
   } catch {
   }
   try {
-    d.exec("ALTER TABLE cash_register_sessions ADD COLUMN opening_notes TEXT");
+    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN opening_notes TEXT`);
   } catch {
   }
   try {
-    d.exec("ALTER TABLE cash_register_sessions ADD COLUMN closing_notes TEXT");
+    db.exec(`ALTER TABLE cash_register_sessions ADD COLUMN closing_notes TEXT`);
   } catch {
   }
 }
-function Pi() {
-  d.exec(`
+function createTableCashRegisterMovements() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS cash_register_movements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       cash_session_id INTEGER NOT NULL,
@@ -1695,25 +1902,27 @@ function Pi() {
 
       FOREIGN KEY (cash_session_id) REFERENCES cash_register_sessions(id) ON DELETE CASCADE
     );
-  `), N.info("-> Tabela 'cash_register_movements' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'cash_register_movements' checada/criada");
 }
-function Bi() {
+function ensureVendaPagamentoColumns() {
   try {
-    d.exec("ALTER TABLE venda_pagamento ADD COLUMN cash_session_id INTEGER REFERENCES cash_register_sessions(id)");
+    db.exec(`ALTER TABLE venda_pagamento ADD COLUMN cash_session_id INTEGER REFERENCES cash_register_sessions(id)`);
   } catch {
   }
   try {
-    d.exec("ALTER TABLE venda_pagamento ADD COLUMN valor_recebido REAL NOT NULL DEFAULT 0");
+    db.exec(`ALTER TABLE venda_pagamento ADD COLUMN valor_recebido REAL NOT NULL DEFAULT 0`);
   } catch {
   }
   try {
-    d.exec("ALTER TABLE venda_pagamento ADD COLUMN troco REAL NOT NULL DEFAULT 0");
+    db.exec(`ALTER TABLE venda_pagamento ADD COLUMN troco REAL NOT NULL DEFAULT 0`);
   } catch {
   }
 }
-function Xi() {
+function createTableIntegrations() {
   try {
-    const t = `
+    const sqlComand = `
       CREATE TABLE IF NOT EXISTS integrations (
         integration_id TEXT PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -1725,17 +1934,19 @@ function Xi() {
         updated_at TEXT NOT NULL
       );
     `;
-    console.log("Criando tabela integrations..."), d.exec(t), console.log("Tabela criada com sucesso!");
-    const e = d.prepare(`
+    console.log("Criando tabela integrations...");
+    db.exec(sqlComand);
+    console.log("Tabela criada com sucesso!");
+    const test = db.prepare(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='integrations';
     `).get();
-    console.log("Tabela existe?", e);
-  } catch (t) {
-    console.error("Erro ao criar tabela:", t);
+    console.log("Tabela existe?", test);
+  } catch (err) {
+    console.error("Erro ao criar tabela:", err);
   }
 }
-function ki() {
-  d.exec(`
+function createTablePrintedDocuments() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS printed_documents (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       document_type TEXT NOT NULL CHECK (document_type IN ('SALE_RECEIPT', 'CASH_OPENING_RECEIPT', 'CASH_CLOSING_RECEIPT')),
@@ -1765,10 +1976,12 @@ function ki() {
 
     CREATE INDEX IF NOT EXISTS idx_printed_documents_cash_session_id
       ON printed_documents (cash_session_id);
-  `), N.info("-> Tabela 'printed_documents' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'printed_documents' checada/criada");
 }
-function $i() {
-  d.exec(`
+function createTablePrintJobs() {
+  const sqlComand = `
     CREATE TABLE IF NOT EXISTS print_jobs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       printed_document_id INTEGER NOT NULL,
@@ -1788,11 +2001,13 @@ function $i() {
 
     CREATE INDEX IF NOT EXISTS idx_print_jobs_status
       ON print_jobs (status);
-  `), N.info("-> Tabela 'print_jobs' checada/criada");
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'print_jobs' checada/criada");
 }
-function Gi() {
+function createTableSyncState() {
   try {
-    const t = `
+    const sqlComand = `
       CREATE TABLE IF NOT EXISTS sync_states (
           id TEXT PRIMARY KEY,
           integration_id TEXT NOT NULL,
@@ -1807,18 +2022,20 @@ function Gi() {
           UNIQUE(integration_id, resource)
       );
     `;
-    console.log("Criando tabela sync_state..."), d.exec(t), console.log("Tabela criada com sucesso!");
-    const e = d.prepare(`
+    console.log("Criando tabela sync_state...");
+    db.exec(sqlComand);
+    console.log("Tabela criada com sucesso!");
+    const test = db.prepare(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='integrations';
     `).get();
-    console.log("Tabela existe?", e);
-  } catch (t) {
-    console.error("Erro ao criar tabela:", t);
+    console.log("Tabela existe?", test);
+  } catch (err) {
+    console.error("Erro ao criar tabela:", err);
   }
 }
-function qi() {
+function createTableSyncLogs() {
   try {
-    const t = `
+    const sqlComand = `
       CREATE TABLE IF NOT EXISTS sync_logs (
           id TEXT PRIMARY KEY,
           integration_id TEXT NOT NULL,
@@ -1834,85 +2051,91 @@ function qi() {
           error_message TEXT
       );
     `;
-    console.log("Criando tabela sync_logs..."), d.exec(t), console.log("Tabela criada com sucesso!");
-    const e = d.prepare(`
+    console.log("Criando tabela sync_logs...");
+    db.exec(sqlComand);
+    console.log("Tabela criada com sucesso!");
+    const test = db.prepare(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='integrations';
     `).get();
-    console.log("Tabela existe?", e);
-  } catch (t) {
-    console.error("Erro ao criar tabela:", t);
+    console.log("Tabela existe?", test);
+  } catch (err) {
+    console.error("Erro ao criar tabela:", err);
   }
 }
-fi();
-Ni();
-gi();
-Ai();
-Ci();
-Ui();
-Ii();
-vi();
-Si();
-Di();
-Oi();
-yi();
-bi();
-wi();
-hi();
-Ri();
-Fi();
-Li();
-Bi();
-xi();
-Mi();
-Pi();
-Xi();
-Gi();
-qi();
-ki();
-$i();
-Ti(d);
-function lo() {
-  const t = d.prepare(`
+createTableProducts();
+ensureProductsColumns();
+syncLegacyProductsMirror();
+createTableCategories();
+createTableClientes();
+createTableUsuarios();
+createTableFornecedores();
+createTableVendas();
+createTableVendaItens();
+createTableCompany();
+createTablePrinters();
+ensurePrintersColumns();
+createTablePrinterLogs();
+createTableSession();
+createTableTaxProfile();
+createTableSaleItemTaxSnapshot();
+createTableStockMoviments();
+createTableVendaPagamento();
+ensureVendaPagamentoColumns();
+createTableCashRegisterSessions();
+ensureCashRegisterSessionsColumns();
+createTableCashRegisterMovements();
+createTableIntegrations();
+createTableSyncState();
+createTableSyncLogs();
+createTablePrintedDocuments();
+createTablePrintJobs();
+runFiscalPersistenceMigrations(db);
+function getSaleDefaults() {
+  const company = db.prepare(`
     SELECT ambiente_emissao, serie_nfce
     FROM company
     WHERE ativo = 1
     LIMIT 1
-  `).get(), e = (t == null ? void 0 : t.ambiente_emissao) ?? 2, r = (t == null ? void 0 : t.serie_nfce) ?? 1, a = d.prepare(`
+  `).get();
+  const ambiente = (company == null ? void 0 : company.ambiente_emissao) ?? 2;
+  const serie = (company == null ? void 0 : company.serie_nfce) ?? 1;
+  const nextNumberRow = db.prepare(`
     SELECT COALESCE(MAX(numero), 0) + 1 AS nextNumber
     FROM vendas
     WHERE modelo_documento = 65 AND serie = ? AND ambiente = ?
-  `).get(r, e);
+  `).get(serie, ambiente);
   return {
-    ambiente: e,
-    serie: r,
-    numero: a.nextNumber,
+    ambiente,
+    serie,
+    numero: nextNumberRow.nextNumber,
     naturezaOperacao: "VENDA PDV",
     modeloDocumento: 65
   };
 }
-function Vi(t) {
-  const e = d.prepare(`
+function getSaleItemSnapshot(productId) {
+  const product = db.prepare(`
     SELECT id, barcode, name, unit, sale_price_cents, ncm, cfop, origin, cest
     FROM products
     WHERE id = ? AND deleted_at IS NULL
     LIMIT 1
-  `).get(t);
-  if (!e)
-    throw new Error(`Produto não encontrado para venda: ${t}`);
+  `).get(productId);
+  if (!product) {
+    throw new Error(`Produto não encontrado para venda: ${productId}`);
+  }
   return {
-    codigoProduto: e.barcode || e.id,
-    nomeProduto: e.name,
-    gtin: e.barcode,
-    unidade: e.unit || "UN",
-    precoUnitario: Number(e.sale_price_cents ?? 0) / 100,
-    ncm: e.ncm ?? "",
-    cfop: e.cfop ?? "5102",
-    cest: e.cest ?? null,
-    originCode: e.origin ?? null
+    codigoProduto: product.barcode || product.id,
+    nomeProduto: product.name,
+    gtin: product.barcode,
+    unidade: product.unit || "UN",
+    precoUnitario: Number(product.sale_price_cents ?? 0) / 100,
+    ncm: product.ncm ?? "",
+    cfop: product.cfop ?? "5102",
+    cest: product.cest ?? null,
+    originCode: product.origin ?? null
   };
 }
-function zi() {
-  return d.prepare(`
+function getDefaultTaxProfile() {
+  return db.prepare(`
     SELECT origin_code, cfop_padrao_saida_interna, csosn, icms_cst, pis_cst, cofins_cst
     FROM tax_profiles
     WHERE ativo = 1
@@ -1920,9 +2143,15 @@ function zi() {
     LIMIT 1
   `).get();
 }
-function Hi(t) {
-  const e = zi(), r = t.originCode || (e == null ? void 0 : e.origin_code) || "0", a = t.cfop || (e == null ? void 0 : e.cfop_padrao_saida_interna) || "5102", n = (e == null ? void 0 : e.pis_cst) || "49", o = (e == null ? void 0 : e.cofins_cst) || "49", s = (e == null ? void 0 : e.csosn) || "102", i = (e == null ? void 0 : e.icms_cst) ?? null;
-  d.prepare(`
+function insertSaleItemTaxSnapshot(input) {
+  const profile = getDefaultTaxProfile();
+  const originCode = input.originCode || (profile == null ? void 0 : profile.origin_code) || "0";
+  const cfop = input.cfop || (profile == null ? void 0 : profile.cfop_padrao_saida_interna) || "5102";
+  const pisCst = (profile == null ? void 0 : profile.pis_cst) || "49";
+  const cofinsCst = (profile == null ? void 0 : profile.cofins_cst) || "49";
+  const csosn = (profile == null ? void 0 : profile.csosn) || "102";
+  const icmsCst = (profile == null ? void 0 : profile.icms_cst) ?? null;
+  db.prepare(`
     INSERT INTO sale_item_tax_snapshot (
       sale_item_id, origem, origin_code, ncm, cfop, cest, csosn, icms_cst,
       pis_cst, cofins_cst, utrib, qtrib, vuntrib
@@ -1941,24 +2170,24 @@ function Hi(t) {
       qtrib = excluded.qtrib,
       vuntrib = excluded.vuntrib
   `).run(
-    t.saleItemId,
-    r,
-    r,
-    t.ncm,
-    a,
-    t.cest,
-    s,
-    i,
-    n,
-    o,
-    t.unit,
-    t.quantity,
-    t.unitPrice
+    input.saleItemId,
+    originCode,
+    originCode,
+    input.ncm,
+    cfop,
+    input.cest,
+    csosn,
+    icmsCst,
+    pisCst,
+    cofinsCst,
+    input.unit,
+    input.quantity,
+    input.unitPrice
   );
 }
-function Eo(t, e) {
-  d.prepare("DELETE FROM venda_itens WHERE venda_id = ?").run(t);
-  const r = d.prepare(`
+function replaceSaleItems(vendaId, itens) {
+  db.prepare(`DELETE FROM venda_itens WHERE venda_id = ?`).run(vendaId);
+  const insertItem = db.prepare(`
     INSERT INTO venda_itens(
       venda_id, produto_id, codigo_produto, nome_produto, gtin, gtin_tributavel,
       ncm, cfop, cest, unidade_comercial, quantidade_comercial, valor_unitario_comercial,
@@ -1967,44 +2196,54 @@ function Eo(t, e) {
     )
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  for (const a of e) {
-    const n = Vi(a.produto_id), o = Number(a.quantidade ?? a.estoque_atual ?? 0), s = Number(a.preco_venda ?? n.precoUnitario), i = Number(a.valor_bruto ?? o * s), c = Math.max(0, Math.min(Number(a.valor_desconto ?? 0), i)), u = Number(a.subtotal ?? Math.max(i - c, 0)), l = r.run(
-      t,
-      a.produto_id,
-      n.codigoProduto,
-      a.nome ?? n.nomeProduto,
-      n.gtin,
-      n.gtin,
-      n.ncm,
-      n.cfop,
-      n.cest,
-      n.unidade,
-      o,
-      s,
-      n.unidade,
-      o,
-      s,
-      i,
-      c,
-      u
+  for (const item of itens) {
+    const snapshot = getSaleItemSnapshot(item.produto_id);
+    const quantidade = Number(item.quantidade ?? item.estoque_atual ?? 0);
+    const precoUnitario = Number(item.preco_venda ?? snapshot.precoUnitario);
+    const valorBruto = Number(item.valor_bruto ?? quantidade * precoUnitario);
+    const valorDesconto = Math.max(0, Math.min(Number(item.valor_desconto ?? 0), valorBruto));
+    const subtotal = Number(item.subtotal ?? Math.max(valorBruto - valorDesconto, 0));
+    const result = insertItem.run(
+      vendaId,
+      item.produto_id,
+      snapshot.codigoProduto,
+      item.nome ?? snapshot.nomeProduto,
+      snapshot.gtin,
+      snapshot.gtin,
+      snapshot.ncm,
+      snapshot.cfop,
+      snapshot.cest,
+      snapshot.unidade,
+      quantidade,
+      precoUnitario,
+      snapshot.unidade,
+      quantidade,
+      precoUnitario,
+      valorBruto,
+      valorDesconto,
+      subtotal
     );
-    Hi({
-      saleItemId: Number(l.lastInsertRowid),
-      ncm: n.ncm,
-      cfop: n.cfop,
-      cest: n.cest,
-      originCode: n.originCode,
-      unit: n.unidade,
-      quantity: o,
-      unitPrice: s
+    insertSaleItemTaxSnapshot({
+      saleItemId: Number(result.lastInsertRowid),
+      ncm: snapshot.ncm,
+      cfop: snapshot.cfop,
+      cest: snapshot.cest,
+      originCode: snapshot.originCode,
+      unit: snapshot.unidade,
+      quantity: quantidade,
+      unitPrice: precoUnitario
     });
   }
 }
-function Wa(t, e, r) {
-  const a = lo(), n = Number(t.valor_produtos ?? t.total ?? 0), o = Number(t.valor_desconto ?? 0), s = Number(t.total ?? 0);
-  return d.transaction(() => {
-    let c = r ?? null;
-    return c ? d.prepare(`
+function salvarVendaPendente(venda, status, vendaId) {
+  const saleDefaults = getSaleDefaults();
+  const valorProdutos = Number(venda.valor_produtos ?? venda.total ?? 0);
+  const valorDesconto = Number(venda.valor_desconto ?? 0);
+  const valorTotal = Number(venda.total ?? 0);
+  const transaction = db.transaction(() => {
+    let persistedSaleId = vendaId ?? null;
+    if (persistedSaleId) {
+      db.prepare(`
         UPDATE vendas
         SET
           data_movimento = datetime('now', 'localtime'),
@@ -2017,46 +2256,54 @@ function Wa(t, e, r) {
           updated_at = datetime('now', 'localtime')
         WHERE id = ?
       `).run(
-      e,
-      t.cpf_cliente ?? null,
-      t.consumidor_identificado ? t.cpf_cliente ?? null : "Consumidor final",
-      n,
-      o,
-      s,
-      c
-    ) : c = d.prepare(`
+        status,
+        venda.cpf_cliente ?? null,
+        venda.consumidor_identificado ? venda.cpf_cliente ?? null : "Consumidor final",
+        valorProdutos,
+        valorDesconto,
+        valorTotal,
+        persistedSaleId
+      );
+    } else {
+      const result = db.prepare(`
         INSERT INTO vendas(
           data_emissao, data_movimento, status, natureza_operacao, modelo_documento,
           serie, numero, ambiente, cliente_nome, cpf_cliente, valor_produtos, valor_desconto, valor_total
         )
         VALUES(datetime('now', 'localtime'), datetime('now', 'localtime'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-      e,
-      a.naturezaOperacao,
-      a.modeloDocumento,
-      a.serie,
-      a.numero,
-      a.ambiente,
-      t.consumidor_identificado ? t.cpf_cliente ?? null : "Consumidor final",
-      t.cpf_cliente ?? null,
-      n,
-      o,
-      s
-    ).lastInsertRowid, Eo(c, t.itens), c;
-  })();
+        status,
+        saleDefaults.naturezaOperacao,
+        saleDefaults.modeloDocumento,
+        saleDefaults.serie,
+        saleDefaults.numero,
+        saleDefaults.ambiente,
+        venda.consumidor_identificado ? venda.cpf_cliente ?? null : "Consumidor final",
+        venda.cpf_cliente ?? null,
+        valorProdutos,
+        valorDesconto,
+        valorTotal
+      );
+      persistedSaleId = result.lastInsertRowid;
+    }
+    replaceSaleItems(persistedSaleId, venda.itens);
+    return persistedSaleId;
+  });
+  return transaction();
 }
-function ji(t) {
-  return {
+function mapPaymentTypeToFiscalCode(meioPagamento) {
+  const paymentTypeMap = {
     DINHEIRO: "01",
     CHEQUE: "02",
     CREDITO: "03",
     DEBITO: "04",
     VOUCHER: "10",
     PIX: "17"
-  }[t] ?? "99";
+  };
+  return paymentTypeMap[meioPagamento] ?? "99";
 }
-function rr(t) {
-  const r = d.prepare(`
+function getCashSessionSummaryById(sessionId) {
+  const stmt = db.prepare(`
     SELECT
       s.id,
       s.operator_id,
@@ -2080,46 +2327,58 @@ function rr(t) {
     FROM cash_register_sessions s
     WHERE s.id = ?
     LIMIT 1
-  `).get(t);
-  return r ? {
-    ...r,
-    total_sangrias: Number(r.total_sangrias ?? 0),
-    total_vendas_dinheiro: Number(r.total_vendas_dinheiro ?? 0),
-    expected_cash_amount: Number(r.opening_cash_amount ?? 0) + Number(r.total_vendas_dinheiro ?? 0) - Number(r.total_sangrias ?? 0)
-  } : null;
+  `);
+  const session = stmt.get(sessionId);
+  if (!session) {
+    return null;
+  }
+  return {
+    ...session,
+    total_sangrias: Number(session.total_sangrias ?? 0),
+    total_vendas_dinheiro: Number(session.total_vendas_dinheiro ?? 0),
+    expected_cash_amount: Number(session.opening_cash_amount ?? 0) + Number(session.total_vendas_dinheiro ?? 0) - Number(session.total_sangrias ?? 0)
+  };
 }
-function Yi(t, e) {
-  if (!(e != null && e.meioPagamento))
+function registrarPagamentoVenda(vendaId, paymentData) {
+  if (!(paymentData == null ? void 0 : paymentData.meioPagamento)) {
     return;
-  const r = d.prepare(`
+  }
+  const sale = db.prepare(`
     SELECT valor_total
     FROM vendas
     WHERE id = ?
     LIMIT 1
-  `).get(t);
-  if (!r)
-    throw new Error(`Venda não encontrada para registrar pagamento: ${t}`);
-  d.prepare("DELETE FROM venda_pagamento WHERE venda_id = ?").run(t);
-  const a = Number(r.valor_total ?? 0), n = Number(e.troco ?? 0), o = e.meioPagamento === "DINHEIRO" ? Number(e.valorPago ?? a) : a;
-  d.prepare(`
+  `).get(vendaId);
+  if (!sale) {
+    throw new Error(`Venda não encontrada para registrar pagamento: ${vendaId}`);
+  }
+  db.prepare(`DELETE FROM venda_pagamento WHERE venda_id = ?`).run(vendaId);
+  const valorVenda = Number(sale.valor_total ?? 0);
+  const troco = Number(paymentData.troco ?? 0);
+  const valorRecebido = paymentData.meioPagamento === "DINHEIRO" ? Number(paymentData.valorPago ?? valorVenda) : valorVenda;
+  db.prepare(`
     INSERT INTO venda_pagamento(
       venda_id, cash_session_id, tpag, valor, valor_recebido, troco, descricao_outro
     )
     VALUES(?, ?, ?, ?, ?, ?, ?)
   `).run(
-    t,
-    e.cashSessionId ?? null,
-    ji(e.meioPagamento),
-    a,
-    o,
-    n,
+    vendaId,
+    paymentData.cashSessionId ?? null,
+    mapPaymentTypeToFiscalCode(paymentData.meioPagamento),
+    valorVenda,
+    valorRecebido,
+    troco,
     null
   );
 }
-function Ki(t) {
-  d.prepare("BEGIN").run();
+function cancelarVenda(venda) {
+  db.prepare("BEGIN").run();
   try {
-    const e = lo(), r = Number(t.valor_produtos ?? t.total ?? 0), a = Number(t.valor_desconto ?? 0), n = Number(t.total ?? 0), s = d.prepare(`
+    const saleDefaults = getSaleDefaults();
+    const valorProdutos = Number(venda.valor_produtos ?? venda.total ?? 0);
+    const valorDesconto = Number(venda.valor_desconto ?? 0);
+    const valorTotal = Number(venda.total ?? 0);
+    const vendaResult = db.prepare(`
         INSERT INTO vendas(
           data_emissao, data_movimento, status, natureza_operacao, modelo_documento,
           serie, numero, ambiente, valor_produtos, valor_desconto, valor_total
@@ -2127,46 +2386,56 @@ function Ki(t) {
         VALUES(datetime('now', 'localtime'), datetime('now', 'localtime'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
       "CANCELADA",
-      e.naturezaOperacao,
-      e.modeloDocumento,
-      e.serie,
-      e.numero,
-      e.ambiente,
-      r,
-      a,
-      n
-    ).lastInsertRowid;
-    return Eo(s, t.itens), d.prepare("COMMIT").run(), { sucesso: !0, vendaId: s };
-  } catch (e) {
-    throw d.prepare("ROLLBACK").run(), e;
+      saleDefaults.naturezaOperacao,
+      saleDefaults.modeloDocumento,
+      saleDefaults.serie,
+      saleDefaults.numero,
+      saleDefaults.ambiente,
+      valorProdutos,
+      valorDesconto,
+      valorTotal
+    );
+    const vendaId = vendaResult.lastInsertRowid;
+    replaceSaleItems(vendaId, venda.itens);
+    db.prepare("COMMIT").run();
+    return { sucesso: true, vendaId };
+  } catch (error) {
+    db.prepare("ROLLBACK").run();
+    throw error;
   }
 }
-function Wi(t) {
-  const e = typeof t == "number" ? t : t.vendaId, r = d.prepare(
+function finalizarVendaComBaixaEstoque(vendaPayload) {
+  const vendaId = typeof vendaPayload === "number" ? vendaPayload : vendaPayload.vendaId;
+  const selectItens = db.prepare(
     `SELECT produto_id, quantidade_comercial AS quantidade
      FROM venda_itens
      WHERE venda_id = ? `
-  ), a = d.prepare(
+  );
+  const selectSaldo = db.prepare(
     `SELECT current_stock
      FROM products
      WHERE id = ? AND deleted_at IS NULL
      LIMIT 1`
-  ), n = d.prepare(
+  );
+  const atualizarEstoque = db.prepare(
     `UPDATE products
      SET current_stock = current_stock - ?,
          updated_at = datetime('now')
      WHERE id = ?`
-  ), o = d.prepare(
+  );
+  const atualizarEstoqueLegado = db.prepare(
     `UPDATE produtos
      SET estoque_atual = estoque_atual - ?,
          updated_at = datetime('now')
      WHERE id = ?`
-  ), s = d.prepare(
+  );
+  const buscarValoresVenda = db.prepare(
     `SELECT valor_produtos, valor_desconto, valor_total
      FROM vendas
      WHERE id = ?
      LIMIT 1`
-  ), i = d.prepare(
+  );
+  const atualizarVenda = db.prepare(
     `UPDATE vendas
      SET status = 'FINALIZADA'
        , data_movimento = datetime('now')
@@ -2177,50 +2446,63 @@ function Wi(t) {
        , updated_at = datetime('now')
      WHERE id = ? `
   );
-  d.transaction(() => {
-    const u = r.all(e), l = s.get(e);
-    if (!l)
-      throw new Error(`Venda não encontrada: ${e}`);
-    for (const g of u) {
-      const y = a.get(g.produto_id);
-      if (!y)
-        throw new Error(`Produto da venda não encontrado: ${g.produto_id}`);
-      if (Number(y.current_stock ?? 0) < Number(g.quantidade ?? 0))
-        throw new Error(`Estoque insuficiente para o produto ${g.produto_id}`);
-      n.run(g.quantidade, g.produto_id), o.run(g.quantidade, g.produto_id);
+  const transaction = db.transaction(() => {
+    const itens = selectItens.all(vendaId);
+    const vendaAtual = buscarValoresVenda.get(vendaId);
+    if (!vendaAtual) {
+      throw new Error(`Venda não encontrada: ${vendaId}`);
     }
-    const E = Number(typeof t == "number" ? l.valor_produtos ?? 0 : t.valorProdutos ?? l.valor_produtos ?? 0), m = Number(typeof t == "number" ? l.valor_desconto ?? 0 : t.valorDesconto ?? l.valor_desconto ?? 0), T = Number(typeof t == "number" ? l.valor_total ?? 0 : t.valorTotal ?? l.valor_total ?? 0), h = typeof t == "number" ? 0 : Number(t.troco ?? 0);
-    i.run(
-      E,
-      m,
-      T,
-      h,
-      e
-    ), Yi(
-      e,
-      typeof t == "number" ? void 0 : t
+    for (const item of itens) {
+      const saldo = selectSaldo.get(item.produto_id);
+      if (!saldo) {
+        throw new Error(`Produto da venda não encontrado: ${item.produto_id}`);
+      }
+      if (Number(saldo.current_stock ?? 0) < Number(item.quantidade ?? 0)) {
+        throw new Error(`Estoque insuficiente para o produto ${item.produto_id}`);
+      }
+      atualizarEstoque.run(item.quantidade, item.produto_id);
+      atualizarEstoqueLegado.run(item.quantidade, item.produto_id);
+    }
+    const valorProdutos = typeof vendaPayload === "number" ? Number(vendaAtual.valor_produtos ?? 0) : Number(vendaPayload.valorProdutos ?? vendaAtual.valor_produtos ?? 0);
+    const valorDesconto = typeof vendaPayload === "number" ? Number(vendaAtual.valor_desconto ?? 0) : Number(vendaPayload.valorDesconto ?? vendaAtual.valor_desconto ?? 0);
+    const valorTotal = typeof vendaPayload === "number" ? Number(vendaAtual.valor_total ?? 0) : Number(vendaPayload.valorTotal ?? vendaAtual.valor_total ?? 0);
+    const valorTroco = typeof vendaPayload === "number" ? 0 : Number(vendaPayload.troco ?? 0);
+    atualizarVenda.run(
+      valorProdutos,
+      valorDesconto,
+      valorTotal,
+      valorTroco,
+      vendaId
     );
-  })();
+    registrarPagamentoVenda(
+      vendaId,
+      typeof vendaPayload === "number" ? void 0 : vendaPayload
+    );
+  });
+  transaction();
 }
-function Qi(t) {
-  var n;
-  const r = d.prepare(`
+function insertCashSession(data) {
+  var _a;
+  const stmt = db.prepare(`
     INSERT INTO cash_register_sessions
       (operator_id, pdv_id, status, opening_cash_amount, opening_notes, opened_at)
     VALUES(?, ?, 'OPEN', ?, ?, datetime('now'))
-      `).run(
-    t.operator_id,
-    t.pdv_id,
-    t.opening_cash_amount,
-    ((n = t.opening_notes) == null ? void 0 : n.trim()) || null
-  ), a = rr(r.lastInsertRowid);
-  if (!a)
+      `);
+  const result = stmt.run(
+    data.operator_id,
+    data.pdv_id,
+    data.opening_cash_amount,
+    ((_a = data.opening_notes) == null ? void 0 : _a.trim()) || null
+  );
+  const session = getCashSessionSummaryById(result.lastInsertRowid);
+  if (!session) {
     throw new Error("Sessão de caixa não encontrada após abertura.");
-  return a;
+  }
+  return session;
 }
-function Ji(t) {
-  var o;
-  if (!d.prepare(`
+function registerCashWithdrawal(data) {
+  var _a;
+  const openSession = db.prepare(`
     SELECT id
     FROM cash_register_sessions
     WHERE id = ?
@@ -2228,37 +2510,43 @@ function Ji(t) {
       AND pdv_id = ?
       AND status = 'OPEN'
     LIMIT 1
-  `).get(t.cash_session_id, t.operator_id, t.pdv_id))
+  `).get(data.cash_session_id, data.operator_id, data.pdv_id);
+  if (!openSession) {
     throw new Error("Nenhum caixa aberto foi encontrado para registrar a sangria.");
-  const r = rr(t.cash_session_id);
-  if (!r)
+  }
+  const session = getCashSessionSummaryById(data.cash_session_id);
+  if (!session) {
     throw new Error("Sessão de caixa inválida para sangria.");
-  const a = Number(t.amount ?? 0);
-  if (a <= 0)
+  }
+  const valorSangria = Number(data.amount ?? 0);
+  if (valorSangria <= 0) {
     throw new Error("Informe um valor válido para a sangria.");
-  if (a > Number(r.expected_cash_amount ?? 0))
+  }
+  if (valorSangria > Number(session.expected_cash_amount ?? 0)) {
     throw new Error("A sangria não pode ser maior que o valor disponível em caixa.");
-  d.prepare(`
+  }
+  db.prepare(`
     INSERT INTO cash_register_movements(
       cash_session_id, operator_id, pdv_id, movement_type, amount, reason
     )
     VALUES(?, ?, ?, ?, ?, ?)
   `).run(
-    t.cash_session_id,
-    t.operator_id,
-    t.pdv_id,
-    t.movement_type,
-    a,
-    ((o = t.reason) == null ? void 0 : o.trim()) || null
+    data.cash_session_id,
+    data.operator_id,
+    data.pdv_id,
+    data.movement_type,
+    valorSangria,
+    ((_a = data.reason) == null ? void 0 : _a.trim()) || null
   );
-  const n = rr(t.cash_session_id);
-  if (!n)
+  const updatedSession = getCashSessionSummaryById(data.cash_session_id);
+  if (!updatedSession) {
     throw new Error("Não foi possível recarregar a sessão após a sangria.");
-  return n;
+  }
+  return updatedSession;
 }
-function Zi(t) {
-  var o;
-  if (d.prepare(`
+function closeCashSession(data) {
+  var _a;
+  const stmt = db.prepare(`
     UPDATE cash_register_sessions
     SET
       status = 'CLOSED',
@@ -2271,54 +2559,73 @@ function Zi(t) {
     WHERE operator_id = ?
       AND pdv_id = ?
         AND status = 'OPEN'
-          `).run(
-    t.closing_cash_amount,
-    t.expected_cash_amount,
-    t.difference,
-    ((o = t.closing_notes) == null ? void 0 : o.trim()) || null,
-    t.operator_id,
-    t.pdv_id
-  ).changes === 0)
+          `);
+  const result = stmt.run(
+    data.closing_cash_amount,
+    data.expected_cash_amount,
+    data.difference,
+    ((_a = data.closing_notes) == null ? void 0 : _a.trim()) || null,
+    data.operator_id,
+    data.pdv_id
+  );
+  if (result.changes === 0) {
     throw new Error("Nenhum caixa aberto foi encontrado para fechamento.");
-  const a = d.prepare(`
+  }
+  const closedSession = db.prepare(`
     SELECT id
     FROM cash_register_sessions
     WHERE operator_id = ?
       AND pdv_id = ?
     ORDER BY id DESC
     LIMIT 1
-  `).get(t.operator_id, t.pdv_id);
-  if (!a)
+  `).get(data.operator_id, data.pdv_id);
+  if (!closedSession) {
     throw new Error("Sessão de caixa não encontrada após o fechamento.");
-  const n = rr(a.id);
-  if (!n)
+  }
+  const summary = getCashSessionSummaryById(closedSession.id);
+  if (!summary) {
     throw new Error("Resumo da sessão de caixa não encontrado após o fechamento.");
-  return n;
+  }
+  return summary;
 }
-function ec({ venda_id: t, data: e, status: r, page: a = 1, limit: n = 20 }) {
-  const o = (a - 1) * n;
-  let s = [], i = [];
-  const c = { 1: "FINALIZADA", 2: "CANCELADA", 3: "ABERTA_PAGAMENTO", 4: "ORCAMENTO", 5: "PAUSADA" };
-  t && (s.push("CAST(id AS TEXT) LIKE ?"), i.push(`%${t}%`)), e && (s.push("date(data_emissao) = date(?)"), i.push(e)), r !== void 0 && (s.push("status = ?"), i.push(c[r]));
-  const u = s.length ? `WHERE ${s.join(" AND ")} ` : "", l = d.prepare(`
+function listarVendas({ venda_id, data, status, page = 1, limit = 20 }) {
+  const offset = (page - 1) * limit;
+  let where = [];
+  let params = [];
+  const statusMap = { 1: "FINALIZADA", 2: "CANCELADA", 3: "ABERTA_PAGAMENTO", 4: "ORCAMENTO", 5: "PAUSADA" };
+  if (venda_id) {
+    where.push("CAST(id AS TEXT) LIKE ?");
+    params.push(`%${venda_id}%`);
+  }
+  if (data) {
+    where.push("date(data_emissao) = date(?)");
+    params.push(data);
+  }
+  if (status !== void 0) {
+    where.push("status = ?");
+    params.push(statusMap[status]);
+  }
+  const whereClause = where.length ? `WHERE ${where.join(" AND ")} ` : "";
+  const stmt = db.prepare(`
     SELECT * FROM vendas
-      ${u}
+      ${whereClause}
       ORDER BY id DESC
     LIMIT ? OFFSET ?
-      `).all(...i, n, o), E = d.prepare(`
+      `).all(...params, limit, offset);
+  const total = db.prepare(`
       SELECT COUNT(*) as total
       FROM vendas
-      ${u}
-    `).get(...i);
+      ${whereClause}
+    `).get(...params);
   return {
-    data: l,
-    page: a,
-    limit: n,
-    total: E.total
+    data: stmt,
+    page,
+    limit,
+    total: total.total
   };
 }
-function tc(t) {
-  const e = d.prepare(`
+function buscarVendaPorId(vendaId) {
+  const venda = db.prepare(`
       SELECT
         id,
         data_emissao,
@@ -2333,9 +2640,9 @@ function tc(t) {
         observacao
       FROM vendas
       WHERE id = ?
-      `).get(t);
-  if (!e) return null;
-  const r = d.prepare(`
+      `).get(vendaId);
+  if (!venda) return null;
+  const itens = db.prepare(`
       SELECT
         produto_id,
         codigo_produto,
@@ -2347,17 +2654,29 @@ function tc(t) {
         subtotal
       FROM venda_itens
       WHERE venda_id = ?
-      `).all(t);
+      `).all(vendaId);
   return {
-    ...e,
-    itens: r
+    ...venda,
+    itens
   };
 }
-function rc({ nome: t, codigo: e, ativo: r, page: a = 1, limit: n = 20 }) {
-  const o = (a - 1) * n;
-  let s = [], i = [];
-  t && (s.push("name LIKE ?"), i.push(`%${t}%`)), e && (s.push("(barcode LIKE ? OR sku LIKE ?)"), i.push(`%${e}%`, `%${e}%`)), r !== void 0 && (s.push("active = ?"), i.push(r));
-  const c = d.prepare(`
+function listarProdutos({ nome, codigo, ativo, page = 1, limit = 20 }) {
+  const offset = (page - 1) * limit;
+  let where = [];
+  let params = [];
+  if (nome) {
+    where.push("name LIKE ?");
+    params.push(`%${nome}%`);
+  }
+  if (codigo) {
+    where.push("(barcode LIKE ? OR sku LIKE ?)");
+    params.push(`%${codigo}%`, `%${codigo}%`);
+  }
+  if (ativo !== void 0) {
+    where.push("active = ?");
+    params.push(ativo);
+  }
+  const data = db.prepare(`
       SELECT
         id,
         barcode AS codigo_barras,
@@ -2367,24 +2686,25 @@ function rc({ nome: t, codigo: e, ativo: r, page: a = 1, limit: n = 20 }) {
         active AS ativo
       FROM products
       WHERE deleted_at IS NULL
-      ${s.length ? `AND ${s.join(" AND ")}` : ""}
+      ${where.length ? `AND ${where.join(" AND ")}` : ""}
       ORDER BY name
     LIMIT ? OFFSET ?
-      `).all(...i, n, o), u = d.prepare(`
+      `).all(...params, limit, offset);
+  const total = db.prepare(`
       SELECT COUNT(*) as total
       FROM products
       WHERE deleted_at IS NULL
-      ${s.length ? `AND ${s.join(" AND ")}` : ""}
-    `).get(...i);
+      ${where.length ? `AND ${where.join(" AND ")}` : ""}
+    `).get(...params);
   return {
-    data: c,
-    page: a,
-    limit: n,
-    total: u.total
+    data,
+    page,
+    limit,
+    total: total.total
   };
 }
-function ac(t) {
-  return d.prepare(`
+function select_product_by_id(id) {
+  const stmt = db.prepare(`
     SELECT
       id,
       external_id,
@@ -2463,10 +2783,11 @@ function ac(t) {
     FROM products
     WHERE id = ? AND deleted_at IS NULL
     LIMIT 1;
-  `).get(t);
+  `);
+  return stmt.get(id);
 }
-function nc(t) {
-  return d.prepare(`
+function buscarProdutosPorNome(termo) {
+  const stmt = db.prepare(`
     SELECT
       id,
       barcode AS codigo_barras,
@@ -2478,10 +2799,11 @@ function nc(t) {
       AND LOWER(name) LIKE LOWER(?)
     ORDER BY name
     LIMIT 50
-      `).all(`%${t}%`);
+      `);
+  return stmt.all(`%${termo}%`);
 }
-function oc(t) {
-  return d.prepare(`
+function buscarProdutoPorCodigoBarras(codigo) {
+  const stmt = db.prepare(`
     SELECT
       id,
       barcode AS codigo_barras,
@@ -2492,10 +2814,11 @@ function oc(t) {
     WHERE deleted_at IS NULL
       AND barcode = ?
     LIMIT 1;
-  `).get(t);
+  `);
+  return stmt.get(codigo);
 }
-function sc(t) {
-  return d.prepare(`
+function selectSuggestionProduct(term) {
+  const stmt = db.prepare(`
     SELECT *
     FROM products
     WHERE deleted_at IS NULL
@@ -2507,25 +2830,30 @@ function sc(t) {
       )
     ORDER BY name
     LIMIT 5
-      `).all(t, t, `%${t}%`).map((a) => ({
-    id: a.id,
-    internalCode: a.sku ?? "",
-    name: a.name,
-    brand: a.brand ?? "",
-    gtin: a.barcode ?? "",
-    unitOfMeasure: a.unit ?? "UN",
-    currentStock: Number(a.current_stock ?? 0),
-    minimumStock: Number(a.minimum_stock ?? 0),
-    avgCost: Number(a.cost_price_cents ?? 0) / 100,
-    ncm: a.ncm ?? "",
-    cfop: a.cfop ?? "",
-    controlsExpiration: !1,
-    controlsBatch: !1
+      `);
+  const rows = stmt.all(term, term, `%${term}%`);
+  return rows.map((product) => ({
+    id: product.id,
+    internalCode: product.sku ?? "",
+    name: product.name,
+    brand: product.brand ?? "",
+    gtin: product.barcode ?? "",
+    unitOfMeasure: product.unit ?? "UN",
+    currentStock: Number(product.current_stock ?? 0),
+    minimumStock: Number(product.minimum_stock ?? 0),
+    avgCost: Number(product.cost_price_cents ?? 0) / 100,
+    ncm: product.ncm ?? "",
+    cfop: product.cfop ?? "",
+    controlsExpiration: false,
+    controlsBatch: false
   }));
 }
-console.log(d);
-function ic(t) {
-  t.is_default === 1 && d.prepare("UPDATE printers SET is_default = 0 WHERE is_default = 1").run(), d.prepare(`
+console.log(db);
+function addPrinter(dados) {
+  if (dados.is_default === 1) {
+    db.prepare(`UPDATE printers SET is_default = 0 WHERE is_default = 1`).run();
+  }
+  const stmt = db.prepare(`
     INSERT INTO printers(
       name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
       paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json, notes, is_default
@@ -2534,27 +2862,30 @@ function ic(t) {
       @selectedPrinter, @display_name, @brand, @model, @connection_type, @driver_name, @driver_version,
       @photo_path, @paper_width_mm, @content_width_mm, @base_font_size_px, @line_height, @receipt_settings_json, @notes, @is_default
     )
-      `).run(t);
+      `);
+  stmt.run(dados);
 }
-function cc() {
-  return d.prepare(`
+function listarPrinters() {
+  const stmt = db.prepare(`
     SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
            paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json, notes, is_default, installed_at
     FROM printers
     ORDER BY is_default DESC, id DESC
-      `).all();
+      `);
+  return stmt.all();
 }
-function uc() {
-  return d.prepare(`
+function getPrinterPadrao() {
+  const stmt = db.prepare(`
     SELECT id, name, display_name, brand, model, connection_type, is_default,
            paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json
     FROM printers
     WHERE is_default = 1
     LIMIT 1
-  `).get();
+  `);
+  return stmt.get();
 }
-function lc(t, e) {
-  return d.prepare(`
+function atualizarLayoutPrinter(id, dados) {
+  return db.prepare(`
     UPDATE printers
     SET
       paper_width_mm = ?,
@@ -2563,106 +2894,157 @@ function lc(t, e) {
       line_height = ?
     WHERE id = ?
   `).run(
-    e.paper_width_mm,
-    e.content_width_mm,
-    e.base_font_size_px,
-    e.line_height,
-    t
+    dados.paper_width_mm,
+    dados.content_width_mm,
+    dados.base_font_size_px,
+    dados.line_height,
+    id
   );
 }
-function dc(t, e) {
-  return d.prepare(`
+function atualizarPersonalizacaoCupomPrinter(id, receiptSettingsJson) {
+  return db.prepare(`
     UPDATE printers
     SET receipt_settings_json = ?
     WHERE id = ?
-  `).run(e, t);
+  `).run(receiptSettingsJson, id);
 }
-function Ec(t) {
-  return d.prepare("DELETE FROM printers WHERE id = ? ").run(t);
+function removerPrinter(id) {
+  const stmt = db.prepare(`DELETE FROM printers WHERE id = ? `);
+  return stmt.run(id);
 }
-function mc(t) {
-  d.transaction(() => {
-    d.prepare("UPDATE printers SET is_default = 0 WHERE is_default = 1").run(), d.prepare("UPDATE printers SET is_default = 1 WHERE id = ? ").run(t);
-  })();
+function definirPrinterPadrao(id) {
+  const transaction = db.transaction(() => {
+    db.prepare(`UPDATE printers SET is_default = 0 WHERE is_default = 1`).run();
+    db.prepare(`UPDATE printers SET is_default = 1 WHERE id = ? `).run(id);
+  });
+  transaction();
 }
-function pc() {
-  d.prepare("SELECT COUNT(*) as total FROM usuarios").get().total === 0 && (d.prepare(`
+function criarUsuarioAdmin() {
+  const existe = db.prepare(`SELECT COUNT(*) as total FROM usuarios`).get();
+  if (existe.total === 0) {
+    const stmt = db.prepare(`
       INSERT INTO usuarios(nome, funcao, email, username, password, ativo)
     VALUES(?, ?, ?, ?, ?, ?)
-      `).run(
-    "Administrador",
-    "Gerente",
-    "admin@galberto.local",
-    "admin",
-    Pr("admin123"),
-    1
-  ), N.info("-> Usuário admin padrão criado (admin / admin123)"), console.log("-> Usuário admin padrão criado (admin / admin123)"));
+      `);
+    stmt.run(
+      "Administrador",
+      "Gerente",
+      "admin@galberto.local",
+      "admin",
+      hashSenha("admin123"),
+      1
+    );
+    logger.info("-> Usuário admin padrão criado (admin / admin123)");
+    console.log("-> Usuário admin padrão criado (admin / admin123)");
+  }
 }
-function Tc(t) {
-  return d.prepare(`
+function buscarUsuario(id) {
+  const stmt = db.prepare(`
     SELECT id, nome, funcao, email, username, ativo, foto_path
     FROM usuarios
     WHERE id = ?
-      `).get(t);
+      `);
+  return stmt.get(id);
 }
-function _c({ name: t, role: e, login: r, ativo: a, page: n = 1, limit: o = 20 }) {
-  const s = (n - 1) * o;
-  let i = [], c = [];
-  t && (i.push("nome LIKE ?"), c.push(`% ${t}% `)), e && (i.push("funcao LIKE ?"), c.push(`% ${e}% `)), r && (i.push("username LIKE ?"), c.push(`% ${r}% `)), a !== void 0 && (i.push("ativo = ?"), c.push(a));
-  const u = i.length ? `WHERE ${i.join(" AND ")} ` : "", l = d.prepare(`
+function selectUsers({ name, role, login, ativo, page = 1, limit = 20 }) {
+  const offset = (page - 1) * limit;
+  let where = [];
+  let params = [];
+  if (name) {
+    where.push("nome LIKE ?");
+    params.push(`% ${name}% `);
+  }
+  if (role) {
+    where.push("funcao LIKE ?");
+    params.push(`% ${role}% `);
+  }
+  if (login) {
+    where.push("username LIKE ?");
+    params.push(`% ${login}% `);
+  }
+  if (ativo !== void 0) {
+    where.push("ativo = ?");
+    params.push(ativo);
+  }
+  const whereClause = where.length ? `WHERE ${where.join(" AND ")} ` : "";
+  const data = db.prepare(`
       SELECT id, nome, funcao AS role, email, username AS login, ativo
       FROM usuarios
-      ${u}
+      ${whereClause}
       ORDER BY nome
     LIMIT ? OFFSET ?
-      `).all(...c, o, s), E = d.prepare(`
+      `).all(...params, limit, offset);
+  const total = db.prepare(`
       SELECT COUNT(*) as total
       FROM usuarios
-      ${u}
-    `).get(...c);
+      ${whereClause}
+    `).get(...params);
   return {
-    data: l,
-    page: n,
-    limit: o,
-    total: E.total
+    data,
+    page,
+    limit,
+    total: total.total
   };
 }
-function fc(t) {
-  return d.prepare(`
+function addUsuario(dados) {
+  const stmt = db.prepare(`
     INSERT INTO usuarios(nome, funcao, email, username, password, ativo, foto_path)
     VALUES(@nome, @funcao, @email, @username, @password, @ativo, @foto_path)
-  `).run({
-    ...t,
-    foto_path: t.foto_path ?? null,
-    password: Pr(t.password)
+  `);
+  return stmt.run({
+    ...dados,
+    foto_path: dados.foto_path ?? null,
+    password: hashSenha(dados.password)
   });
 }
-function Nc(t, e) {
-  return d.prepare("UPDATE usuarios SET password = ? WHERE id = ? ").run(Pr(e), t);
+function alterarSenhaUsuario(id, newPassword) {
+  const stmt = db.prepare(`UPDATE usuarios SET password = ? WHERE id = ? `);
+  return stmt.run(hashSenha(newPassword), id);
 }
-function gc(t) {
-  return d.prepare("DELETE FROM usuarios WHERE id = ? ").run(t);
+function removerUsuario(id) {
+  const stmt = db.prepare(`DELETE FROM usuarios WHERE id = ? `);
+  return stmt.run(id);
 }
-function Ac(t) {
-  console.log("Dados chegando no db.ts", t);
-  const e = [], r = [];
-  t.nome !== void 0 && (e.push("nome = ?"), r.push(t.nome)), t.email !== void 0 && (e.push("email = ?"), r.push(t.email)), t.login !== void 0 && (e.push("username = ?"), r.push(t.login)), t.role !== void 0 && (e.push("funcao = ?"), r.push(t.role)), r.push(t.id);
-  const a = `
+function updateUser(data) {
+  console.log("Dados chegando no db.ts", data);
+  const campos = [];
+  const valores = [];
+  if (data.nome !== void 0) {
+    campos.push("nome = ?");
+    valores.push(data.nome);
+  }
+  if (data.email !== void 0) {
+    campos.push("email = ?");
+    valores.push(data.email);
+  }
+  if (data.login !== void 0) {
+    campos.push("username = ?");
+    valores.push(data.login);
+  }
+  if (data.role !== void 0) {
+    campos.push("funcao = ?");
+    valores.push(data.role);
+  }
+  valores.push(data.id);
+  const sql = `
   UPDATE usuarios
-  SET ${e.join(", ")}
+  SET ${campos.join(", ")}
   WHERE id = ?
       `;
-  d.prepare(a).run(...r);
+  const stmt = db.prepare(sql);
+  stmt.run(...valores);
 }
-function hc(t) {
-  return d.prepare("UPDATE usuarios SET ativo = 0 WHERE id = ? ").run(t);
+function disableUser(id) {
+  const stmt = db.prepare(`UPDATE usuarios SET ativo = 0 WHERE id = ? `);
+  return stmt.run(id);
 }
-function Ic(t) {
-  return d.prepare("UPDATE usuarios SET ativo = 1 WHERE id = ? ").run(t);
+function enableUser(id) {
+  const stmt = db.prepare(`UPDATE usuarios SET ativo = 1 WHERE id = ? `);
+  return stmt.run(id);
 }
-pc();
-function Cc(t) {
-  const r = d.prepare(`
+criarUsuarioAdmin();
+function getOpenCashSession(data) {
+  const stmt = db.prepare(`
     SELECT id
       FROM cash_register_sessions
     WHERE pdv_id = ?
@@ -2670,206 +3052,219 @@ function Cc(t) {
         AND status = 'OPEN'
     ORDER BY opened_at DESC
     LIMIT 1;
-    `).get(t.pdv_id, t.operator_id);
-  return r ? rr(r.id) : null;
+    `);
+  const session = stmt.get(data.pdv_id, data.operator_id);
+  if (!session) {
+    return null;
+  }
+  return getCashSessionSummaryById(session.id);
 }
-function _a(t) {
-  return JSON.stringify(t ?? null);
+function serializeJson(value) {
+  return JSON.stringify(value ?? null);
 }
-function br(t) {
-  return t ? 1 : 0;
+function booleanToInt(value) {
+  return value ? 1 : 0;
 }
-function Dc(t) {
+function mapSale(row) {
   return {
-    id: t.id,
-    storeId: t.store_id,
-    customerId: t.customer_id,
-    customerName: t.customer_name,
-    customerDocument: t.customer_document,
-    status: t.status,
-    subtotalAmount: t.subtotal_amount,
-    discountAmount: t.discount_amount,
-    surchargeAmount: t.surcharge_amount,
-    totalAmount: t.total_amount,
-    changeAmount: t.change_amount,
-    externalReference: t.external_reference,
-    createdAt: t.created_at,
-    updatedAt: t.updated_at
+    id: row.id,
+    storeId: row.store_id,
+    customerId: row.customer_id,
+    customerName: row.customer_name,
+    customerDocument: row.customer_document,
+    status: row.status,
+    subtotalAmount: row.subtotal_amount,
+    discountAmount: row.discount_amount,
+    surchargeAmount: row.surcharge_amount,
+    totalAmount: row.total_amount,
+    changeAmount: row.change_amount,
+    externalReference: row.external_reference,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
-function vc(t) {
+function mapItem(row) {
   return {
-    id: t.id,
-    saleId: t.sale_id,
-    productId: t.product_id,
-    sku: t.sku,
-    description: t.description,
-    unit: t.unit,
-    quantity: t.quantity,
-    unitPrice: t.unit_price,
-    grossAmount: t.gross_amount,
-    discountAmount: t.discount_amount,
-    totalAmount: t.total_amount,
-    ncm: t.ncm,
-    cfop: t.cfop,
-    cest: t.cest,
-    originCode: t.origin_code,
-    taxSnapshotJson: t.tax_snapshot_json,
-    createdAt: t.created_at,
-    updatedAt: t.updated_at
+    id: row.id,
+    saleId: row.sale_id,
+    productId: row.product_id,
+    sku: row.sku,
+    description: row.description,
+    unit: row.unit,
+    quantity: row.quantity,
+    unitPrice: row.unit_price,
+    grossAmount: row.gross_amount,
+    discountAmount: row.discount_amount,
+    totalAmount: row.total_amount,
+    ncm: row.ncm,
+    cfop: row.cfop,
+    cest: row.cest,
+    originCode: row.origin_code,
+    taxSnapshotJson: row.tax_snapshot_json,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
-function Sc(t) {
+function mapPayment(row) {
   return {
-    id: t.id,
-    saleId: t.sale_id,
-    method: t.method,
-    amount: t.amount,
-    receivedAmount: t.received_amount,
-    changeAmount: t.change_amount,
-    integrationReference: t.integration_reference,
-    createdAt: t.created_at,
-    updatedAt: t.updated_at
+    id: row.id,
+    saleId: row.sale_id,
+    method: row.method,
+    amount: row.amount,
+    receivedAmount: row.received_amount,
+    changeAmount: row.change_amount,
+    integrationReference: row.integration_reference,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
-class Rc {
-  create(e) {
-    return d.transaction(() => {
-      const a = d.prepare(`
+class SalesRepository {
+  create(input) {
+    const transaction = db.transaction(() => {
+      const saleResult = db.prepare(`
         INSERT INTO sales (
           store_id, customer_id, customer_name, customer_document, status,
           subtotal_amount, discount_amount, surcharge_amount, total_amount,
           change_amount, external_reference, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(
-        e.storeId,
-        e.customerId ?? null,
-        e.customerName ?? null,
-        e.customerDocument ?? null,
-        e.status ?? "OPEN",
-        e.subtotalAmount,
-        e.discountAmount ?? 0,
-        e.surchargeAmount ?? 0,
-        e.totalAmount,
-        e.changeAmount ?? 0,
-        e.externalReference ?? null
-      ), n = Number(a.lastInsertRowid), o = d.prepare(`
+        input.storeId,
+        input.customerId ?? null,
+        input.customerName ?? null,
+        input.customerDocument ?? null,
+        input.status ?? "OPEN",
+        input.subtotalAmount,
+        input.discountAmount ?? 0,
+        input.surchargeAmount ?? 0,
+        input.totalAmount,
+        input.changeAmount ?? 0,
+        input.externalReference ?? null
+      );
+      const saleId = Number(saleResult.lastInsertRowid);
+      const insertItem = db.prepare(`
         INSERT INTO sale_items (
           sale_id, product_id, sku, description, unit, quantity, unit_price,
           gross_amount, discount_amount, total_amount, ncm, cfop, cest,
           origin_code, tax_snapshot_json, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `);
-      for (const i of e.items)
-        o.run(
-          n,
-          i.productId ?? null,
-          i.sku ?? null,
-          i.description,
-          i.unit,
-          i.quantity,
-          i.unitPrice,
-          i.grossAmount,
-          i.discountAmount ?? 0,
-          i.totalAmount,
-          i.ncm ?? null,
-          i.cfop ?? null,
-          i.cest ?? null,
-          i.originCode ?? null,
-          i.taxSnapshot ? _a(i.taxSnapshot) : null
+      for (const item of input.items) {
+        insertItem.run(
+          saleId,
+          item.productId ?? null,
+          item.sku ?? null,
+          item.description,
+          item.unit,
+          item.quantity,
+          item.unitPrice,
+          item.grossAmount,
+          item.discountAmount ?? 0,
+          item.totalAmount,
+          item.ncm ?? null,
+          item.cfop ?? null,
+          item.cest ?? null,
+          item.originCode ?? null,
+          item.taxSnapshot ? serializeJson(item.taxSnapshot) : null
         );
-      const s = d.prepare(`
+      }
+      const insertPayment = db.prepare(`
         INSERT INTO payments (
           sale_id, method, amount, received_amount, change_amount,
           integration_reference, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `);
-      for (const i of e.payments)
-        s.run(
-          n,
-          i.method,
-          i.amount,
-          i.receivedAmount ?? i.amount,
-          i.changeAmount ?? 0,
-          i.integrationReference ?? null
+      for (const payment of input.payments) {
+        insertPayment.run(
+          saleId,
+          payment.method,
+          payment.amount,
+          payment.receivedAmount ?? payment.amount,
+          payment.changeAmount ?? 0,
+          payment.integrationReference ?? null
         );
-      return this.findAggregateById(n);
-    })();
+      }
+      return this.findAggregateById(saleId);
+    });
+    return transaction();
   }
-  findById(e) {
-    const r = d.prepare("SELECT * FROM sales WHERE id = ? LIMIT 1").get(e);
-    return r ? Dc(r) : null;
+  findById(id) {
+    const row = db.prepare(`SELECT * FROM sales WHERE id = ? LIMIT 1`).get(id);
+    return row ? mapSale(row) : null;
   }
-  findByExternalReference(e) {
-    const r = d.prepare(`
+  findByExternalReference(externalReference) {
+    const row = db.prepare(`
       SELECT * FROM sales
       WHERE external_reference = ?
       LIMIT 1
-    `).get(e);
-    return r ? this.findAggregateById(r.id) : null;
+    `).get(externalReference);
+    return row ? this.findAggregateById(row.id) : null;
   }
-  findAggregateById(e) {
-    const r = this.findById(e);
-    if (!r) return null;
-    const a = d.prepare("SELECT * FROM sale_items WHERE sale_id = ? ORDER BY id ASC").all(e), n = d.prepare("SELECT * FROM payments WHERE sale_id = ? ORDER BY id ASC").all(e), o = d.prepare("SELECT id FROM fiscal_documents WHERE sale_id = ? LIMIT 1").get(e);
+  findAggregateById(id) {
+    const sale = this.findById(id);
+    if (!sale) return null;
+    const items = db.prepare(`SELECT * FROM sale_items WHERE sale_id = ? ORDER BY id ASC`).all(id);
+    const payments = db.prepare(`SELECT * FROM payments WHERE sale_id = ? ORDER BY id ASC`).all(id);
+    const fiscalDocument = db.prepare(`SELECT id FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(id);
     return {
-      sale: r,
-      items: a.map(vc),
-      payments: n.map(Sc),
-      fiscalDocument: o ? { id: o.id } : null
+      sale,
+      items: items.map(mapItem),
+      payments: payments.map(mapPayment),
+      fiscalDocument: fiscalDocument ? { id: fiscalDocument.id } : null
     };
   }
-  listRecent(e = 20) {
-    return d.prepare(`
+  listRecent(limit = 20) {
+    const sales = db.prepare(`
       SELECT * FROM sales
       ORDER BY created_at DESC
       LIMIT ?
-    `).all(e).map((a) => this.findAggregateById(a.id)).filter((a) => !!a);
+    `).all(limit);
+    return sales.map((sale) => this.findAggregateById(sale.id)).filter((sale) => Boolean(sale));
   }
-  updateStatus(e, r) {
-    d.prepare(`
+  updateStatus(id, status) {
+    db.prepare(`
       UPDATE sales
       SET status = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(r, e);
+    `).run(status, id);
   }
 }
-const vr = new Rc();
-function Lc(t) {
-  const e = String(t ?? "").trim();
-  if (["1", "2", "3", "4"].includes(e))
-    return e;
-  throw new Error(`CRT/regime tributario invalido na store: ${e || "vazio"}.`);
+const salesRepository = new SalesRepository();
+function toTaxRegimeCode$2(value) {
+  const normalized = String(value ?? "").trim();
+  if (["1", "2", "3", "4"].includes(normalized)) {
+    return normalized;
+  }
+  throw new Error(`CRT/regime tributario invalido na store: ${normalized || "vazio"}.`);
 }
-function Qa(t) {
+function mapStore(row) {
   return {
-    id: t.id,
-    code: t.code,
-    name: t.name,
-    legalName: t.legal_name,
-    cnpj: t.cnpj,
-    stateRegistration: t.state_registration,
-    taxRegimeCode: Lc(t.tax_regime_code),
-    environment: t.environment,
-    cscId: t.csc_id,
-    cscToken: t.csc_token,
-    defaultSeries: t.default_series,
-    nextNfceNumber: t.next_nfce_number,
-    addressStreet: t.address_street,
-    addressNumber: t.address_number,
-    addressNeighborhood: t.address_neighborhood,
-    addressCity: t.address_city,
-    addressState: t.address_state,
-    addressZipCode: t.address_zip_code,
-    addressCityIbgeCode: t.address_city_ibge_code,
-    active: !!t.active,
-    createdAt: t.created_at,
-    updatedAt: t.updated_at
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    legalName: row.legal_name,
+    cnpj: row.cnpj,
+    stateRegistration: row.state_registration,
+    taxRegimeCode: toTaxRegimeCode$2(row.tax_regime_code),
+    environment: row.environment,
+    cscId: row.csc_id,
+    cscToken: row.csc_token,
+    defaultSeries: row.default_series,
+    nextNfceNumber: row.next_nfce_number,
+    addressStreet: row.address_street,
+    addressNumber: row.address_number,
+    addressNeighborhood: row.address_neighborhood,
+    addressCity: row.address_city,
+    addressState: row.address_state,
+    addressZipCode: row.address_zip_code,
+    addressCityIbgeCode: row.address_city_ibge_code,
+    active: Boolean(row.active),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
-class Oc {
-  create(e) {
-    const r = d.prepare(`
+class StoreRepository {
+  create(input) {
+    const result = db.prepare(`
       INSERT INTO stores (
         code, name, legal_name, cnpj, state_registration, tax_regime_code,
         environment, csc_id, csc_token, default_series, next_nfce_number,
@@ -2878,44 +3273,47 @@ class Oc {
         created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
-      e.code,
-      e.name,
-      e.legalName,
-      e.cnpj,
-      e.stateRegistration,
-      e.taxRegimeCode,
-      e.environment,
-      e.cscId ?? null,
-      e.cscToken ?? null,
-      e.defaultSeries ?? 1,
-      e.nextNfceNumber ?? 1,
-      e.addressStreet,
-      e.addressNumber,
-      e.addressNeighborhood,
-      e.addressCity,
-      e.addressState,
-      e.addressZipCode,
-      e.addressCityIbgeCode,
-      br(e.active ?? !0)
+      input.code,
+      input.name,
+      input.legalName,
+      input.cnpj,
+      input.stateRegistration,
+      input.taxRegimeCode,
+      input.environment,
+      input.cscId ?? null,
+      input.cscToken ?? null,
+      input.defaultSeries ?? 1,
+      input.nextNfceNumber ?? 1,
+      input.addressStreet,
+      input.addressNumber,
+      input.addressNeighborhood,
+      input.addressCity,
+      input.addressState,
+      input.addressZipCode,
+      input.addressCityIbgeCode,
+      booleanToInt(input.active ?? true)
     );
-    return this.findById(Number(r.lastInsertRowid));
+    return this.findById(Number(result.lastInsertRowid));
   }
-  findById(e) {
-    const r = d.prepare("SELECT * FROM stores WHERE id = ? LIMIT 1").get(e);
-    return r ? Qa(r) : null;
+  findById(id) {
+    const row = db.prepare(`SELECT * FROM stores WHERE id = ? LIMIT 1`).get(id);
+    return row ? mapStore(row) : null;
   }
   findActive() {
-    const e = d.prepare(`
+    const row = db.prepare(`
       SELECT * FROM stores
       WHERE active = 1
       ORDER BY id ASC
       LIMIT 1
     `).get();
-    return e ? Qa(e) : null;
+    return row ? mapStore(row) : null;
   }
-  upsertActive(e) {
-    const r = e.id ? this.findById(e.id) : this.findActive();
-    return r ? (d.prepare(`
+  upsertActive(input) {
+    const current = input.id ? this.findById(input.id) : this.findActive();
+    if (!current) {
+      return this.create({ ...input, code: input.code || "MAIN", active: true });
+    }
+    db.prepare(`
       UPDATE stores
       SET
         code = ?,
@@ -2940,33 +3338,35 @@ class Oc {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      e.code || r.code || "MAIN",
-      e.name,
-      e.legalName,
-      e.cnpj,
-      e.stateRegistration,
-      e.taxRegimeCode,
-      e.environment,
-      e.cscId ?? null,
-      e.cscToken ?? r.cscToken ?? null,
-      e.defaultSeries ?? r.defaultSeries,
-      e.nextNfceNumber ?? r.nextNfceNumber,
-      e.addressStreet,
-      e.addressNumber,
-      e.addressNeighborhood,
-      e.addressCity,
-      e.addressState,
-      e.addressZipCode,
-      e.addressCityIbgeCode,
-      br(e.active ?? !0),
-      r.id
-    ), this.findById(r.id)) : this.create({ ...e, code: e.code || "MAIN", active: !0 });
+      input.code || current.code || "MAIN",
+      input.name,
+      input.legalName,
+      input.cnpj,
+      input.stateRegistration,
+      input.taxRegimeCode,
+      input.environment,
+      input.cscId ?? null,
+      input.cscToken ?? current.cscToken ?? null,
+      input.defaultSeries ?? current.defaultSeries,
+      input.nextNfceNumber ?? current.nextNfceNumber,
+      input.addressStreet,
+      input.addressNumber,
+      input.addressNeighborhood,
+      input.addressCity,
+      input.addressState,
+      input.addressZipCode,
+      input.addressCityIbgeCode,
+      booleanToInt(input.active ?? true),
+      current.id
+    );
+    return this.findById(current.id);
   }
-  updateFiscalConfiguration(e, r) {
-    const a = this.findById(e);
-    if (!a)
-      throw new Error(`Store ${e} não encontrada.`);
-    return d.prepare(`
+  updateFiscalConfiguration(storeId, input) {
+    const current = this.findById(storeId);
+    if (!current) {
+      throw new Error(`Store ${storeId} não encontrada.`);
+    }
+    db.prepare(`
       UPDATE stores
       SET
         environment = ?,
@@ -2976,71 +3376,85 @@ class Oc {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      r.environment ?? a.environment,
-      r.cscId ?? a.cscId ?? null,
-      r.cscToken ?? a.cscToken ?? null,
-      r.defaultSeries && r.defaultSeries > 0 ? r.defaultSeries : a.defaultSeries,
-      e
-    ), this.findById(e);
+      input.environment ?? current.environment,
+      input.cscId ?? current.cscId ?? null,
+      input.cscToken ?? current.cscToken ?? null,
+      input.defaultSeries && input.defaultSeries > 0 ? input.defaultSeries : current.defaultSeries,
+      storeId
+    );
+    return this.findById(storeId);
   }
-  reserveNextNfceNumber(e) {
-    return d.transaction(() => {
-      const a = d.prepare(`
+  reserveNextNfceNumber(storeId) {
+    const transaction = db.transaction(() => {
+      const current = db.prepare(`
         SELECT default_series, next_nfce_number
         FROM stores
         WHERE id = ?
         LIMIT 1
-      `).get(e);
-      if (!a)
-        throw new Error(`Store ${e} não encontrada.`);
-      return d.prepare(`
+      `).get(storeId);
+      if (!current) {
+        throw new Error(`Store ${storeId} não encontrada.`);
+      }
+      db.prepare(`
         UPDATE stores
         SET next_nfce_number = next_nfce_number + 1, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(e), {
-        series: a.default_series,
-        number: a.next_nfce_number
+      `).run(storeId);
+      return {
+        series: current.default_series,
+        number: current.next_nfce_number
       };
-    })();
+    });
+    return transaction();
   }
 }
-const Ie = new Oc();
-function Vt(t) {
-  return Number(t ?? 0).toLocaleString("pt-BR", {
+const storeRepository = new StoreRepository();
+function money$1(value) {
+  return Number(value ?? 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL"
   });
 }
-class yc {
+class HtmlDanfeService {
   constructor() {
-    Re(this, "outputDir", We.join(De.getPath("userData"), "fiscal", "danfe"));
+    __publicField(this, "outputDir", path$1.join(app.getPath("userData"), "fiscal", "danfe"));
   }
-  async generate(e) {
-    he.mkdirSync(this.outputDir, { recursive: !0 });
-    const r = e.danfePath || We.join(this.outputDir, `nfce-${e.id}.html`), a = this.render(e);
-    return he.writeFileSync(r, a, "utf8"), {
-      documentId: e.id,
-      danfePath: r,
+  async generate(document) {
+    fs$1.mkdirSync(this.outputDir, { recursive: true });
+    const danfePath = document.danfePath || path$1.join(this.outputDir, `nfce-${document.id}.html`);
+    const html = this.render(document);
+    fs$1.writeFileSync(danfePath, html, "utf8");
+    return {
+      documentId: document.id,
+      danfePath,
       contentType: "text/html",
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
-  async recover(e) {
-    return !e.danfePath || !he.existsSync(e.danfePath) ? null : {
-      documentId: e.id,
-      danfePath: e.danfePath,
+  async recover(document) {
+    if (!document.danfePath || !fs$1.existsSync(document.danfePath)) {
+      return null;
+    }
+    return {
+      documentId: document.id,
+      danfePath: document.danfePath,
       contentType: "text/html",
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
-  render(e) {
-    const r = vr.findAggregateById(e.saleId), a = Ie.findById(e.companyId), n = e.environment === "homologation", o = (r == null ? void 0 : r.items) ?? [], s = (r == null ? void 0 : r.payments) ?? [], i = (r == null ? void 0 : r.sale.totalAmount) ?? 0;
+  render(document) {
+    const aggregate = salesRepository.findAggregateById(document.saleId);
+    const store = storeRepository.findById(document.companyId);
+    const isHomologation = document.environment === "homologation";
+    const items = (aggregate == null ? void 0 : aggregate.items) ?? [];
+    const payments = (aggregate == null ? void 0 : aggregate.payments) ?? [];
+    const total = (aggregate == null ? void 0 : aggregate.sale.totalAmount) ?? 0;
     return `<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DANFE NFC-e ${e.number}</title>
+    <title>DANFE NFC-e ${document.number}</title>
     <style>
       body { font-family: Arial, sans-serif; background: #f4f4f5; color: #18181b; padding: 12px; }
       .card { width: 320px; margin: 0 auto; background: white; border: 1px solid #d4d4d8; border-radius: 12px; padding: 16px; }
@@ -3059,270 +3473,312 @@ class yc {
   <body>
     <div class="card">
       <div class="title">DANFE NFC-e</div>
-      <div class="subtitle">${(a == null ? void 0 : a.legalName) ?? "Emitente não encontrado"}</div>
-      <div class="subtitle">CNPJ ${(a == null ? void 0 : a.cnpj) ?? "—"} | IE ${(a == null ? void 0 : a.stateRegistration) ?? "—"}</div>
-      <div class="subtitle">${a ? `${a.addressStreet}, ${a.addressNumber} - ${a.addressNeighborhood}` : "Endereço indisponível"}</div>
-      <div class="subtitle">${a ? `${a.addressCity}/${a.addressState}` : ""}</div>
-      ${n ? '<div class="warn">EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ""}
+      <div class="subtitle">${(store == null ? void 0 : store.legalName) ?? "Emitente não encontrado"}</div>
+      <div class="subtitle">CNPJ ${(store == null ? void 0 : store.cnpj) ?? "—"} | IE ${(store == null ? void 0 : store.stateRegistration) ?? "—"}</div>
+      <div class="subtitle">${store ? `${store.addressStreet}, ${store.addressNumber} - ${store.addressNeighborhood}` : "Endereço indisponível"}</div>
+      <div class="subtitle">${store ? `${store.addressCity}/${store.addressState}` : ""}</div>
+      ${isHomologation ? '<div class="warn">EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ""}
       <div class="divider"></div>
-      <div class="row"><span class="muted">Documento</span><span>${e.id}</span></div>
-      <div class="row"><span class="muted">Venda</span><span>${e.saleId}</span></div>
-      <div class="row"><span class="muted">Número/Série</span><span>${e.number}/${e.series}</span></div>
-      <div class="row"><span class="muted">Status</span><span class="${e.status === "AUTHORIZED" ? "ok" : "muted"}">${e.status}</span></div>
-      <div class="row"><span class="muted">Emissão</span><span>${e.issuedAt}</span></div>
-      <div class="row"><span class="muted">Autorização</span><span>${e.authorizedAt ?? "Pendente"}</span></div>
-      <div class="row"><span class="muted">Protocolo</span><span>${e.authorizationProtocol ?? "Pendente"}</span></div>
+      <div class="row"><span class="muted">Documento</span><span>${document.id}</span></div>
+      <div class="row"><span class="muted">Venda</span><span>${document.saleId}</span></div>
+      <div class="row"><span class="muted">Número/Série</span><span>${document.number}/${document.series}</span></div>
+      <div class="row"><span class="muted">Status</span><span class="${document.status === "AUTHORIZED" ? "ok" : "muted"}">${document.status}</span></div>
+      <div class="row"><span class="muted">Emissão</span><span>${document.issuedAt}</span></div>
+      <div class="row"><span class="muted">Autorização</span><span>${document.authorizedAt ?? "Pendente"}</span></div>
+      <div class="row"><span class="muted">Protocolo</span><span>${document.authorizationProtocol ?? "Pendente"}</span></div>
       <div class="divider"></div>
       <div class="subtitle"><strong>Itens</strong></div>
-      ${o.map((c) => `
+      ${items.map((item) => `
         <div class="item">
-          <strong>${c.description}</strong>
-          <div class="row"><span>${Number(c.quantity).toFixed(3)} x ${Vt(c.unitPrice)}</span><span>${Vt(c.totalAmount)}</span></div>
+          <strong>${item.description}</strong>
+          <div class="row"><span>${Number(item.quantity).toFixed(3)} x ${money$1(item.unitPrice)}</span><span>${money$1(item.totalAmount)}</span></div>
         </div>
       `).join("")}
       <div class="divider"></div>
       <div class="subtitle"><strong>Pagamentos</strong></div>
-      ${s.map((c) => `
+      ${payments.map((payment) => `
         <div class="row">
-          <span>${c.method}</span>
-          <span>${Vt(c.amount)}</span>
+          <span>${payment.method}</span>
+          <span>${money$1(payment.amount)}</span>
         </div>
       `).join("")}
-      <div class="row"><span class="muted">Troco</span><span>${Vt((r == null ? void 0 : r.sale.changeAmount) ?? 0)}</span></div>
-      <div class="row"><span class="muted">Total</span><span><strong>${Vt(i)}</strong></span></div>
+      <div class="row"><span class="muted">Troco</span><span>${money$1((aggregate == null ? void 0 : aggregate.sale.changeAmount) ?? 0)}</span></div>
+      <div class="row"><span class="muted">Total</span><span><strong>${money$1(total)}</strong></span></div>
       <div class="divider"></div>
-      <div class="row"><span class="muted">Chave</span><span>${e.accessKey ?? "Pendente"}</span></div>
-      <div class="qr">${e.qrCodeUrl ?? "QR Code indisponível"}</div>
+      <div class="row"><span class="muted">Chave</span><span>${document.accessKey ?? "Pendente"}</span></div>
+      <div class="qr">${document.qrCodeUrl ?? "QR Code indisponível"}</div>
     </div>
   </body>
 </html>`;
   }
 }
-class D extends Error {
-  constructor(r) {
-    super(r.message);
-    Re(this, "code");
-    Re(this, "category");
-    Re(this, "retryable");
-    Re(this, "details");
-    this.name = "FiscalError", this.code = r.code, this.category = r.category, this.retryable = r.retryable ?? !1, this.details = r.details, r.cause !== void 0 && (this.cause = r.cause);
+class FiscalError extends Error {
+  constructor(input) {
+    super(input.message);
+    __publicField(this, "code");
+    __publicField(this, "category");
+    __publicField(this, "retryable");
+    __publicField(this, "details");
+    this.name = "FiscalError";
+    this.code = input.code;
+    this.category = input.category;
+    this.retryable = input.retryable ?? false;
+    this.details = input.details;
+    if (input.cause !== void 0) {
+      this.cause = input.cause;
+    }
   }
 }
-function me(t, e = "FISCAL_INTERNAL_ERROR") {
-  return t instanceof D ? t : t instanceof Error ? new D({
-    code: e,
-    message: t.message,
-    category: "INTERNAL",
-    retryable: !1,
-    cause: t
-  }) : new D({
-    code: e,
+function normalizeFiscalError(error, fallbackCode = "FISCAL_INTERNAL_ERROR") {
+  if (error instanceof FiscalError) {
+    return error;
+  }
+  if (error instanceof Error) {
+    return new FiscalError({
+      code: fallbackCode,
+      message: error.message,
+      category: "INTERNAL",
+      retryable: false,
+      cause: error
+    });
+  }
+  return new FiscalError({
+    code: fallbackCode,
     message: "Erro interno na camada fiscal.",
     category: "INTERNAL",
-    retryable: !1,
-    details: t
+    retryable: false,
+    details: error
   });
 }
-function bc() {
-  return (process.env.PATH ?? process.env.Path ?? "").split(We.delimiter).filter(Boolean);
+function pathEntries() {
+  const rawPath = process.env.PATH ?? process.env.Path ?? "";
+  return rawPath.split(path$1.delimiter).filter(Boolean);
 }
-function Ja(t) {
+function executableExists(filePath) {
   try {
-    return he.existsSync(t) && he.statSync(t).isFile();
+    return fs$1.existsSync(filePath) && fs$1.statSync(filePath).isFile();
   } catch {
-    return !1;
+    return false;
   }
 }
-function mo() {
-  var a;
-  const t = (a = process.env.OPENSSL_BIN) == null ? void 0 : a.trim();
-  return t && Ja(t) ? t : process.platform !== "win32" ? "openssl" : [
-    ...bc().map((n) => We.join(n, "openssl.exe")),
+function resolveOpenSslCommand() {
+  var _a;
+  const envPath = (_a = process.env.OPENSSL_BIN) == null ? void 0 : _a.trim();
+  if (envPath && executableExists(envPath)) {
+    return envPath;
+  }
+  if (process.platform !== "win32") {
+    return "openssl";
+  }
+  const candidates = [
+    ...pathEntries().map((entry) => path$1.join(entry, "openssl.exe")),
     "C:\\Program Files\\OpenSSL-Win64\\bin\\openssl.exe",
     "C:\\Program Files\\OpenSSL-Win32\\bin\\openssl.exe",
     "C:\\Program Files\\Git\\usr\\bin\\openssl.exe"
-  ].find(Ja) ?? "openssl";
+  ];
+  const found = candidates.find(executableExists);
+  return found ?? "openssl";
 }
-function Uc(t) {
-  if (Buffer.isBuffer(t))
-    return t.toString("utf8").trim() || void 0;
-  if (typeof t == "string")
-    return t.trim() || void 0;
+function stringifyFailureValue(value) {
+  if (Buffer.isBuffer(value)) {
+    return value.toString("utf8").trim() || void 0;
+  }
+  if (typeof value === "string") {
+    return value.trim() || void 0;
+  }
+  return void 0;
 }
-function Za(t, e) {
-  if (t)
-    return t.replaceAll(`pass:${e}`, "pass:***").replaceAll(e, "***");
+function maskSensitiveValue(value, password) {
+  if (!value) {
+    return void 0;
+  }
+  return value.replaceAll(`pass:${password}`, "pass:***").replaceAll(password, "***");
 }
-function en(t, e) {
-  const r = t;
+function toFailureDetails(error, password) {
+  const failure = error;
   return {
-    code: r == null ? void 0 : r.code,
-    message: Za(t instanceof Error ? t.message : String(t), e),
-    stderr: Za(Uc(r == null ? void 0 : r.stderr), e)
+    code: failure == null ? void 0 : failure.code,
+    message: maskSensitiveValue(error instanceof Error ? error.message : String(error), password),
+    stderr: maskSensitiveValue(stringifyFailureValue(failure == null ? void 0 : failure.stderr), password)
   };
 }
-function tn(t, e) {
-  return Us(mo(), [
+function execPkcs12(args, password) {
+  return execFileSync(resolveOpenSslCommand(), [
     "pkcs12",
-    ...t,
+    ...args,
     "-passin",
-    `pass:${e}`
+    `pass:${password}`
   ], {
     encoding: "utf8",
-    windowsHide: !0
+    windowsHide: true
   });
 }
-function fa(t, e) {
-  let r;
+function readPkcs12WithOpenSsl(args, password) {
+  let originalError;
   try {
-    return tn(t, e);
-  } catch (a) {
-    r = a;
+    return execPkcs12(args, password);
+  } catch (error) {
+    originalError = error;
   }
   try {
-    return tn(["-legacy", ...t], e);
-  } catch (a) {
-    const n = en(r, e), o = en(a, e), s = {
-      command: mo(),
+    return execPkcs12(["-legacy", ...args], password);
+  } catch (legacyError) {
+    const original = toFailureDetails(originalError, password);
+    const legacy = toFailureDetails(legacyError, password);
+    const details = {
+      command: resolveOpenSslCommand(),
       platform: process.platform,
-      attemptedLegacyFallback: !0,
-      originalCode: n.code,
-      originalMessage: n.message,
-      stderr: n.stderr,
-      legacyCode: o.code,
-      legacyMessage: o.message,
-      legacyStderr: o.stderr
-    }, i = new Error(o.message ?? "Falha ao executar OpenSSL para ler certificado PKCS#12.");
-    throw i.details = s, i;
+      attemptedLegacyFallback: true,
+      originalCode: original.code,
+      originalMessage: original.message,
+      stderr: original.stderr,
+      legacyCode: legacy.code,
+      legacyMessage: legacy.message,
+      legacyStderr: legacy.stderr
+    };
+    const error = new Error(legacy.message ?? "Falha ao executar OpenSSL para ler certificado PKCS#12.");
+    error.details = details;
+    throw error;
   }
 }
-class wc {
-  readCertificatePem(e) {
-    var n;
-    const r = (n = e.certificatePath) == null ? void 0 : n.trim();
-    if (!r)
+class FileSystemCertificateService {
+  readCertificatePem(config2) {
+    var _a;
+    const certificatePath = (_a = config2.certificatePath) == null ? void 0 : _a.trim();
+    if (!certificatePath) {
       return null;
-    const a = We.extname(r).toLowerCase();
-    if (a === ".pem" || a === ".crt" || a === ".cer")
-      return he.readFileSync(r, "utf8");
-    if (a === ".pfx" || a === ".p12") {
-      if (!e.certificatePassword)
-        throw new D({
+    }
+    const extension = path$1.extname(certificatePath).toLowerCase();
+    if (extension === ".pem" || extension === ".crt" || extension === ".cer") {
+      return fs$1.readFileSync(certificatePath, "utf8");
+    }
+    if (extension === ".pfx" || extension === ".p12") {
+      if (!config2.certificatePassword) {
+        throw new FiscalError({
           code: "CERTIFICATE_PASSWORD_REQUIRED",
           message: "Senha do certificado não configurada.",
           category: "CERTIFICATE"
         });
+      }
       try {
-        return fa(["-in", r, "-clcerts", "-nokeys"], e.certificatePassword);
-      } catch (o) {
-        throw new D({
+        return readPkcs12WithOpenSsl(["-in", certificatePath, "-clcerts", "-nokeys"], config2.certificatePassword);
+      } catch (error) {
+        throw new FiscalError({
           code: "CERTIFICATE_READ_FAILED",
           message: "Não foi possível validar o certificado digital informado.",
           category: "CERTIFICATE",
-          details: o == null ? void 0 : o.details,
-          cause: o
+          details: error == null ? void 0 : error.details,
+          cause: error
         });
       }
     }
     return null;
   }
-  async getCertificateInfo(e) {
-    var s;
-    const r = (s = e.certificatePath) == null ? void 0 : s.trim(), a = (/* @__PURE__ */ new Date()).toISOString();
-    if (!r)
+  async getCertificateInfo(config2) {
+    var _a;
+    const certificatePath = (_a = config2.certificatePath) == null ? void 0 : _a.trim();
+    const lastCheckedAt = (/* @__PURE__ */ new Date()).toISOString();
+    if (!certificatePath) {
       return {
-        configured: !1,
+        configured: false,
         type: "UNKNOWN",
-        lastCheckedAt: a
+        lastCheckedAt
       };
-    const n = he.existsSync(r);
-    let o = null;
-    if (n)
+    }
+    const exists = fs$1.existsSync(certificatePath);
+    let validUntil = null;
+    if (exists) {
       try {
-        const i = this.readCertificatePem(e);
-        if (i) {
-          const c = new ja(i);
-          o = new Date(c.validTo).toISOString();
+        const pem = this.readCertificatePem(config2);
+        if (pem) {
+          const certificate = new X509Certificate(pem);
+          validUntil = new Date(certificate.validTo).toISOString();
         }
       } catch {
-        o = null;
+        validUntil = null;
       }
+    }
     return {
-      configured: n,
-      type: [".pfx", ".p12"].includes(We.extname(r).toLowerCase()) ? "A1" : "UNKNOWN",
-      alias: We.basename(r),
-      source: r,
-      validUntil: o,
-      lastCheckedAt: a
+      configured: exists,
+      type: [".pfx", ".p12"].includes(path$1.extname(certificatePath).toLowerCase()) ? "A1" : "UNKNOWN",
+      alias: path$1.basename(certificatePath),
+      source: certificatePath,
+      validUntil,
+      lastCheckedAt
     };
   }
-  async assertCertificateReady(e) {
-    if (e.provider === "mock")
+  async assertCertificateReady(config2) {
+    if (config2.provider === "mock") {
       return;
-    if (!e.certificatePath)
-      throw new D({
+    }
+    if (!config2.certificatePath) {
+      throw new FiscalError({
         code: "CERTIFICATE_NOT_CONFIGURED",
         message: "Certificado fiscal não configurado.",
         category: "CERTIFICATE"
       });
-    if (!he.existsSync(e.certificatePath))
-      throw new D({
+    }
+    if (!fs$1.existsSync(config2.certificatePath)) {
+      throw new FiscalError({
         code: "CERTIFICATE_FILE_NOT_FOUND",
-        message: `Arquivo do certificado não encontrado: ${e.certificatePath}`,
+        message: `Arquivo do certificado não encontrado: ${config2.certificatePath}`,
         category: "CERTIFICATE"
       });
-    const r = this.readCertificatePem(e);
-    if (!r)
-      throw new D({
+    }
+    const pem = this.readCertificatePem(config2);
+    if (!pem) {
+      throw new FiscalError({
         code: "CERTIFICATE_FORMAT_NOT_SUPPORTED",
         message: "Formato de certificado não suportado pela camada fiscal atual.",
         category: "CERTIFICATE"
       });
-    const a = new ja(r);
-    if (new Date(a.validTo).getTime() < Date.now())
-      throw new D({
+    }
+    const certificate = new X509Certificate(pem);
+    if (new Date(certificate.validTo).getTime() < Date.now()) {
+      throw new FiscalError({
         code: "CERTIFICATE_EXPIRED",
         message: "O certificado digital configurado está expirado.",
         category: "CERTIFICATE"
       });
+    }
   }
 }
-function rn(t) {
+function mapFiscalSettings(row) {
   return {
-    id: t.id,
-    storeId: t.store_id,
-    provider: t.provider,
-    documentModel: t.document_model,
-    contingencyMode: t.contingency_mode,
-    sefazBaseUrl: t.sefaz_base_url,
-    gatewayBaseUrl: t.gateway_base_url,
-    gatewayApiKey: t.gateway_api_key,
-    certificateType: t.certificate_type,
-    certificatePath: t.certificate_path,
-    certificatePassword: t.certificate_password,
-    certificateValidUntil: t.certificate_valid_until,
-    caBundlePath: t.ca_bundle_path,
-    tlsValidationMode: t.tls_validation_mode,
-    active: !!t.active,
-    createdAt: t.created_at,
-    updatedAt: t.updated_at
+    id: row.id,
+    storeId: row.store_id,
+    provider: row.provider,
+    documentModel: row.document_model,
+    contingencyMode: row.contingency_mode,
+    sefazBaseUrl: row.sefaz_base_url,
+    gatewayBaseUrl: row.gateway_base_url,
+    gatewayApiKey: row.gateway_api_key,
+    certificateType: row.certificate_type,
+    certificatePath: row.certificate_path,
+    certificatePassword: row.certificate_password,
+    certificateValidUntil: row.certificate_valid_until,
+    caBundlePath: row.ca_bundle_path,
+    tlsValidationMode: row.tls_validation_mode,
+    active: Boolean(row.active),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
-class Fc {
-  findActiveByStoreId(e) {
-    const r = d.prepare(`
+class FiscalSettingsRepository {
+  findActiveByStoreId(storeId) {
+    const row = db.prepare(`
       SELECT *
       FROM fiscal_settings
       WHERE store_id = ? AND active = 1
       ORDER BY id DESC
       LIMIT 1
-    `).get(e);
-    return r ? rn(r) : null;
+    `).get(storeId);
+    return row ? mapFiscalSettings(row) : null;
   }
-  upsertActive(e) {
-    const r = this.findActiveByStoreId(e.storeId);
-    if (!r) {
-      const a = d.prepare(`
+  upsertActive(input) {
+    const current = this.findActiveByStoreId(input.storeId);
+    if (!current) {
+      const result = db.prepare(`
         INSERT INTO fiscal_settings (
           store_id,
           provider,
@@ -3342,24 +3798,24 @@ class Fc {
           updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(
-        e.storeId,
-        e.provider,
-        e.documentModel ?? 65,
-        e.contingencyMode ?? "queue",
-        e.sefazBaseUrl ?? null,
-        e.gatewayBaseUrl ?? null,
-        e.gatewayApiKey ?? null,
-        e.certificateType ?? "A1",
-        e.certificatePath ?? null,
-        e.certificatePassword ?? null,
-        e.certificateValidUntil ?? null,
-        e.caBundlePath ?? null,
-        e.tlsValidationMode ?? "strict",
-        br(e.active ?? !0)
+        input.storeId,
+        input.provider,
+        input.documentModel ?? 65,
+        input.contingencyMode ?? "queue",
+        input.sefazBaseUrl ?? null,
+        input.gatewayBaseUrl ?? null,
+        input.gatewayApiKey ?? null,
+        input.certificateType ?? "A1",
+        input.certificatePath ?? null,
+        input.certificatePassword ?? null,
+        input.certificateValidUntil ?? null,
+        input.caBundlePath ?? null,
+        input.tlsValidationMode ?? "strict",
+        booleanToInt(input.active ?? true)
       );
-      return this.findById(Number(a.lastInsertRowid));
+      return this.findById(Number(result.lastInsertRowid));
     }
-    return d.prepare(`
+    db.prepare(`
       UPDATE fiscal_settings
       SET
         provider = ?,
@@ -3378,42 +3834,45 @@ class Fc {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      e.provider,
-      e.documentModel ?? r.documentModel,
-      e.contingencyMode ?? r.contingencyMode ?? "queue",
-      e.sefazBaseUrl ?? null,
-      e.gatewayBaseUrl ?? null,
-      e.gatewayApiKey ?? null,
-      e.certificateType ?? r.certificateType,
-      e.certificatePath ?? null,
-      e.certificatePassword ?? null,
-      e.certificateValidUntil ?? null,
-      e.caBundlePath ?? null,
-      e.tlsValidationMode ?? r.tlsValidationMode,
-      br(e.active ?? r.active),
-      r.id
-    ), this.findById(r.id);
+      input.provider,
+      input.documentModel ?? current.documentModel,
+      input.contingencyMode ?? current.contingencyMode ?? "queue",
+      input.sefazBaseUrl ?? null,
+      input.gatewayBaseUrl ?? null,
+      input.gatewayApiKey ?? null,
+      input.certificateType ?? current.certificateType,
+      input.certificatePath ?? null,
+      input.certificatePassword ?? null,
+      input.certificateValidUntil ?? null,
+      input.caBundlePath ?? null,
+      input.tlsValidationMode ?? current.tlsValidationMode,
+      booleanToInt(input.active ?? current.active),
+      current.id
+    );
+    return this.findById(current.id);
   }
-  findById(e) {
-    const r = d.prepare(`
+  findById(id) {
+    const row = db.prepare(`
       SELECT *
       FROM fiscal_settings
       WHERE id = ?
       LIMIT 1
-    `).get(e);
-    return r ? rn(r) : null;
+    `).get(id);
+    return row ? mapFiscalSettings(row) : null;
   }
 }
-const po = new Fc(), Zt = "fiscal:nfce", an = "__FISCAL_CONFIG__";
-function Na() {
+const fiscalSettingsRepository = new FiscalSettingsRepository();
+const FISCAL_INTEGRATION_ID = "fiscal:nfce";
+const CONFIG_SENTINEL = "__FISCAL_CONFIG__";
+function nowIso$1() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
-function nn() {
+function defaultConfig() {
   return {
     provider: "mock",
     environment: "homologation",
     contingencyMode: "queue",
-    integrationId: Zt,
+    integrationId: FISCAL_INTEGRATION_ID,
     gatewayApiKey: null,
     gatewayBaseUrl: null,
     sefazBaseUrl: null,
@@ -3428,68 +3887,72 @@ function nn() {
     certificateValidUntil: null,
     caBundlePath: null,
     tlsValidationMode: "strict",
-    updatedAt: Na()
+    updatedAt: nowIso$1()
   };
 }
-function on(t) {
+function sanitizeForView$1(config2) {
   return {
-    provider: t.provider,
-    environment: t.environment,
-    contingencyMode: t.contingencyMode,
-    integrationId: t.integrationId,
-    gatewayBaseUrl: t.gatewayBaseUrl ?? null,
-    sefazBaseUrl: t.sefazBaseUrl ?? null,
-    certificatePath: t.certificatePath ?? null,
-    cscId: t.cscId ?? null,
-    uf: t.uf ?? "SP",
-    model: t.model ?? 65,
-    defaultSeries: t.defaultSeries ?? null,
-    certificateType: t.certificateType ?? "A1",
-    certificateValidUntil: t.certificateValidUntil ?? null,
-    caBundlePath: t.caBundlePath ?? null,
-    tlsValidationMode: t.tlsValidationMode ?? "strict",
-    hasGatewayApiKey: !!t.gatewayApiKey,
-    hasCertificatePassword: !!t.certificatePassword,
-    hasCscToken: !!t.cscToken,
-    updatedAt: t.updatedAt
+    provider: config2.provider,
+    environment: config2.environment,
+    contingencyMode: config2.contingencyMode,
+    integrationId: config2.integrationId,
+    gatewayBaseUrl: config2.gatewayBaseUrl ?? null,
+    sefazBaseUrl: config2.sefazBaseUrl ?? null,
+    certificatePath: config2.certificatePath ?? null,
+    cscId: config2.cscId ?? null,
+    uf: config2.uf ?? "SP",
+    model: config2.model ?? 65,
+    defaultSeries: config2.defaultSeries ?? null,
+    certificateType: config2.certificateType ?? "A1",
+    certificateValidUntil: config2.certificateValidUntil ?? null,
+    caBundlePath: config2.caBundlePath ?? null,
+    tlsValidationMode: config2.tlsValidationMode ?? "strict",
+    hasGatewayApiKey: Boolean(config2.gatewayApiKey),
+    hasCertificatePassword: Boolean(config2.certificatePassword),
+    hasCscToken: Boolean(config2.cscToken),
+    updatedAt: config2.updatedAt
   };
 }
-class To {
+class IntegrationFiscalSettingsService {
   /**
    * Legacy fallback only.
    * Fiscal runtime must use FiscalSettingsService/FiscalContextResolver as the primary source.
    */
   getConfig() {
-    const e = d.prepare(`
+    const row = db.prepare(`
       SELECT integration_id, raw_json, updated_at
       FROM integrations
       WHERE integration_id = ?
       LIMIT 1
-    `).get(Zt);
-    if (!(e != null && e.raw_json))
-      return N.warn("[FiscalConfig] Configuracao fiscal fiscal:nfce nao encontrada. Usando defaults."), nn();
-    const r = JSON.parse(e.raw_json);
-    return N.info(`[FiscalConfig] Configuracao fiscal carregada provider=${r.provider ?? "mock"} ambiente=${r.environment ?? "homologation"} uf=${r.uf ?? "SP"}.`), {
-      ...nn(),
-      ...r,
-      integrationId: Zt,
-      updatedAt: r.updatedAt ?? e.updated_at ?? Na()
+    `).get(FISCAL_INTEGRATION_ID);
+    if (!(row == null ? void 0 : row.raw_json)) {
+      logger.warn("[FiscalConfig] Configuracao fiscal fiscal:nfce nao encontrada. Usando defaults.");
+      return defaultConfig();
+    }
+    const parsed = JSON.parse(row.raw_json);
+    logger.info(`[FiscalConfig] Configuracao fiscal carregada provider=${parsed.provider ?? "mock"} ambiente=${parsed.environment ?? "homologation"} uf=${parsed.uf ?? "SP"}.`);
+    return {
+      ...defaultConfig(),
+      ...parsed,
+      integrationId: FISCAL_INTEGRATION_ID,
+      updatedAt: parsed.updatedAt ?? row.updated_at ?? nowIso$1()
     };
   }
   getConfigView() {
-    return on(this.getConfig());
+    return sanitizeForView$1(this.getConfig());
   }
-  saveConfig(e) {
-    const r = this.getConfig(), a = {
-      ...r,
-      ...e,
-      gatewayApiKey: e.gatewayApiKey === "" ? r.gatewayApiKey : e.gatewayApiKey ?? r.gatewayApiKey,
-      certificatePassword: e.certificatePassword === "" ? r.certificatePassword : e.certificatePassword ?? r.certificatePassword,
-      cscToken: e.cscToken === "" ? r.cscToken : e.cscToken ?? r.cscToken,
-      integrationId: Zt,
-      updatedAt: Na()
+  saveConfig(input) {
+    const current = this.getConfig();
+    const next = {
+      ...current,
+      ...input,
+      gatewayApiKey: input.gatewayApiKey === "" ? current.gatewayApiKey : input.gatewayApiKey ?? current.gatewayApiKey,
+      certificatePassword: input.certificatePassword === "" ? current.certificatePassword : input.certificatePassword ?? current.certificatePassword,
+      cscToken: input.cscToken === "" ? current.cscToken : input.cscToken ?? current.cscToken,
+      integrationId: FISCAL_INTEGRATION_ID,
+      updatedAt: nowIso$1()
     };
-    return d.prepare(`
+    db.prepare(`
       INSERT INTO integrations (
         integration_id,
         access_token,
@@ -3509,403 +3972,495 @@ class To {
         raw_json = excluded.raw_json,
         updated_at = excluded.updated_at
     `).run(
-      Zt,
-      an,
-      an,
+      FISCAL_INTEGRATION_ID,
+      CONFIG_SENTINEL,
+      CONFIG_SENTINEL,
       "CONFIG",
       "9999-12-31T23:59:59.999Z",
       "fiscal:nfce",
-      JSON.stringify(a),
-      a.updatedAt
-    ), N.info(`[FiscalConfig] Configuracao fiscal salva provider=${a.provider} ambiente=${a.environment} uf=${a.uf ?? "SP"}.`), on(a);
+      JSON.stringify(next),
+      next.updatedAt
+    );
+    logger.info(`[FiscalConfig] Configuracao fiscal salva provider=${next.provider} ambiente=${next.environment} uf=${next.uf ?? "SP"}.`);
+    return sanitizeForView$1(next);
   }
 }
-function xc(t) {
-  const e = String(t ?? "").trim();
-  if (["1", "2", "3", "4"].includes(e))
-    return e;
-  throw new Error(`CRT/regime tributario invalido na company legada: ${e || "vazio"}.`);
+function toTaxRegimeCode$1(value) {
+  const normalized = String(value ?? "").trim();
+  if (["1", "2", "3", "4"].includes(normalized)) {
+    return normalized;
+  }
+  throw new Error(`CRT/regime tributario invalido na company legada: ${normalized || "vazio"}.`);
 }
-function Mc(t) {
+function mapCompanyToStoreInput(company) {
   return {
     code: "MAIN",
-    name: t.nome_fantasia,
-    legalName: t.razao_social,
-    cnpj: t.cnpj,
-    stateRegistration: t.inscricao_estadual,
-    taxRegimeCode: xc(t.crt),
-    environment: t.ambiente_emissao === 1 ? "production" : "homologation",
-    cscId: t.csc_id,
-    cscToken: t.csc_token,
-    defaultSeries: Number(t.serie_nfce ?? 1),
-    nextNfceNumber: Number(t.proximo_numero_nfce ?? 1),
-    addressStreet: t.rua,
-    addressNumber: t.numero,
-    addressNeighborhood: t.bairro,
-    addressCity: t.cidade,
-    addressState: t.uf,
-    addressZipCode: t.cep,
-    addressCityIbgeCode: t.cod_municipio_ibge,
-    active: !!t.ativo
+    name: company.nome_fantasia,
+    legalName: company.razao_social,
+    cnpj: company.cnpj,
+    stateRegistration: company.inscricao_estadual,
+    taxRegimeCode: toTaxRegimeCode$1(company.crt),
+    environment: company.ambiente_emissao === 1 ? "production" : "homologation",
+    cscId: company.csc_id,
+    cscToken: company.csc_token,
+    defaultSeries: Number(company.serie_nfce ?? 1),
+    nextNfceNumber: Number(company.proximo_numero_nfce ?? 1),
+    addressStreet: company.rua,
+    addressNumber: company.numero,
+    addressNeighborhood: company.bairro,
+    addressCity: company.cidade,
+    addressState: company.uf,
+    addressZipCode: company.cep,
+    addressCityIbgeCode: company.cod_municipio_ibge,
+    active: Boolean(company.ativo)
   };
 }
-function _o() {
-  const t = Ie.findActive();
-  if (t) return t;
-  const e = d.prepare(`
+function ensureActiveFiscalStore() {
+  const existing = storeRepository.findActive();
+  if (existing) return existing;
+  const company = db.prepare(`
     SELECT *
     FROM company
     WHERE ativo = 1
     ORDER BY id ASC
     LIMIT 1
   `).get();
-  if (!e)
-    return N.warn("[FiscalStore] Nenhuma store ativa e nenhuma company ativa encontrada."), null;
-  const r = Ie.create(Mc(e));
-  return N.info(`[FiscalStore] Store fiscal criada a partir de company ativa store=${r.id}.`), r;
+  if (!company) {
+    logger.warn("[FiscalStore] Nenhuma store ativa e nenhuma company ativa encontrada.");
+    return null;
+  }
+  const store = storeRepository.create(mapCompanyToStoreInput(company));
+  logger.info(`[FiscalStore] Store fiscal criada a partir de company ativa store=${store.id}.`);
+  return store;
 }
-const Pc = "fiscal:nfce";
-function Bc(t) {
-  return (t ?? "SP").trim().toUpperCase() || "SP";
+const LEGACY_INTEGRATION_ID$1 = "fiscal:nfce";
+function normalizeUf(value) {
+  return (value ?? "SP").trim().toUpperCase() || "SP";
 }
-function Xc(t) {
+function mapSettingsToProviderConfig(context) {
   return {
-    provider: t.provider,
-    environment: t.environment,
-    contingencyMode: t.contingencyMode,
-    integrationId: Pc,
-    certificateType: t.certificateType ?? "A1",
-    sefazBaseUrl: t.sefazBaseUrl ?? null,
-    gatewayBaseUrl: t.gatewayBaseUrl ?? null,
-    gatewayApiKey: t.gatewayApiKey ?? null,
-    certificatePath: t.certificatePath ?? null,
-    certificatePassword: t.certificatePassword ?? null,
-    certificateValidUntil: t.certificateValidUntil ?? null,
-    caBundlePath: t.caBundlePath ?? null,
-    tlsValidationMode: t.tlsValidationMode,
-    cscId: t.cscId ?? null,
-    cscToken: t.cscToken ?? null,
-    uf: t.uf,
-    model: t.documentModel,
-    defaultSeries: t.defaultSeries,
-    updatedAt: t.updatedAt
+    provider: context.provider,
+    environment: context.environment,
+    contingencyMode: context.contingencyMode,
+    integrationId: LEGACY_INTEGRATION_ID$1,
+    certificateType: context.certificateType ?? "A1",
+    sefazBaseUrl: context.sefazBaseUrl ?? null,
+    gatewayBaseUrl: context.gatewayBaseUrl ?? null,
+    gatewayApiKey: context.gatewayApiKey ?? null,
+    certificatePath: context.certificatePath ?? null,
+    certificatePassword: context.certificatePassword ?? null,
+    certificateValidUntil: context.certificateValidUntil ?? null,
+    caBundlePath: context.caBundlePath ?? null,
+    tlsValidationMode: context.tlsValidationMode,
+    cscId: context.cscId ?? null,
+    cscToken: context.cscToken ?? null,
+    uf: context.uf,
+    model: context.documentModel,
+    defaultSeries: context.defaultSeries,
+    updatedAt: context.updatedAt
   };
 }
-class kc {
-  constructor(e = new To()) {
-    this.legacySettings = e;
+class FiscalContextResolver {
+  constructor(legacySettings = new IntegrationFiscalSettingsService()) {
+    this.legacySettings = legacySettings;
   }
-  resolve(e) {
-    const r = e ? Ie.findById(e) : _o();
-    if (e && !r)
-      throw new Error(`Store fiscal ${e} não encontrada ou inativa.`);
-    if (!r)
+  resolve(storeId) {
+    const effectiveStore = storeId ? storeRepository.findById(storeId) : ensureActiveFiscalStore();
+    if (storeId && !effectiveStore) {
+      throw new Error(`Store fiscal ${storeId} não encontrada ou inativa.`);
+    }
+    if (!effectiveStore) {
       throw new Error("Nenhuma store fiscal ativa encontrada. Cadastre os dados do emitente antes da emissão.");
-    const a = po.findActiveByStoreId(r.id), n = a ? null : this.legacySettings.getConfig(), o = !a && !!n;
-    o && N.warn(`[FiscalContext] Usando fallback legado integrations para store=${r.id}.`);
-    const s = a ? "fiscal_settings" : o ? "integrations-fallback" : "defaults";
-    return this.buildContext(r, a, n ?? null, s, o);
+    }
+    const settings = fiscalSettingsRepository.findActiveByStoreId(effectiveStore.id);
+    const legacy = settings ? null : this.legacySettings.getConfig();
+    const legacyFallbackUsed = !settings && Boolean(legacy);
+    if (legacyFallbackUsed) {
+      logger.warn(`[FiscalContext] Usando fallback legado integrations para store=${effectiveStore.id}.`);
+    }
+    const settingsSource = settings ? "fiscal_settings" : legacyFallbackUsed ? "integrations-fallback" : "defaults";
+    return this.buildContext(effectiveStore, settings, legacy ?? null, settingsSource, legacyFallbackUsed);
   }
-  resolveProviderConfig(e) {
-    return Xc(this.resolve(e));
+  resolveProviderConfig(storeId) {
+    return mapSettingsToProviderConfig(this.resolve(storeId));
   }
-  buildContext(e, r, a, n, o) {
+  buildContext(store, settings, legacy, settingsSource, legacyFallbackUsed) {
     return {
-      storeId: e.id,
-      provider: (r == null ? void 0 : r.provider) ?? (a == null ? void 0 : a.provider) ?? "mock",
-      environment: e.environment,
-      contingencyMode: (r == null ? void 0 : r.contingencyMode) ?? (a == null ? void 0 : a.contingencyMode) ?? "queue",
+      storeId: store.id,
+      provider: (settings == null ? void 0 : settings.provider) ?? (legacy == null ? void 0 : legacy.provider) ?? "mock",
+      environment: store.environment,
+      contingencyMode: (settings == null ? void 0 : settings.contingencyMode) ?? (legacy == null ? void 0 : legacy.contingencyMode) ?? "queue",
       documentModel: 65,
-      sefazBaseUrl: (r == null ? void 0 : r.sefazBaseUrl) ?? (a == null ? void 0 : a.sefazBaseUrl) ?? null,
-      gatewayBaseUrl: (r == null ? void 0 : r.gatewayBaseUrl) ?? (a == null ? void 0 : a.gatewayBaseUrl) ?? null,
-      gatewayApiKey: (r == null ? void 0 : r.gatewayApiKey) ?? (a == null ? void 0 : a.gatewayApiKey) ?? null,
-      certificateType: (r == null ? void 0 : r.certificateType) ?? (a == null ? void 0 : a.certificateType) ?? "A1",
-      certificatePath: (r == null ? void 0 : r.certificatePath) ?? (a == null ? void 0 : a.certificatePath) ?? null,
-      certificatePassword: (r == null ? void 0 : r.certificatePassword) ?? (a == null ? void 0 : a.certificatePassword) ?? null,
-      certificateValidUntil: (r == null ? void 0 : r.certificateValidUntil) ?? (a == null ? void 0 : a.certificateValidUntil) ?? null,
-      caBundlePath: (r == null ? void 0 : r.caBundlePath) ?? (a == null ? void 0 : a.caBundlePath) ?? null,
-      tlsValidationMode: (r == null ? void 0 : r.tlsValidationMode) ?? (a == null ? void 0 : a.tlsValidationMode) ?? "strict",
-      cscId: e.cscId ?? (a == null ? void 0 : a.cscId) ?? null,
-      cscToken: e.cscToken ?? (a == null ? void 0 : a.cscToken) ?? null,
-      uf: Bc(e.addressState ?? (a == null ? void 0 : a.uf)),
-      defaultSeries: e.defaultSeries,
-      nextNfceNumber: e.nextNfceNumber,
+      sefazBaseUrl: (settings == null ? void 0 : settings.sefazBaseUrl) ?? (legacy == null ? void 0 : legacy.sefazBaseUrl) ?? null,
+      gatewayBaseUrl: (settings == null ? void 0 : settings.gatewayBaseUrl) ?? (legacy == null ? void 0 : legacy.gatewayBaseUrl) ?? null,
+      gatewayApiKey: (settings == null ? void 0 : settings.gatewayApiKey) ?? (legacy == null ? void 0 : legacy.gatewayApiKey) ?? null,
+      certificateType: (settings == null ? void 0 : settings.certificateType) ?? (legacy == null ? void 0 : legacy.certificateType) ?? "A1",
+      certificatePath: (settings == null ? void 0 : settings.certificatePath) ?? (legacy == null ? void 0 : legacy.certificatePath) ?? null,
+      certificatePassword: (settings == null ? void 0 : settings.certificatePassword) ?? (legacy == null ? void 0 : legacy.certificatePassword) ?? null,
+      certificateValidUntil: (settings == null ? void 0 : settings.certificateValidUntil) ?? (legacy == null ? void 0 : legacy.certificateValidUntil) ?? null,
+      caBundlePath: (settings == null ? void 0 : settings.caBundlePath) ?? (legacy == null ? void 0 : legacy.caBundlePath) ?? null,
+      tlsValidationMode: (settings == null ? void 0 : settings.tlsValidationMode) ?? (legacy == null ? void 0 : legacy.tlsValidationMode) ?? "strict",
+      cscId: store.cscId ?? (legacy == null ? void 0 : legacy.cscId) ?? null,
+      cscToken: store.cscToken ?? (legacy == null ? void 0 : legacy.cscToken) ?? null,
+      uf: normalizeUf(store.addressState ?? (legacy == null ? void 0 : legacy.uf)),
+      defaultSeries: store.defaultSeries,
+      nextNfceNumber: store.nextNfceNumber,
       emitter: {
-        cnpj: e.cnpj,
-        stateRegistration: e.stateRegistration,
-        legalName: e.legalName,
-        tradeName: e.name,
-        taxRegimeCode: e.taxRegimeCode,
+        cnpj: store.cnpj,
+        stateRegistration: store.stateRegistration,
+        legalName: store.legalName,
+        tradeName: store.name,
+        taxRegimeCode: store.taxRegimeCode,
         address: {
-          street: e.addressStreet,
-          number: e.addressNumber,
-          neighborhood: e.addressNeighborhood,
-          city: e.addressCity,
-          state: e.addressState,
-          zipCode: e.addressZipCode,
-          cityIbgeCode: e.addressCityIbgeCode
+          street: store.addressStreet,
+          number: store.addressNumber,
+          neighborhood: store.addressNeighborhood,
+          city: store.addressCity,
+          state: store.addressState,
+          zipCode: store.addressZipCode,
+          cityIbgeCode: store.addressCityIbgeCode
         }
       },
       source: {
         store: "stores",
-        settings: n,
-        legacyFallbackUsed: o
+        settings: settingsSource,
+        legacyFallbackUsed
       },
-      updatedAt: (r == null ? void 0 : r.updatedAt) ?? (a == null ? void 0 : a.updatedAt) ?? e.updatedAt
+      updatedAt: (settings == null ? void 0 : settings.updatedAt) ?? (legacy == null ? void 0 : legacy.updatedAt) ?? store.updatedAt
     };
   }
 }
-const Qe = new kc(), $c = "fiscal:nfce";
-function sn(t) {
+const fiscalContextResolver = new FiscalContextResolver();
+const LEGACY_INTEGRATION_ID = "fiscal:nfce";
+function sanitizeForView(config2) {
   return {
-    provider: t.provider,
-    environment: t.environment,
-    contingencyMode: t.contingencyMode,
-    integrationId: t.integrationId,
-    certificateType: t.certificateType ?? "A1",
-    gatewayBaseUrl: t.gatewayBaseUrl ?? null,
-    sefazBaseUrl: t.sefazBaseUrl ?? null,
-    certificatePath: t.certificatePath ?? null,
-    certificateValidUntil: t.certificateValidUntil ?? null,
-    caBundlePath: t.caBundlePath ?? null,
-    tlsValidationMode: t.tlsValidationMode ?? "strict",
-    cscId: t.cscId ?? null,
-    uf: t.uf ?? "SP",
-    model: t.model ?? 65,
-    defaultSeries: t.defaultSeries ?? null,
-    hasGatewayApiKey: !!t.gatewayApiKey,
-    hasCertificatePassword: !!t.certificatePassword,
-    hasCscToken: !!t.cscToken,
-    updatedAt: t.updatedAt
+    provider: config2.provider,
+    environment: config2.environment,
+    contingencyMode: config2.contingencyMode,
+    integrationId: config2.integrationId,
+    certificateType: config2.certificateType ?? "A1",
+    gatewayBaseUrl: config2.gatewayBaseUrl ?? null,
+    sefazBaseUrl: config2.sefazBaseUrl ?? null,
+    certificatePath: config2.certificatePath ?? null,
+    certificateValidUntil: config2.certificateValidUntil ?? null,
+    caBundlePath: config2.caBundlePath ?? null,
+    tlsValidationMode: config2.tlsValidationMode ?? "strict",
+    cscId: config2.cscId ?? null,
+    uf: config2.uf ?? "SP",
+    model: config2.model ?? 65,
+    defaultSeries: config2.defaultSeries ?? null,
+    hasGatewayApiKey: Boolean(config2.gatewayApiKey),
+    hasCertificatePassword: Boolean(config2.certificatePassword),
+    hasCscToken: Boolean(config2.cscToken),
+    updatedAt: config2.updatedAt
   };
 }
-function je(t) {
-  if (t == null) return null;
-  const e = t.trim();
-  return e.length > 0 ? e : null;
+function normalizeNullableText(value) {
+  if (value === void 0 || value === null) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
-class Gc {
-  constructor(e = new To()) {
-    this.legacySettings = e;
+class FiscalSettingsService {
+  constructor(legacySettings = new IntegrationFiscalSettingsService()) {
+    this.legacySettings = legacySettings;
   }
   getConfig() {
-    return Qe.resolveProviderConfig();
+    return fiscalContextResolver.resolveProviderConfig();
   }
   getConfigView() {
-    return sn(this.getConfig());
+    return sanitizeForView(this.getConfig());
   }
-  saveConfig(e) {
-    const r = _o();
-    if (!r)
+  saveConfig(input) {
+    const store = ensureActiveFiscalStore();
+    if (!store) {
       throw new Error("Nenhuma store fiscal ativa encontrada. Cadastre os dados do emitente antes de salvar a configuração fiscal.");
-    const a = this.getConfig(), n = e.certificatePassword === "" ? a.certificatePassword : e.certificatePassword ?? a.certificatePassword ?? null, o = e.gatewayApiKey === "" ? a.gatewayApiKey : e.gatewayApiKey ?? a.gatewayApiKey ?? null, s = e.cscToken === "" ? a.cscToken : e.cscToken ?? a.cscToken ?? null, i = Ie.updateFiscalConfiguration(r.id, {
-      environment: e.environment,
-      cscId: je(e.cscId) ?? a.cscId ?? null,
-      cscToken: s,
-      defaultSeries: e.defaultSeries ?? a.defaultSeries ?? r.defaultSeries
-    }), c = po.upsertActive({
-      storeId: i.id,
-      provider: e.provider,
-      documentModel: e.model ?? 65,
-      contingencyMode: e.contingencyMode,
-      sefazBaseUrl: je(e.sefazBaseUrl),
-      gatewayBaseUrl: je(e.gatewayBaseUrl),
-      gatewayApiKey: je(o),
-      certificateType: e.certificateType ?? a.certificateType ?? "A1",
-      certificatePath: je(e.certificatePath) ?? a.certificatePath ?? null,
-      certificatePassword: je(n),
-      certificateValidUntil: je(e.certificateValidUntil) ?? a.certificateValidUntil ?? null,
-      caBundlePath: je(e.caBundlePath),
-      tlsValidationMode: e.tlsValidationMode ?? a.tlsValidationMode ?? "strict",
-      active: !0
-    }), u = Qe.resolveProviderConfig(i.id);
-    return this.mirrorLegacyConfig(u), N.info(`[FiscalConfig] Configuracao fiscal salva em fiscal_settings store=${c.storeId} provider=${c.provider} ambiente=${i.environment}.`), sn(u);
+    }
+    const current = this.getConfig();
+    const nextPassword = input.certificatePassword === "" ? current.certificatePassword : input.certificatePassword ?? current.certificatePassword ?? null;
+    const nextGatewayApiKey = input.gatewayApiKey === "" ? current.gatewayApiKey : input.gatewayApiKey ?? current.gatewayApiKey ?? null;
+    const nextCscToken = input.cscToken === "" ? current.cscToken : input.cscToken ?? current.cscToken ?? null;
+    const updatedStore = storeRepository.updateFiscalConfiguration(store.id, {
+      environment: input.environment,
+      cscId: normalizeNullableText(input.cscId) ?? current.cscId ?? null,
+      cscToken: nextCscToken,
+      defaultSeries: input.defaultSeries ?? current.defaultSeries ?? store.defaultSeries
+    });
+    const settings = fiscalSettingsRepository.upsertActive({
+      storeId: updatedStore.id,
+      provider: input.provider,
+      documentModel: input.model ?? 65,
+      contingencyMode: input.contingencyMode,
+      sefazBaseUrl: normalizeNullableText(input.sefazBaseUrl),
+      gatewayBaseUrl: normalizeNullableText(input.gatewayBaseUrl),
+      gatewayApiKey: normalizeNullableText(nextGatewayApiKey),
+      certificateType: input.certificateType ?? current.certificateType ?? "A1",
+      certificatePath: normalizeNullableText(input.certificatePath) ?? current.certificatePath ?? null,
+      certificatePassword: normalizeNullableText(nextPassword),
+      certificateValidUntil: normalizeNullableText(input.certificateValidUntil) ?? current.certificateValidUntil ?? null,
+      caBundlePath: normalizeNullableText(input.caBundlePath),
+      tlsValidationMode: input.tlsValidationMode ?? current.tlsValidationMode ?? "strict",
+      active: true
+    });
+    const nextConfig = fiscalContextResolver.resolveProviderConfig(updatedStore.id);
+    this.mirrorLegacyConfig(nextConfig);
+    logger.info(`[FiscalConfig] Configuracao fiscal salva em fiscal_settings store=${settings.storeId} provider=${settings.provider} ambiente=${updatedStore.environment}.`);
+    return sanitizeForView(nextConfig);
   }
-  mirrorLegacyConfig(e) {
+  mirrorLegacyConfig(config2) {
     try {
       this.legacySettings.saveConfig({
-        provider: e.provider,
-        environment: e.environment,
-        contingencyMode: e.contingencyMode,
-        certificateType: e.certificateType,
-        sefazBaseUrl: e.sefazBaseUrl,
-        gatewayBaseUrl: e.gatewayBaseUrl,
-        gatewayApiKey: e.gatewayApiKey,
-        certificatePath: e.certificatePath,
-        certificatePassword: e.certificatePassword,
-        certificateValidUntil: e.certificateValidUntil,
-        caBundlePath: e.caBundlePath,
-        tlsValidationMode: e.tlsValidationMode,
-        cscId: e.cscId,
-        cscToken: e.cscToken,
-        uf: e.uf,
-        model: e.model,
-        defaultSeries: e.defaultSeries
+        provider: config2.provider,
+        environment: config2.environment,
+        contingencyMode: config2.contingencyMode,
+        certificateType: config2.certificateType,
+        sefazBaseUrl: config2.sefazBaseUrl,
+        gatewayBaseUrl: config2.gatewayBaseUrl,
+        gatewayApiKey: config2.gatewayApiKey,
+        certificatePath: config2.certificatePath,
+        certificatePassword: config2.certificatePassword,
+        certificateValidUntil: config2.certificateValidUntil,
+        caBundlePath: config2.caBundlePath,
+        tlsValidationMode: config2.tlsValidationMode,
+        cscId: config2.cscId,
+        cscToken: config2.cscToken,
+        uf: config2.uf,
+        model: config2.model,
+        defaultSeries: config2.defaultSeries
       });
-    } catch (r) {
-      N.warn(`[FiscalConfig] Falha ao espelhar configuracao fiscal no legado integrations: ${r instanceof Error ? r.message : String(r)}`);
+    } catch (error) {
+      logger.warn(`[FiscalConfig] Falha ao espelhar configuracao fiscal no legado integrations: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   getLegacyRowForDiagnostics() {
-    return d.prepare(`
+    return db.prepare(`
       SELECT integration_id, updated_at
       FROM integrations
       WHERE integration_id = ?
       LIMIT 1
-    `).get($c);
+    `).get(LEGACY_INTEGRATION_ID);
   }
 }
-function zt(t) {
-  return String(t ?? "").replace(/\D/g, "");
+function onlyDigits$2(value) {
+  return String(value ?? "").replace(/\D/g, "");
 }
-function q(t) {
-  return typeof t == "string" && t.trim().length > 0;
+function hasText(value) {
+  return typeof value === "string" && value.trim().length > 0;
 }
-function O(t, e, r, a, n, o = "error") {
-  t.push({ code: e, message: r, field: a, table: n, severity: o });
+function addIssue(issues, code, message, field, table, severity = "error") {
+  issues.push({ code, message, field, table, severity });
 }
-class qc {
-  validateContext(e) {
-    const r = [];
-    zt(e.emitter.cnpj).length !== 14 && O(r, "EMITTER_CNPJ_REQUIRED", "CNPJ do emitente deve ter 14 digitos.", "cnpj", "stores"), q(e.emitter.stateRegistration) || O(r, "EMITTER_IE_REQUIRED", "IE do emitente e obrigatoria.", "state_registration", "stores"), q(e.emitter.legalName) || O(r, "EMITTER_LEGAL_NAME_REQUIRED", "Razao social do emitente e obrigatoria.", "legal_name", "stores"), q(e.emitter.taxRegimeCode) || O(r, "EMITTER_TAX_REGIME_REQUIRED", "Regime tributario/CRT e obrigatorio.", "tax_regime_code", "stores");
-    const a = e.emitter.address;
-    return q(a.street) || O(r, "EMITTER_STREET_REQUIRED", "Logradouro do emitente e obrigatorio.", "address_street", "stores"), q(a.number) || O(r, "EMITTER_NUMBER_REQUIRED", "Numero do endereco do emitente e obrigatorio.", "address_number", "stores"), q(a.neighborhood) || O(r, "EMITTER_NEIGHBORHOOD_REQUIRED", "Bairro do emitente e obrigatorio.", "address_neighborhood", "stores"), q(a.city) || O(r, "EMITTER_CITY_REQUIRED", "Municipio do emitente e obrigatorio.", "address_city", "stores"), (!q(a.state) || a.state.length !== 2) && O(r, "EMITTER_UF_REQUIRED", "UF do emitente deve ter 2 letras.", "address_state", "stores"), zt(a.zipCode).length !== 8 && O(r, "EMITTER_ZIP_REQUIRED", "CEP do emitente deve ter 8 digitos.", "address_zip_code", "stores"), zt(a.cityIbgeCode).length !== 7 && O(r, "EMITTER_IBGE_REQUIRED", "Codigo IBGE do municipio deve ter 7 digitos.", "address_city_ibge_code", "stores"), e.environment || O(r, "FISCAL_ENVIRONMENT_REQUIRED", "Ambiente fiscal e obrigatorio.", "environment", "stores"), e.provider || O(r, "FISCAL_PROVIDER_REQUIRED", "Provider fiscal e obrigatorio.", "provider", "fiscal_settings"), e.provider === "sefaz-direct" && !q(e.sefazBaseUrl) && e.uf !== "SP" && O(r, "SEFAZ_URL_REQUIRED", "URL SEFAZ deve ser configurada para UF diferente de SP.", "sefaz_base_url", "fiscal_settings"), e.provider === "gateway" && !q(e.gatewayBaseUrl) && O(r, "GATEWAY_URL_REQUIRED", "URL do gateway fiscal e obrigatoria para provider gateway.", "gateway_base_url", "fiscal_settings"), e.provider === "gateway" && !q(e.gatewayApiKey) && O(r, "GATEWAY_API_KEY_REQUIRED", "API key do gateway fiscal e obrigatoria para provider gateway.", "gateway_api_key", "fiscal_settings"), e.provider !== "mock" && (q(e.certificatePath) || O(r, "CERTIFICATE_PATH_REQUIRED", "Certificado A1 e obrigatorio para emissao real.", "certificate_path", "fiscal_settings"), q(e.certificatePassword) || O(r, "CERTIFICATE_PASSWORD_REQUIRED", "Senha do certificado A1 e obrigatoria.", "certificate_password", "fiscal_settings"), q(e.cscId) || O(r, "CSC_ID_REQUIRED", "CSC ID e obrigatorio para NFC-e.", "csc_id", "stores"), q(e.cscToken) || O(r, "CSC_TOKEN_REQUIRED", "CSC token e obrigatorio para NFC-e.", "csc_token", "stores")), (!Number.isInteger(e.defaultSeries) || e.defaultSeries <= 0) && O(r, "DEFAULT_SERIES_REQUIRED", "Serie padrao NFC-e deve ser maior que zero.", "default_series", "stores"), (!Number.isInteger(e.nextNfceNumber) || e.nextNfceNumber <= 0) && O(r, "NEXT_NFCE_NUMBER_REQUIRED", "Proximo numero NFC-e deve ser maior que zero.", "next_nfce_number", "stores"), this.toResult(r);
+class FiscalReadinessValidator {
+  validateContext(context) {
+    const issues = [];
+    if (onlyDigits$2(context.emitter.cnpj).length !== 14) {
+      addIssue(issues, "EMITTER_CNPJ_REQUIRED", "CNPJ do emitente deve ter 14 digitos.", "cnpj", "stores");
+    }
+    if (!hasText(context.emitter.stateRegistration)) {
+      addIssue(issues, "EMITTER_IE_REQUIRED", "IE do emitente e obrigatoria.", "state_registration", "stores");
+    }
+    if (!hasText(context.emitter.legalName)) {
+      addIssue(issues, "EMITTER_LEGAL_NAME_REQUIRED", "Razao social do emitente e obrigatoria.", "legal_name", "stores");
+    }
+    if (!hasText(context.emitter.taxRegimeCode)) {
+      addIssue(issues, "EMITTER_TAX_REGIME_REQUIRED", "Regime tributario/CRT e obrigatorio.", "tax_regime_code", "stores");
+    }
+    const address = context.emitter.address;
+    if (!hasText(address.street)) addIssue(issues, "EMITTER_STREET_REQUIRED", "Logradouro do emitente e obrigatorio.", "address_street", "stores");
+    if (!hasText(address.number)) addIssue(issues, "EMITTER_NUMBER_REQUIRED", "Numero do endereco do emitente e obrigatorio.", "address_number", "stores");
+    if (!hasText(address.neighborhood)) addIssue(issues, "EMITTER_NEIGHBORHOOD_REQUIRED", "Bairro do emitente e obrigatorio.", "address_neighborhood", "stores");
+    if (!hasText(address.city)) addIssue(issues, "EMITTER_CITY_REQUIRED", "Municipio do emitente e obrigatorio.", "address_city", "stores");
+    if (!hasText(address.state) || address.state.length !== 2) addIssue(issues, "EMITTER_UF_REQUIRED", "UF do emitente deve ter 2 letras.", "address_state", "stores");
+    if (onlyDigits$2(address.zipCode).length !== 8) addIssue(issues, "EMITTER_ZIP_REQUIRED", "CEP do emitente deve ter 8 digitos.", "address_zip_code", "stores");
+    if (onlyDigits$2(address.cityIbgeCode).length !== 7) addIssue(issues, "EMITTER_IBGE_REQUIRED", "Codigo IBGE do municipio deve ter 7 digitos.", "address_city_ibge_code", "stores");
+    if (!context.environment) addIssue(issues, "FISCAL_ENVIRONMENT_REQUIRED", "Ambiente fiscal e obrigatorio.", "environment", "stores");
+    if (!context.provider) addIssue(issues, "FISCAL_PROVIDER_REQUIRED", "Provider fiscal e obrigatorio.", "provider", "fiscal_settings");
+    if (context.provider === "sefaz-direct" && !hasText(context.sefazBaseUrl) && context.uf !== "SP") {
+      addIssue(issues, "SEFAZ_URL_REQUIRED", "URL SEFAZ deve ser configurada para UF diferente de SP.", "sefaz_base_url", "fiscal_settings");
+    }
+    if (context.provider === "gateway" && !hasText(context.gatewayBaseUrl)) {
+      addIssue(issues, "GATEWAY_URL_REQUIRED", "URL do gateway fiscal e obrigatoria para provider gateway.", "gateway_base_url", "fiscal_settings");
+    }
+    if (context.provider === "gateway" && !hasText(context.gatewayApiKey)) {
+      addIssue(issues, "GATEWAY_API_KEY_REQUIRED", "API key do gateway fiscal e obrigatoria para provider gateway.", "gateway_api_key", "fiscal_settings");
+    }
+    if (context.provider !== "mock") {
+      if (!hasText(context.certificatePath)) addIssue(issues, "CERTIFICATE_PATH_REQUIRED", "Certificado A1 e obrigatorio para emissao real.", "certificate_path", "fiscal_settings");
+      if (!hasText(context.certificatePassword)) addIssue(issues, "CERTIFICATE_PASSWORD_REQUIRED", "Senha do certificado A1 e obrigatoria.", "certificate_password", "fiscal_settings");
+      if (!hasText(context.cscId)) addIssue(issues, "CSC_ID_REQUIRED", "CSC ID e obrigatorio para NFC-e.", "csc_id", "stores");
+      if (!hasText(context.cscToken)) addIssue(issues, "CSC_TOKEN_REQUIRED", "CSC token e obrigatorio para NFC-e.", "csc_token", "stores");
+    }
+    if (!Number.isInteger(context.defaultSeries) || context.defaultSeries <= 0) {
+      addIssue(issues, "DEFAULT_SERIES_REQUIRED", "Serie padrao NFC-e deve ser maior que zero.", "default_series", "stores");
+    }
+    if (!Number.isInteger(context.nextNfceNumber) || context.nextNfceNumber <= 0) {
+      addIssue(issues, "NEXT_NFCE_NUMBER_REQUIRED", "Proximo numero NFC-e deve ser maior que zero.", "next_nfce_number", "stores");
+    }
+    return this.toResult(issues);
   }
-  validateAuthorizeReadiness(e, r) {
-    const a = this.validateContext(e), n = [...a.errors, ...a.warnings];
-    return this.validateItems(r.items, n), this.validatePayments(r.payments, n), (!r.totals || r.totals.finalAmount <= 0) && O(n, "SALE_TOTAL_REQUIRED", "Total da venda deve ser maior que zero.", "totals.finalAmount", "sales"), this.toResult(n);
+  validateAuthorizeReadiness(context, request) {
+    const contextResult = this.validateContext(context);
+    const issues = [...contextResult.errors, ...contextResult.warnings];
+    this.validateItems(request.items, issues);
+    this.validatePayments(request.payments, issues);
+    if (!request.totals || request.totals.finalAmount <= 0) {
+      addIssue(issues, "SALE_TOTAL_REQUIRED", "Total da venda deve ser maior que zero.", "totals.finalAmount", "sales");
+    }
+    return this.toResult(issues);
   }
-  validateItems(e, r) {
-    if (!Array.isArray(e) || e.length === 0) {
-      O(r, "SALE_ITEMS_REQUIRED", "Venda deve possuir ao menos um item.", "items", "sale_items");
+  validateItems(items, issues) {
+    if (!Array.isArray(items) || items.length === 0) {
+      addIssue(issues, "SALE_ITEMS_REQUIRED", "Venda deve possuir ao menos um item.", "items", "sale_items");
       return;
     }
-    e.forEach((a, n) => {
-      var s, i, c, u, l, E, m;
-      const o = `items[${n}]`;
-      q(a.description) || O(r, "ITEM_DESCRIPTION_REQUIRED", "Descricao do item e obrigatoria.", `${o}.description`, "sale_items"), q(a.unit) || O(r, "ITEM_UNIT_REQUIRED", "Unidade do item e obrigatoria.", `${o}.unit`, "sale_items"), a.quantity <= 0 && O(r, "ITEM_QUANTITY_REQUIRED", "Quantidade do item deve ser maior que zero.", `${o}.quantity`, "sale_items"), a.unitPrice <= 0 && O(r, "ITEM_UNIT_PRICE_REQUIRED", "Valor unitario do item deve ser maior que zero.", `${o}.unitPrice`, "sale_items"), zt((s = a.tax) == null ? void 0 : s.ncm).length !== 8 && O(r, "ITEM_NCM_REQUIRED", `NCM do item "${a.description}" deve ter 8 digitos. Corrija o cadastro do produto antes de emitir NFC-e.`, `${o}.tax.ncm`, "sale_items"), zt((i = a.tax) == null ? void 0 : i.cfop).length !== 4 && O(r, "ITEM_CFOP_REQUIRED", "CFOP do item deve ter 4 digitos.", `${o}.tax.cfop`, "sale_items"), q((c = a.tax) == null ? void 0 : c.originCode) || O(r, "ITEM_ORIGIN_REQUIRED", `Origem tributaria do item "${a.description}" e obrigatoria.`, `${o}.tax.originCode`, "sale_item_tax_snapshot"), !q((u = a.tax) == null ? void 0 : u.csosn) && !q((l = a.tax) == null ? void 0 : l.icmsCst) && O(r, "ITEM_ICMS_REQUIRED", `CST ou CSOSN do ICMS do item "${a.description}" e obrigatorio.`, `${o}.tax`, "sale_item_tax_snapshot"), q((E = a.tax) == null ? void 0 : E.pisCst) || O(r, "ITEM_PIS_REQUIRED", `CST de PIS do item "${a.description}" e obrigatorio.`, `${o}.tax.pisCst`, "sale_item_tax_snapshot"), q((m = a.tax) == null ? void 0 : m.cofinsCst) || O(r, "ITEM_COFINS_REQUIRED", `CST de COFINS do item "${a.description}" e obrigatorio.`, `${o}.tax.cofinsCst`, "sale_item_tax_snapshot");
+    items.forEach((item, index) => {
+      var _a, _b, _c, _d, _e, _f, _g;
+      const prefix = `items[${index}]`;
+      if (!hasText(item.description)) addIssue(issues, "ITEM_DESCRIPTION_REQUIRED", "Descricao do item e obrigatoria.", `${prefix}.description`, "sale_items");
+      if (!hasText(item.unit)) addIssue(issues, "ITEM_UNIT_REQUIRED", "Unidade do item e obrigatoria.", `${prefix}.unit`, "sale_items");
+      if (item.quantity <= 0) addIssue(issues, "ITEM_QUANTITY_REQUIRED", "Quantidade do item deve ser maior que zero.", `${prefix}.quantity`, "sale_items");
+      if (item.unitPrice <= 0) addIssue(issues, "ITEM_UNIT_PRICE_REQUIRED", "Valor unitario do item deve ser maior que zero.", `${prefix}.unitPrice`, "sale_items");
+      if (onlyDigits$2((_a = item.tax) == null ? void 0 : _a.ncm).length !== 8) addIssue(issues, "ITEM_NCM_REQUIRED", `NCM do item "${item.description}" deve ter 8 digitos. Corrija o cadastro do produto antes de emitir NFC-e.`, `${prefix}.tax.ncm`, "sale_items");
+      if (onlyDigits$2((_b = item.tax) == null ? void 0 : _b.cfop).length !== 4) addIssue(issues, "ITEM_CFOP_REQUIRED", "CFOP do item deve ter 4 digitos.", `${prefix}.tax.cfop`, "sale_items");
+      if (!hasText((_c = item.tax) == null ? void 0 : _c.originCode)) addIssue(issues, "ITEM_ORIGIN_REQUIRED", `Origem tributaria do item "${item.description}" e obrigatoria.`, `${prefix}.tax.originCode`, "sale_item_tax_snapshot");
+      if (!hasText((_d = item.tax) == null ? void 0 : _d.csosn) && !hasText((_e = item.tax) == null ? void 0 : _e.icmsCst)) addIssue(issues, "ITEM_ICMS_REQUIRED", `CST ou CSOSN do ICMS do item "${item.description}" e obrigatorio.`, `${prefix}.tax`, "sale_item_tax_snapshot");
+      if (!hasText((_f = item.tax) == null ? void 0 : _f.pisCst)) addIssue(issues, "ITEM_PIS_REQUIRED", `CST de PIS do item "${item.description}" e obrigatorio.`, `${prefix}.tax.pisCst`, "sale_item_tax_snapshot");
+      if (!hasText((_g = item.tax) == null ? void 0 : _g.cofinsCst)) addIssue(issues, "ITEM_COFINS_REQUIRED", `CST de COFINS do item "${item.description}" e obrigatorio.`, `${prefix}.tax.cofinsCst`, "sale_item_tax_snapshot");
     });
   }
-  validatePayments(e, r) {
-    if (!Array.isArray(e) || e.length === 0) {
-      O(r, "PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments", "payments");
+  validatePayments(payments, issues) {
+    if (!Array.isArray(payments) || payments.length === 0) {
+      addIssue(issues, "PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments", "payments");
       return;
     }
-    e.forEach((a, n) => {
-      const o = `payments[${n}]`;
-      q(a.method) || O(r, "PAYMENT_METHOD_REQUIRED", "Forma de pagamento e obrigatoria.", `${o}.method`, "payments"), a.amount <= 0 && O(r, "PAYMENT_AMOUNT_REQUIRED", "Valor do pagamento deve ser maior que zero.", `${o}.amount`, "payments");
+    payments.forEach((payment, index) => {
+      const prefix = `payments[${index}]`;
+      if (!hasText(payment.method)) addIssue(issues, "PAYMENT_METHOD_REQUIRED", "Forma de pagamento e obrigatoria.", `${prefix}.method`, "payments");
+      if (payment.amount <= 0) addIssue(issues, "PAYMENT_AMOUNT_REQUIRED", "Valor do pagamento deve ser maior que zero.", `${prefix}.amount`, "payments");
     });
   }
-  toResult(e) {
-    const r = e.filter((n) => n.severity === "error"), a = e.filter((n) => n.severity === "warning");
-    return { ok: r.length === 0, errors: r, warnings: a };
+  toResult(issues) {
+    const errors2 = issues.filter((issue) => issue.severity === "error");
+    const warnings = issues.filter((issue) => issue.severity === "warning");
+    return { ok: errors2.length === 0, errors: errors2, warnings };
   }
 }
-const Da = new qc(), Vc = ["1", "2", "3", "4"];
-function zc(t) {
-  return Vc.includes(t);
+const fiscalReadinessValidator = new FiscalReadinessValidator();
+const VALID_TAX_REGIME_CODES = ["1", "2", "3", "4"];
+function isTaxRegimeCode(value) {
+  return VALID_TAX_REGIME_CODES.includes(value);
 }
-function Jr(t) {
-  return String(t ?? "").replace(/\D/g, "");
+function cleanDigits(value) {
+  return String(value ?? "").replace(/\D/g, "");
 }
-function lt(t) {
-  return String(t ?? "").trim();
+function cleanText(value) {
+  return String(value ?? "").trim();
 }
-function ft(t, e, r) {
-  const a = lt(String(t[e] ?? ""));
-  if (!a)
-    throw new Error(`${r} e obrigatorio.`);
-  return a;
+function requireText(input, field, label) {
+  const value = cleanText(String(input[field] ?? ""));
+  if (!value) {
+    throw new Error(`${label} e obrigatorio.`);
+  }
+  return value;
 }
-function Hc(t) {
-  const e = {
-    id: t.id,
-    code: lt(t.code || "MAIN") || "MAIN",
-    name: ft(t, "name", "Nome fantasia"),
-    legalName: ft(t, "legalName", "Razao social"),
-    cnpj: Jr(t.cnpj),
-    stateRegistration: lt(t.stateRegistration),
-    taxRegimeCode: lt(t.taxRegimeCode),
-    environment: t.environment === "production" ? "production" : "homologation",
-    cscId: lt(t.cscId ?? "") || null,
-    cscToken: lt(t.cscToken ?? "") || null,
-    defaultSeries: Number(t.defaultSeries ?? 1),
-    nextNfceNumber: Number(t.nextNfceNumber ?? 1),
-    addressStreet: ft(t, "addressStreet", "Logradouro"),
-    addressNumber: ft(t, "addressNumber", "Numero"),
-    addressNeighborhood: ft(t, "addressNeighborhood", "Bairro"),
-    addressCity: ft(t, "addressCity", "Cidade"),
-    addressState: lt(t.addressState).toUpperCase(),
-    addressZipCode: Jr(t.addressZipCode),
-    addressCityIbgeCode: Jr(t.addressCityIbgeCode),
-    active: !0
+function normalizeStoreInput(input) {
+  const normalized = {
+    id: input.id,
+    code: cleanText(input.code || "MAIN") || "MAIN",
+    name: requireText(input, "name", "Nome fantasia"),
+    legalName: requireText(input, "legalName", "Razao social"),
+    cnpj: cleanDigits(input.cnpj),
+    stateRegistration: cleanText(input.stateRegistration),
+    taxRegimeCode: cleanText(input.taxRegimeCode),
+    environment: input.environment === "production" ? "production" : "homologation",
+    cscId: cleanText(input.cscId ?? "") || null,
+    cscToken: cleanText(input.cscToken ?? "") || null,
+    defaultSeries: Number(input.defaultSeries ?? 1),
+    nextNfceNumber: Number(input.nextNfceNumber ?? 1),
+    addressStreet: requireText(input, "addressStreet", "Logradouro"),
+    addressNumber: requireText(input, "addressNumber", "Numero"),
+    addressNeighborhood: requireText(input, "addressNeighborhood", "Bairro"),
+    addressCity: requireText(input, "addressCity", "Cidade"),
+    addressState: cleanText(input.addressState).toUpperCase(),
+    addressZipCode: cleanDigits(input.addressZipCode),
+    addressCityIbgeCode: cleanDigits(input.addressCityIbgeCode),
+    active: true
   };
-  if (e.cnpj.length !== 14)
+  if (normalized.cnpj.length !== 14) {
     throw new Error("CNPJ deve conter 14 digitos.");
-  if (!e.stateRegistration)
+  }
+  if (!normalized.stateRegistration) {
     throw new Error("Inscricao estadual e obrigatoria.");
-  if (!e.taxRegimeCode)
+  }
+  if (!normalized.taxRegimeCode) {
     throw new Error("CRT/regime tributario e obrigatorio.");
-  if (!zc(e.taxRegimeCode))
+  }
+  if (!isTaxRegimeCode(normalized.taxRegimeCode)) {
     throw new Error("CRT deve ser 1, 2, 3 ou 4.");
-  if (e.addressState.length !== 2)
+  }
+  if (normalized.addressState.length !== 2) {
     throw new Error("UF deve conter 2 letras.");
-  if (e.addressZipCode.length !== 8)
+  }
+  if (normalized.addressZipCode.length !== 8) {
     throw new Error("CEP deve conter 8 digitos.");
-  if (e.addressCityIbgeCode.length !== 7)
+  }
+  if (normalized.addressCityIbgeCode.length !== 7) {
     throw new Error("Codigo IBGE do municipio deve conter 7 digitos.");
-  if (!Number.isInteger(e.defaultSeries ?? 0) || (e.defaultSeries ?? 0) <= 0)
+  }
+  if (!Number.isInteger(normalized.defaultSeries ?? 0) || (normalized.defaultSeries ?? 0) <= 0) {
     throw new Error("Serie padrao NFC-e deve ser maior que zero.");
-  if (!Number.isInteger(e.nextNfceNumber ?? 0) || (e.nextNfceNumber ?? 0) <= 0)
+  }
+  if (!Number.isInteger(normalized.nextNfceNumber ?? 0) || (normalized.nextNfceNumber ?? 0) <= 0) {
     throw new Error("Proximo numero NFC-e deve ser maior que zero.");
-  return e;
+  }
+  return normalized;
 }
-class jc {
+class FiscalStoreService {
   getActiveStore() {
-    return Ie.findActive();
+    return storeRepository.findActive();
   }
-  saveActiveStore(e) {
-    const r = Ie.upsertActive(Hc(e));
-    return N.info(`[FiscalStore] Store fiscal salva id=${r.id} cnpj=${r.cnpj} ambiente=${r.environment}.`), r;
+  saveActiveStore(input) {
+    const store = storeRepository.upsertActive(normalizeStoreInput(input));
+    logger.info(`[FiscalStore] Store fiscal salva id=${store.id} cnpj=${store.cnpj} ambiente=${store.environment}.`);
+    return store;
   }
 }
-const Yc = new jc();
-function Zr(t) {
+const fiscalStoreService = new FiscalStoreService();
+function toPersistedDocument(row) {
   return {
-    id: t.id,
-    saleId: t.sale_id,
-    companyId: t.store_id,
-    number: t.number,
-    series: t.series,
-    model: t.model,
-    environment: t.environment,
-    status: t.status,
-    issueType: t.contingency_type ? 9 : 1,
-    accessKey: t.access_key,
-    authorizationProtocol: t.protocol,
-    receiptNumber: t.receipt_number,
-    statusCode: t.rejection_code,
-    statusMessage: t.rejection_reason,
-    issuedAt: t.issued_datetime ?? t.created_at,
-    authorizedAt: t.authorization_datetime,
-    cancelledAt: t.cancel_datetime,
-    cancellationProtocol: t.protocol,
-    xmlBuilt: t.xml,
-    xmlSigned: t.xml_signed,
-    xmlSent: t.xml,
-    xmlAuthorized: t.xml_authorized,
-    xmlCancellation: t.xml_cancellation,
-    danfePath: t.danfe_path,
-    qrCodeUrl: t.qr_code_url,
+    id: row.id,
+    saleId: row.sale_id,
+    companyId: row.store_id,
+    number: row.number,
+    series: row.series,
+    model: row.model,
+    environment: row.environment,
+    status: row.status,
+    issueType: row.contingency_type ? 9 : 1,
+    accessKey: row.access_key,
+    authorizationProtocol: row.protocol,
+    receiptNumber: row.receipt_number,
+    statusCode: row.rejection_code,
+    statusMessage: row.rejection_reason,
+    issuedAt: row.issued_datetime ?? row.created_at,
+    authorizedAt: row.authorization_datetime,
+    cancelledAt: row.cancel_datetime,
+    cancellationProtocol: row.protocol,
+    xmlBuilt: row.xml,
+    xmlSigned: row.xml_signed,
+    xmlSent: row.xml,
+    xmlAuthorized: row.xml_authorized,
+    xmlCancellation: row.xml_cancellation,
+    danfePath: row.danfe_path,
+    qrCodeUrl: row.qr_code_url,
     digestValue: null,
-    contingencyJustification: t.contingency_type,
+    contingencyJustification: row.contingency_type,
     cancellationJustification: null,
-    updatedAt: t.updated_at,
-    createdAt: t.created_at
+    updatedAt: row.updated_at,
+    createdAt: row.created_at
   };
 }
-function Kc(t) {
-  switch (t) {
+function toQueueStatus(status) {
+  switch (status) {
     case "PENDING":
       return "pending";
     case "PROCESSING":
@@ -3917,37 +4472,40 @@ function Kc(t) {
       return "failed";
   }
 }
-function ea(t) {
-  const e = JSON.parse(t.payload_json), r = t.result_json ? JSON.parse(t.result_json) : null, a = Number(t.entity_id);
+function toQueueItem(row) {
+  const payload = JSON.parse(row.payload_json);
+  const result = row.result_json ? JSON.parse(row.result_json) : null;
+  const parsedEntityId = Number(row.entity_id);
   return {
-    id: String(t.id),
-    saleId: Number((e == null ? void 0 : e.saleId) ?? 0),
-    documentId: Number.isNaN(a) ? null : a,
-    operation: t.operation,
-    payload: e,
-    result: r,
-    status: Kc(t.status),
-    idempotencyKey: t.idempotency_key,
-    attempts: t.attempts,
+    id: String(row.id),
+    saleId: Number((payload == null ? void 0 : payload.saleId) ?? 0),
+    documentId: Number.isNaN(parsedEntityId) ? null : parsedEntityId,
+    operation: row.operation,
+    payload,
+    result,
+    status: toQueueStatus(row.status),
+    idempotencyKey: row.idempotency_key,
+    attempts: row.attempts,
     maxAttempts: 5,
-    nextRetryAt: t.next_attempt_at,
-    lastErrorCode: t.last_error ?? null,
-    lastErrorMessage: t.last_error ?? null,
-    lockedAt: t.locked_at,
-    lockedBy: t.locked_by,
-    processedAt: t.processed_at ?? (t.status === "DONE" ? t.updated_at : null),
-    createdAt: t.created_at,
-    updatedAt: t.updated_at
+    nextRetryAt: row.next_attempt_at,
+    lastErrorCode: row.last_error ?? null,
+    lastErrorMessage: row.last_error ?? null,
+    lockedAt: row.locked_at,
+    lockedBy: row.locked_by,
+    processedAt: row.processed_at ?? (row.status === "DONE" ? row.updated_at : null),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
-class Wc {
+class SqliteFiscalRepository {
   ensureSchema() {
   }
-  createPendingDocument(e) {
-    const r = this.findBySaleId(e.saleId);
-    if (r)
-      return r;
-    const a = d.prepare(`
+  createPendingDocument(request) {
+    const existing = this.findBySaleId(request.saleId);
+    if (existing) {
+      return existing;
+    }
+    const result = db.prepare(`
       INSERT INTO fiscal_documents (
         sale_id, store_id, model, series, number, access_key, environment, status,
         issued_datetime, xml, xml_signed, xml_authorized, xml_cancellation, protocol, receipt_number, qr_code_url, authorization_datetime,
@@ -3955,19 +4513,19 @@ class Wc {
         provider, created_at, updated_at
       ) VALUES (?, ?, 65, ?, ?, NULL, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ?, NULL, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
-      e.saleId,
-      e.companyId,
-      e.series,
-      e.number,
-      e.environment,
-      e.offlineFallbackMode === "queue" ? "QUEUED" : "PENDING",
-      e.issuedAt,
-      e.offlineFallbackMode === "offline-contingency" ? "offline-contingency" : null
+      request.saleId,
+      request.companyId,
+      request.series,
+      request.number,
+      request.environment,
+      request.offlineFallbackMode === "queue" ? "QUEUED" : "PENDING",
+      request.issuedAt,
+      request.offlineFallbackMode === "offline-contingency" ? "offline-contingency" : null
     );
-    return this.findById(Number(a.lastInsertRowid));
+    return this.findById(Number(result.lastInsertRowid));
   }
-  updateTransmissionArtifacts(e, r) {
-    d.prepare(`
+  updateTransmissionArtifacts(documentId, input) {
+    db.prepare(`
       UPDATE fiscal_documents
       SET
         issued_datetime = COALESCE(?, issued_datetime),
@@ -3979,17 +4537,17 @@ class Wc {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      r.issuedAt ?? null,
-      r.accessKey ?? null,
-      r.xmlBuilt ?? null,
-      r.xmlSigned ?? null,
-      r.xmlAuthorized ?? null,
-      r.xmlCancellation ?? null,
-      e
+      input.issuedAt ?? null,
+      input.accessKey ?? null,
+      input.xmlBuilt ?? null,
+      input.xmlSigned ?? null,
+      input.xmlAuthorized ?? null,
+      input.xmlCancellation ?? null,
+      documentId
     );
   }
-  markAsAuthorized(e, r) {
-    return d.prepare(`
+  markAsAuthorized(documentId, response) {
+    db.prepare(`
       UPDATE fiscal_documents
       SET
         status = 'AUTHORIZED',
@@ -4008,23 +4566,24 @@ class Wc {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      r.accessKey ?? null,
-      r.protocol ?? null,
-      r.receiptNumber ?? null,
-      r.qrCodeUrl ?? null,
-      r.authorizedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      r.issuedAt ?? null,
-      r.xmlBuilt ?? r.xmlSent ?? null,
-      r.xmlSigned ?? null,
-      r.xmlAuthorized ?? null,
-      r.statusCode ?? null,
-      r.statusMessage,
-      r.provider ?? null,
-      e
-    ), this.findById(e);
+      response.accessKey ?? null,
+      response.protocol ?? null,
+      response.receiptNumber ?? null,
+      response.qrCodeUrl ?? null,
+      response.authorizedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      response.issuedAt ?? null,
+      response.xmlBuilt ?? response.xmlSent ?? null,
+      response.xmlSigned ?? null,
+      response.xmlAuthorized ?? null,
+      response.statusCode ?? null,
+      response.statusMessage,
+      response.provider ?? null,
+      documentId
+    );
+    return this.findById(documentId);
   }
-  markAsRejected(e, r) {
-    return d.prepare(`
+  markAsRejected(documentId, response) {
+    db.prepare(`
       UPDATE fiscal_documents
       SET
         status = ?,
@@ -4042,23 +4601,24 @@ class Wc {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      r.status,
-      r.accessKey ?? null,
-      r.protocol ?? null,
-      r.receiptNumber ?? null,
-      r.qrCodeUrl ?? null,
-      r.issuedAt ?? null,
-      r.xmlBuilt ?? r.xmlSent ?? null,
-      r.xmlSigned ?? null,
-      r.xmlAuthorized ?? null,
-      r.statusCode ?? null,
-      r.statusMessage,
-      r.provider ?? null,
-      e
-    ), this.findById(e);
+      response.status,
+      response.accessKey ?? null,
+      response.protocol ?? null,
+      response.receiptNumber ?? null,
+      response.qrCodeUrl ?? null,
+      response.issuedAt ?? null,
+      response.xmlBuilt ?? response.xmlSent ?? null,
+      response.xmlSigned ?? null,
+      response.xmlAuthorized ?? null,
+      response.statusCode ?? null,
+      response.statusMessage,
+      response.provider ?? null,
+      documentId
+    );
+    return this.findById(documentId);
   }
-  markAsCancelled(e, r, a) {
-    return d.prepare(`
+  markAsCancelled(documentId, _request, response) {
+    db.prepare(`
       UPDATE fiscal_documents
       SET
         status = 'CANCELLED',
@@ -4071,36 +4631,37 @@ class Wc {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      a.cancelledAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      a.cancellationProtocol ?? null,
-      a.xmlAuthorized ?? null,
-      a.xmlCancellation ?? null,
-      a.statusCode ?? null,
-      a.statusMessage,
-      e
-    ), this.findById(e);
+      response.cancelledAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      response.cancellationProtocol ?? null,
+      response.xmlAuthorized ?? null,
+      response.xmlCancellation ?? null,
+      response.statusCode ?? null,
+      response.statusMessage,
+      documentId
+    );
+    return this.findById(documentId);
   }
-  updateDanfePath(e, r) {
-    d.prepare(`
+  updateDanfePath(documentId, danfePath) {
+    db.prepare(`
       UPDATE fiscal_documents
       SET danfe_path = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(r, e);
+    `).run(danfePath, documentId);
   }
-  findById(e) {
-    const r = d.prepare("SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1").get(e);
-    return r ? Zr(r) : null;
+  findById(documentId) {
+    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1`).get(documentId);
+    return row ? toPersistedDocument(row) : null;
   }
-  findBySaleId(e) {
-    const r = d.prepare("SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1").get(e);
-    return r ? Zr(r) : null;
+  findBySaleId(saleId) {
+    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(saleId);
+    return row ? toPersistedDocument(row) : null;
   }
-  findByAccessKey(e) {
-    const r = d.prepare("SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1").get(e);
-    return r ? Zr(r) : null;
+  findByAccessKey(accessKey) {
+    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1`).get(accessKey);
+    return row ? toPersistedDocument(row) : null;
   }
-  updateStatus(e, r, a, n) {
-    d.prepare(`
+  updateStatus(documentId, status, statusCode, statusMessage) {
+    db.prepare(`
       UPDATE fiscal_documents
       SET
         status = ?,
@@ -4108,59 +4669,68 @@ class Wc {
         rejection_reason = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(r, a ?? null, n ?? null, e);
+    `).run(status, statusCode ?? null, statusMessage ?? null, documentId);
   }
-  enqueue(e) {
-    const r = this.findQueueItemByIdempotencyKey(e.idempotencyKey);
-    if (r)
-      return r;
-    const a = d.prepare(`
+  enqueue(request) {
+    const existing = this.findQueueItemByIdempotencyKey(request.idempotencyKey);
+    if (existing) {
+      return existing;
+    }
+    const result = db.prepare(`
       INSERT INTO sync_queue (
         entity_type, entity_id, operation, payload_json, status, attempts,
         next_attempt_at, last_error, idempotency_key, created_at, updated_at
       ) VALUES (?, ?, ?, ?, 'PENDING', 0, CURRENT_TIMESTAMP, NULL, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
       "fiscal_document",
-      String(e.documentId ?? e.saleId),
-      e.operation,
-      JSON.stringify(e.payload),
-      e.idempotencyKey
+      String(request.documentId ?? request.saleId),
+      request.operation,
+      JSON.stringify(request.payload),
+      request.idempotencyKey
     );
-    return this.findQueueItemById(String(a.lastInsertRowid));
+    return this.findQueueItemById(String(result.lastInsertRowid));
   }
-  findQueueItemByIdempotencyKey(e) {
-    const r = d.prepare(`
+  findQueueItemByIdempotencyKey(idempotencyKey) {
+    const row = db.prepare(`
       SELECT * FROM sync_queue
       WHERE idempotency_key = ?
       LIMIT 1
-    `).get(e);
-    return r ? ea(r) : null;
+    `).get(idempotencyKey);
+    return row ? toQueueItem(row) : null;
   }
-  findQueueItemById(e) {
-    const r = d.prepare("SELECT * FROM sync_queue WHERE id = ? LIMIT 1").get(Number(e));
-    return r ? ea(r) : null;
+  findQueueItemById(queueId) {
+    const row = db.prepare(`SELECT * FROM sync_queue WHERE id = ? LIMIT 1`).get(Number(queueId));
+    return row ? toQueueItem(row) : null;
   }
-  claimNextQueueItem(e, r) {
-    const a = d.prepare(`
+  claimNextQueueItem(nowIso2, _workerId) {
+    const row = db.prepare(`
       SELECT * FROM sync_queue
       WHERE status IN ('PENDING', 'FAILED')
         AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
       ORDER BY created_at ASC
       LIMIT 1
-    `).get(e);
-    return a ? (this.markQueueItemProcessing(String(a.id), "main", e), this.findQueueItemById(String(a.id))) : null;
+    `).get(nowIso2);
+    if (!row) {
+      return null;
+    }
+    this.markQueueItemProcessing(String(row.id), "main", nowIso2);
+    return this.findQueueItemById(String(row.id));
   }
-  claimQueueItemById(e, r, a) {
-    const n = d.prepare(`
+  claimQueueItemById(queueId, nowIso2, workerId) {
+    const row = db.prepare(`
       SELECT * FROM sync_queue
       WHERE id = ?
         AND status IN ('PENDING', 'FAILED')
       LIMIT 1
-    `).get(Number(e));
-    return n ? (this.markQueueItemProcessing(String(n.id), a, r), this.findQueueItemById(String(n.id))) : null;
+    `).get(Number(queueId));
+    if (!row) {
+      return null;
+    }
+    this.markQueueItemProcessing(String(row.id), workerId, nowIso2);
+    return this.findQueueItemById(String(row.id));
   }
-  markQueueItemProcessing(e, r, a) {
-    d.prepare(`
+  markQueueItemProcessing(queueId, workerId, nowIso2) {
+    db.prepare(`
       UPDATE sync_queue
       SET
         status = 'PROCESSING',
@@ -4169,10 +4739,10 @@ class Wc {
         locked_by = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(a, r, Number(e));
+    `).run(nowIso2, workerId, Number(queueId));
   }
-  markQueueItemDone(e, r, a) {
-    d.prepare(`
+  markQueueItemDone(queueId, processedAtIso, result) {
+    db.prepare(`
       UPDATE sync_queue
       SET
         status = 'DONE',
@@ -4183,11 +4753,11 @@ class Wc {
         locked_by = NULL,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(a === void 0 ? null : JSON.stringify(a), r, Number(e));
+    `).run(result === void 0 ? null : JSON.stringify(result), processedAtIso, Number(queueId));
   }
-  markQueueItemFailed(e, r, a, n, o, s) {
-    const i = [r, a].filter(Boolean).join(": ");
-    d.prepare(`
+  markQueueItemFailed(queueId, errorCode, errorMessage, nextRetryAtIso, failedAtIso, result) {
+    const message = [errorCode, errorMessage].filter(Boolean).join(": ");
+    db.prepare(`
       UPDATE sync_queue
       SET
         status = 'FAILED',
@@ -4200,315 +4770,348 @@ class Wc {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      i,
-      n ?? null,
-      s === void 0 ? null : JSON.stringify(s),
-      o,
-      Number(e)
+      message,
+      nextRetryAtIso ?? null,
+      result === void 0 ? null : JSON.stringify(result),
+      failedAtIso,
+      Number(queueId)
     );
   }
-  listQueueItems(e = 20) {
-    return d.prepare(`
+  listQueueItems(limit = 20) {
+    const rows = db.prepare(`
       SELECT * FROM sync_queue
       ORDER BY created_at DESC
       LIMIT ?
-    `).all(e).map(ea);
+    `).all(limit);
+    return rows.map(toQueueItem);
   }
   summarizeQueue() {
-    const e = d.prepare(`
+    const rows = db.prepare(`
       SELECT status, COUNT(*) as total
       FROM sync_queue
       GROUP BY status
-    `).all(), r = {
+    `).all();
+    const summary = {
       pending: 0,
       processing: 0,
       failed: 0,
       done: 0,
       nextRetryAt: null
     };
-    for (const n of e)
-      n.status === "PENDING" && (r.pending = n.total), n.status === "PROCESSING" && (r.processing = n.total), n.status === "FAILED" && (r.failed = n.total), n.status === "DONE" && (r.done = n.total);
-    const a = d.prepare(`
+    for (const row of rows) {
+      if (row.status === "PENDING") summary.pending = row.total;
+      if (row.status === "PROCESSING") summary.processing = row.total;
+      if (row.status === "FAILED") summary.failed = row.total;
+      if (row.status === "DONE") summary.done = row.total;
+    }
+    const nextRetry = db.prepare(`
       SELECT next_attempt_at
       FROM sync_queue
       WHERE status = 'FAILED' AND next_attempt_at IS NOT NULL
       ORDER BY next_attempt_at ASC
       LIMIT 1
     `).get();
-    return r.nextRetryAt = (a == null ? void 0 : a.next_attempt_at) ?? null, r;
+    summary.nextRetryAt = (nextRetry == null ? void 0 : nextRetry.next_attempt_at) ?? null;
+    return summary;
   }
 }
-function Ht(t) {
-  var r;
-  const e = (r = t.gatewayBaseUrl) == null ? void 0 : r.trim();
-  if (!e)
-    throw new D({
+function resolveBaseUrl(config2) {
+  var _a;
+  const baseUrl = (_a = config2.gatewayBaseUrl) == null ? void 0 : _a.trim();
+  if (!baseUrl) {
+    throw new FiscalError({
       code: "GATEWAY_BASE_URL_REQUIRED",
       message: "Gateway fiscal não configurado.",
       category: "CONFIGURATION"
     });
-  return e.replace(/\/+$/, "");
+  }
+  return baseUrl.replace(/\/+$/, "");
 }
-function fr(t) {
-  var r;
-  const e = (r = t.gatewayApiKey) == null ? void 0 : r.trim();
-  if (!e)
-    throw new D({
+function resolveHeaders(config2) {
+  var _a;
+  const apiKey = (_a = config2.gatewayApiKey) == null ? void 0 : _a.trim();
+  if (!apiKey) {
+    throw new FiscalError({
       code: "GATEWAY_API_KEY_REQUIRED",
       message: "API key do gateway fiscal não configurada.",
       category: "CONFIGURATION"
     });
+  }
   return {
     "content-type": "application/json",
-    authorization: `Bearer ${e}`
+    authorization: `Bearer ${apiKey}`
   };
 }
-async function Nr(t, e) {
-  var o, s, i, c, u, l;
-  const r = await t.text(), a = r ? JSON.parse(r) : {}, n = a;
-  if (!t.ok)
-    throw new D({
-      code: ((o = n.error) == null ? void 0 : o.code) ?? e,
-      message: ((s = n.error) == null ? void 0 : s.message) ?? `Gateway fiscal retornou HTTP ${t.status}.`,
+async function parseGatewayResponse(response, fallbackCode) {
+  var _a, _b, _c, _d, _e, _f;
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : {};
+  const envelope = payload;
+  if (!response.ok) {
+    throw new FiscalError({
+      code: ((_a = envelope.error) == null ? void 0 : _a.code) ?? fallbackCode,
+      message: ((_b = envelope.error) == null ? void 0 : _b.message) ?? `Gateway fiscal retornou HTTP ${response.status}.`,
       category: "PROVIDER",
-      retryable: t.status >= 500 || ((i = n.error) == null ? void 0 : i.retryable) === !0,
-      details: a
+      retryable: response.status >= 500 || ((_c = envelope.error) == null ? void 0 : _c.retryable) === true,
+      details: payload
     });
-  if ("success" in n && n.success === !1)
-    throw new D({
-      code: ((c = n.error) == null ? void 0 : c.code) ?? e,
-      message: ((u = n.error) == null ? void 0 : u.message) ?? "Gateway fiscal retornou erro de negócio.",
+  }
+  if ("success" in envelope && envelope.success === false) {
+    throw new FiscalError({
+      code: ((_d = envelope.error) == null ? void 0 : _d.code) ?? fallbackCode,
+      message: ((_e = envelope.error) == null ? void 0 : _e.message) ?? "Gateway fiscal retornou erro de negócio.",
       category: "PROVIDER",
-      retryable: ((l = n.error) == null ? void 0 : l.retryable) === !0,
-      details: a
+      retryable: ((_f = envelope.error) == null ? void 0 : _f.retryable) === true,
+      details: payload
     });
-  return "data" in n && n.data !== void 0 ? n.data : a;
+  }
+  return "data" in envelope && envelope.data !== void 0 ? envelope.data : payload;
 }
-class Qc {
+class GatewayFiscalProvider {
   constructor() {
-    Re(this, "providerId", "gateway");
+    __publicField(this, "providerId", "gateway");
   }
-  async authorizeNfce(e, r) {
-    const a = await fetch(`${Ht(r)}/nfce/authorize`, {
+  async authorizeNfce(request, config2) {
+    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/authorize`, {
       method: "POST",
-      headers: fr(r),
+      headers: resolveHeaders(config2),
       body: JSON.stringify({
-        request: e
+        request
       })
     });
-    return Nr(a, "GATEWAY_AUTHORIZE_FAILED");
+    return parseGatewayResponse(response, "GATEWAY_AUTHORIZE_FAILED");
   }
-  async cancelNfce(e, r) {
-    const a = await fetch(`${Ht(r)}/nfce/cancel`, {
+  async cancelNfce(request, config2) {
+    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/cancel`, {
       method: "POST",
-      headers: fr(r),
+      headers: resolveHeaders(config2),
       body: JSON.stringify({
-        request: e
+        request
       })
     });
-    return Nr(a, "GATEWAY_CANCEL_FAILED");
+    return parseGatewayResponse(response, "GATEWAY_CANCEL_FAILED");
   }
-  async consultStatus(e, r) {
-    const a = await fetch(`${Ht(r)}/nfce/status/${encodeURIComponent(e.accessKey)}`, {
+  async consultStatus(request, config2) {
+    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/status/${encodeURIComponent(request.accessKey)}`, {
       method: "GET",
-      headers: fr(r)
+      headers: resolveHeaders(config2)
     });
-    return Nr(a, "GATEWAY_CONSULT_FAILED");
+    return parseGatewayResponse(response, "GATEWAY_CONSULT_FAILED");
   }
-  async testStatusServico(e) {
-    const r = Date.now(), a = await fetch(`${Ht(e)}/nfce/status-servico`, {
+  async testStatusServico(config2) {
+    const startedAt = Date.now();
+    const response = await fetch(`${resolveBaseUrl(config2)}/nfce/status-servico`, {
       method: "POST",
-      headers: fr(e),
+      headers: resolveHeaders(config2),
       body: JSON.stringify({
-        environment: e.environment,
-        uf: e.uf ?? "SP",
-        model: e.model ?? 65
+        environment: config2.environment,
+        uf: config2.uf ?? "SP",
+        model: config2.model ?? 65
       })
-    }), n = await Nr(
-      a,
+    });
+    const data = await parseGatewayResponse(
+      response,
       "GATEWAY_STATUS_SERVICE_FAILED"
     );
     return {
       provider: "gateway",
-      environment: e.environment,
-      uf: e.uf ?? n.uf ?? "SP",
+      environment: config2.environment,
+      uf: config2.uf ?? data.uf ?? "SP",
       model: 65,
       service: "NFeStatusServico4",
-      url: `${Ht(e)}/nfce/status-servico`,
-      success: n.success ?? !0,
-      statusCode: n.statusCode ?? null,
-      statusMessage: n.statusMessage ?? "Consulta de status executada pelo gateway fiscal.",
-      responseTimeMs: n.responseTimeMs ?? Date.now() - r,
-      rawRequest: n.rawRequest ?? "",
-      rawResponse: n.rawResponse ?? JSON.stringify(n),
-      checkedAt: n.checkedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      tlsValidation: n.tlsValidation ?? "verified",
-      warning: n.warning ?? null
+      url: `${resolveBaseUrl(config2)}/nfce/status-servico`,
+      success: data.success ?? true,
+      statusCode: data.statusCode ?? null,
+      statusMessage: data.statusMessage ?? "Consulta de status executada pelo gateway fiscal.",
+      responseTimeMs: data.responseTimeMs ?? Date.now() - startedAt,
+      rawRequest: data.rawRequest ?? "",
+      rawResponse: data.rawResponse ?? JSON.stringify(data),
+      checkedAt: data.checkedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      tlsValidation: data.tlsValidation ?? "verified",
+      warning: data.warning ?? null
     };
   }
 }
-function Jc(t) {
-  return `${t.emitter.address.state}${t.saleId}${t.number}${t.series}`.replace(/\D/g, "").padEnd(44, "0").slice(0, 44);
+function buildAccessKey(request) {
+  const base = `${request.emitter.address.state}${request.saleId}${request.number}${request.series}`.replace(/\D/g, "");
+  return base.padEnd(44, "0").slice(0, 44);
 }
-class Zc {
+class MockFiscalProvider {
   constructor() {
-    Re(this, "providerId", "mock");
+    __publicField(this, "providerId", "mock");
   }
-  async authorizeNfce(e, r) {
-    const a = (/* @__PURE__ */ new Date()).toISOString(), n = Jc(e);
+  async authorizeNfce(request, _config) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const accessKey = buildAccessKey(request);
     return {
       status: "AUTHORIZED",
       provider: "mock",
-      accessKey: n,
-      protocol: `MOCK-PROT-${e.saleId}-${e.number}`,
-      receiptNumber: `MOCK-REC-${e.saleId}`,
+      accessKey,
+      protocol: `MOCK-PROT-${request.saleId}-${request.number}`,
+      receiptNumber: `MOCK-REC-${request.saleId}`,
       statusCode: "100",
       statusMessage: "Autorizado em ambiente mock.",
-      authorizedAt: a,
-      xmlSent: `<NFe><infNFe Id="${n}"></infNFe></NFe>`,
-      xmlAuthorized: `<procNFe><protNFe nProt="MOCK-PROT-${e.saleId}-${e.number}"/></procNFe>`,
-      qrCodeUrl: `https://mock.fiscal.local/qrcode/${n}`,
-      rawResponse: { mock: !0, environment: e.environment }
+      authorizedAt: now,
+      xmlSent: `<NFe><infNFe Id="${accessKey}"></infNFe></NFe>`,
+      xmlAuthorized: `<procNFe><protNFe nProt="MOCK-PROT-${request.saleId}-${request.number}"/></procNFe>`,
+      qrCodeUrl: `https://mock.fiscal.local/qrcode/${accessKey}`,
+      rawResponse: { mock: true, environment: request.environment }
     };
   }
-  async cancelNfce(e, r) {
+  async cancelNfce(request, _config) {
     return {
       status: "CANCELLED",
       provider: "mock",
-      cancellationProtocol: `MOCK-CANC-${e.documentId}`,
+      cancellationProtocol: `MOCK-CANC-${request.documentId}`,
       cancelledAt: (/* @__PURE__ */ new Date()).toISOString(),
       statusCode: "135",
       statusMessage: "Cancelamento homologado em provider mock.",
-      xmlCancellation: "<procEventoNFe><descEvento>Cancelamento</descEvento></procEventoNFe>",
-      rawResponse: { mock: !0 }
+      xmlCancellation: `<procEventoNFe><descEvento>Cancelamento</descEvento></procEventoNFe>`,
+      rawResponse: { mock: true }
     };
   }
-  async consultStatus(e, r) {
+  async consultStatus(request, _config) {
     return {
       provider: "mock",
-      accessKey: e.accessKey,
+      accessKey: request.accessKey,
       status: "AUTHORIZED",
       statusCode: "100",
       statusMessage: "Documento autorizado em ambiente mock.",
-      protocol: `MOCK-CONSULT-${e.accessKey.slice(-8)}`,
+      protocol: `MOCK-CONSULT-${request.accessKey.slice(-8)}`,
       authorizedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      rawResponse: { mock: !0 }
+      rawResponse: { mock: true }
     };
   }
-  async testStatusServico(e) {
-    const r = (/* @__PURE__ */ new Date()).toISOString();
+  async testStatusServico(config2) {
+    const checkedAt = (/* @__PURE__ */ new Date()).toISOString();
     return {
       provider: "mock",
-      environment: e.environment,
-      uf: e.uf ?? "SP",
+      environment: config2.environment,
+      uf: config2.uf ?? "SP",
       model: 65,
       service: "NFeStatusServico4",
       url: "mock://nfce/status-servico",
-      success: !0,
+      success: true,
       statusCode: "107",
       statusMessage: "Servico em operacao em ambiente mock.",
       responseTimeMs: 0,
       rawRequest: "<mockStatusServico />",
       rawResponse: "<retConsStatServ><cStat>107</cStat><xMotivo>Servico em operacao</xMotivo></retConsStatServ>",
-      checkedAt: r,
+      checkedAt,
       tlsValidation: "verified",
       warning: null
     };
   }
 }
-var H = {};
-function eu(t, e, r) {
-  if (r === void 0 && (r = Array.prototype), t && typeof r.find == "function")
-    return r.find.call(t, e);
-  for (var a = 0; a < t.length; a++)
-    if (pt(t, a)) {
-      var n = t[a];
-      if (e.call(void 0, n, a, t))
-        return n;
+var conventions$5 = {};
+function find$1(list, predicate, ac) {
+  if (ac === void 0) {
+    ac = Array.prototype;
+  }
+  if (list && typeof ac.find === "function") {
+    return ac.find.call(list, predicate);
+  }
+  for (var i = 0; i < list.length; i++) {
+    if (hasOwn$2(list, i)) {
+      var item = list[i];
+      if (predicate.call(void 0, item, i, list)) {
+        return item;
+      }
     }
+  }
 }
-function Mt(t, e) {
-  return e === void 0 && (e = Object), e && typeof e.getOwnPropertyDescriptors == "function" && (t = e.create(null, e.getOwnPropertyDescriptors(t))), e && typeof e.freeze == "function" ? e.freeze(t) : t;
+function freeze(object, oc) {
+  if (oc === void 0) {
+    oc = Object;
+  }
+  if (oc && typeof oc.getOwnPropertyDescriptors === "function") {
+    object = oc.create(null, oc.getOwnPropertyDescriptors(object));
+  }
+  return oc && typeof oc.freeze === "function" ? oc.freeze(object) : object;
 }
-function pt(t, e) {
-  return Object.prototype.hasOwnProperty.call(t, e);
+function hasOwn$2(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
 }
-function tu(t, e) {
-  if (t === null || typeof t != "object")
+function assign(target, source) {
+  if (target === null || typeof target !== "object") {
     throw new TypeError("target is not an object");
-  for (var r in e)
-    pt(e, r) && (t[r] = e[r]);
-  return t;
+  }
+  for (var key in source) {
+    if (hasOwn$2(source, key)) {
+      target[key] = source[key];
+    }
+  }
+  return target;
 }
-var fo = Mt({
-  allowfullscreen: !0,
-  async: !0,
-  autofocus: !0,
-  autoplay: !0,
-  checked: !0,
-  controls: !0,
-  default: !0,
-  defer: !0,
-  disabled: !0,
-  formnovalidate: !0,
-  hidden: !0,
-  ismap: !0,
-  itemscope: !0,
-  loop: !0,
-  multiple: !0,
-  muted: !0,
-  nomodule: !0,
-  novalidate: !0,
-  open: !0,
-  playsinline: !0,
-  readonly: !0,
-  required: !0,
-  reversed: !0,
-  selected: !0
+var HTML_BOOLEAN_ATTRIBUTES = freeze({
+  allowfullscreen: true,
+  async: true,
+  autofocus: true,
+  autoplay: true,
+  checked: true,
+  controls: true,
+  default: true,
+  defer: true,
+  disabled: true,
+  formnovalidate: true,
+  hidden: true,
+  ismap: true,
+  itemscope: true,
+  loop: true,
+  multiple: true,
+  muted: true,
+  nomodule: true,
+  novalidate: true,
+  open: true,
+  playsinline: true,
+  readonly: true,
+  required: true,
+  reversed: true,
+  selected: true
 });
-function ru(t) {
-  return pt(fo, t.toLowerCase());
+function isHTMLBooleanAttribute(name) {
+  return hasOwn$2(HTML_BOOLEAN_ATTRIBUTES, name.toLowerCase());
 }
-var No = Mt({
-  area: !0,
-  base: !0,
-  br: !0,
-  col: !0,
-  embed: !0,
-  hr: !0,
-  img: !0,
-  input: !0,
-  link: !0,
-  meta: !0,
-  param: !0,
-  source: !0,
-  track: !0,
-  wbr: !0
+var HTML_VOID_ELEMENTS = freeze({
+  area: true,
+  base: true,
+  br: true,
+  col: true,
+  embed: true,
+  hr: true,
+  img: true,
+  input: true,
+  link: true,
+  meta: true,
+  param: true,
+  source: true,
+  track: true,
+  wbr: true
 });
-function au(t) {
-  return pt(No, t.toLowerCase());
+function isHTMLVoidElement$1(tagName) {
+  return hasOwn$2(HTML_VOID_ELEMENTS, tagName.toLowerCase());
 }
-var ar = Mt({
-  script: !1,
-  style: !1,
-  textarea: !0,
-  title: !0
+var HTML_RAW_TEXT_ELEMENTS = freeze({
+  script: false,
+  style: false,
+  textarea: true,
+  title: true
 });
-function nu(t) {
-  var e = t.toLowerCase();
-  return pt(ar, e) && !ar[e];
+function isHTMLRawTextElement$2(tagName) {
+  var key = tagName.toLowerCase();
+  return hasOwn$2(HTML_RAW_TEXT_ELEMENTS, key) && !HTML_RAW_TEXT_ELEMENTS[key];
 }
-function ou(t) {
-  var e = t.toLowerCase();
-  return pt(ar, e) && ar[e];
+function isHTMLEscapableRawTextElement$1(tagName) {
+  var key = tagName.toLowerCase();
+  return hasOwn$2(HTML_RAW_TEXT_ELEMENTS, key) && HTML_RAW_TEXT_ELEMENTS[key];
 }
-function go(t) {
-  return t === nr.HTML;
+function isHTMLMimeType$3(mimeType) {
+  return mimeType === MIME_TYPE$2.HTML;
 }
-function su(t) {
-  return go(t) || t === nr.XML_XHTML_APPLICATION;
+function hasDefaultHTMLNamespace$2(mimeType) {
+  return isHTMLMimeType$3(mimeType) || mimeType === MIME_TYPE$2.XML_XHTML_APPLICATION;
 }
-var nr = Mt({
+var MIME_TYPE$2 = freeze({
   /**
    * `text/html`, the only mime type that triggers treating an XML document as HTML.
    *
@@ -4554,13 +5157,14 @@ var nr = Mt({
    * @see https://en.wikipedia.org/wiki/Scalable_Vector_Graphics Wikipedia
    */
   XML_SVG_IMAGE: "image/svg+xml"
-}), iu = Object.keys(nr).map(function(t) {
-  return nr[t];
 });
-function cu(t) {
-  return iu.indexOf(t) > -1;
+var _MIME_TYPES = Object.keys(MIME_TYPE$2).map(function(key) {
+  return MIME_TYPE$2[key];
+});
+function isValidMimeType$1(mimeType) {
+  return _MIME_TYPES.indexOf(mimeType) > -1;
 }
-var uu = Mt({
+var NAMESPACE$3 = freeze({
   /**
    * The XHTML namespace.
    *
@@ -4586,30 +5190,31 @@ var uu = Mt({
    */
   XMLNS: "http://www.w3.org/2000/xmlns/"
 });
-H.assign = tu;
-H.find = eu;
-H.freeze = Mt;
-H.HTML_BOOLEAN_ATTRIBUTES = fo;
-H.HTML_RAW_TEXT_ELEMENTS = ar;
-H.HTML_VOID_ELEMENTS = No;
-H.hasDefaultHTMLNamespace = su;
-H.hasOwn = pt;
-H.isHTMLBooleanAttribute = ru;
-H.isHTMLRawTextElement = nu;
-H.isHTMLEscapableRawTextElement = ou;
-H.isHTMLMimeType = go;
-H.isHTMLVoidElement = au;
-H.isValidMimeType = cu;
-H.MIME_TYPE = nr;
-H.NAMESPACE = uu;
-var Tt = {}, lu = H;
-function Ao(t, e) {
-  t.prototype = Object.create(Error.prototype, {
-    constructor: { value: t },
-    name: { value: t.name, enumerable: !0, writable: e }
+conventions$5.assign = assign;
+conventions$5.find = find$1;
+conventions$5.freeze = freeze;
+conventions$5.HTML_BOOLEAN_ATTRIBUTES = HTML_BOOLEAN_ATTRIBUTES;
+conventions$5.HTML_RAW_TEXT_ELEMENTS = HTML_RAW_TEXT_ELEMENTS;
+conventions$5.HTML_VOID_ELEMENTS = HTML_VOID_ELEMENTS;
+conventions$5.hasDefaultHTMLNamespace = hasDefaultHTMLNamespace$2;
+conventions$5.hasOwn = hasOwn$2;
+conventions$5.isHTMLBooleanAttribute = isHTMLBooleanAttribute;
+conventions$5.isHTMLRawTextElement = isHTMLRawTextElement$2;
+conventions$5.isHTMLEscapableRawTextElement = isHTMLEscapableRawTextElement$1;
+conventions$5.isHTMLMimeType = isHTMLMimeType$3;
+conventions$5.isHTMLVoidElement = isHTMLVoidElement$1;
+conventions$5.isValidMimeType = isValidMimeType$1;
+conventions$5.MIME_TYPE = MIME_TYPE$2;
+conventions$5.NAMESPACE = NAMESPACE$3;
+var errors$3 = {};
+var conventions$4 = conventions$5;
+function extendError(constructor, writableName) {
+  constructor.prototype = Object.create(Error.prototype, {
+    constructor: { value: constructor },
+    name: { value: constructor.name, enumerable: true, writable: writableName }
   });
 }
-var or = lu.freeze({
+var DOMExceptionName$1 = conventions$4.freeze({
   /**
    * the default value as defined by the spec
    */
@@ -4680,27 +5285,36 @@ var or = lu.freeze({
   OperationError: "OperationError",
   NotAllowedError: "NotAllowedError",
   OptOutError: "OptOutError"
-}), ho = Object.keys(or);
-function Io(t) {
-  return typeof t == "number" && t >= 1 && t <= 25;
+});
+var DOMExceptionNames = Object.keys(DOMExceptionName$1);
+function isValidDomExceptionCode(value) {
+  return typeof value === "number" && value >= 1 && value <= 25;
 }
-function du(t) {
-  return typeof t == "string" && t.substring(t.length - or.Error.length) === or.Error;
+function endsWithError(value) {
+  return typeof value === "string" && value.substring(value.length - DOMExceptionName$1.Error.length) === DOMExceptionName$1.Error;
 }
-function dr(t, e) {
-  Io(t) ? (this.name = ho[t], this.message = e || "") : (this.message = t, this.name = du(e) ? e : or.Error), Error.captureStackTrace && Error.captureStackTrace(this, dr);
+function DOMException$2(messageOrCode, nameOrMessage) {
+  if (isValidDomExceptionCode(messageOrCode)) {
+    this.name = DOMExceptionNames[messageOrCode];
+    this.message = nameOrMessage || "";
+  } else {
+    this.message = messageOrCode;
+    this.name = endsWithError(nameOrMessage) ? nameOrMessage : DOMExceptionName$1.Error;
+  }
+  if (Error.captureStackTrace) Error.captureStackTrace(this, DOMException$2);
 }
-Ao(dr, !0);
-Object.defineProperties(dr.prototype, {
+extendError(DOMException$2, true);
+Object.defineProperties(DOMException$2.prototype, {
   code: {
-    enumerable: !0,
+    enumerable: true,
     get: function() {
-      var t = ho.indexOf(this.name);
-      return Io(t) ? t : 0;
+      var code = DOMExceptionNames.indexOf(this.name);
+      if (isValidDomExceptionCode(code)) return code;
+      return 0;
     }
   }
 });
-var Co = {
+var ExceptionCode = {
   INDEX_SIZE_ERR: 1,
   DOMSTRING_SIZE_ERR: 2,
   HIERARCHY_REQUEST_ERR: 3,
@@ -4726,194 +5340,334 @@ var Co = {
   TIMEOUT_ERR: 23,
   INVALID_NODE_TYPE_ERR: 24,
   DATA_CLONE_ERR: 25
-}, ta = Object.entries(Co);
-for (var gr = 0; gr < ta.length; gr++) {
-  var Eu = ta[gr][0];
-  dr[Eu] = ta[gr][1];
+};
+var entries = Object.entries(ExceptionCode);
+for (var i = 0; i < entries.length; i++) {
+  var key = entries[i][0];
+  DOMException$2[key] = entries[i][1];
 }
-function va(t, e) {
-  this.message = t, this.locator = e, Error.captureStackTrace && Error.captureStackTrace(this, va);
+function ParseError$2(message, locator) {
+  this.message = message;
+  this.locator = locator;
+  if (Error.captureStackTrace) Error.captureStackTrace(this, ParseError$2);
 }
-Ao(va);
-Tt.DOMException = dr;
-Tt.DOMExceptionName = or;
-Tt.ExceptionCode = Co;
-Tt.ParseError = va;
-var j = {}, C = {};
-function Do(t) {
+extendError(ParseError$2);
+errors$3.DOMException = DOMException$2;
+errors$3.DOMExceptionName = DOMExceptionName$1;
+errors$3.ExceptionCode = ExceptionCode;
+errors$3.ParseError = ParseError$2;
+var dom$1 = {};
+var grammar = {};
+function detectUnicodeSupport(RegExpImpl) {
   try {
-    typeof t != "function" && (t = RegExp);
-    var e = new t("𝌆", "u").exec("𝌆");
-    return !!e && e[0].length === 2;
-  } catch {
+    if (typeof RegExpImpl !== "function") {
+      RegExpImpl = RegExp;
+    }
+    var match = new RegExpImpl("𝌆", "u").exec("𝌆");
+    return !!match && match[0].length === 2;
+  } catch (error) {
   }
-  return !1;
+  return false;
 }
-var Pt = Do();
-function et(t) {
-  if (t.source[0] !== "[")
-    throw new Error(t + " can not be used with chars");
-  return t.source.slice(1, t.source.lastIndexOf("]"));
+var UNICODE_SUPPORT = detectUnicodeSupport();
+function chars(regexp) {
+  if (regexp.source[0] !== "[") {
+    throw new Error(regexp + " can not be used with chars");
+  }
+  return regexp.source.slice(1, regexp.source.lastIndexOf("]"));
 }
-function bt(t, e) {
-  if (t.source[0] !== "[")
-    throw new Error("/" + t.source + "/ can not be used with chars_without");
-  if (!e || typeof e != "string")
-    throw new Error(JSON.stringify(e) + " is not a valid search");
-  if (t.source.indexOf(e) === -1)
-    throw new Error('"' + e + '" is not is /' + t.source + "/");
-  if (e === "-" && t.source.indexOf(e) !== 1)
-    throw new Error('"' + e + '" is not at the first postion of /' + t.source + "/");
-  return new RegExp(t.source.replace(e, ""), Pt ? "u" : "");
+function chars_without(regexp, search) {
+  if (regexp.source[0] !== "[") {
+    throw new Error("/" + regexp.source + "/ can not be used with chars_without");
+  }
+  if (!search || typeof search !== "string") {
+    throw new Error(JSON.stringify(search) + " is not a valid search");
+  }
+  if (regexp.source.indexOf(search) === -1) {
+    throw new Error('"' + search + '" is not is /' + regexp.source + "/");
+  }
+  if (search === "-" && regexp.source.indexOf(search) !== 1) {
+    throw new Error('"' + search + '" is not at the first postion of /' + regexp.source + "/");
+  }
+  return new RegExp(regexp.source.replace(search, ""), UNICODE_SUPPORT ? "u" : "");
 }
-function R(t) {
-  var e = this;
+function reg(args) {
+  var self = this;
   return new RegExp(
-    Array.prototype.slice.call(arguments).map(function(r) {
-      var a = typeof r == "string";
-      if (a && e === void 0 && r === "|")
+    Array.prototype.slice.call(arguments).map(function(part) {
+      var isStr = typeof part === "string";
+      if (isStr && self === void 0 && part === "|") {
         throw new Error("use regg instead of reg to wrap expressions with `|`!");
-      return a ? r : r.source;
+      }
+      return isStr ? part : part.source;
     }).join(""),
-    Pt ? "mu" : "m"
+    UNICODE_SUPPORT ? "mu" : "m"
   );
 }
-function I(t) {
-  if (arguments.length === 0)
+function regg(args) {
+  if (arguments.length === 0) {
     throw new Error("no parameters provided");
-  return R.apply(I, ["(?:"].concat(Array.prototype.slice.call(arguments), [")"]));
+  }
+  return reg.apply(regg, ["(?:"].concat(Array.prototype.slice.call(arguments), [")"]));
 }
-var mu = "�", tt = /[-\x09\x0A\x0D\x20-\x2C\x2E-\uD7FF\uE000-\uFFFD]/;
-Pt && (tt = R("[", et(tt), "\\u{10000}-\\u{10FFFF}", "]"));
-var pu = new RegExp("[^" + et(tt) + "]", Pt ? "u" : ""), Sa = /[\x20\x09\x0D\x0A]/, Tu = et(Sa), x = R(Sa, "+"), V = R(Sa, "*"), sr = /[:_a-zA-Z\xC0-\xD6\xD8-\xF6\xF8-\u02FF\u0370-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]/;
-Pt && (sr = R("[", et(sr), "\\u{10000}-\\u{10FFFF}", "]"));
-var _u = et(sr), Ra = R("[", _u, et(/[-.0-9\xB7]/), et(/[\u0300-\u036F\u203F-\u2040]/), "]"), ve = R(sr, Ra, "*"), cn = R(Ra, "+"), fu = R("&", ve, ";"), Nu = I(/&#[0-9]+;|&#x[0-9a-fA-F]+;/), ir = I(fu, "|", Nu), cr = R("%", ve, ";"), La = I(
-  R('"', I(/[^%&"]/, "|", cr, "|", ir), "*", '"'),
+var UNICODE_REPLACEMENT_CHARACTER = "�";
+var Char = /[-\x09\x0A\x0D\x20-\x2C\x2E-\uD7FF\uE000-\uFFFD]/;
+if (UNICODE_SUPPORT) {
+  Char = reg("[", chars(Char), "\\u{10000}-\\u{10FFFF}", "]");
+}
+var InvalidChar = new RegExp("[^" + chars(Char) + "]", UNICODE_SUPPORT ? "u" : "");
+var _SChar = /[\x20\x09\x0D\x0A]/;
+var SChar_s = chars(_SChar);
+var S = reg(_SChar, "+");
+var S_OPT = reg(_SChar, "*");
+var NameStartChar = /[:_a-zA-Z\xC0-\xD6\xD8-\xF6\xF8-\u02FF\u0370-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]/;
+if (UNICODE_SUPPORT) {
+  NameStartChar = reg("[", chars(NameStartChar), "\\u{10000}-\\u{10FFFF}", "]");
+}
+var NameStartChar_s = chars(NameStartChar);
+var NameChar = reg("[", NameStartChar_s, chars(/[-.0-9\xB7]/), chars(/[\u0300-\u036F\u203F-\u2040]/), "]");
+var Name = reg(NameStartChar, NameChar, "*");
+var Nmtoken = reg(NameChar, "+");
+var EntityRef = reg("&", Name, ";");
+var CharRef = regg(/&#[0-9]+;|&#x[0-9a-fA-F]+;/);
+var Reference = regg(EntityRef, "|", CharRef);
+var PEReference = reg("%", Name, ";");
+var EntityValue = regg(
+  reg('"', regg(/[^%&"]/, "|", PEReference, "|", Reference), "*", '"'),
   "|",
-  R("'", I(/[^%&']/, "|", cr, "|", ir), "*", "'")
-), gu = I('"', I(/[^<&"]/, "|", ir), "*", '"', "|", "'", I(/[^<&']/, "|", ir), "*", "'"), Au = bt(sr, ":"), hu = bt(Ra, ":"), un = R(Au, hu, "*"), Er = R(un, I(":", un), "?"), Iu = R("^", Er, "$"), Cu = R("(", Er, ")"), Ut = I(/"[^"]*"|'[^']*'/), Du = R(/^<\?/, "(", ve, ")", I(x, "(", tt, "*?)"), "?", /\?>/), ln = /[\x20\x0D\x0Aa-zA-Z0-9-'()+,./:=?;!*#@$_%]/, mr = I('"', ln, '*"', "|", "'", bt(ln, "'"), "*'"), vo = "<!--", So = "-->", vu = R(vo, I(bt(tt, "-"), "|", R("-", bt(tt, "-"))), "*", So), dn = "#PCDATA", Su = I(
-  R(/\(/, V, dn, I(V, /\|/, V, Er), "*", V, /\)\*/),
+  reg("'", regg(/[^%&']/, "|", PEReference, "|", Reference), "*", "'")
+);
+var AttValue = regg('"', regg(/[^<&"]/, "|", Reference), "*", '"', "|", "'", regg(/[^<&']/, "|", Reference), "*", "'");
+var NCNameStartChar = chars_without(NameStartChar, ":");
+var NCNameChar = chars_without(NameChar, ":");
+var NCName = reg(NCNameStartChar, NCNameChar, "*");
+var QName = reg(NCName, regg(":", NCName), "?");
+var QName_exact = reg("^", QName, "$");
+var QName_group = reg("(", QName, ")");
+var SystemLiteral = regg(/"[^"]*"|'[^']*'/);
+var PI = reg(/^<\?/, "(", Name, ")", regg(S, "(", Char, "*?)"), "?", /\?>/);
+var PubidChar = /[\x20\x0D\x0Aa-zA-Z0-9-'()+,./:=?;!*#@$_%]/;
+var PubidLiteral = regg('"', PubidChar, '*"', "|", "'", chars_without(PubidChar, "'"), "*'");
+var COMMENT_START = "<!--";
+var COMMENT_END = "-->";
+var Comment$1 = reg(COMMENT_START, regg(chars_without(Char, "-"), "|", reg("-", chars_without(Char, "-"))), "*", COMMENT_END);
+var PCDATA = "#PCDATA";
+var Mixed = regg(
+  reg(/\(/, S_OPT, PCDATA, regg(S_OPT, /\|/, S_OPT, QName), "*", S_OPT, /\)\*/),
   "|",
-  R(/\(/, V, dn, V, /\)/)
-), Ru = /[?*+]?/, Lu = R(
+  reg(/\(/, S_OPT, PCDATA, S_OPT, /\)/)
+);
+var _children_quantity = /[?*+]?/;
+var children = reg(
   /\([^>]+\)/,
-  Ru
+  _children_quantity
   /*regg(choice, '|', seq), _children_quantity*/
-), Ou = I("EMPTY", "|", "ANY", "|", Su, "|", Lu), yu = "<!ELEMENT", bu = R(yu, x, I(Er, "|", cr), x, I(Ou, "|", cr), V, ">"), Uu = R("NOTATION", x, /\(/, V, ve, I(V, /\|/, V, ve), "*", V, /\)/), wu = R(/\(/, V, cn, I(V, /\|/, V, cn), "*", V, /\)/), Fu = I(Uu, "|", wu), xu = I(/CDATA|ID|IDREF|IDREFS|ENTITY|ENTITIES|NMTOKEN|NMTOKENS/, "|", Fu), Mu = I(/#REQUIRED|#IMPLIED/, "|", I(I("#FIXED", x), "?", gu)), Pu = I(x, ve, x, xu, x, Mu), Bu = "<!ATTLIST", Xu = R(Bu, x, ve, Pu, "*", V, ">"), ga = "about:legacy-compat", ku = I('"' + ga + '"', "|", "'" + ga + "'"), Oa = "SYSTEM", Br = "PUBLIC", Xr = I(I(Oa, x, Ut), "|", I(Br, x, mr, x, Ut)), $u = R(
+);
+var contentspec = regg("EMPTY", "|", "ANY", "|", Mixed, "|", children);
+var ELEMENTDECL_START = "<!ELEMENT";
+var elementdecl = reg(ELEMENTDECL_START, S, regg(QName, "|", PEReference), S, regg(contentspec, "|", PEReference), S_OPT, ">");
+var NotationType = reg("NOTATION", S, /\(/, S_OPT, Name, regg(S_OPT, /\|/, S_OPT, Name), "*", S_OPT, /\)/);
+var Enumeration = reg(/\(/, S_OPT, Nmtoken, regg(S_OPT, /\|/, S_OPT, Nmtoken), "*", S_OPT, /\)/);
+var EnumeratedType = regg(NotationType, "|", Enumeration);
+var AttType = regg(/CDATA|ID|IDREF|IDREFS|ENTITY|ENTITIES|NMTOKEN|NMTOKENS/, "|", EnumeratedType);
+var DefaultDecl = regg(/#REQUIRED|#IMPLIED/, "|", regg(regg("#FIXED", S), "?", AttValue));
+var AttDef = regg(S, Name, S, AttType, S, DefaultDecl);
+var ATTLIST_DECL_START = "<!ATTLIST";
+var AttlistDecl = reg(ATTLIST_DECL_START, S, Name, AttDef, "*", S_OPT, ">");
+var ABOUT_LEGACY_COMPAT = "about:legacy-compat";
+var ABOUT_LEGACY_COMPAT_SystemLiteral = regg('"' + ABOUT_LEGACY_COMPAT + '"', "|", "'" + ABOUT_LEGACY_COMPAT + "'");
+var SYSTEM = "SYSTEM";
+var PUBLIC = "PUBLIC";
+var ExternalID = regg(regg(SYSTEM, S, SystemLiteral), "|", regg(PUBLIC, S, PubidLiteral, S, SystemLiteral));
+var ExternalID_match = reg(
   "^",
-  I(
-    I(Oa, x, "(?<SystemLiteralOnly>", Ut, ")"),
+  regg(
+    regg(SYSTEM, S, "(?<SystemLiteralOnly>", SystemLiteral, ")"),
     "|",
-    I(Br, x, "(?<PubidLiteral>", mr, ")", x, "(?<SystemLiteral>", Ut, ")")
+    regg(PUBLIC, S, "(?<PubidLiteral>", PubidLiteral, ")", S, "(?<SystemLiteral>", SystemLiteral, ")")
   )
-), Gu = R("^", mr, "$"), qu = R("^", Ut, "$"), Vu = I(x, "NDATA", x, ve), zu = I(La, "|", I(Xr, Vu, "?")), Ro = "<!ENTITY", Hu = R(Ro, x, ve, x, zu, V, ">"), ju = I(La, "|", Xr), Yu = R(Ro, x, "%", x, ve, x, ju, V, ">"), Ku = I(Hu, "|", Yu), Wu = R(Br, x, mr), Qu = R("<!NOTATION", x, ve, x, I(Xr, "|", Wu), V, ">"), ya = R(V, "=", V), En = /1[.]\d+/, Ju = R(x, "version", ya, I("'", En, "'", "|", '"', En, '"')), mn = /[A-Za-z][-A-Za-z0-9._]*/, Zu = I(x, "encoding", ya, I('"', mn, '"', "|", "'", mn, "'")), el = I(x, "standalone", ya, I("'", I("yes", "|", "no"), "'", "|", '"', I("yes", "|", "no"), '"')), tl = R(/^<\?xml/, Ju, Zu, "?", el, "?", V, /\?>/), rl = "<!DOCTYPE", al = "<![CDATA[", nl = "]]>", ol = /<!\[CDATA\[/, sl = /\]\]>/, il = R(tt, "*?", sl), cl = R(ol, il);
-C.chars = et;
-C.chars_without = bt;
-C.detectUnicodeSupport = Do;
-C.reg = R;
-C.regg = I;
-C.ABOUT_LEGACY_COMPAT = ga;
-C.ABOUT_LEGACY_COMPAT_SystemLiteral = ku;
-C.AttlistDecl = Xu;
-C.CDATA_START = al;
-C.CDATA_END = nl;
-C.CDSect = cl;
-C.Char = tt;
-C.Comment = vu;
-C.COMMENT_START = vo;
-C.COMMENT_END = So;
-C.DOCTYPE_DECL_START = rl;
-C.elementdecl = bu;
-C.EntityDecl = Ku;
-C.EntityValue = La;
-C.ExternalID = Xr;
-C.ExternalID_match = $u;
-C.Name = ve;
-C.NotationDecl = Qu;
-C.Reference = ir;
-C.PEReference = cr;
-C.PI = Du;
-C.PUBLIC = Br;
-C.PubidLiteral = mr;
-C.PubidLiteral_match = Gu;
-C.QName = Er;
-C.QName_exact = Iu;
-C.QName_group = Cu;
-C.S = x;
-C.SChar_s = Tu;
-C.S_OPT = V;
-C.SYSTEM = Oa;
-C.SystemLiteral = Ut;
-C.SystemLiteral_match = qu;
-C.InvalidChar = pu;
-C.UNICODE_REPLACEMENT_CHARACTER = mu;
-C.UNICODE_SUPPORT = Pt;
-C.XMLDecl = tl;
-var Ce = H, Fe = Ce.find, ul = Ce.hasDefaultHTMLNamespace, wt = Ce.hasOwn, ll = Ce.isHTMLMimeType, dl = Ce.isHTMLRawTextElement, El = Ce.isHTMLVoidElement, er = Ce.MIME_TYPE, xe = Ce.NAMESPACE, ie = Symbol(), Lo = Tt, _ = Lo.DOMException, _e = Lo.DOMExceptionName, ee = C;
-function le(t) {
-  if (t !== ie)
+);
+var PubidLiteral_match = reg("^", PubidLiteral, "$");
+var SystemLiteral_match = reg("^", SystemLiteral, "$");
+var NDataDecl = regg(S, "NDATA", S, Name);
+var EntityDef = regg(EntityValue, "|", regg(ExternalID, NDataDecl, "?"));
+var ENTITY_DECL_START = "<!ENTITY";
+var GEDecl = reg(ENTITY_DECL_START, S, Name, S, EntityDef, S_OPT, ">");
+var PEDef = regg(EntityValue, "|", ExternalID);
+var PEDecl = reg(ENTITY_DECL_START, S, "%", S, Name, S, PEDef, S_OPT, ">");
+var EntityDecl = regg(GEDecl, "|", PEDecl);
+var PublicID = reg(PUBLIC, S, PubidLiteral);
+var NotationDecl = reg("<!NOTATION", S, Name, S, regg(ExternalID, "|", PublicID), S_OPT, ">");
+var Eq = reg(S_OPT, "=", S_OPT);
+var VersionNum = /1[.]\d+/;
+var VersionInfo = reg(S, "version", Eq, regg("'", VersionNum, "'", "|", '"', VersionNum, '"'));
+var EncName = /[A-Za-z][-A-Za-z0-9._]*/;
+var EncodingDecl = regg(S, "encoding", Eq, regg('"', EncName, '"', "|", "'", EncName, "'"));
+var SDDecl = regg(S, "standalone", Eq, regg("'", regg("yes", "|", "no"), "'", "|", '"', regg("yes", "|", "no"), '"'));
+var XMLDecl = reg(/^<\?xml/, VersionInfo, EncodingDecl, "?", SDDecl, "?", S_OPT, /\?>/);
+var DOCTYPE_DECL_START = "<!DOCTYPE";
+var CDATA_START = "<![CDATA[";
+var CDATA_END = "]]>";
+var CDStart = /<!\[CDATA\[/;
+var CDEnd = /\]\]>/;
+var CData = reg(Char, "*?", CDEnd);
+var CDSect = reg(CDStart, CData);
+grammar.chars = chars;
+grammar.chars_without = chars_without;
+grammar.detectUnicodeSupport = detectUnicodeSupport;
+grammar.reg = reg;
+grammar.regg = regg;
+grammar.ABOUT_LEGACY_COMPAT = ABOUT_LEGACY_COMPAT;
+grammar.ABOUT_LEGACY_COMPAT_SystemLiteral = ABOUT_LEGACY_COMPAT_SystemLiteral;
+grammar.AttlistDecl = AttlistDecl;
+grammar.CDATA_START = CDATA_START;
+grammar.CDATA_END = CDATA_END;
+grammar.CDSect = CDSect;
+grammar.Char = Char;
+grammar.Comment = Comment$1;
+grammar.COMMENT_START = COMMENT_START;
+grammar.COMMENT_END = COMMENT_END;
+grammar.DOCTYPE_DECL_START = DOCTYPE_DECL_START;
+grammar.elementdecl = elementdecl;
+grammar.EntityDecl = EntityDecl;
+grammar.EntityValue = EntityValue;
+grammar.ExternalID = ExternalID;
+grammar.ExternalID_match = ExternalID_match;
+grammar.Name = Name;
+grammar.NotationDecl = NotationDecl;
+grammar.Reference = Reference;
+grammar.PEReference = PEReference;
+grammar.PI = PI;
+grammar.PUBLIC = PUBLIC;
+grammar.PubidLiteral = PubidLiteral;
+grammar.PubidLiteral_match = PubidLiteral_match;
+grammar.QName = QName;
+grammar.QName_exact = QName_exact;
+grammar.QName_group = QName_group;
+grammar.S = S;
+grammar.SChar_s = SChar_s;
+grammar.S_OPT = S_OPT;
+grammar.SYSTEM = SYSTEM;
+grammar.SystemLiteral = SystemLiteral;
+grammar.SystemLiteral_match = SystemLiteral_match;
+grammar.InvalidChar = InvalidChar;
+grammar.UNICODE_REPLACEMENT_CHARACTER = UNICODE_REPLACEMENT_CHARACTER;
+grammar.UNICODE_SUPPORT = UNICODE_SUPPORT;
+grammar.XMLDecl = XMLDecl;
+var conventions$3 = conventions$5;
+var find = conventions$3.find;
+var hasDefaultHTMLNamespace$1 = conventions$3.hasDefaultHTMLNamespace;
+var hasOwn$1 = conventions$3.hasOwn;
+var isHTMLMimeType$2 = conventions$3.isHTMLMimeType;
+var isHTMLRawTextElement$1 = conventions$3.isHTMLRawTextElement;
+var isHTMLVoidElement = conventions$3.isHTMLVoidElement;
+var MIME_TYPE$1 = conventions$3.MIME_TYPE;
+var NAMESPACE$2 = conventions$3.NAMESPACE;
+var PDC = Symbol();
+var errors$2 = errors$3;
+var DOMException$1 = errors$2.DOMException;
+var DOMExceptionName = errors$2.DOMExceptionName;
+var g$1 = grammar;
+function checkSymbol(symbol) {
+  if (symbol !== PDC) {
     throw new TypeError("Illegal constructor");
+  }
 }
-function ml(t) {
-  return t !== "";
+function notEmptyString(input) {
+  return input !== "";
 }
-function pl(t) {
-  return t ? t.split(/[\t\n\f\r ]+/).filter(ml) : [];
+function splitOnASCIIWhitespace(input) {
+  return input ? input.split(/[\t\n\f\r ]+/).filter(notEmptyString) : [];
 }
-function Tl(t, e) {
-  return wt(t, e) || (t[e] = !0), t;
+function orderedSetReducer(current, element) {
+  if (!hasOwn$1(current, element)) {
+    current[element] = true;
+  }
+  return current;
 }
-function pn(t) {
-  if (!t) return [];
-  var e = pl(t);
-  return Object.keys(e.reduce(Tl, {}));
+function toOrderedSet(input) {
+  if (!input) return [];
+  var list = splitOnASCIIWhitespace(input);
+  return Object.keys(list.reduce(orderedSetReducer, {}));
 }
-function _l(t) {
-  return function(e) {
-    return t && t.indexOf(e) !== -1;
+function arrayIncludes(list) {
+  return function(element) {
+    return list && list.indexOf(element) !== -1;
   };
 }
-function Oo(t) {
-  if (!ee.QName_exact.test(t))
-    throw new _(_.INVALID_CHARACTER_ERR, 'invalid character in qualified name "' + t + '"');
-}
-function Aa(t, e) {
-  Oo(e), t = t || null;
-  var r = null, a = e;
-  if (e.indexOf(":") >= 0) {
-    var n = e.split(":");
-    r = n[0], a = n[1];
+function validateQualifiedName(qualifiedName) {
+  if (!g$1.QName_exact.test(qualifiedName)) {
+    throw new DOMException$1(DOMException$1.INVALID_CHARACTER_ERR, 'invalid character in qualified name "' + qualifiedName + '"');
   }
-  if (r !== null && t === null)
-    throw new _(_.NAMESPACE_ERR, "prefix is non-null and namespace is null");
-  if (r === "xml" && t !== Ce.NAMESPACE.XML)
-    throw new _(_.NAMESPACE_ERR, 'prefix is "xml" and namespace is not the XML namespace');
-  if ((r === "xmlns" || e === "xmlns") && t !== Ce.NAMESPACE.XMLNS)
-    throw new _(
-      _.NAMESPACE_ERR,
+}
+function validateAndExtract(namespace, qualifiedName) {
+  validateQualifiedName(qualifiedName);
+  namespace = namespace || null;
+  var prefix = null;
+  var localName2 = qualifiedName;
+  if (qualifiedName.indexOf(":") >= 0) {
+    var splitResult = qualifiedName.split(":");
+    prefix = splitResult[0];
+    localName2 = splitResult[1];
+  }
+  if (prefix !== null && namespace === null) {
+    throw new DOMException$1(DOMException$1.NAMESPACE_ERR, "prefix is non-null and namespace is null");
+  }
+  if (prefix === "xml" && namespace !== conventions$3.NAMESPACE.XML) {
+    throw new DOMException$1(DOMException$1.NAMESPACE_ERR, 'prefix is "xml" and namespace is not the XML namespace');
+  }
+  if ((prefix === "xmlns" || qualifiedName === "xmlns") && namespace !== conventions$3.NAMESPACE.XMLNS) {
+    throw new DOMException$1(
+      DOMException$1.NAMESPACE_ERR,
       'either qualifiedName or prefix is "xmlns" and namespace is not the XMLNS namespace'
     );
-  if (t === Ce.NAMESPACE.XMLNS && r !== "xmlns" && e !== "xmlns")
-    throw new _(
-      _.NAMESPACE_ERR,
+  }
+  if (namespace === conventions$3.NAMESPACE.XMLNS && prefix !== "xmlns" && qualifiedName !== "xmlns") {
+    throw new DOMException$1(
+      DOMException$1.NAMESPACE_ERR,
       'namespace is the XMLNS namespace and neither qualifiedName nor prefix is "xmlns"'
     );
-  return [t, r, a];
-}
-function Bt(t, e) {
-  for (var r in t)
-    wt(t, r) && (e[r] = t[r]);
-}
-function de(t, e) {
-  var r = t.prototype;
-  if (!(r instanceof e)) {
-    let a = function() {
-    };
-    a.prototype = e.prototype, a = new a(), Bt(r, a), t.prototype = r = a;
   }
-  r.constructor != t && (typeof t != "function" && console.error("unknown Class:" + t), r.constructor = t);
+  return [namespace, prefix, localName2];
 }
-var Ee = {}, Ae = Ee.ELEMENT_NODE = 1, Ft = Ee.ATTRIBUTE_NODE = 2, Ur = Ee.TEXT_NODE = 3, yo = Ee.CDATA_SECTION_NODE = 4, bo = Ee.ENTITY_REFERENCE_NODE = 5, fl = Ee.ENTITY_NODE = 6, ba = Ee.PROCESSING_INSTRUCTION_NODE = 7, Ua = Ee.COMMENT_NODE = 8, yt = Ee.DOCUMENT_NODE = 9, Uo = Ee.DOCUMENT_TYPE_NODE = 10, Je = Ee.DOCUMENT_FRAGMENT_NODE = 11, Nl = Ee.NOTATION_NODE = 12, z = Ce.freeze({
+function copy(src, dest) {
+  for (var p in src) {
+    if (hasOwn$1(src, p)) {
+      dest[p] = src[p];
+    }
+  }
+}
+function _extends(Class, Super) {
+  var pt = Class.prototype;
+  if (!(pt instanceof Super)) {
+    let t = function() {
+    };
+    t.prototype = Super.prototype;
+    t = new t();
+    copy(pt, t);
+    Class.prototype = pt = t;
+  }
+  if (pt.constructor != Class) {
+    if (typeof Class != "function") {
+      console.error("unknown Class:" + Class);
+    }
+    pt.constructor = Class;
+  }
+}
+var NodeType = {};
+var ELEMENT_NODE = NodeType.ELEMENT_NODE = 1;
+var ATTRIBUTE_NODE = NodeType.ATTRIBUTE_NODE = 2;
+var TEXT_NODE = NodeType.TEXT_NODE = 3;
+var CDATA_SECTION_NODE = NodeType.CDATA_SECTION_NODE = 4;
+var ENTITY_REFERENCE_NODE = NodeType.ENTITY_REFERENCE_NODE = 5;
+var ENTITY_NODE = NodeType.ENTITY_NODE = 6;
+var PROCESSING_INSTRUCTION_NODE = NodeType.PROCESSING_INSTRUCTION_NODE = 7;
+var COMMENT_NODE = NodeType.COMMENT_NODE = 8;
+var DOCUMENT_NODE = NodeType.DOCUMENT_NODE = 9;
+var DOCUMENT_TYPE_NODE = NodeType.DOCUMENT_TYPE_NODE = 10;
+var DOCUMENT_FRAGMENT_NODE = NodeType.DOCUMENT_FRAGMENT_NODE = 11;
+var NOTATION_NODE = NodeType.NOTATION_NODE = 12;
+var DocumentPosition = conventions$3.freeze({
   DOCUMENT_POSITION_DISCONNECTED: 1,
   DOCUMENT_POSITION_PRECEDING: 2,
   DOCUMENT_POSITION_FOLLOWING: 4,
@@ -4921,21 +5675,22 @@ var Ee = {}, Ae = Ee.ELEMENT_NODE = 1, Ft = Ee.ATTRIBUTE_NODE = 2, Ur = Ee.TEXT_
   DOCUMENT_POSITION_CONTAINED_BY: 16,
   DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC: 32
 });
-function wo(t, e) {
-  if (e.length < t.length) return wo(e, t);
-  var r = null;
-  for (var a in t) {
-    if (t[a] !== e[a]) return r;
-    r = t[a];
+function commonAncestor(a, b) {
+  if (b.length < a.length) return commonAncestor(b, a);
+  var c = null;
+  for (var n in a) {
+    if (a[n] !== b[n]) return c;
+    c = a[n];
   }
-  return r;
+  return c;
 }
-function Tn(t) {
-  return t.guid || (t.guid = Math.random()), t.guid;
+function docGUID(doc) {
+  if (!doc.guid) doc.guid = Math.random();
+  return doc.guid;
 }
-function J() {
+function NodeList() {
 }
-J.prototype = {
+NodeList.prototype = {
   /**
    * The number of nodes in the list. The range of valid child node indices is 0 to length-1
    * inclusive.
@@ -4953,8 +5708,8 @@ J.prototype = {
    * The node at position `index` in the NodeList,
    * or null if that is not a valid index.
    */
-  item: function(t) {
-    return t >= 0 && t < this.length ? this[t] : null;
+  item: function(index) {
+    return index >= 0 && index < this.length ? this[index] : null;
   },
   /**
    * Returns a string representation of the NodeList.
@@ -4969,16 +5724,23 @@ J.prototype = {
    * @param {function} [options.nodeFilter]
    * @returns {string}
    */
-  toString: function(t) {
-    var e;
-    typeof t == "function" ? e = { requireWellFormed: !1, splitCDATASections: !0, nodeFilter: t } : t ? e = {
-      requireWellFormed: !!t.requireWellFormed,
-      splitCDATASections: t.splitCDATASections !== !1,
-      nodeFilter: t.nodeFilter || null
-    } : e = { requireWellFormed: !1, splitCDATASections: !0, nodeFilter: null };
-    for (var r = [], a = 0; a < this.length; a++)
-      xa(this[a], r, null, e);
-    return r.join("");
+  toString: function(options2) {
+    var opts;
+    if (typeof options2 === "function") {
+      opts = { requireWellFormed: false, splitCDATASections: true, nodeFilter: options2 };
+    } else if (!!options2) {
+      opts = {
+        requireWellFormed: !!options2.requireWellFormed,
+        splitCDATASections: options2.splitCDATASections !== false,
+        nodeFilter: options2.nodeFilter || null
+      };
+    } else {
+      opts = { requireWellFormed: false, splitCDATASections: true, nodeFilter: null };
+    }
+    for (var buf = [], i = 0; i < this.length; i++) {
+      serializeToString(this[i], buf, null, opts);
+    }
+    return buf.join("");
   },
   /**
    * Filters the NodeList based on a predicate.
@@ -4989,8 +5751,8 @@ J.prototype = {
    * An array of nodes that satisfy the predicate.
    * @private
    */
-  filter: function(t) {
-    return Array.prototype.filter.call(this, t);
+  filter: function(predicate) {
+    return Array.prototype.filter.call(this, predicate);
   },
   /**
    * Returns the first index at which a given node can be found in the NodeList, or -1 if it is
@@ -5002,75 +5764,106 @@ J.prototype = {
    * The first index of the node in the NodeList; -1 if not found.
    * @private
    */
-  indexOf: function(t) {
-    return Array.prototype.indexOf.call(this, t);
+  indexOf: function(item) {
+    return Array.prototype.indexOf.call(this, item);
   }
 };
-J.prototype[Symbol.iterator] = function() {
-  var t = this, e = 0;
+NodeList.prototype[Symbol.iterator] = function() {
+  var me = this;
+  var index = 0;
   return {
     next: function() {
-      return e < t.length ? {
-        value: t[e++],
-        done: !1
-      } : {
-        done: !0
-      };
+      if (index < me.length) {
+        return {
+          value: me[index++],
+          done: false
+        };
+      } else {
+        return {
+          done: true
+        };
+      }
     },
     return: function() {
       return {
-        done: !0
+        done: true
       };
     }
   };
 };
-function Ue(t, e) {
-  this._node = t, this._refresh = e, kr(this);
+function LiveNodeList(node, refresh) {
+  this._node = node;
+  this._refresh = refresh;
+  _updateLiveList(this);
 }
-function kr(t) {
-  var e = t._node._inc || t._node.ownerDocument._inc;
-  if (t._inc !== e) {
-    var r = t._refresh(t._node);
-    if (zo(t, "length", r.length), !t.$$length || r.length < t.$$length)
-      for (var a = r.length; a in t; a++)
-        wt(t, a) && delete t[a];
-    Bt(r, t), t._inc = e;
+function _updateLiveList(list) {
+  var inc = list._node._inc || list._node.ownerDocument._inc;
+  if (list._inc !== inc) {
+    var ls = list._refresh(list._node);
+    __set__(list, "length", ls.length);
+    if (!list.$$length || ls.length < list.$$length) {
+      for (var i = ls.length; i in list; i++) {
+        if (hasOwn$1(list, i)) {
+          delete list[i];
+        }
+      }
+    }
+    copy(ls, list);
+    list._inc = inc;
   }
 }
-Ue.prototype.item = function(t) {
-  return kr(this), this[t] || null;
+LiveNodeList.prototype.item = function(i) {
+  _updateLiveList(this);
+  return this[i] || null;
 };
-de(Ue, J);
-function xt() {
+_extends(LiveNodeList, NodeList);
+function NamedNodeMap() {
 }
-function Fo(t, e) {
-  for (var r = 0; r < t.length; ) {
-    if (t[r] === e)
-      return r;
-    r++;
+function _findNodeIndex(list, node) {
+  var i = 0;
+  while (i < list.length) {
+    if (list[i] === node) {
+      return i;
+    }
+    i++;
   }
 }
-function gl(t, e, r, a) {
-  if (a ? e[Fo(e, a)] = r : (e[e.length] = r, e.length++), t) {
-    r.ownerElement = t;
-    var n = t.ownerDocument;
-    n && (a && Po(n, t, a), Al(n, t, r));
+function _addNamedNode(el, list, newAttr, oldAttr) {
+  if (oldAttr) {
+    list[_findNodeIndex(list, oldAttr)] = newAttr;
+  } else {
+    list[list.length] = newAttr;
+    list.length++;
   }
-}
-function _n(t, e, r) {
-  var a = Fo(e, r);
-  if (a >= 0) {
-    for (var n = e.length - 1; a <= n; )
-      e[a] = e[++a];
-    if (e.length = n, t) {
-      var o = t.ownerDocument;
-      o && Po(o, t, r), r.ownerElement = null;
+  if (el) {
+    newAttr.ownerElement = el;
+    var doc = el.ownerDocument;
+    if (doc) {
+      oldAttr && _onRemoveAttribute(doc, el, oldAttr);
+      _onAddAttribute(doc, el, newAttr);
     }
   }
 }
-xt.prototype = {
+function _removeNamedNode(el, list, attr) {
+  var i = _findNodeIndex(list, attr);
+  if (i >= 0) {
+    var lastIndex = list.length - 1;
+    while (i <= lastIndex) {
+      list[i] = list[++i];
+    }
+    list.length = lastIndex;
+    if (el) {
+      var doc = el.ownerDocument;
+      if (doc) {
+        _onRemoveAttribute(doc, el, attr);
+      }
+      attr.ownerElement = null;
+    }
+  }
+}
+NamedNodeMap.prototype = {
   length: 0,
-  item: J.prototype.item,
+  item: NodeList.prototype.item,
   /**
    * Get an attribute by name. Note: Name is in lower case in case of HTML namespace and
    * document.
@@ -5081,13 +5874,17 @@ xt.prototype = {
    * The attribute with the given local name, or null if no such attribute exists.
    * @see https://dom.spec.whatwg.org/#concept-element-attributes-get-by-name
    */
-  getNamedItem: function(t) {
-    this._ownerElement && this._ownerElement._isInHTMLDocumentAndNamespace() && (t = t.toLowerCase());
-    for (var e = 0; e < this.length; ) {
-      var r = this[e];
-      if (r.nodeName === t)
-        return r;
-      e++;
+  getNamedItem: function(localName2) {
+    if (this._ownerElement && this._ownerElement._isInHTMLDocumentAndNamespace()) {
+      localName2 = localName2.toLowerCase();
+    }
+    var i = 0;
+    while (i < this.length) {
+      var attr = this[i];
+      if (attr.nodeName === localName2) {
+        return attr;
+      }
+      i++;
     }
     return null;
   },
@@ -5105,12 +5902,17 @@ xt.prototype = {
    * element.
    * @see https://dom.spec.whatwg.org/#concept-element-attributes-set
    */
-  setNamedItem: function(t) {
-    var e = t.ownerElement;
-    if (e && e !== this._ownerElement)
-      throw new _(_.INUSE_ATTRIBUTE_ERR);
-    var r = this.getNamedItemNS(t.namespaceURI, t.localName);
-    return r === t ? t : (gl(this._ownerElement, this, t, r), r);
+  setNamedItem: function(attr) {
+    var el = attr.ownerElement;
+    if (el && el !== this._ownerElement) {
+      throw new DOMException$1(DOMException$1.INUSE_ATTRIBUTE_ERR);
+    }
+    var oldAttr = this.getNamedItemNS(attr.namespaceURI, attr.localName);
+    if (oldAttr === attr) {
+      return attr;
+    }
+    _addNamedNode(this._ownerElement, this, attr, oldAttr);
+    return oldAttr;
   },
   /**
    * Set an attribute, replacing an existing attribute with the same local name and namespace
@@ -5126,8 +5928,8 @@ xt.prototype = {
    * attribute of another element.
    * @see https://dom.spec.whatwg.org/#concept-element-attributes-set
    */
-  setNamedItemNS: function(t) {
-    return this.setNamedItem(t);
+  setNamedItemNS: function(attr) {
+    return this.setNamedItem(attr);
   },
   /**
    * Removes an attribute specified by the local name.
@@ -5142,11 +5944,13 @@ xt.prototype = {
    * @see https://dom.spec.whatwg.org/#dom-namednodemap-removenameditem
    * @see https://dom.spec.whatwg.org/#concept-element-attributes-remove-by-name
    */
-  removeNamedItem: function(t) {
-    var e = this.getNamedItem(t);
-    if (!e)
-      throw new _(_.NOT_FOUND_ERR, t);
-    return _n(this._ownerElement, this, e), e;
+  removeNamedItem: function(localName2) {
+    var attr = this.getNamedItem(localName2);
+    if (!attr) {
+      throw new DOMException$1(DOMException$1.NOT_FOUND_ERR, localName2);
+    }
+    _removeNamedNode(this._ownerElement, this, attr);
+    return attr;
   },
   /**
    * Removes an attribute specified by the namespace and local name.
@@ -5164,11 +5968,13 @@ xt.prototype = {
    * @see https://dom.spec.whatwg.org/#dom-namednodemap-removenameditemns
    * @see https://dom.spec.whatwg.org/#concept-element-attributes-remove-by-namespace
    */
-  removeNamedItemNS: function(t, e) {
-    var r = this.getNamedItemNS(t, e);
-    if (!r)
-      throw new _(_.NOT_FOUND_ERR, t ? t + " : " + e : e);
-    return _n(this._ownerElement, this, r), r;
+  removeNamedItemNS: function(namespaceURI, localName2) {
+    var attr = this.getNamedItemNS(namespaceURI, localName2);
+    if (!attr) {
+      throw new DOMException$1(DOMException$1.NOT_FOUND_ERR, namespaceURI ? namespaceURI + " : " + localName2 : localName2);
+    }
+    _removeNamedNode(this._ownerElement, this, attr);
+    return attr;
   },
   /**
    * Get an attribute by namespace and local name.
@@ -5182,38 +5988,47 @@ xt.prototype = {
    * exists.
    * @see https://dom.spec.whatwg.org/#concept-element-attributes-get-by-namespace
    */
-  getNamedItemNS: function(t, e) {
-    t || (t = null);
-    for (var r = 0; r < this.length; ) {
-      var a = this[r];
-      if (a.localName === e && a.namespaceURI === t)
-        return a;
-      r++;
+  getNamedItemNS: function(namespaceURI, localName2) {
+    if (!namespaceURI) {
+      namespaceURI = null;
+    }
+    var i = 0;
+    while (i < this.length) {
+      var node = this[i];
+      if (node.localName === localName2 && node.namespaceURI === namespaceURI) {
+        return node;
+      }
+      i++;
     }
     return null;
   }
 };
-xt.prototype[Symbol.iterator] = function() {
-  var t = this, e = 0;
+NamedNodeMap.prototype[Symbol.iterator] = function() {
+  var me = this;
+  var index = 0;
   return {
     next: function() {
-      return e < t.length ? {
-        value: t[e++],
-        done: !1
-      } : {
-        done: !0
-      };
+      if (index < me.length) {
+        return {
+          value: me[index++],
+          done: false
+        };
+      } else {
+        return {
+          done: true
+        };
+      }
     },
     return: function() {
       return {
-        done: !0
+        done: true
       };
     }
   };
 };
-function xo() {
+function DOMImplementation$1() {
 }
-xo.prototype = {
+DOMImplementation$1.prototype = {
   /**
    * Test if the DOM implementation implements a specific feature and version, as specified in
    * {@link https://www.w3.org/TR/DOM-Level-3-Core/core.html#DOMFeatures DOM Features}.
@@ -5237,8 +6052,8 @@ xo.prototype = {
    * @see https://dom.spec.whatwg.org/#dom-domimplementation-hasfeature DOM Living Standard
    * @see https://www.w3.org/TR/DOM-Level-3-Core/core.html#ID-5CED94D7 DOM Level 3 Core
    */
-  hasFeature: function(t, e) {
-    return !0;
+  hasFeature: function(feature, version) {
+    return true;
   },
   /**
    * Creates a DOM Document object of the specified type with its document element. Note that
@@ -5300,15 +6115,25 @@ xo.prototype = {
    * @see https://www.w3.org/TR/DOM-Level-2-Core/core.html#Level-2-Core-DOM-createDocument DOM
    *      Level 2 Core (initial)
    */
-  createDocument: function(t, e, r) {
-    var a = er.XML_APPLICATION;
-    t === xe.HTML ? a = er.XML_XHTML_APPLICATION : t === xe.SVG && (a = er.XML_SVG_IMAGE);
-    var n = new Ve(ie, { contentType: a });
-    if (n.implementation = this, n.childNodes = new J(), n.doctype = r || null, r && n.appendChild(r), e) {
-      var o = n.createElementNS(t, e);
-      n.appendChild(o);
+  createDocument: function(namespaceURI, qualifiedName, doctype) {
+    var contentType = MIME_TYPE$1.XML_APPLICATION;
+    if (namespaceURI === NAMESPACE$2.HTML) {
+      contentType = MIME_TYPE$1.XML_XHTML_APPLICATION;
+    } else if (namespaceURI === NAMESPACE$2.SVG) {
+      contentType = MIME_TYPE$1.XML_SVG_IMAGE;
     }
-    return n;
+    var doc = new Document(PDC, { contentType });
+    doc.implementation = this;
+    doc.childNodes = new NodeList();
+    doc.doctype = doctype || null;
+    if (doctype) {
+      doc.appendChild(doctype);
+    }
+    if (qualifiedName) {
+      var root = doc.createElementNS(namespaceURI, qualifiedName);
+      doc.appendChild(root);
+    }
+    return doc;
   },
   /**
    * Creates an empty DocumentType node. Entity declarations and notations are not made
@@ -5365,10 +6190,16 @@ xo.prototype = {
    * @see https://www.w3.org/TR/DOM-Level-2-Core/#core-ID-Core-DocType-internalSubset
    * @prettierignore
    */
-  createDocumentType: function(t, e, r, a) {
-    Oo(t);
-    var n = new qr(ie);
-    return n.name = t, n.nodeName = t, n.publicId = e || "", n.systemId = r || "", n.internalSubset = a || "", n.childNodes = new J(), n;
+  createDocumentType: function(qualifiedName, publicId, systemId, internalSubset) {
+    validateQualifiedName(qualifiedName);
+    var node = new DocumentType(PDC);
+    node.name = qualifiedName;
+    node.nodeName = qualifiedName;
+    node.publicId = publicId || "";
+    node.systemId = systemId || "";
+    node.internalSubset = internalSubset || "";
+    node.childNodes = new NodeList();
+    return node;
   },
   /**
    * Returns an HTML document, that might already have a basic DOM structure.
@@ -5387,26 +6218,32 @@ xo.prototype = {
    * @see https://dom.spec.whatwg.org/#dom-domimplementation-createhtmldocument
    * @see https://dom.spec.whatwg.org/#html-document
    */
-  createHTMLDocument: function(t) {
-    var e = new Ve(ie, { contentType: er.HTML });
-    if (e.implementation = this, e.childNodes = new J(), t !== !1) {
-      e.doctype = this.createDocumentType("html"), e.doctype.ownerDocument = e, e.appendChild(e.doctype);
-      var r = e.createElement("html");
-      e.appendChild(r);
-      var a = e.createElement("head");
-      if (r.appendChild(a), typeof t == "string") {
-        var n = e.createElement("title");
-        n.appendChild(e.createTextNode(t)), a.appendChild(n);
+  createHTMLDocument: function(title) {
+    var doc = new Document(PDC, { contentType: MIME_TYPE$1.HTML });
+    doc.implementation = this;
+    doc.childNodes = new NodeList();
+    if (title !== false) {
+      doc.doctype = this.createDocumentType("html");
+      doc.doctype.ownerDocument = doc;
+      doc.appendChild(doc.doctype);
+      var htmlNode = doc.createElement("html");
+      doc.appendChild(htmlNode);
+      var headNode = doc.createElement("head");
+      htmlNode.appendChild(headNode);
+      if (typeof title === "string") {
+        var titleNode = doc.createElement("title");
+        titleNode.appendChild(doc.createTextNode(title));
+        headNode.appendChild(titleNode);
       }
-      r.appendChild(e.createElement("body"));
+      htmlNode.appendChild(doc.createElement("body"));
     }
-    return e;
+    return doc;
   }
 };
-function U(t) {
-  le(t);
+function Node(symbol) {
+  checkSymbol(symbol);
 }
-U.prototype = {
+Node.prototype = {
   /**
    * The first child of this node.
    *
@@ -5494,8 +6331,8 @@ U.prototype = {
    * @type {boolean}
    */
   get isConnected() {
-    var t = this.getRootNode();
-    return t && t.nodeType === t.DOCUMENT_NODE;
+    var rootNode = this.getRootNode();
+    return rootNode && rootNode.nodeType === rootNode.DOCUMENT_NODE;
   },
   /**
    * Checks whether `other` is an inclusive descendant of this node.
@@ -5506,14 +6343,14 @@ U.prototype = {
    * True if `other` is an inclusive descendant of this node; false otherwise.
    * @see https://dom.spec.whatwg.org/#dom-node-contains
    */
-  contains: function(t) {
-    if (!t) return !1;
-    var e = t;
+  contains: function(other) {
+    if (!other) return false;
+    var parent = other;
     do {
-      if (this === e) return !0;
-      e = e.parentNode;
-    } while (e);
-    return !1;
+      if (this === parent) return true;
+      parent = parent.parentNode;
+    } while (parent);
+    return false;
   },
   /**
    * @typedef GetRootNodeOptions
@@ -5531,13 +6368,14 @@ U.prototype = {
    * @see https://dom.spec.whatwg.org/#dom-node-getrootnode
    * @see https://dom.spec.whatwg.org/#concept-shadow-including-root
    */
-  getRootNode: function(t) {
-    var e = this;
+  getRootNode: function(options2) {
+    var parent = this;
     do {
-      if (!e.parentNode)
-        return e;
-      e = e.parentNode;
-    } while (e);
+      if (!parent.parentNode) {
+        return parent;
+      }
+      parent = parent.parentNode;
+    } while (parent);
   },
   /**
    * Checks whether the given node is equal to this node.
@@ -5552,48 +6390,60 @@ U.prototype = {
    * @see https://dom.spec.whatwg.org/#concept-node-equals
    * @see ../docs/walk-dom.md.
    */
-  isEqualNode: function(t) {
-    if (!t) return !1;
-    for (var e = [{ node: this, other: t }]; e.length > 0; ) {
-      var r = e.pop(), a = r.node, n = r.other;
-      if (a.nodeType !== n.nodeType) return !1;
-      switch (a.nodeType) {
-        case a.DOCUMENT_TYPE_NODE:
-          if (a.name !== n.name || a.publicId !== n.publicId || a.systemId !== n.systemId) return !1;
+  isEqualNode: function(otherNode) {
+    if (!otherNode) return false;
+    var stack = [{ node: this, other: otherNode }];
+    while (stack.length > 0) {
+      var pair = stack.pop();
+      var node = pair.node;
+      var other = pair.other;
+      if (node.nodeType !== other.nodeType) return false;
+      switch (node.nodeType) {
+        case node.DOCUMENT_TYPE_NODE:
+          if (node.name !== other.name) return false;
+          if (node.publicId !== other.publicId) return false;
+          if (node.systemId !== other.systemId) return false;
           break;
-        case a.ELEMENT_NODE:
-          if (a.namespaceURI !== n.namespaceURI || a.prefix !== n.prefix || a.localName !== n.localName || a.attributes.length !== n.attributes.length) return !1;
-          for (var o = 0; o < a.attributes.length; o++) {
-            var s = a.attributes.item(o), i = n.getAttributeNodeNS(s.namespaceURI, s.localName);
-            if (!i) return !1;
-            e.push({ node: s, other: i });
+        case node.ELEMENT_NODE:
+          if (node.namespaceURI !== other.namespaceURI) return false;
+          if (node.prefix !== other.prefix) return false;
+          if (node.localName !== other.localName) return false;
+          if (node.attributes.length !== other.attributes.length) return false;
+          for (var i = 0; i < node.attributes.length; i++) {
+            var attr = node.attributes.item(i);
+            var otherAttr = other.getAttributeNodeNS(attr.namespaceURI, attr.localName);
+            if (!otherAttr) return false;
+            stack.push({ node: attr, other: otherAttr });
           }
           break;
-        case a.ATTRIBUTE_NODE:
-          if (a.namespaceURI !== n.namespaceURI || a.localName !== n.localName || a.value !== n.value) return !1;
+        case node.ATTRIBUTE_NODE:
+          if (node.namespaceURI !== other.namespaceURI) return false;
+          if (node.localName !== other.localName) return false;
+          if (node.value !== other.value) return false;
           break;
-        case a.PROCESSING_INSTRUCTION_NODE:
-          if (a.target !== n.target || a.data !== n.data) return !1;
+        case node.PROCESSING_INSTRUCTION_NODE:
+          if (node.target !== other.target || node.data !== other.data) return false;
           break;
-        case a.TEXT_NODE:
-        case a.CDATA_SECTION_NODE:
-        case a.COMMENT_NODE:
-          if (a.data !== n.data) return !1;
+        case node.TEXT_NODE:
+        case node.CDATA_SECTION_NODE:
+        case node.COMMENT_NODE:
+          if (node.data !== other.data) return false;
           break;
       }
-      if (a.childNodes.length !== n.childNodes.length) return !1;
-      for (var o = a.childNodes.length - 1; o >= 0; o--)
-        e.push({ node: a.childNodes[o], other: n.childNodes[o] });
+      if (node.childNodes.length !== other.childNodes.length) return false;
+      for (var i = node.childNodes.length - 1; i >= 0; i--) {
+        stack.push({ node: node.childNodes[i], other: other.childNodes[i] });
+      }
     }
-    return !0;
+    return true;
   },
   /**
    * Checks whether or not the given node is this node.
    *
    * @param {Node} [otherNode]
    */
-  isSameNode: function(t) {
-    return this === t;
+  isSameNode: function(otherNode) {
+    return this === otherNode;
   },
   /**
    * Inserts a node before a reference node as a child of this node.
@@ -5610,8 +6460,8 @@ U.prototype = {
    * See {@link _insertBefore} for more details.
    * @since Modified in DOM L2
    */
-  insertBefore: function(t, e) {
-    return wr(this, t, e);
+  insertBefore: function(newChild, refChild) {
+    return _insertBefore(this, newChild, refChild);
   },
   /**
    * Replaces an old child node with a new child node within this node.
@@ -5631,8 +6481,11 @@ U.prototype = {
    * {@link assertPreReplacementValidityInDocument} for more details.
    * @see https://dom.spec.whatwg.org/#concept-node-replace
    */
-  replaceChild: function(t, e) {
-    wr(this, t, e, $o), e && this.removeChild(e);
+  replaceChild: function(newChild, oldChild) {
+    _insertBefore(this, newChild, oldChild, assertPreReplacementValidityInDocument);
+    if (oldChild) {
+      this.removeChild(oldChild);
+    }
   },
   /**
    * Removes an existing child node from this node.
@@ -5645,8 +6498,8 @@ U.prototype = {
    * Throws a DOMException if `oldChild` is not a child of `this`.
    * See {@link _removeChild} for more details.
    */
-  removeChild: function(t) {
-    return Xo(this, t);
+  removeChild: function(oldChild) {
+    return _removeChild(this, oldChild);
   },
   /**
    * Appends a child node to this node.
@@ -5661,8 +6514,8 @@ U.prototype = {
    * well-formed, or if `newChild` is not a valid Node.
    * See {@link insertBefore} for more details.
    */
-  appendChild: function(t) {
-    return this.insertBefore(t, null);
+  appendChild: function(newChild) {
+    return this.insertBefore(newChild, null);
   },
   /**
    * Determines whether this node has any child nodes.
@@ -5687,8 +6540,8 @@ U.prototype = {
    * specific constraints.
    * @see {@link cloneNode}
    */
-  cloneNode: function(t) {
-    return Vo(this.ownerDocument || this, this, t);
+  cloneNode: function(deep) {
+    return cloneNode(this.ownerDocument || this, this, deep);
   },
   /**
    * Puts the specified node and all of its subtree into a "normalized" form. In a normalized
@@ -5710,13 +6563,19 @@ U.prototype = {
    * @see ../docs/walk-dom.md.
    */
   normalize: function() {
-    te(this, null, {
-      enter: function(t) {
-        for (var e = t.firstChild; e; ) {
-          var r = e.nextSibling;
-          r !== null && r.nodeType === Ur && e.nodeType === Ur ? (t.removeChild(r), e.appendData(r.data)) : e = r;
+    walkDOM(this, null, {
+      enter: function(node) {
+        var child = node.firstChild;
+        while (child) {
+          var next = child.nextSibling;
+          if (next !== null && next.nodeType === TEXT_NODE && child.nodeType === TEXT_NODE) {
+            node.removeChild(next);
+            child.appendData(next.data);
+          } else {
+            child = next;
+          }
         }
-        return !0;
+        return true;
       }
     });
   },
@@ -5735,8 +6594,8 @@ U.prototype = {
    * @since Introduced in DOM Level 2
    * @see {@link DOMImplementation.hasFeature}
    */
-  isSupported: function(t, e) {
-    return this.ownerDocument.implementation.hasFeature(t, e);
+  isSupported: function(feature, version) {
+    return this.ownerDocument.implementation.hasFeature(feature, version);
   },
   /**
    * Look up the prefix associated to the given namespace URI, starting from this node.
@@ -5757,15 +6616,18 @@ U.prototype = {
    * @see https://github.com/xmldom/xmldom/issues/322
    * @prettierignore
    */
-  lookupPrefix: function(t) {
-    for (var e = this; e; ) {
-      var r = e._nsMap;
-      if (r) {
-        for (var a in r)
-          if (wt(r, a) && r[a] === t)
-            return a;
+  lookupPrefix: function(namespaceURI) {
+    var el = this;
+    while (el) {
+      var map = el._nsMap;
+      if (map) {
+        for (var n in map) {
+          if (hasOwn$1(map, n) && map[n] === namespaceURI) {
+            return n;
+          }
+        }
       }
-      e = e.nodeType == Ft ? e.ownerDocument : e.parentNode;
+      el = el.nodeType == ATTRIBUTE_NODE ? el.ownerDocument : el.parentNode;
     }
     return null;
   },
@@ -5786,12 +6648,16 @@ U.prototype = {
    * @see https://www.w3.org/TR/DOM-Level-3-Core/core.html#Node3-lookupNamespaceURI
    * @prettierignore
    */
-  lookupNamespaceURI: function(t) {
-    for (var e = this; e; ) {
-      var r = e._nsMap;
-      if (r && wt(r, t))
-        return r[t];
-      e = e.nodeType == Ft ? e.ownerDocument : e.parentNode;
+  lookupNamespaceURI: function(prefix) {
+    var el = this;
+    while (el) {
+      var map = el._nsMap;
+      if (map) {
+        if (hasOwn$1(map, prefix)) {
+          return map[prefix];
+        }
+      }
+      el = el.nodeType == ATTRIBUTE_NODE ? el.ownerDocument : el.parentNode;
     }
     return null;
   },
@@ -5816,9 +6682,9 @@ U.prototype = {
    * @see https://dom.spec.whatwg.org/#dom-node-isdefaultnamespace
    * @prettierignore
    */
-  isDefaultNamespace: function(t) {
-    var e = this.lookupPrefix(t);
-    return e == null;
+  isDefaultNamespace: function(namespaceURI) {
+    var prefix = this.lookupPrefix(namespaceURI);
+    return prefix == null;
   },
   /**
    * Compares the reference node with a node with regard to their position in the document and
@@ -5833,221 +6699,327 @@ U.prototype = {
    * @see https://www.w3.org/TR/2004/REC-DOM-Level-3-Core-20040407/core.html#Node3-compare
    * @see https://dom.spec.whatwg.org/#dom-node-comparedocumentposition
    */
-  compareDocumentPosition: function(t) {
-    if (this === t) return 0;
-    var e = t, r = this, a = null, n = null;
-    if (e instanceof Et && (a = e, e = a.ownerElement), r instanceof Et && (n = r, r = n.ownerElement, a && e && r === e))
-      for (var o = 0, s; s = r.attributes[o]; o++) {
-        if (s === a)
-          return z.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + z.DOCUMENT_POSITION_PRECEDING;
-        if (s === n)
-          return z.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + z.DOCUMENT_POSITION_FOLLOWING;
+  compareDocumentPosition: function(other) {
+    if (this === other) return 0;
+    var node1 = other;
+    var node2 = this;
+    var attr1 = null;
+    var attr2 = null;
+    if (node1 instanceof Attr) {
+      attr1 = node1;
+      node1 = attr1.ownerElement;
+    }
+    if (node2 instanceof Attr) {
+      attr2 = node2;
+      node2 = attr2.ownerElement;
+      if (attr1 && node1 && node2 === node1) {
+        for (var i = 0, attr; attr = node2.attributes[i]; i++) {
+          if (attr === attr1)
+            return DocumentPosition.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + DocumentPosition.DOCUMENT_POSITION_PRECEDING;
+          if (attr === attr2)
+            return DocumentPosition.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + DocumentPosition.DOCUMENT_POSITION_FOLLOWING;
+        }
       }
-    if (!e || !r || r.ownerDocument !== e.ownerDocument)
-      return z.DOCUMENT_POSITION_DISCONNECTED + z.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + (Tn(r.ownerDocument) > Tn(e.ownerDocument) ? z.DOCUMENT_POSITION_FOLLOWING : z.DOCUMENT_POSITION_PRECEDING);
-    if (n && e === r)
-      return z.DOCUMENT_POSITION_CONTAINS + z.DOCUMENT_POSITION_PRECEDING;
-    if (a && e === r)
-      return z.DOCUMENT_POSITION_CONTAINED_BY + z.DOCUMENT_POSITION_FOLLOWING;
-    for (var i = [], c = e.parentNode; c; ) {
-      if (!n && c === r)
-        return z.DOCUMENT_POSITION_CONTAINED_BY + z.DOCUMENT_POSITION_FOLLOWING;
-      i.push(c), c = c.parentNode;
     }
-    i.reverse();
-    for (var u = [], l = r.parentNode; l; ) {
-      if (!a && l === e)
-        return z.DOCUMENT_POSITION_CONTAINS + z.DOCUMENT_POSITION_PRECEDING;
-      u.push(l), l = l.parentNode;
+    if (!node1 || !node2 || node2.ownerDocument !== node1.ownerDocument) {
+      return DocumentPosition.DOCUMENT_POSITION_DISCONNECTED + DocumentPosition.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + (docGUID(node2.ownerDocument) > docGUID(node1.ownerDocument) ? DocumentPosition.DOCUMENT_POSITION_FOLLOWING : DocumentPosition.DOCUMENT_POSITION_PRECEDING);
     }
-    u.reverse();
-    var E = wo(i, u);
-    for (var m in E.childNodes) {
-      var T = E.childNodes[m];
-      if (T === r) return z.DOCUMENT_POSITION_FOLLOWING;
-      if (T === e) return z.DOCUMENT_POSITION_PRECEDING;
-      if (u.indexOf(T) >= 0) return z.DOCUMENT_POSITION_FOLLOWING;
-      if (i.indexOf(T) >= 0) return z.DOCUMENT_POSITION_PRECEDING;
+    if (attr2 && node1 === node2) {
+      return DocumentPosition.DOCUMENT_POSITION_CONTAINS + DocumentPosition.DOCUMENT_POSITION_PRECEDING;
+    }
+    if (attr1 && node1 === node2) {
+      return DocumentPosition.DOCUMENT_POSITION_CONTAINED_BY + DocumentPosition.DOCUMENT_POSITION_FOLLOWING;
+    }
+    var chain1 = [];
+    var ancestor1 = node1.parentNode;
+    while (ancestor1) {
+      if (!attr2 && ancestor1 === node2) {
+        return DocumentPosition.DOCUMENT_POSITION_CONTAINED_BY + DocumentPosition.DOCUMENT_POSITION_FOLLOWING;
+      }
+      chain1.push(ancestor1);
+      ancestor1 = ancestor1.parentNode;
+    }
+    chain1.reverse();
+    var chain2 = [];
+    var ancestor2 = node2.parentNode;
+    while (ancestor2) {
+      if (!attr1 && ancestor2 === node1) {
+        return DocumentPosition.DOCUMENT_POSITION_CONTAINS + DocumentPosition.DOCUMENT_POSITION_PRECEDING;
+      }
+      chain2.push(ancestor2);
+      ancestor2 = ancestor2.parentNode;
+    }
+    chain2.reverse();
+    var ca = commonAncestor(chain1, chain2);
+    for (var n in ca.childNodes) {
+      var child = ca.childNodes[n];
+      if (child === node2) return DocumentPosition.DOCUMENT_POSITION_FOLLOWING;
+      if (child === node1) return DocumentPosition.DOCUMENT_POSITION_PRECEDING;
+      if (chain2.indexOf(child) >= 0) return DocumentPosition.DOCUMENT_POSITION_FOLLOWING;
+      if (chain1.indexOf(child) >= 0) return DocumentPosition.DOCUMENT_POSITION_PRECEDING;
     }
     return 0;
   }
 };
-function Mo(t) {
-  return t == "<" && "&lt;" || t == ">" && "&gt;" || t == "&" && "&amp;" || t == '"' && "&quot;" || "&#" + t.charCodeAt() + ";";
+function _xmlEncoder(c) {
+  return c == "<" && "&lt;" || c == ">" && "&gt;" || c == "&" && "&amp;" || c == '"' && "&quot;" || "&#" + c.charCodeAt() + ";";
 }
-Bt(Ee, U);
-Bt(Ee, U.prototype);
-Bt(z, U);
-Bt(z, U.prototype);
-function Sr(t, e) {
-  te(t, null, {
-    enter: function(r) {
-      return e(r) ? te.STOP : !0;
+copy(NodeType, Node);
+copy(NodeType, Node.prototype);
+copy(DocumentPosition, Node);
+copy(DocumentPosition, Node.prototype);
+function _visitNode(node, callback) {
+  walkDOM(node, null, {
+    enter: function(n) {
+      return callback(n) ? walkDOM.STOP : true;
     }
   });
 }
-function te(t, e, r) {
-  for (var a = [{ node: t, context: e, phase: te.ENTER }]; a.length > 0; ) {
-    var n = a.pop();
-    if (n.phase === te.ENTER) {
-      var o = r.enter(n.node, n.context);
-      if (o === te.STOP)
-        return te.STOP;
-      if (a.push({ node: n.node, context: o, phase: te.EXIT }), o == null)
+function walkDOM(node, context, callbacks) {
+  var stack = [{ node, context, phase: walkDOM.ENTER }];
+  while (stack.length > 0) {
+    var frame = stack.pop();
+    if (frame.phase === walkDOM.ENTER) {
+      var childContext = callbacks.enter(frame.node, frame.context);
+      if (childContext === walkDOM.STOP) {
+        return walkDOM.STOP;
+      }
+      stack.push({ node: frame.node, context: childContext, phase: walkDOM.EXIT });
+      if (childContext === null || childContext === void 0) {
         continue;
-      for (var s = n.node.lastChild; s; )
-        a.push({ node: s, context: o, phase: te.ENTER }), s = s.previousSibling;
-    } else
-      r.exit && r.exit(n.node, n.context);
-  }
-}
-te.STOP = Symbol("walkDOM.STOP");
-te.ENTER = 0;
-te.EXIT = 1;
-function Ve(t, e) {
-  le(t);
-  var r = e || {};
-  this.ownerDocument = this, this.contentType = r.contentType || er.XML_APPLICATION, this.type = ll(this.contentType) ? "html" : "xml";
-}
-function Al(t, e, r) {
-  t && t._inc++;
-  var a = r.namespaceURI;
-  a === xe.XMLNS && (e._nsMap[r.prefix ? r.localName : ""] = r.value);
-}
-function Po(t, e, r, a) {
-  t && t._inc++;
-  var n = r.namespaceURI;
-  n === xe.XMLNS && delete e._nsMap[r.prefix ? r.localName : ""];
-}
-function Bo(t, e, r) {
-  if (t && t._inc) {
-    t._inc++;
-    var a = e.childNodes;
-    if (r && !r.nextSibling)
-      a[a.length++] = r;
-    else {
-      for (var n = e.firstChild, o = 0; n; )
-        a[o++] = n, n = n.nextSibling;
-      a.length = o, delete a[a.length];
+      }
+      var child = frame.node.lastChild;
+      while (child) {
+        stack.push({ node: child, context: childContext, phase: walkDOM.ENTER });
+        child = child.previousSibling;
+      }
+    } else {
+      if (callbacks.exit) {
+        callbacks.exit(frame.node, frame.context);
+      }
     }
   }
 }
-function Xo(t, e) {
-  if (t !== e.parentNode)
-    throw new _(_.NOT_FOUND_ERR, "child's parent is not parent");
-  var r = e.previousSibling, a = e.nextSibling;
-  return r ? r.nextSibling = a : t.firstChild = a, a ? a.previousSibling = r : t.lastChild = r, Bo(t.ownerDocument, t), e.parentNode = null, e.previousSibling = null, e.nextSibling = null, e;
+walkDOM.STOP = Symbol("walkDOM.STOP");
+walkDOM.ENTER = 0;
+walkDOM.EXIT = 1;
+function Document(symbol, options2) {
+  checkSymbol(symbol);
+  var opt = options2 || {};
+  this.ownerDocument = this;
+  this.contentType = opt.contentType || MIME_TYPE$1.XML_APPLICATION;
+  this.type = isHTMLMimeType$2(this.contentType) ? "html" : "xml";
 }
-function hl(t) {
-  return t && (t.nodeType === U.DOCUMENT_NODE || t.nodeType === U.DOCUMENT_FRAGMENT_NODE || t.nodeType === U.ELEMENT_NODE);
-}
-function Il(t) {
-  return t && (t.nodeType === U.CDATA_SECTION_NODE || t.nodeType === U.COMMENT_NODE || t.nodeType === U.DOCUMENT_FRAGMENT_NODE || t.nodeType === U.DOCUMENT_TYPE_NODE || t.nodeType === U.ELEMENT_NODE || t.nodeType === U.PROCESSING_INSTRUCTION_NODE || t.nodeType === U.TEXT_NODE);
-}
-function rt(t) {
-  return t && t.nodeType === U.DOCUMENT_TYPE_NODE;
-}
-function qe(t) {
-  return t && t.nodeType === U.ELEMENT_NODE;
-}
-function ko(t) {
-  return t && t.nodeType === U.TEXT_NODE;
-}
-function fn(t, e) {
-  var r = t.childNodes || [];
-  if (Fe(r, qe) || rt(e))
-    return !1;
-  var a = Fe(r, rt);
-  return !(e && a && r.indexOf(a) > r.indexOf(e));
-}
-function Nn(t, e) {
-  var r = t.childNodes || [];
-  function a(o) {
-    return qe(o) && o !== e;
+function _onAddAttribute(doc, el, newAttr) {
+  doc && doc._inc++;
+  var ns = newAttr.namespaceURI;
+  if (ns === NAMESPACE$2.XMLNS) {
+    el._nsMap[newAttr.prefix ? newAttr.localName : ""] = newAttr.value;
   }
-  if (Fe(r, a))
-    return !1;
-  var n = Fe(r, rt);
-  return !(e && n && r.indexOf(n) > r.indexOf(e));
 }
-function Cl(t, e, r) {
-  if (!hl(t))
-    throw new _(_.HIERARCHY_REQUEST_ERR, "Unexpected parent node type " + t.nodeType);
-  if (r && r.parentNode !== t)
-    throw new _(_.NOT_FOUND_ERR, "child not in parent");
+function _onRemoveAttribute(doc, el, newAttr, remove) {
+  doc && doc._inc++;
+  var ns = newAttr.namespaceURI;
+  if (ns === NAMESPACE$2.XMLNS) {
+    delete el._nsMap[newAttr.prefix ? newAttr.localName : ""];
+  }
+}
+function _onUpdateChild(doc, parent, newChild) {
+  if (doc && doc._inc) {
+    doc._inc++;
+    var childNodes = parent.childNodes;
+    if (newChild && !newChild.nextSibling) {
+      childNodes[childNodes.length++] = newChild;
+    } else {
+      var child = parent.firstChild;
+      var i = 0;
+      while (child) {
+        childNodes[i++] = child;
+        child = child.nextSibling;
+      }
+      childNodes.length = i;
+      delete childNodes[childNodes.length];
+    }
+  }
+}
+function _removeChild(parentNode, child) {
+  if (parentNode !== child.parentNode) {
+    throw new DOMException$1(DOMException$1.NOT_FOUND_ERR, "child's parent is not parent");
+  }
+  var oldPreviousSibling = child.previousSibling;
+  var oldNextSibling = child.nextSibling;
+  if (oldPreviousSibling) {
+    oldPreviousSibling.nextSibling = oldNextSibling;
+  } else {
+    parentNode.firstChild = oldNextSibling;
+  }
+  if (oldNextSibling) {
+    oldNextSibling.previousSibling = oldPreviousSibling;
+  } else {
+    parentNode.lastChild = oldPreviousSibling;
+  }
+  _onUpdateChild(parentNode.ownerDocument, parentNode);
+  child.parentNode = null;
+  child.previousSibling = null;
+  child.nextSibling = null;
+  return child;
+}
+function hasValidParentNodeType(node) {
+  return node && (node.nodeType === Node.DOCUMENT_NODE || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE || node.nodeType === Node.ELEMENT_NODE);
+}
+function hasInsertableNodeType(node) {
+  return node && (node.nodeType === Node.CDATA_SECTION_NODE || node.nodeType === Node.COMMENT_NODE || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE || node.nodeType === Node.DOCUMENT_TYPE_NODE || node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.PROCESSING_INSTRUCTION_NODE || node.nodeType === Node.TEXT_NODE);
+}
+function isDocTypeNode(node) {
+  return node && node.nodeType === Node.DOCUMENT_TYPE_NODE;
+}
+function isElementNode(node) {
+  return node && node.nodeType === Node.ELEMENT_NODE;
+}
+function isTextNode(node) {
+  return node && node.nodeType === Node.TEXT_NODE;
+}
+function isElementInsertionPossible(doc, child) {
+  var parentChildNodes = doc.childNodes || [];
+  if (find(parentChildNodes, isElementNode) || isDocTypeNode(child)) {
+    return false;
+  }
+  var docTypeNode = find(parentChildNodes, isDocTypeNode);
+  return !(child && docTypeNode && parentChildNodes.indexOf(docTypeNode) > parentChildNodes.indexOf(child));
+}
+function isElementReplacementPossible(doc, child) {
+  var parentChildNodes = doc.childNodes || [];
+  function hasElementChildThatIsNotChild(node) {
+    return isElementNode(node) && node !== child;
+  }
+  if (find(parentChildNodes, hasElementChildThatIsNotChild)) {
+    return false;
+  }
+  var docTypeNode = find(parentChildNodes, isDocTypeNode);
+  return !(child && docTypeNode && parentChildNodes.indexOf(docTypeNode) > parentChildNodes.indexOf(child));
+}
+function assertPreInsertionValidity1to5(parent, node, child) {
+  if (!hasValidParentNodeType(parent)) {
+    throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "Unexpected parent node type " + parent.nodeType);
+  }
+  if (child && child.parentNode !== parent) {
+    throw new DOMException$1(DOMException$1.NOT_FOUND_ERR, "child not in parent");
+  }
   if (
     // 4. If `node` is not a DocumentFragment, DocumentType, Element, or CharacterData node, then throw a "HierarchyRequestError" DOMException.
-    !Il(e) || // 5. If either `node` is a Text node and `parent` is a document,
+    !hasInsertableNodeType(node) || // 5. If either `node` is a Text node and `parent` is a document,
     // the sax parser currently adds top level text nodes, this will be fixed in 0.9.0
     // || (node.nodeType === Node.TEXT_NODE && parent.nodeType === Node.DOCUMENT_NODE)
     // or `node` is a doctype and `parent` is not a document, then throw a "HierarchyRequestError" DOMException.
-    rt(e) && t.nodeType !== U.DOCUMENT_NODE
-  )
-    throw new _(
-      _.HIERARCHY_REQUEST_ERR,
-      "Unexpected node type " + e.nodeType + " for parent node type " + t.nodeType
+    isDocTypeNode(node) && parent.nodeType !== Node.DOCUMENT_NODE
+  ) {
+    throw new DOMException$1(
+      DOMException$1.HIERARCHY_REQUEST_ERR,
+      "Unexpected node type " + node.nodeType + " for parent node type " + parent.nodeType
     );
-}
-function Dl(t, e, r) {
-  var a = t.childNodes || [], n = e.childNodes || [];
-  if (e.nodeType === U.DOCUMENT_FRAGMENT_NODE) {
-    var o = n.filter(qe);
-    if (o.length > 1 || Fe(n, ko))
-      throw new _(_.HIERARCHY_REQUEST_ERR, "More than one element or text in fragment");
-    if (o.length === 1 && !fn(t, r))
-      throw new _(_.HIERARCHY_REQUEST_ERR, "Element in fragment can not be inserted before doctype");
-  }
-  if (qe(e) && !fn(t, r))
-    throw new _(_.HIERARCHY_REQUEST_ERR, "Only one element can be added and only after doctype");
-  if (rt(e)) {
-    if (Fe(a, rt))
-      throw new _(_.HIERARCHY_REQUEST_ERR, "Only one doctype is allowed");
-    var s = Fe(a, qe);
-    if (r && a.indexOf(s) < a.indexOf(r))
-      throw new _(_.HIERARCHY_REQUEST_ERR, "Doctype can only be inserted before an element");
-    if (!r && s)
-      throw new _(_.HIERARCHY_REQUEST_ERR, "Doctype can not be appended since element is present");
   }
 }
-function $o(t, e, r) {
-  var a = t.childNodes || [], n = e.childNodes || [];
-  if (e.nodeType === U.DOCUMENT_FRAGMENT_NODE) {
-    var o = n.filter(qe);
-    if (o.length > 1 || Fe(n, ko))
-      throw new _(_.HIERARCHY_REQUEST_ERR, "More than one element or text in fragment");
-    if (o.length === 1 && !Nn(t, r))
-      throw new _(_.HIERARCHY_REQUEST_ERR, "Element in fragment can not be inserted before doctype");
+function assertPreInsertionValidityInDocument(parent, node, child) {
+  var parentChildNodes = parent.childNodes || [];
+  var nodeChildNodes = node.childNodes || [];
+  if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+    var nodeChildElements = nodeChildNodes.filter(isElementNode);
+    if (nodeChildElements.length > 1 || find(nodeChildNodes, isTextNode)) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "More than one element or text in fragment");
+    }
+    if (nodeChildElements.length === 1 && !isElementInsertionPossible(parent, child)) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "Element in fragment can not be inserted before doctype");
+    }
   }
-  if (qe(e) && !Nn(t, r))
-    throw new _(_.HIERARCHY_REQUEST_ERR, "Only one element can be added and only after doctype");
-  if (rt(e)) {
-    if (Fe(a, function(c) {
-      return rt(c) && c !== r;
-    }))
-      throw new _(_.HIERARCHY_REQUEST_ERR, "Only one doctype is allowed");
-    var s = Fe(a, qe);
-    if (r && a.indexOf(s) < a.indexOf(r))
-      throw new _(_.HIERARCHY_REQUEST_ERR, "Doctype can only be inserted before an element");
+  if (isElementNode(node)) {
+    if (!isElementInsertionPossible(parent, child)) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "Only one element can be added and only after doctype");
+    }
+  }
+  if (isDocTypeNode(node)) {
+    if (find(parentChildNodes, isDocTypeNode)) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "Only one doctype is allowed");
+    }
+    var parentElementChild = find(parentChildNodes, isElementNode);
+    if (child && parentChildNodes.indexOf(parentElementChild) < parentChildNodes.indexOf(child)) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "Doctype can only be inserted before an element");
+    }
+    if (!child && parentElementChild) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "Doctype can not be appended since element is present");
+    }
   }
 }
-function wr(t, e, r, a) {
-  Cl(t, e, r), t.nodeType === U.DOCUMENT_NODE && (a || Dl)(t, e, r);
-  var n = e.parentNode;
-  if (n && n.removeChild(e), e.nodeType === Je) {
-    var o = e.firstChild;
-    if (o == null)
-      return e;
-    var s = e.lastChild;
-  } else
-    o = s = e;
-  var i = r ? r.previousSibling : t.lastChild;
-  o.previousSibling = i, s.nextSibling = r, i ? i.nextSibling = o : t.firstChild = o, r == null ? t.lastChild = s : r.previousSibling = s;
-  do
-    o.parentNode = t;
-  while (o !== s && (o = o.nextSibling));
-  return Bo(t.ownerDocument || t, t, e), e.nodeType == Je && (e.firstChild = e.lastChild = null), e;
+function assertPreReplacementValidityInDocument(parent, node, child) {
+  var parentChildNodes = parent.childNodes || [];
+  var nodeChildNodes = node.childNodes || [];
+  if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+    var nodeChildElements = nodeChildNodes.filter(isElementNode);
+    if (nodeChildElements.length > 1 || find(nodeChildNodes, isTextNode)) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "More than one element or text in fragment");
+    }
+    if (nodeChildElements.length === 1 && !isElementReplacementPossible(parent, child)) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "Element in fragment can not be inserted before doctype");
+    }
+  }
+  if (isElementNode(node)) {
+    if (!isElementReplacementPossible(parent, child)) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "Only one element can be added and only after doctype");
+    }
+  }
+  if (isDocTypeNode(node)) {
+    let hasDoctypeChildThatIsNotChild = function(node2) {
+      return isDocTypeNode(node2) && node2 !== child;
+    };
+    if (find(parentChildNodes, hasDoctypeChildThatIsNotChild)) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "Only one doctype is allowed");
+    }
+    var parentElementChild = find(parentChildNodes, isElementNode);
+    if (child && parentChildNodes.indexOf(parentElementChild) < parentChildNodes.indexOf(child)) {
+      throw new DOMException$1(DOMException$1.HIERARCHY_REQUEST_ERR, "Doctype can only be inserted before an element");
+    }
+  }
 }
-Ve.prototype = {
+function _insertBefore(parent, node, child, _inDocumentAssertion) {
+  assertPreInsertionValidity1to5(parent, node, child);
+  if (parent.nodeType === Node.DOCUMENT_NODE) {
+    (_inDocumentAssertion || assertPreInsertionValidityInDocument)(parent, node, child);
+  }
+  var cp = node.parentNode;
+  if (cp) {
+    cp.removeChild(node);
+  }
+  if (node.nodeType === DOCUMENT_FRAGMENT_NODE) {
+    var newFirst = node.firstChild;
+    if (newFirst == null) {
+      return node;
+    }
+    var newLast = node.lastChild;
+  } else {
+    newFirst = newLast = node;
+  }
+  var pre = child ? child.previousSibling : parent.lastChild;
+  newFirst.previousSibling = pre;
+  newLast.nextSibling = child;
+  if (pre) {
+    pre.nextSibling = newFirst;
+  } else {
+    parent.firstChild = newFirst;
+  }
+  if (child == null) {
+    parent.lastChild = newLast;
+  } else {
+    child.previousSibling = newLast;
+  }
+  do {
+    newFirst.parentNode = parent;
+  } while (newFirst !== newLast && (newFirst = newFirst.nextSibling));
+  _onUpdateChild(parent.ownerDocument || parent, parent, node);
+  if (node.nodeType == DOCUMENT_FRAGMENT_NODE) {
+    node.firstChild = node.lastChild = null;
+  }
+  return node;
+}
+Document.prototype = {
   /**
    * The implementation that created this document.
    *
@@ -6056,7 +7028,7 @@ Ve.prototype = {
    */
   implementation: null,
   nodeName: "#document",
-  nodeType: yt,
+  nodeType: DOCUMENT_NODE,
   /**
    * The DocumentType node of the document.
    *
@@ -6066,22 +7038,39 @@ Ve.prototype = {
   doctype: null,
   documentElement: null,
   _inc: 1,
-  insertBefore: function(t, e) {
-    if (t.nodeType === Je) {
-      for (var r = t.firstChild; r; ) {
-        var a = r.nextSibling;
-        this.insertBefore(r, e), r = a;
+  insertBefore: function(newChild, refChild) {
+    if (newChild.nodeType === DOCUMENT_FRAGMENT_NODE) {
+      var child = newChild.firstChild;
+      while (child) {
+        var next = child.nextSibling;
+        this.insertBefore(child, refChild);
+        child = next;
       }
-      return t;
+      return newChild;
     }
-    return wr(this, t, e), t.ownerDocument = this, this.documentElement === null && t.nodeType === Ae && (this.documentElement = t), t;
+    _insertBefore(this, newChild, refChild);
+    newChild.ownerDocument = this;
+    if (this.documentElement === null && newChild.nodeType === ELEMENT_NODE) {
+      this.documentElement = newChild;
+    }
+    return newChild;
   },
-  removeChild: function(t) {
-    var e = Xo(this, t);
-    return e === this.documentElement && (this.documentElement = null), e;
+  removeChild: function(oldChild) {
+    var removed = _removeChild(this, oldChild);
+    if (removed === this.documentElement) {
+      this.documentElement = null;
+    }
+    return removed;
   },
-  replaceChild: function(t, e) {
-    wr(this, t, e, $o), t.ownerDocument = this, e && this.removeChild(e), qe(t) && (this.documentElement = t);
+  replaceChild: function(newChild, oldChild) {
+    _insertBefore(this, newChild, oldChild, assertPreReplacementValidityInDocument);
+    newChild.ownerDocument = this;
+    if (oldChild) {
+      this.removeChild(oldChild);
+    }
+    if (isElementNode(newChild)) {
+      this.documentElement = newChild;
+    }
   },
   /**
    * Imports a node from another document into this document, creating a new copy owned by this
@@ -6097,16 +7086,21 @@ Ve.prototype = {
    * @see {@link importNode}
    * @see {@link https://dom.spec.whatwg.org/#dom-document-importnode}
    */
-  importNode: function(t, e) {
-    return vl(this, t, e);
+  importNode: function(importedNode, deep) {
+    return importNode(this, importedNode, deep);
   },
   // Introduced in DOM Level 2:
-  getElementById: function(t) {
-    var e = null;
-    return Sr(this.documentElement, function(r) {
-      if (r.nodeType == Ae && r.getAttribute("id") == t)
-        return e = r, !0;
-    }), e;
+  getElementById: function(id) {
+    var rtv = null;
+    _visitNode(this.documentElement, function(node) {
+      if (node.nodeType == ELEMENT_NODE) {
+        if (node.getAttribute("id") == id) {
+          rtv = node;
+          return true;
+        }
+      }
+    });
+    return rtv;
   },
   /**
    * Creates a new `Element` that is owned by this `Document`.
@@ -6126,26 +7120,42 @@ Ve.prototype = {
    * @see https://dom.spec.whatwg.org/#dom-document-createelement
    * @see https://dom.spec.whatwg.org/#concept-create-element
    */
-  createElement: function(t) {
-    var e = new ze(ie);
-    e.ownerDocument = this, this.type === "html" && (t = t.toLowerCase()), ul(this.contentType) && (e.namespaceURI = xe.HTML), e.nodeName = t, e.tagName = t, e.localName = t, e.childNodes = new J();
-    var r = e.attributes = new xt();
-    return r._ownerElement = e, e;
+  createElement: function(tagName) {
+    var node = new Element(PDC);
+    node.ownerDocument = this;
+    if (this.type === "html") {
+      tagName = tagName.toLowerCase();
+    }
+    if (hasDefaultHTMLNamespace$1(this.contentType)) {
+      node.namespaceURI = NAMESPACE$2.HTML;
+    }
+    node.nodeName = tagName;
+    node.tagName = tagName;
+    node.localName = tagName;
+    node.childNodes = new NodeList();
+    var attrs = node.attributes = new NamedNodeMap();
+    attrs._ownerElement = node;
+    return node;
   },
   /**
    * @returns {DocumentFragment}
    */
   createDocumentFragment: function() {
-    var t = new kt(ie);
-    return t.ownerDocument = this, t.childNodes = new J(), t;
+    var node = new DocumentFragment(PDC);
+    node.ownerDocument = this;
+    node.childNodes = new NodeList();
+    return node;
   },
   /**
    * @param {string} data
    * @returns {Text}
    */
-  createTextNode: function(t) {
-    var e = new pr(ie);
-    return e.ownerDocument = this, e.childNodes = new J(), e.appendData(t), e;
+  createTextNode: function(data) {
+    var node = new Text(PDC);
+    node.ownerDocument = this;
+    node.childNodes = new NodeList();
+    node.appendData(data);
+    return node;
   },
   /**
    * @param {string} data
@@ -6160,9 +7170,12 @@ Ve.prototype = {
    *      outside the XML Char production (W3C DOM Parsing §3.2.1.3). Without that option the
    *      data is emitted verbatim.
    */
-  createComment: function(t) {
-    var e = new $r(ie);
-    return e.ownerDocument = this, e.childNodes = new J(), e.appendData(t), e;
+  createComment: function(data) {
+    var node = new Comment(PDC);
+    node.ownerDocument = this;
+    node.childNodes = new NodeList();
+    node.appendData(data);
+    return node;
   },
   /**
    * Returns a new CDATASection node whose data is `data`.
@@ -6177,11 +7190,15 @@ Ve.prototype = {
    * @see https://developer.mozilla.org/en-US/docs/Web/API/Document/createCDATASection
    * @see https://dom.spec.whatwg.org/#dom-document-createcdatasection
    */
-  createCDATASection: function(t) {
-    if (t.indexOf("]]>") !== -1)
-      throw new _(_.INVALID_CHARACTER_ERR, 'data contains "]]>"');
-    var e = new Gr(ie);
-    return e.ownerDocument = this, e.childNodes = new J(), e.appendData(t), e;
+  createCDATASection: function(data) {
+    if (data.indexOf("]]>") !== -1) {
+      throw new DOMException$1(DOMException$1.INVALID_CHARACTER_ERR, 'data contains "]]>"');
+    }
+    var node = new CDATASection(PDC);
+    node.ownerDocument = this;
+    node.childNodes = new NodeList();
+    node.appendData(data);
+    return node;
   },
   /**
    * Returns a ProcessingInstruction node whose target is target and data is data.
@@ -6203,9 +7220,13 @@ Ve.prototype = {
    * @see https://dom.spec.whatwg.org/#dom-document-createprocessinginstruction
    * @see https://www.w3.org/TR/DOM-Parsing/#dfn-concept-serialize-xml §3.2.1.7
    */
-  createProcessingInstruction: function(t, e) {
-    var r = new zr(ie);
-    return r.ownerDocument = this, r.childNodes = new J(), r.nodeName = r.target = t, r.nodeValue = r.data = e, r;
+  createProcessingInstruction: function(target, data) {
+    var node = new ProcessingInstruction(PDC);
+    node.ownerDocument = this;
+    node.childNodes = new NodeList();
+    node.nodeName = node.target = target;
+    node.nodeValue = node.data = data;
+    return node;
   },
   /**
    * Creates an `Attr` node that is owned by this document.
@@ -6221,14 +7242,24 @@ Ve.prototype = {
    * @see https://developer.mozilla.org/en-US/docs/Web/API/Document/createAttribute
    * @see https://dom.spec.whatwg.org/#dom-document-createattribute
    */
-  createAttribute: function(t) {
-    if (!ee.QName_exact.test(t))
-      throw new _(_.INVALID_CHARACTER_ERR, 'invalid character in name "' + t + '"');
-    return this.type === "html" && (t = t.toLowerCase()), this._createAttribute(t);
+  createAttribute: function(name) {
+    if (!g$1.QName_exact.test(name)) {
+      throw new DOMException$1(DOMException$1.INVALID_CHARACTER_ERR, 'invalid character in name "' + name + '"');
+    }
+    if (this.type === "html") {
+      name = name.toLowerCase();
+    }
+    return this._createAttribute(name);
   },
-  _createAttribute: function(t) {
-    var e = new Et(ie);
-    return e.ownerDocument = this, e.childNodes = new J(), e.name = t, e.nodeName = t, e.localName = t, e.specified = !0, e;
+  _createAttribute: function(name) {
+    var node = new Attr(PDC);
+    node.ownerDocument = this;
+    node.childNodes = new NodeList();
+    node.name = name;
+    node.nodeName = name;
+    node.localName = name;
+    node.specified = true;
+    return node;
   },
   /**
    * Creates an EntityReference object.
@@ -6246,13 +7277,18 @@ Ve.prototype = {
    * with code `NOT_SUPPORTED_ERR` when the document is of type `html`
    * @see https://www.w3.org/TR/DOM-Level-3-Core/core.html#ID-392B75AE
    */
-  createEntityReference: function(t) {
-    if (!ee.Name.test(t))
-      throw new _(_.INVALID_CHARACTER_ERR, 'not a valid xml name "' + t + '"');
-    if (this.type === "html")
-      throw new _("document is an html document", _e.NotSupportedError);
-    var e = new Vr(ie);
-    return e.ownerDocument = this, e.childNodes = new J(), e.nodeName = t, e;
+  createEntityReference: function(name) {
+    if (!g$1.Name.test(name)) {
+      throw new DOMException$1(DOMException$1.INVALID_CHARACTER_ERR, 'not a valid xml name "' + name + '"');
+    }
+    if (this.type === "html") {
+      throw new DOMException$1("document is an html document", DOMExceptionName.NotSupportedError);
+    }
+    var node = new EntityReference(PDC);
+    node.ownerDocument = this;
+    node.childNodes = new NodeList();
+    node.nodeName = name;
+    return node;
   },
   // Introduced in DOM Level 2:
   /**
@@ -6260,9 +7296,19 @@ Ve.prototype = {
    * @param {string} qualifiedName
    * @returns {Element}
    */
-  createElementNS: function(t, e) {
-    var r = Aa(t, e), a = new ze(ie), n = a.attributes = new xt();
-    return a.childNodes = new J(), a.ownerDocument = this, a.nodeName = e, a.tagName = e, a.namespaceURI = r[0], a.prefix = r[1], a.localName = r[2], n._ownerElement = a, a;
+  createElementNS: function(namespaceURI, qualifiedName) {
+    var validated = validateAndExtract(namespaceURI, qualifiedName);
+    var node = new Element(PDC);
+    var attrs = node.attributes = new NamedNodeMap();
+    node.childNodes = new NodeList();
+    node.ownerDocument = this;
+    node.nodeName = qualifiedName;
+    node.tagName = qualifiedName;
+    node.namespaceURI = validated[0];
+    node.prefix = validated[1];
+    node.localName = validated[2];
+    attrs._ownerElement = node;
+    return node;
   },
   // Introduced in DOM Level 2:
   /**
@@ -6270,17 +7316,27 @@ Ve.prototype = {
    * @param {string} qualifiedName
    * @returns {Attr}
    */
-  createAttributeNS: function(t, e) {
-    var r = Aa(t, e), a = new Et(ie);
-    return a.ownerDocument = this, a.childNodes = new J(), a.nodeName = e, a.name = e, a.specified = !0, a.namespaceURI = r[0], a.prefix = r[1], a.localName = r[2], a;
+  createAttributeNS: function(namespaceURI, qualifiedName) {
+    var validated = validateAndExtract(namespaceURI, qualifiedName);
+    var node = new Attr(PDC);
+    node.ownerDocument = this;
+    node.childNodes = new NodeList();
+    node.nodeName = qualifiedName;
+    node.name = qualifiedName;
+    node.specified = true;
+    node.namespaceURI = validated[0];
+    node.prefix = validated[1];
+    node.localName = validated[2];
+    return node;
   }
 };
-de(Ve, U);
-function ze(t) {
-  le(t), this._nsMap = /* @__PURE__ */ Object.create(null);
+_extends(Document, Node);
+function Element(symbol) {
+  checkSymbol(symbol);
+  this._nsMap = /* @__PURE__ */ Object.create(null);
 }
-ze.prototype = {
-  nodeType: Ae,
+Element.prototype = {
+  nodeType: ELEMENT_NODE,
   /**
    * The attributes of this element.
    *
@@ -6291,7 +7347,7 @@ ze.prototype = {
     return this.prefix ? this.prefix + ":" + this.localName : this.localName;
   },
   _isInHTMLDocumentAndNamespace: function() {
-    return this.ownerDocument.type === "html" && this.namespaceURI === xe.HTML;
+    return this.ownerDocument.type === "html" && this.namespaceURI === NAMESPACE$2.HTML;
   },
   /**
    * Implementaton of Level2 Core function hasAttributes.
@@ -6303,8 +7359,8 @@ ze.prototype = {
   hasAttributes: function() {
     return !!(this.attributes && this.attributes.length);
   },
-  hasAttribute: function(t) {
-    return !!this.getAttributeNode(t);
+  hasAttribute: function(name) {
+    return !!this.getAttributeNode(name);
   },
   /**
    * Returns element’s first attribute whose qualified name is `name`, and `null`
@@ -6313,12 +7369,15 @@ ze.prototype = {
    * @param {string} name
    * @returns {string | null}
    */
-  getAttribute: function(t) {
-    var e = this.getAttributeNode(t);
-    return e ? e.value : null;
+  getAttribute: function(name) {
+    var attr = this.getAttributeNode(name);
+    return attr ? attr.value : null;
   },
-  getAttributeNode: function(t) {
-    return this._isInHTMLDocumentAndNamespace() && (t = t.toLowerCase()), this.attributes.getNamedItem(t);
+  getAttributeNode: function(name) {
+    if (this._isInHTMLDocumentAndNamespace()) {
+      name = name.toLowerCase();
+    }
+    return this.attributes.getNamedItem(name);
   },
   /**
    * Sets the value of element’s first attribute whose qualified name is qualifiedName to value.
@@ -6326,31 +7385,39 @@ ze.prototype = {
    * @param {string} name
    * @param {string} value
    */
-  setAttribute: function(t, e) {
-    this._isInHTMLDocumentAndNamespace() && (t = t.toLowerCase());
-    var r = this.getAttributeNode(t);
-    r ? r.value = r.nodeValue = "" + e : (r = this.ownerDocument._createAttribute(t), r.value = r.nodeValue = "" + e, this.setAttributeNode(r));
+  setAttribute: function(name, value) {
+    if (this._isInHTMLDocumentAndNamespace()) {
+      name = name.toLowerCase();
+    }
+    var attr = this.getAttributeNode(name);
+    if (attr) {
+      attr.value = attr.nodeValue = "" + value;
+    } else {
+      attr = this.ownerDocument._createAttribute(name);
+      attr.value = attr.nodeValue = "" + value;
+      this.setAttributeNode(attr);
+    }
   },
-  removeAttribute: function(t) {
-    var e = this.getAttributeNode(t);
-    e && this.removeAttributeNode(e);
+  removeAttribute: function(name) {
+    var attr = this.getAttributeNode(name);
+    attr && this.removeAttributeNode(attr);
   },
-  setAttributeNode: function(t) {
-    return this.attributes.setNamedItem(t);
+  setAttributeNode: function(newAttr) {
+    return this.attributes.setNamedItem(newAttr);
   },
-  setAttributeNodeNS: function(t) {
-    return this.attributes.setNamedItemNS(t);
+  setAttributeNodeNS: function(newAttr) {
+    return this.attributes.setNamedItemNS(newAttr);
   },
-  removeAttributeNode: function(t) {
-    return this.attributes.removeNamedItem(t.nodeName);
+  removeAttributeNode: function(oldAttr) {
+    return this.attributes.removeNamedItem(oldAttr.nodeName);
   },
   //get real attribute name,and remove it by removeAttributeNode
-  removeAttributeNS: function(t, e) {
-    var r = this.getAttributeNodeNS(t, e);
-    r && this.removeAttributeNode(r);
+  removeAttributeNS: function(namespaceURI, localName2) {
+    var old = this.getAttributeNodeNS(namespaceURI, localName2);
+    old && this.removeAttributeNode(old);
   },
-  hasAttributeNS: function(t, e) {
-    return this.getAttributeNodeNS(t, e) != null;
+  hasAttributeNS: function(namespaceURI, localName2) {
+    return this.getAttributeNodeNS(namespaceURI, localName2) != null;
   },
   /**
    * Returns element’s attribute whose namespace is `namespaceURI` and local name is
@@ -6361,9 +7428,9 @@ ze.prototype = {
    * @param {string} localName
    * @returns {string | null}
    */
-  getAttributeNS: function(t, e) {
-    var r = this.getAttributeNodeNS(t, e);
-    return r ? r.value : null;
+  getAttributeNS: function(namespaceURI, localName2) {
+    var attr = this.getAttributeNodeNS(namespaceURI, localName2);
+    return attr ? attr.value : null;
   },
   /**
    * Sets the value of element’s attribute whose namespace is `namespaceURI` and local name is
@@ -6374,12 +7441,20 @@ ze.prototype = {
    * @param {string} value
    * @see https://dom.spec.whatwg.org/#dom-element-setattributens
    */
-  setAttributeNS: function(t, e, r) {
-    var a = Aa(t, e), n = a[2], o = this.getAttributeNodeNS(t, n);
-    o ? o.value = o.nodeValue = "" + r : (o = this.ownerDocument.createAttributeNS(t, e), o.value = o.nodeValue = "" + r, this.setAttributeNode(o));
+  setAttributeNS: function(namespaceURI, qualifiedName, value) {
+    var validated = validateAndExtract(namespaceURI, qualifiedName);
+    var localName2 = validated[2];
+    var attr = this.getAttributeNodeNS(namespaceURI, localName2);
+    if (attr) {
+      attr.value = attr.nodeValue = "" + value;
+    } else {
+      attr = this.ownerDocument.createAttributeNS(namespaceURI, qualifiedName);
+      attr.value = attr.nodeValue = "" + value;
+      this.setAttributeNode(attr);
+    }
   },
-  getAttributeNodeNS: function(t, e) {
-    return this.attributes.getNamedItemNS(t, e);
+  getAttributeNodeNS: function(namespaceURI, localName2) {
+    return this.attributes.getNamedItemNS(namespaceURI, localName2);
   },
   /**
    * Returns a LiveNodeList of all child elements which have **all** of the given class name(s).
@@ -6399,23 +7474,28 @@ ze.prototype = {
    * @see https://developer.mozilla.org/en-US/docs/Web/API/Document/getElementsByClassName
    * @see https://dom.spec.whatwg.org/#concept-getelementsbyclassname
    */
-  getElementsByClassName: function(t) {
-    var e = pn(t);
-    return new Ue(this, function(r) {
-      var a = [];
-      return e.length > 0 && Sr(r, function(n) {
-        if (n !== r && n.nodeType === Ae) {
-          var o = n.getAttribute("class");
-          if (o) {
-            var s = t === o;
-            if (!s) {
-              var i = pn(o);
-              s = e.every(_l(i));
+  getElementsByClassName: function(classNames) {
+    var classNamesSet = toOrderedSet(classNames);
+    return new LiveNodeList(this, function(base) {
+      var ls = [];
+      if (classNamesSet.length > 0) {
+        _visitNode(base, function(node) {
+          if (node !== base && node.nodeType === ELEMENT_NODE) {
+            var nodeClassNames = node.getAttribute("class");
+            if (nodeClassNames) {
+              var matches = classNames === nodeClassNames;
+              if (!matches) {
+                var nodeClassNamesSet = toOrderedSet(nodeClassNames);
+                matches = classNamesSet.every(arrayIncludes(nodeClassNamesSet));
+              }
+              if (matches) {
+                ls.push(node);
+              }
             }
-            s && a.push(n);
           }
-        }
-      }), a;
+        });
+      }
+      return ls;
     });
   },
   /**
@@ -6442,426 +7522,603 @@ ze.prototype = {
    * @see https://developer.mozilla.org/en-US/docs/Web/API/Element/getElementsByTagName
    * @see https://dom.spec.whatwg.org/#concept-getelementsbytagname
    */
-  getElementsByTagName: function(t) {
-    var e = (this.nodeType === yt ? this : this.ownerDocument).type === "html", r = t.toLowerCase();
-    return new Ue(this, function(a) {
-      var n = [];
-      return Sr(a, function(o) {
-        if (!(o === a || o.nodeType !== Ae))
-          if (t === "*")
-            n.push(o);
-          else {
-            var s = o.getQualifiedName(), i = e && o.namespaceURI === xe.HTML ? r : t;
-            s === i && n.push(o);
+  getElementsByTagName: function(qualifiedName) {
+    var isHTMLDocument = (this.nodeType === DOCUMENT_NODE ? this : this.ownerDocument).type === "html";
+    var lowerQualifiedName = qualifiedName.toLowerCase();
+    return new LiveNodeList(this, function(base) {
+      var ls = [];
+      _visitNode(base, function(node) {
+        if (node === base || node.nodeType !== ELEMENT_NODE) {
+          return;
+        }
+        if (qualifiedName === "*") {
+          ls.push(node);
+        } else {
+          var nodeQualifiedName = node.getQualifiedName();
+          var matchingQName = isHTMLDocument && node.namespaceURI === NAMESPACE$2.HTML ? lowerQualifiedName : qualifiedName;
+          if (nodeQualifiedName === matchingQName) {
+            ls.push(node);
           }
-      }), n;
+        }
+      });
+      return ls;
     });
   },
-  getElementsByTagNameNS: function(t, e) {
-    return new Ue(this, function(r) {
-      var a = [];
-      return Sr(r, function(n) {
-        n !== r && n.nodeType === Ae && (t === "*" || n.namespaceURI === t) && (e === "*" || n.localName == e) && a.push(n);
-      }), a;
+  getElementsByTagNameNS: function(namespaceURI, localName2) {
+    return new LiveNodeList(this, function(base) {
+      var ls = [];
+      _visitNode(base, function(node) {
+        if (node !== base && node.nodeType === ELEMENT_NODE && (namespaceURI === "*" || node.namespaceURI === namespaceURI) && (localName2 === "*" || node.localName == localName2)) {
+          ls.push(node);
+        }
+      });
+      return ls;
     });
   }
 };
-Ve.prototype.getElementsByClassName = ze.prototype.getElementsByClassName;
-Ve.prototype.getElementsByTagName = ze.prototype.getElementsByTagName;
-Ve.prototype.getElementsByTagNameNS = ze.prototype.getElementsByTagNameNS;
-de(ze, U);
-function Et(t) {
-  le(t), this.namespaceURI = null, this.prefix = null, this.ownerElement = null;
+Document.prototype.getElementsByClassName = Element.prototype.getElementsByClassName;
+Document.prototype.getElementsByTagName = Element.prototype.getElementsByTagName;
+Document.prototype.getElementsByTagNameNS = Element.prototype.getElementsByTagNameNS;
+_extends(Element, Node);
+function Attr(symbol) {
+  checkSymbol(symbol);
+  this.namespaceURI = null;
+  this.prefix = null;
+  this.ownerElement = null;
 }
-Et.prototype.nodeType = Ft;
-de(Et, U);
-function Xt(t) {
-  le(t);
+Attr.prototype.nodeType = ATTRIBUTE_NODE;
+_extends(Attr, Node);
+function CharacterData(symbol) {
+  checkSymbol(symbol);
 }
-Xt.prototype = {
+CharacterData.prototype = {
   data: "",
-  substringData: function(t, e) {
-    return this.data.substring(t, t + e);
+  substringData: function(offset, count) {
+    return this.data.substring(offset, offset + count);
   },
-  appendData: function(t) {
-    t = this.data + t, this.nodeValue = this.data = t, this.length = t.length;
+  appendData: function(text) {
+    text = this.data + text;
+    this.nodeValue = this.data = text;
+    this.length = text.length;
   },
-  insertData: function(t, e) {
-    this.replaceData(t, 0, e);
+  insertData: function(offset, text) {
+    this.replaceData(offset, 0, text);
   },
-  deleteData: function(t, e) {
-    this.replaceData(t, e, "");
+  deleteData: function(offset, count) {
+    this.replaceData(offset, count, "");
   },
-  replaceData: function(t, e, r) {
-    var a = this.data.substring(0, t), n = this.data.substring(t + e);
-    r = a + r + n, this.nodeValue = this.data = r, this.length = r.length;
+  replaceData: function(offset, count, text) {
+    var start = this.data.substring(0, offset);
+    var end = this.data.substring(offset + count);
+    text = start + text + end;
+    this.nodeValue = this.data = text;
+    this.length = text.length;
   }
 };
-de(Xt, U);
-function pr(t) {
-  le(t);
+_extends(CharacterData, Node);
+function Text(symbol) {
+  checkSymbol(symbol);
 }
-pr.prototype = {
+Text.prototype = {
   nodeName: "#text",
-  nodeType: Ur,
-  splitText: function(t) {
-    var e = this.data, r = e.substring(t);
-    e = e.substring(0, t), this.data = this.nodeValue = e, this.length = e.length;
-    var a = this.ownerDocument.createTextNode(r);
-    return this.parentNode && this.parentNode.insertBefore(a, this.nextSibling), a;
+  nodeType: TEXT_NODE,
+  splitText: function(offset) {
+    var text = this.data;
+    var newText = text.substring(offset);
+    text = text.substring(0, offset);
+    this.data = this.nodeValue = text;
+    this.length = text.length;
+    var newNode = this.ownerDocument.createTextNode(newText);
+    if (this.parentNode) {
+      this.parentNode.insertBefore(newNode, this.nextSibling);
+    }
+    return newNode;
   }
 };
-de(pr, Xt);
-function $r(t) {
-  le(t);
+_extends(Text, CharacterData);
+function Comment(symbol) {
+  checkSymbol(symbol);
 }
-$r.prototype = {
+Comment.prototype = {
   nodeName: "#comment",
-  nodeType: Ua
+  nodeType: COMMENT_NODE
 };
-de($r, Xt);
-function Gr(t) {
-  le(t);
+_extends(Comment, CharacterData);
+function CDATASection(symbol) {
+  checkSymbol(symbol);
 }
-Gr.prototype = {
+CDATASection.prototype = {
   nodeName: "#cdata-section",
-  nodeType: yo
+  nodeType: CDATA_SECTION_NODE
 };
-de(Gr, pr);
-function qr(t) {
-  le(t);
+_extends(CDATASection, Text);
+function DocumentType(symbol) {
+  checkSymbol(symbol);
 }
-qr.prototype.nodeType = Uo;
-de(qr, U);
-function wa(t) {
-  le(t);
+DocumentType.prototype.nodeType = DOCUMENT_TYPE_NODE;
+_extends(DocumentType, Node);
+function Notation(symbol) {
+  checkSymbol(symbol);
 }
-wa.prototype.nodeType = Nl;
-de(wa, U);
-function Fa(t) {
-  le(t);
+Notation.prototype.nodeType = NOTATION_NODE;
+_extends(Notation, Node);
+function Entity(symbol) {
+  checkSymbol(symbol);
 }
-Fa.prototype.nodeType = fl;
-de(Fa, U);
-function Vr(t) {
-  le(t);
+Entity.prototype.nodeType = ENTITY_NODE;
+_extends(Entity, Node);
+function EntityReference(symbol) {
+  checkSymbol(symbol);
 }
-Vr.prototype.nodeType = bo;
-de(Vr, U);
-function kt(t) {
-  le(t);
+EntityReference.prototype.nodeType = ENTITY_REFERENCE_NODE;
+_extends(EntityReference, Node);
+function DocumentFragment(symbol) {
+  checkSymbol(symbol);
 }
-kt.prototype.nodeName = "#document-fragment";
-kt.prototype.nodeType = Je;
-de(kt, U);
-function zr(t) {
-  le(t);
+DocumentFragment.prototype.nodeName = "#document-fragment";
+DocumentFragment.prototype.nodeType = DOCUMENT_FRAGMENT_NODE;
+_extends(DocumentFragment, Node);
+function ProcessingInstruction(symbol) {
+  checkSymbol(symbol);
 }
-zr.prototype.nodeType = ba;
-de(zr, Xt);
-function Go() {
+ProcessingInstruction.prototype.nodeType = PROCESSING_INSTRUCTION_NODE;
+_extends(ProcessingInstruction, CharacterData);
+function XMLSerializer() {
 }
-Go.prototype.serializeToString = function(t, e) {
-  return qo.call(t, e);
+XMLSerializer.prototype.serializeToString = function(node, options2) {
+  return nodeSerializeToString.call(node, options2);
 };
-U.prototype.toString = qo;
-function qo(t) {
-  var e;
-  typeof t == "function" ? e = { requireWellFormed: !1, splitCDATASections: !0, nodeFilter: t } : t != null ? e = {
-    requireWellFormed: !!t.requireWellFormed,
-    splitCDATASections: t.splitCDATASections !== !1,
-    nodeFilter: t.nodeFilter || null
-  } : e = { requireWellFormed: !1, splitCDATASections: !0, nodeFilter: null };
-  var r = [], a = this.nodeType === yt && this.documentElement || this, n = a.prefix, o = a.namespaceURI;
-  if (o && n == null) {
-    var n = a.lookupPrefix(o);
-    if (n == null)
-      var s = [
-        { namespace: o, prefix: null }
+Node.prototype.toString = nodeSerializeToString;
+function nodeSerializeToString(options2) {
+  var opts;
+  if (typeof options2 === "function") {
+    opts = { requireWellFormed: false, splitCDATASections: true, nodeFilter: options2 };
+  } else if (options2 != null) {
+    opts = {
+      requireWellFormed: !!options2.requireWellFormed,
+      splitCDATASections: options2.splitCDATASections !== false,
+      nodeFilter: options2.nodeFilter || null
+    };
+  } else {
+    opts = { requireWellFormed: false, splitCDATASections: true, nodeFilter: null };
+  }
+  var buf = [];
+  var refNode = this.nodeType === DOCUMENT_NODE && this.documentElement || this;
+  var prefix = refNode.prefix;
+  var uri = refNode.namespaceURI;
+  if (uri && prefix == null) {
+    var prefix = refNode.lookupPrefix(uri);
+    if (prefix == null) {
+      var visibleNamespaces = [
+        { namespace: uri, prefix: null }
         //{namespace:uri,prefix:''}
       ];
+    }
   }
-  return xa(this, r, s, e), r.join("");
+  serializeToString(this, buf, visibleNamespaces, opts);
+  return buf.join("");
 }
-function gn(t, e, r) {
-  var a = t.prefix || "", n = t.namespaceURI;
-  if (!n || a === "xml" && n === xe.XML || n === xe.XMLNS)
-    return !1;
-  for (var o = r.length; o--; ) {
-    var s = r[o];
-    if (s.prefix === a)
-      return s.namespace !== n;
+function needNamespaceDefine(node, isHTML, visibleNamespaces) {
+  var prefix = node.prefix || "";
+  var uri = node.namespaceURI;
+  if (!uri) {
+    return false;
   }
-  return !0;
+  if (prefix === "xml" && uri === NAMESPACE$2.XML || uri === NAMESPACE$2.XMLNS) {
+    return false;
+  }
+  var i = visibleNamespaces.length;
+  while (i--) {
+    var ns = visibleNamespaces[i];
+    if (ns.prefix === prefix) {
+      return ns.namespace !== uri;
+    }
+  }
+  return true;
 }
-function Ar(t, e, r) {
-  t.push(" ", e, '="', r.replace(/[<>&"\t\n\r]/g, Mo), '"');
+function addSerializedAttribute(buf, qualifiedName, value) {
+  buf.push(" ", qualifiedName, '="', value.replace(/[<>&"\t\n\r]/g, _xmlEncoder), '"');
 }
-function xa(t, e, r, a) {
-  r || (r = []);
-  var n = a.nodeFilter, o = a.requireWellFormed, s = a.splitCDATASections, i = t.nodeType === yt ? t : t.ownerDocument, c = i.type === "html";
-  te(
-    t,
-    { ns: r },
+function serializeToString(node, buf, visibleNamespaces, opts) {
+  if (!visibleNamespaces) {
+    visibleNamespaces = [];
+  }
+  var nodeFilter = opts.nodeFilter;
+  var requireWellFormed = opts.requireWellFormed;
+  var splitCDATASections = opts.splitCDATASections;
+  var doc = node.nodeType === DOCUMENT_NODE ? node : node.ownerDocument;
+  var isHTML = doc.type === "html";
+  walkDOM(
+    node,
+    { ns: visibleNamespaces },
     {
-      enter: function(u, l) {
-        var E = l.ns;
-        if (n)
-          if (u = n(u), u) {
-            if (typeof u == "string")
-              return e.push(u), null;
-          } else
+      enter: function(n, ctx) {
+        var namespaces = ctx.ns;
+        if (nodeFilter) {
+          n = nodeFilter(n);
+          if (n) {
+            if (typeof n == "string") {
+              buf.push(n);
+              return null;
+            }
+          } else {
             return null;
-        switch (u.nodeType) {
-          case Ae:
-            var m = u.attributes, T = m.length, h = u.tagName, g = h;
-            if (!c && !u.prefix && u.namespaceURI) {
-              for (var y, P = 0; P < m.length; P++)
-                if (m.item(P).name === "xmlns") {
-                  y = m.item(P).value;
+          }
+        }
+        switch (n.nodeType) {
+          case ELEMENT_NODE:
+            var attrs = n.attributes;
+            var len = attrs.length;
+            var nodeName = n.tagName;
+            var prefixedNodeName = nodeName;
+            if (!isHTML && !n.prefix && n.namespaceURI) {
+              var defaultNS;
+              for (var ai = 0; ai < attrs.length; ai++) {
+                if (attrs.item(ai).name === "xmlns") {
+                  defaultNS = attrs.item(ai).value;
                   break;
                 }
-              if (!y)
-                for (var Y = E.length - 1; Y >= 0; Y--) {
-                  var re = E[Y];
-                  if (re.prefix === "" && re.namespace === u.namespaceURI) {
-                    y = re.namespace;
-                    break;
-                  }
-                }
-              if (y !== u.namespaceURI)
-                for (var Y = E.length - 1; Y >= 0; Y--) {
-                  var re = E[Y];
-                  if (re.namespace === u.namespaceURI) {
-                    re.prefix && (g = re.prefix + ":" + h);
-                    break;
-                  }
-                }
-            }
-            e.push("<", g);
-            for (var B = E.slice(), X = 0; X < T; X++) {
-              var K = m.item(X);
-              K.prefix == "xmlns" ? B.push({
-                prefix: K.localName,
-                namespace: K.value
-              }) : K.nodeName == "xmlns" && B.push({ prefix: "", namespace: K.value });
-            }
-            for (var X = 0; X < T; X++) {
-              var K = m.item(X);
-              if (gn(K, c, B)) {
-                var W = K.prefix || "", Oe = K.namespaceURI;
-                Ar(e, W ? "xmlns:" + W : "xmlns", Oe), B.push({ prefix: W, namespace: Oe });
               }
-              var Se = n ? n(K) : K;
-              Se && (typeof Se == "string" ? e.push(Se) : Ar(e, Se.name, Se.value));
+              if (!defaultNS) {
+                for (var nsi = namespaces.length - 1; nsi >= 0; nsi--) {
+                  var nsEntry = namespaces[nsi];
+                  if (nsEntry.prefix === "" && nsEntry.namespace === n.namespaceURI) {
+                    defaultNS = nsEntry.namespace;
+                    break;
+                  }
+                }
+              }
+              if (defaultNS !== n.namespaceURI) {
+                for (var nsi = namespaces.length - 1; nsi >= 0; nsi--) {
+                  var nsEntry = namespaces[nsi];
+                  if (nsEntry.namespace === n.namespaceURI) {
+                    if (nsEntry.prefix) {
+                      prefixedNodeName = nsEntry.prefix + ":" + nodeName;
+                    }
+                    break;
+                  }
+                }
+              }
             }
-            if (h === g && gn(u, c, B)) {
-              var Me = u.prefix || "", Oe = u.namespaceURI;
-              Ar(e, Me ? "xmlns:" + Me : "xmlns", Oe), B.push({ prefix: Me, namespace: Oe });
+            buf.push("<", prefixedNodeName);
+            var childNamespaces = namespaces.slice();
+            for (var i = 0; i < len; i++) {
+              var attr = attrs.item(i);
+              if (attr.prefix == "xmlns") {
+                childNamespaces.push({
+                  prefix: attr.localName,
+                  namespace: attr.value
+                });
+              } else if (attr.nodeName == "xmlns") {
+                childNamespaces.push({ prefix: "", namespace: attr.value });
+              }
             }
-            var S = !u.firstChild;
-            if (S && (c || u.namespaceURI === xe.HTML) && (S = El(h)), S)
-              return e.push("/>"), null;
-            if (e.push(">"), c && dl(h)) {
-              for (var k = u.firstChild; k; )
-                k.data ? e.push(k.data) : xa(k, e, B.slice(), a), k = k.nextSibling;
-              return e.push("</", g, ">"), null;
+            for (var i = 0; i < len; i++) {
+              var attr = attrs.item(i);
+              if (needNamespaceDefine(attr, isHTML, childNamespaces)) {
+                var attrPrefix = attr.prefix || "";
+                var uri = attr.namespaceURI;
+                addSerializedAttribute(buf, attrPrefix ? "xmlns:" + attrPrefix : "xmlns", uri);
+                childNamespaces.push({ prefix: attrPrefix, namespace: uri });
+              }
+              var filteredAttr = nodeFilter ? nodeFilter(attr) : attr;
+              if (filteredAttr) {
+                if (typeof filteredAttr === "string") {
+                  buf.push(filteredAttr);
+                } else {
+                  addSerializedAttribute(buf, filteredAttr.name, filteredAttr.value);
+                }
+              }
             }
-            return { ns: B, tag: g };
-          case yt:
-          case Je:
-            if (o && u.nodeType === yt && u.documentElement == null)
-              throw new _("The Document has no documentElement", _e.InvalidStateError);
-            return { ns: E };
-          case Ft:
-            return Ar(e, u.name, u.value), null;
-          case Ur:
-            if (o && ee.InvalidChar.test(u.data))
-              throw new _(
+            if (nodeName === prefixedNodeName && needNamespaceDefine(n, isHTML, childNamespaces)) {
+              var nodePrefix = n.prefix || "";
+              var uri = n.namespaceURI;
+              addSerializedAttribute(buf, nodePrefix ? "xmlns:" + nodePrefix : "xmlns", uri);
+              childNamespaces.push({ prefix: nodePrefix, namespace: uri });
+            }
+            var canCloseTag = !n.firstChild;
+            if (canCloseTag && (isHTML || n.namespaceURI === NAMESPACE$2.HTML)) {
+              canCloseTag = isHTMLVoidElement(nodeName);
+            }
+            if (canCloseTag) {
+              buf.push("/>");
+              return null;
+            }
+            buf.push(">");
+            if (isHTML && isHTMLRawTextElement$1(nodeName)) {
+              var child = n.firstChild;
+              while (child) {
+                if (child.data) {
+                  buf.push(child.data);
+                } else {
+                  serializeToString(child, buf, childNamespaces.slice(), opts);
+                }
+                child = child.nextSibling;
+              }
+              buf.push("</", prefixedNodeName, ">");
+              return null;
+            }
+            return { ns: childNamespaces, tag: prefixedNodeName };
+          case DOCUMENT_NODE:
+          case DOCUMENT_FRAGMENT_NODE:
+            if (requireWellFormed && n.nodeType === DOCUMENT_NODE && n.documentElement == null) {
+              throw new DOMException$1("The Document has no documentElement", DOMExceptionName.InvalidStateError);
+            }
+            return { ns: namespaces };
+          case ATTRIBUTE_NODE:
+            addSerializedAttribute(buf, n.name, n.value);
+            return null;
+          case TEXT_NODE:
+            if (requireWellFormed && g$1.InvalidChar.test(n.data)) {
+              throw new DOMException$1(
                 "The Text node data contains characters outside the XML Char production",
-                _e.InvalidStateError
+                DOMExceptionName.InvalidStateError
               );
-            return e.push(u.data.replace(/[<&>]/g, Mo)), null;
-          case yo:
-            if (o && u.data.indexOf("]]>") !== -1)
-              throw new _('The CDATASection data contains "]]>"', _e.InvalidStateError);
-            return s ? e.push(ee.CDATA_START, u.data.replace(/]]>/g, "]]]]><![CDATA[>"), ee.CDATA_END) : e.push(ee.CDATA_START, u.data, ee.CDATA_END), null;
-          case Ua:
-            if (o) {
-              if (ee.InvalidChar.test(u.data))
-                throw new _(
+            }
+            buf.push(n.data.replace(/[<&>]/g, _xmlEncoder));
+            return null;
+          case CDATA_SECTION_NODE:
+            if (requireWellFormed && n.data.indexOf("]]>") !== -1) {
+              throw new DOMException$1('The CDATASection data contains "]]>"', DOMExceptionName.InvalidStateError);
+            }
+            if (splitCDATASections) {
+              buf.push(g$1.CDATA_START, n.data.replace(/]]>/g, "]]]]><![CDATA[>"), g$1.CDATA_END);
+            } else {
+              buf.push(g$1.CDATA_START, n.data, g$1.CDATA_END);
+            }
+            return null;
+          case COMMENT_NODE:
+            if (requireWellFormed) {
+              if (g$1.InvalidChar.test(n.data)) {
+                throw new DOMException$1(
                   "The comment node data contains characters outside the XML Char production",
-                  _e.InvalidStateError
+                  DOMExceptionName.InvalidStateError
                 );
-              if (u.data.indexOf("--") !== -1 || u.data[u.data.length - 1] === "-")
-                throw new _(
+              }
+              if (n.data.indexOf("--") !== -1 || n.data[n.data.length - 1] === "-") {
+                throw new DOMException$1(
                   'The comment node data contains "--" or ends with "-"',
-                  _e.InvalidStateError
+                  DOMExceptionName.InvalidStateError
                 );
+              }
             }
-            return e.push(ee.COMMENT_START, u.data, ee.COMMENT_END), null;
-          case Uo:
-            var ye = u.publicId, G = u.systemId;
-            if (o) {
-              if (ye && !ee.PubidLiteral_match.test(ye))
-                throw new _("DocumentType publicId is not a valid PubidLiteral", _e.InvalidStateError);
-              if (G && G !== "." && !ee.SystemLiteral_match.test(G))
-                throw new _("DocumentType systemId is not a valid SystemLiteral", _e.InvalidStateError);
-              if (u.internalSubset && u.internalSubset.indexOf("]>") !== -1)
-                throw new _('DocumentType internalSubset contains "]>"', _e.InvalidStateError);
+            buf.push(g$1.COMMENT_START, n.data, g$1.COMMENT_END);
+            return null;
+          case DOCUMENT_TYPE_NODE:
+            var pubid = n.publicId;
+            var sysid = n.systemId;
+            if (requireWellFormed) {
+              if (pubid && !g$1.PubidLiteral_match.test(pubid)) {
+                throw new DOMException$1("DocumentType publicId is not a valid PubidLiteral", DOMExceptionName.InvalidStateError);
+              }
+              if (sysid && sysid !== "." && !g$1.SystemLiteral_match.test(sysid)) {
+                throw new DOMException$1("DocumentType systemId is not a valid SystemLiteral", DOMExceptionName.InvalidStateError);
+              }
+              if (n.internalSubset && n.internalSubset.indexOf("]>") !== -1) {
+                throw new DOMException$1('DocumentType internalSubset contains "]>"', DOMExceptionName.InvalidStateError);
+              }
             }
-            return e.push(ee.DOCTYPE_DECL_START, " ", u.name), ye ? (e.push(" ", ee.PUBLIC, " ", ye), G && G !== "." && e.push(" ", G)) : G && G !== "." && e.push(" ", ee.SYSTEM, " ", G), u.internalSubset && e.push(" [", u.internalSubset, "]"), e.push(">"), null;
-          case ba:
-            if (o) {
-              if (u.target.indexOf(":") !== -1 || u.target.toLowerCase() === "xml")
-                throw new _("The ProcessingInstruction target is not well-formed", _e.InvalidStateError);
-              if (ee.InvalidChar.test(u.data))
-                throw new _(
+            buf.push(g$1.DOCTYPE_DECL_START, " ", n.name);
+            if (pubid) {
+              buf.push(" ", g$1.PUBLIC, " ", pubid);
+              if (sysid && sysid !== ".") {
+                buf.push(" ", sysid);
+              }
+            } else if (sysid && sysid !== ".") {
+              buf.push(" ", g$1.SYSTEM, " ", sysid);
+            }
+            if (n.internalSubset) {
+              buf.push(" [", n.internalSubset, "]");
+            }
+            buf.push(">");
+            return null;
+          case PROCESSING_INSTRUCTION_NODE:
+            if (requireWellFormed) {
+              if (n.target.indexOf(":") !== -1 || n.target.toLowerCase() === "xml") {
+                throw new DOMException$1("The ProcessingInstruction target is not well-formed", DOMExceptionName.InvalidStateError);
+              }
+              if (g$1.InvalidChar.test(n.data)) {
+                throw new DOMException$1(
                   "The ProcessingInstruction data contains characters outside the XML Char production",
-                  _e.InvalidStateError
+                  DOMExceptionName.InvalidStateError
                 );
-              if (u.data.indexOf("?>") !== -1)
-                throw new _('The ProcessingInstruction data contains "?>"', _e.InvalidStateError);
+              }
+              if (n.data.indexOf("?>") !== -1) {
+                throw new DOMException$1('The ProcessingInstruction data contains "?>"', DOMExceptionName.InvalidStateError);
+              }
             }
-            return e.push("<?", u.target, " ", u.data, "?>"), null;
-          case bo:
-            return e.push("&", u.nodeName, ";"), null;
+            buf.push("<?", n.target, " ", n.data, "?>");
+            return null;
+          case ENTITY_REFERENCE_NODE:
+            buf.push("&", n.nodeName, ";");
+            return null;
           default:
-            return e.push("??", u.nodeName), null;
+            buf.push("??", n.nodeName);
+            return null;
         }
       },
-      exit: function(u, l) {
-        l && l.tag && e.push("</", l.tag, ">");
+      exit: function(n, childCtx) {
+        if (childCtx && childCtx.tag) {
+          buf.push("</", childCtx.tag, ">");
+        }
       }
     }
   );
 }
-function vl(t, e, r) {
-  var a;
-  return te(e, null, {
-    enter: function(n, o) {
-      var s = n.cloneNode(!1);
-      s.ownerDocument = t, s.parentNode = null, o === null ? a = s : o.appendChild(s);
-      var i = n.nodeType === Ft || r;
-      return i ? s : null;
-    }
-  }), a;
-}
-function Vo(t, e, r) {
-  var a;
-  return te(e, null, {
-    enter: function(n, o) {
-      var s = new n.constructor(ie);
-      for (var i in n)
-        if (wt(n, i)) {
-          var c = n[i];
-          typeof c != "object" && c != s[i] && (s[i] = c);
-        }
-      n.childNodes && (s.childNodes = new J()), s.ownerDocument = t;
-      var u = r;
-      switch (s.nodeType) {
-        case Ae:
-          var l = n.attributes, E = s.attributes = new xt(), m = l.length;
-          E._ownerElement = s;
-          for (var T = 0; T < m; T++)
-            s.setAttributeNode(Vo(t, l.item(T), !0));
-          break;
-        case Ft:
-          u = !0;
+function importNode(doc, node, deep) {
+  var destRoot;
+  walkDOM(node, null, {
+    enter: function(srcNode, destParent) {
+      var destNode = srcNode.cloneNode(false);
+      destNode.ownerDocument = doc;
+      destNode.parentNode = null;
+      if (destParent === null) {
+        destRoot = destNode;
+      } else {
+        destParent.appendChild(destNode);
       }
-      return o !== null ? o.appendChild(s) : a = s, u ? s : null;
+      var shouldDeep = srcNode.nodeType === ATTRIBUTE_NODE || deep;
+      return shouldDeep ? destNode : null;
     }
-  }), a;
+  });
+  return destRoot;
 }
-function zo(t, e, r) {
-  t[e] = r;
+function cloneNode(doc, node, deep) {
+  var destRoot;
+  walkDOM(node, null, {
+    enter: function(srcNode, destParent) {
+      var destNode = new srcNode.constructor(PDC);
+      for (var n in srcNode) {
+        if (hasOwn$1(srcNode, n)) {
+          var v = srcNode[n];
+          if (typeof v != "object") {
+            if (v != destNode[n]) {
+              destNode[n] = v;
+            }
+          }
+        }
+      }
+      if (srcNode.childNodes) {
+        destNode.childNodes = new NodeList();
+      }
+      destNode.ownerDocument = doc;
+      var shouldDeep = deep;
+      switch (destNode.nodeType) {
+        case ELEMENT_NODE:
+          var attrs = srcNode.attributes;
+          var attrs2 = destNode.attributes = new NamedNodeMap();
+          var len = attrs.length;
+          attrs2._ownerElement = destNode;
+          for (var i = 0; i < len; i++) {
+            destNode.setAttributeNode(cloneNode(doc, attrs.item(i), true));
+          }
+          break;
+        case ATTRIBUTE_NODE:
+          shouldDeep = true;
+      }
+      if (destParent !== null) {
+        destParent.appendChild(destNode);
+      } else {
+        destRoot = destNode;
+      }
+      return shouldDeep ? destNode : null;
+    }
+  });
+  return destRoot;
 }
-function ra(t) {
-  for (var e = [], r = t.firstChild; r; )
-    r.nodeType === Ae && e.push(r), r = r.nextSibling;
-  return e;
+function __set__(object, key, value) {
+  object[key] = value;
+}
+function childrenRefresh(node) {
+  var ls = [];
+  var child = node.firstChild;
+  while (child) {
+    if (child.nodeType === ELEMENT_NODE) {
+      ls.push(child);
+    }
+    child = child.nextSibling;
+  }
+  return ls;
 }
 try {
-  Object.defineProperty && (Object.defineProperty(Ue.prototype, "length", {
-    get: function() {
-      return kr(this), this.$$length;
-    }
-  }), Object.defineProperty(U.prototype, "textContent", {
-    get: function() {
-      if (this.nodeType === Ae || this.nodeType === Je) {
-        var t = [];
-        return te(this, null, {
-          enter: function(e) {
-            if (e.nodeType === Ae || e.nodeType === Je)
-              return !0;
-            if (e.nodeType === ba || e.nodeType === Ua)
-              return null;
-            t.push(e.nodeValue);
-          }
-        }), t.join("");
+  if (Object.defineProperty) {
+    Object.defineProperty(LiveNodeList.prototype, "length", {
+      get: function() {
+        _updateLiveList(this);
+        return this.$$length;
       }
-      return this.nodeValue;
-    },
-    set: function(t) {
-      switch (this.nodeType) {
-        case Ae:
-        case Je:
-          for (; this.firstChild; )
-            this.removeChild(this.firstChild);
-          (t || String(t)) && this.appendChild(this.ownerDocument.createTextNode(t));
-          break;
-        default:
-          this.data = t, this.value = t, this.nodeValue = t;
+    });
+    Object.defineProperty(Node.prototype, "textContent", {
+      get: function() {
+        if (this.nodeType === ELEMENT_NODE || this.nodeType === DOCUMENT_FRAGMENT_NODE) {
+          var buf = [];
+          walkDOM(this, null, {
+            enter: function(n) {
+              if (n.nodeType === ELEMENT_NODE || n.nodeType === DOCUMENT_FRAGMENT_NODE) {
+                return true;
+              }
+              if (n.nodeType === PROCESSING_INSTRUCTION_NODE || n.nodeType === COMMENT_NODE) {
+                return null;
+              }
+              buf.push(n.nodeValue);
+            }
+          });
+          return buf.join("");
+        }
+        return this.nodeValue;
+      },
+      set: function(data) {
+        switch (this.nodeType) {
+          case ELEMENT_NODE:
+          case DOCUMENT_FRAGMENT_NODE:
+            while (this.firstChild) {
+              this.removeChild(this.firstChild);
+            }
+            if (data || String(data)) {
+              this.appendChild(this.ownerDocument.createTextNode(data));
+            }
+            break;
+          default:
+            this.data = data;
+            this.value = data;
+            this.nodeValue = data;
+        }
       }
-    }
-  }), Object.defineProperty(ze.prototype, "children", {
-    get: function() {
-      return new Ue(this, ra);
-    }
-  }), Object.defineProperty(Ve.prototype, "children", {
-    get: function() {
-      return new Ue(this, ra);
-    }
-  }), Object.defineProperty(kt.prototype, "children", {
-    get: function() {
-      return new Ue(this, ra);
-    }
-  }), zo = function(t, e, r) {
-    t["$$" + e] = r;
-  });
-} catch {
+    });
+    Object.defineProperty(Element.prototype, "children", {
+      get: function() {
+        return new LiveNodeList(this, childrenRefresh);
+      }
+    });
+    Object.defineProperty(Document.prototype, "children", {
+      get: function() {
+        return new LiveNodeList(this, childrenRefresh);
+      }
+    });
+    Object.defineProperty(DocumentFragment.prototype, "children", {
+      get: function() {
+        return new LiveNodeList(this, childrenRefresh);
+      }
+    });
+    __set__ = function(object, key, value) {
+      object["$$" + key] = value;
+    };
+  }
+} catch (e) {
 }
-j._updateLiveList = kr;
-j.Attr = Et;
-j.CDATASection = Gr;
-j.CharacterData = Xt;
-j.Comment = $r;
-j.Document = Ve;
-j.DocumentFragment = kt;
-j.DocumentType = qr;
-j.DOMImplementation = xo;
-j.Element = ze;
-j.Entity = Fa;
-j.EntityReference = Vr;
-j.LiveNodeList = Ue;
-j.NamedNodeMap = xt;
-j.Node = U;
-j.NodeList = J;
-j.Notation = wa;
-j.Text = pr;
-j.ProcessingInstruction = zr;
-j.walkDOM = te;
-j.XMLSerializer = Go;
-var $t = {}, Ho = {};
-(function(t) {
-  var e = H.freeze;
-  t.XML_ENTITIES = e({
+dom$1._updateLiveList = _updateLiveList;
+dom$1.Attr = Attr;
+dom$1.CDATASection = CDATASection;
+dom$1.CharacterData = CharacterData;
+dom$1.Comment = Comment;
+dom$1.Document = Document;
+dom$1.DocumentFragment = DocumentFragment;
+dom$1.DocumentType = DocumentType;
+dom$1.DOMImplementation = DOMImplementation$1;
+dom$1.Element = Element;
+dom$1.Entity = Entity;
+dom$1.EntityReference = EntityReference;
+dom$1.LiveNodeList = LiveNodeList;
+dom$1.NamedNodeMap = NamedNodeMap;
+dom$1.Node = Node;
+dom$1.NodeList = NodeList;
+dom$1.Notation = Notation;
+dom$1.Text = Text;
+dom$1.ProcessingInstruction = ProcessingInstruction;
+dom$1.walkDOM = walkDOM;
+dom$1.XMLSerializer = XMLSerializer;
+var domParser$1 = {};
+var entities$1 = {};
+(function(exports$1) {
+  var freeze2 = conventions$5.freeze;
+  exports$1.XML_ENTITIES = freeze2({
     amp: "&",
     apos: "'",
     gt: ">",
     lt: "<",
     quot: '"'
-  }), t.HTML_ENTITIES = e({
+  });
+  exports$1.HTML_ENTITIES = freeze2({
     Aacute: "Á",
     aacute: "á",
     Abreve: "Ă",
@@ -7971,8 +9228,7 @@ var $t = {}, Ho = {};
     nesim: "≂̸",
     NestedGreaterGreater: "≫",
     NestedLessLess: "≪",
-    NewLine: `
-`,
+    NewLine: "\n",
     nexist: "∄",
     nexists: "∄",
     Nfr: "𝔑",
@@ -8988,450 +10244,736 @@ var $t = {}, Ho = {};
     zscr: "𝓏",
     zwj: "‍",
     zwnj: "‌"
-  }), t.entityMap = t.HTML_ENTITIES;
-})(Ho);
-var Hr = {}, Gt = H, v = C, jo = Tt, Sl = Gt.isHTMLEscapableRawTextElement, Rl = Gt.isHTMLMimeType, Ll = Gt.isHTMLRawTextElement, ur = Gt.hasOwn, An = Gt.NAMESPACE, hn = jo.ParseError, Ol = jo.DOMException, jt = 0, Ye = 1, Nt = 2, Yt = 3, gt = 4, At = 5, Kt = 6, hr = 7;
-function Yo() {
+  });
+  exports$1.entityMap = exports$1.HTML_ENTITIES;
+})(entities$1);
+var sax$1 = {};
+var conventions$2 = conventions$5;
+var g = grammar;
+var errors$1 = errors$3;
+var isHTMLEscapableRawTextElement = conventions$2.isHTMLEscapableRawTextElement;
+var isHTMLMimeType$1 = conventions$2.isHTMLMimeType;
+var isHTMLRawTextElement = conventions$2.isHTMLRawTextElement;
+var hasOwn = conventions$2.hasOwn;
+var NAMESPACE$1 = conventions$2.NAMESPACE;
+var ParseError$1 = errors$1.ParseError;
+var DOMException = errors$1.DOMException;
+var S_TAG = 0;
+var S_ATTR = 1;
+var S_ATTR_SPACE = 2;
+var S_EQ = 3;
+var S_ATTR_NOQUOT_VALUE = 4;
+var S_ATTR_END = 5;
+var S_TAG_SPACE = 6;
+var S_TAG_CLOSE = 7;
+function XMLReader$1() {
 }
-Yo.prototype = {
-  parse: function(t, e, r) {
-    var a = this.domBuilder;
-    a.startDocument(), Ko(e, e = /* @__PURE__ */ Object.create(null)), yl(t, e, r, a, this.errorHandler), a.endDocument();
+XMLReader$1.prototype = {
+  parse: function(source, defaultNSMap, entityMap) {
+    var domBuilder = this.domBuilder;
+    domBuilder.startDocument();
+    _copy(defaultNSMap, defaultNSMap = /* @__PURE__ */ Object.create(null));
+    parse(source, defaultNSMap, entityMap, domBuilder, this.errorHandler);
+    domBuilder.endDocument();
   }
 };
-var Ma = /&#?\w+;?/g;
-function yl(t, e, r, a, n) {
-  var o = Rl(a.mimeType);
-  t.indexOf(v.UNICODE_REPLACEMENT_CHARACTER) >= 0 && n.warning("Unicode replacement character detected, source encoding issues?");
-  function s(w) {
-    if (w > 65535) {
-      w -= 65536;
-      var Te = 55296 + (w >> 10), Tr = 56320 + (w & 1023);
-      return String.fromCharCode(Te, Tr);
-    } else
-      return String.fromCharCode(w);
+var ENTITY_REG = /&#?\w+;?/g;
+function parse(source, defaultNSMapCopy, entityMap, domBuilder, errorHandler) {
+  var isHTML = isHTMLMimeType$1(domBuilder.mimeType);
+  if (source.indexOf(g.UNICODE_REPLACEMENT_CHARACTER) >= 0) {
+    errorHandler.warning("Unicode replacement character detected, source encoding issues?");
   }
-  function i(w) {
-    var Te = w[w.length - 1] === ";" ? w : w + ";";
-    if (!o && Te !== w)
-      return n.error("EntityRef: expecting ;"), w;
-    var Tr = v.Reference.exec(Te);
-    if (!Tr || Tr[0].length !== Te.length)
-      return n.error("entity not matching Reference production: " + w), w;
-    var _r = Te.slice(1, -1);
-    return ur(r, _r) ? r[_r] : _r.charAt(0) === "#" ? s(parseInt(_r.substring(1).replace("x", "0x"))) : (n.error("entity not found:" + w), w);
-  }
-  function c(w) {
-    if (w > y) {
-      var Te = t.substring(y, w).replace(Ma, i);
-      m && T(y), a.characters(Te, 0, w - y), y = w;
+  function fixedFromCharCode(code) {
+    if (code > 65535) {
+      code -= 65536;
+      var surrogate1 = 55296 + (code >> 10), surrogate2 = 56320 + (code & 1023);
+      return String.fromCharCode(surrogate1, surrogate2);
+    } else {
+      return String.fromCharCode(code);
     }
   }
-  var u = 0, l = 0, E = /\r\n?|\n|$/g, m = a.locator;
-  function T(w, Te) {
-    for (; w >= l && (Te = E.exec(t)); )
-      u = l, l = Te.index + Te[0].length, m.lineNumber++;
-    m.columnNumber = w - u + 1;
+  function entityReplacer(a2) {
+    var complete = a2[a2.length - 1] === ";" ? a2 : a2 + ";";
+    if (!isHTML && complete !== a2) {
+      errorHandler.error("EntityRef: expecting ;");
+      return a2;
+    }
+    var match = g.Reference.exec(complete);
+    if (!match || match[0].length !== complete.length) {
+      errorHandler.error("entity not matching Reference production: " + a2);
+      return a2;
+    }
+    var k = complete.slice(1, -1);
+    if (hasOwn(entityMap, k)) {
+      return entityMap[k];
+    } else if (k.charAt(0) === "#") {
+      return fixedFromCharCode(parseInt(k.substring(1).replace("x", "0x")));
+    } else {
+      errorHandler.error("entity not found:" + a2);
+      return a2;
+    }
   }
-  for (var h = [{ currentNSMap: e }], g = [], y = 0; ; ) {
+  function appendText(end2) {
+    if (end2 > start) {
+      var xt = source.substring(start, end2).replace(ENTITY_REG, entityReplacer);
+      locator && position2(start);
+      domBuilder.characters(xt, 0, end2 - start);
+      start = end2;
+    }
+  }
+  var lineStart = 0;
+  var lineEnd = 0;
+  var linePattern = /\r\n?|\n|$/g;
+  var locator = domBuilder.locator;
+  function position2(p, m) {
+    while (p >= lineEnd && (m = linePattern.exec(source))) {
+      lineStart = lineEnd;
+      lineEnd = m.index + m[0].length;
+      locator.lineNumber++;
+    }
+    locator.columnNumber = p - lineStart + 1;
+  }
+  var parseStack = [{ currentNSMap: defaultNSMapCopy }];
+  var unclosedTags = [];
+  var start = 0;
+  while (true) {
     try {
-      var P = t.indexOf("<", y);
-      if (P < 0) {
-        if (!o && g.length > 0)
-          return n.fatalError("unclosed xml tag(s): " + g.join(", "));
-        if (!t.substring(y).match(/^\s*$/)) {
-          var Y = a.doc, re = Y.createTextNode(t.substring(y));
-          if (Y.documentElement)
-            return n.error("Extra content at the end of the document");
-          Y.appendChild(re), a.currentElement = re;
+      var tagStart = source.indexOf("<", start);
+      if (tagStart < 0) {
+        if (!isHTML && unclosedTags.length > 0) {
+          return errorHandler.fatalError("unclosed xml tag(s): " + unclosedTags.join(", "));
+        }
+        if (!source.substring(start).match(/^\s*$/)) {
+          var doc = domBuilder.doc;
+          var text = doc.createTextNode(source.substring(start));
+          if (doc.documentElement) {
+            return errorHandler.error("Extra content at the end of the document");
+          }
+          doc.appendChild(text);
+          domBuilder.currentElement = text;
         }
         return;
       }
-      if (P > y) {
-        var B = t.substring(y, P);
-        !o && g.length === 0 && (B = B.replace(new RegExp(v.S_OPT.source, "g"), ""), B && n.error("Unexpected content outside root element: '" + B + "'")), c(P);
+      if (tagStart > start) {
+        var fromSource = source.substring(start, tagStart);
+        if (!isHTML && unclosedTags.length === 0) {
+          fromSource = fromSource.replace(new RegExp(g.S_OPT.source, "g"), "");
+          fromSource && errorHandler.error("Unexpected content outside root element: '" + fromSource + "'");
+        }
+        appendText(tagStart);
       }
-      switch (t.charAt(P + 1)) {
+      switch (source.charAt(tagStart + 1)) {
         case "/":
-          var G = t.indexOf(">", P + 2), X = t.substring(P + 2, G > 0 ? G : void 0);
-          if (!X)
-            return n.fatalError("end tag name missing");
-          var K = G > 0 && v.reg("^", v.QName_group, v.S_OPT, "$").exec(X);
-          if (!K)
-            return n.fatalError('end tag name contains invalid characters: "' + X + '"');
-          if (!a.currentElement && !a.doc.documentElement)
-            return;
-          var W = g[g.length - 1] || a.currentElement.tagName || a.doc.documentElement.tagName || "";
-          if (W !== K[1]) {
-            var Oe = K[1].toLowerCase();
-            if (!o || W.toLowerCase() !== Oe)
-              return n.fatalError('Opening and ending tag mismatch: "' + W + '" != "' + X + '"');
+          var end = source.indexOf(">", tagStart + 2);
+          var tagNameRaw = source.substring(tagStart + 2, end > 0 ? end : void 0);
+          if (!tagNameRaw) {
+            return errorHandler.fatalError("end tag name missing");
           }
-          var Se = h.pop();
-          g.pop();
-          var Me = Se.localNSMap;
-          if (a.endElement(Se.uri, Se.localName, W), Me)
-            for (var S in Me)
-              ur(Me, S) && a.endPrefixMapping(S);
-          G++;
+          var tagNameMatch = end > 0 && g.reg("^", g.QName_group, g.S_OPT, "$").exec(tagNameRaw);
+          if (!tagNameMatch) {
+            return errorHandler.fatalError('end tag name contains invalid characters: "' + tagNameRaw + '"');
+          }
+          if (!domBuilder.currentElement && !domBuilder.doc.documentElement) {
+            return;
+          }
+          var currentTagName = unclosedTags[unclosedTags.length - 1] || domBuilder.currentElement.tagName || domBuilder.doc.documentElement.tagName || "";
+          if (currentTagName !== tagNameMatch[1]) {
+            var tagNameLower = tagNameMatch[1].toLowerCase();
+            if (!isHTML || currentTagName.toLowerCase() !== tagNameLower) {
+              return errorHandler.fatalError('Opening and ending tag mismatch: "' + currentTagName + '" != "' + tagNameRaw + '"');
+            }
+          }
+          var config2 = parseStack.pop();
+          unclosedTags.pop();
+          var localNSMap = config2.localNSMap;
+          domBuilder.endElement(config2.uri, config2.localName, currentTagName);
+          if (localNSMap) {
+            for (var prefix in localNSMap) {
+              if (hasOwn(localNSMap, prefix)) {
+                domBuilder.endPrefixMapping(prefix);
+              }
+            }
+          }
+          end++;
           break;
         case "?":
-          m && T(P), G = Fl(t, P, a, n);
+          locator && position2(tagStart);
+          end = parseProcessingInstruction(source, tagStart, domBuilder, errorHandler);
           break;
         case "!":
-          m && T(P), G = Qo(t, P, a, n, o);
+          locator && position2(tagStart);
+          end = parseDoctypeCommentOrCData(source, tagStart, domBuilder, errorHandler, isHTML);
           break;
         default:
-          m && T(P);
-          var k = new Jo(), ye = h[h.length - 1].currentNSMap, G = bl(t, P, k, ye, i, n, o), za = k.length;
-          if (k.closed || (o && Gt.isHTMLVoidElement(k.tagName) ? k.closed = !0 : g.push(k.tagName)), m && za) {
-            for (var Ss = In(m, {}), Kr = 0; Kr < za; Kr++) {
-              var Ha = k[Kr];
-              T(Ha.offset), Ha.locator = In(m, {});
+          locator && position2(tagStart);
+          var el = new ElementAttributes();
+          var currentNSMap = parseStack[parseStack.length - 1].currentNSMap;
+          var end = parseElementStartPart(source, tagStart, el, currentNSMap, entityReplacer, errorHandler, isHTML);
+          var len = el.length;
+          if (!el.closed) {
+            if (isHTML && conventions$2.isHTMLVoidElement(el.tagName)) {
+              el.closed = true;
+            } else {
+              unclosedTags.push(el.tagName);
             }
-            a.locator = Ss, Cn(k, a, ye) && h.push(k), a.locator = m;
-          } else
-            Cn(k, a, ye) && h.push(k);
-          o && !k.closed ? G = Ul(t, G, k.tagName, i, a) : G++;
+          }
+          if (locator && len) {
+            var locator2 = copyLocator(locator, {});
+            for (var i = 0; i < len; i++) {
+              var a = el[i];
+              position2(a.offset);
+              a.locator = copyLocator(locator, {});
+            }
+            domBuilder.locator = locator2;
+            if (appendElement$1(el, domBuilder, currentNSMap)) {
+              parseStack.push(el);
+            }
+            domBuilder.locator = locator;
+          } else {
+            if (appendElement$1(el, domBuilder, currentNSMap)) {
+              parseStack.push(el);
+            }
+          }
+          if (isHTML && !el.closed) {
+            end = parseHtmlSpecialContent(source, end, el.tagName, entityReplacer, domBuilder);
+          } else {
+            end++;
+          }
       }
-    } catch (w) {
-      if (w instanceof hn)
-        throw w;
-      if (w instanceof Ol)
-        throw new hn(w.name + ": " + w.message, a.locator, w);
-      n.error("element parse error: " + w), G = -1;
+    } catch (e) {
+      if (e instanceof ParseError$1) {
+        throw e;
+      } else if (e instanceof DOMException) {
+        throw new ParseError$1(e.name + ": " + e.message, domBuilder.locator, e);
+      }
+      errorHandler.error("element parse error: " + e);
+      end = -1;
     }
-    G > y ? y = G : c(Math.max(P, y) + 1);
+    if (end > start) {
+      start = end;
+    } else {
+      appendText(Math.max(tagStart, start) + 1);
+    }
   }
 }
-function In(t, e) {
-  return e.lineNumber = t.lineNumber, e.columnNumber = t.columnNumber, e;
+function copyLocator(f, t) {
+  t.lineNumber = f.lineNumber;
+  t.columnNumber = f.columnNumber;
+  return t;
 }
-function bl(t, e, r, a, n, o, s) {
-  function i(T, h, g) {
-    if (ur(r.attributeNames, T))
-      return o.fatalError("Attribute " + T + " redefined");
-    if (!s && h.indexOf("<") >= 0)
-      return o.fatalError("Unescaped '<' not allowed in attributes values");
-    r.addValue(
-      T,
+function parseElementStartPart(source, start, el, currentNSMap, entityReplacer, errorHandler, isHTML) {
+  function addAttribute(qname, value2, startIndex) {
+    if (hasOwn(el.attributeNames, qname)) {
+      return errorHandler.fatalError("Attribute " + qname + " redefined");
+    }
+    if (!isHTML && value2.indexOf("<") >= 0) {
+      return errorHandler.fatalError("Unescaped '<' not allowed in attributes values");
+    }
+    el.addValue(
+      qname,
       // @see https://www.w3.org/TR/xml/#AVNormalize
       // since the xmldom sax parser does not "interpret" DTD the following is not implemented:
       // - recursive replacement of (DTD) entity references
       // - trimming and collapsing multiple spaces into a single one for attributes that are not of type CDATA
-      h.replace(/[\t\n\r]/g, " ").replace(Ma, n),
-      g
+      value2.replace(/[\t\n\r]/g, " ").replace(ENTITY_REG, entityReplacer),
+      startIndex
     );
   }
-  for (var c, u, l = ++e, E = jt; ; ) {
-    var m = t.charAt(l);
-    switch (m) {
+  var attrName;
+  var value;
+  var p = ++start;
+  var s = S_TAG;
+  while (true) {
+    var c = source.charAt(p);
+    switch (c) {
       case "=":
-        if (E === Ye)
-          c = t.slice(e, l), E = Yt;
-        else if (E === Nt)
-          E = Yt;
-        else
+        if (s === S_ATTR) {
+          attrName = source.slice(start, p);
+          s = S_EQ;
+        } else if (s === S_ATTR_SPACE) {
+          s = S_EQ;
+        } else {
           throw new Error("attribute equal must after attrName");
+        }
         break;
       case "'":
       case '"':
-        if (E === Yt || E === Ye)
-          if (E === Ye && (o.warning('attribute value must after "="'), c = t.slice(e, l)), e = l + 1, l = t.indexOf(m, e), l > 0)
-            u = t.slice(e, l), i(c, u, e - 1), E = At;
-          else
-            throw new Error("attribute value no end '" + m + "' match");
-        else if (E == gt)
-          u = t.slice(e, l), i(c, u, e), o.warning('attribute "' + c + '" missed start quot(' + m + ")!!"), e = l + 1, E = At;
-        else
+        if (s === S_EQ || s === S_ATTR) {
+          if (s === S_ATTR) {
+            errorHandler.warning('attribute value must after "="');
+            attrName = source.slice(start, p);
+          }
+          start = p + 1;
+          p = source.indexOf(c, start);
+          if (p > 0) {
+            value = source.slice(start, p);
+            addAttribute(attrName, value, start - 1);
+            s = S_ATTR_END;
+          } else {
+            throw new Error("attribute value no end '" + c + "' match");
+          }
+        } else if (s == S_ATTR_NOQUOT_VALUE) {
+          value = source.slice(start, p);
+          addAttribute(attrName, value, start);
+          errorHandler.warning('attribute "' + attrName + '" missed start quot(' + c + ")!!");
+          start = p + 1;
+          s = S_ATTR_END;
+        } else {
           throw new Error('attribute value must after "="');
+        }
         break;
       case "/":
-        switch (E) {
-          case jt:
-            r.setTagName(t.slice(e, l));
-          case At:
-          case Kt:
-          case hr:
-            E = hr, r.closed = !0;
-          case gt:
-          case Ye:
+        switch (s) {
+          case S_TAG:
+            el.setTagName(source.slice(start, p));
+          case S_ATTR_END:
+          case S_TAG_SPACE:
+          case S_TAG_CLOSE:
+            s = S_TAG_CLOSE;
+            el.closed = true;
+          case S_ATTR_NOQUOT_VALUE:
+          case S_ATTR:
             break;
-          case Nt:
-            r.closed = !0;
+          case S_ATTR_SPACE:
+            el.closed = true;
             break;
           default:
             throw new Error("attribute invalid close char('/')");
         }
         break;
       case "":
-        return o.error("unexpected end of input"), E == jt && r.setTagName(t.slice(e, l)), l;
-      case ">":
-        switch (E) {
-          case jt:
-            r.setTagName(t.slice(e, l));
-          case At:
-          case Kt:
-          case hr:
-            break;
-          case gt:
-          case Ye:
-            u = t.slice(e, l), u.slice(-1) === "/" && (r.closed = !0, u = u.slice(0, -1));
-          case Nt:
-            E === Nt && (u = c), E == gt ? (o.warning('attribute "' + u + '" missed quot(")!'), i(c, u, e)) : (s || o.warning('attribute "' + u + '" missed value!! "' + u + '" instead!!'), i(u, u, e));
-            break;
-          case Yt:
-            if (!s)
-              return o.fatalError(`AttValue: ' or " expected`);
+        errorHandler.error("unexpected end of input");
+        if (s == S_TAG) {
+          el.setTagName(source.slice(start, p));
         }
-        return l;
+        return p;
+      case ">":
+        switch (s) {
+          case S_TAG:
+            el.setTagName(source.slice(start, p));
+          case S_ATTR_END:
+          case S_TAG_SPACE:
+          case S_TAG_CLOSE:
+            break;
+          case S_ATTR_NOQUOT_VALUE:
+          case S_ATTR:
+            value = source.slice(start, p);
+            if (value.slice(-1) === "/") {
+              el.closed = true;
+              value = value.slice(0, -1);
+            }
+          case S_ATTR_SPACE:
+            if (s === S_ATTR_SPACE) {
+              value = attrName;
+            }
+            if (s == S_ATTR_NOQUOT_VALUE) {
+              errorHandler.warning('attribute "' + value + '" missed quot(")!');
+              addAttribute(attrName, value, start);
+            } else {
+              if (!isHTML) {
+                errorHandler.warning('attribute "' + value + '" missed value!! "' + value + '" instead!!');
+              }
+              addAttribute(value, value, start);
+            }
+            break;
+          case S_EQ:
+            if (!isHTML) {
+              return errorHandler.fatalError(`AttValue: ' or " expected`);
+            }
+        }
+        return p;
       case "":
-        m = " ";
+        c = " ";
       default:
-        if (m <= " ")
-          switch (E) {
-            case jt:
-              r.setTagName(t.slice(e, l)), E = Kt;
+        if (c <= " ") {
+          switch (s) {
+            case S_TAG:
+              el.setTagName(source.slice(start, p));
+              s = S_TAG_SPACE;
               break;
-            case Ye:
-              c = t.slice(e, l), E = Nt;
+            case S_ATTR:
+              attrName = source.slice(start, p);
+              s = S_ATTR_SPACE;
               break;
-            case gt:
-              var u = t.slice(e, l);
-              o.warning('attribute "' + u + '" missed quot(")!!'), i(c, u, e);
-            case At:
-              E = Kt;
+            case S_ATTR_NOQUOT_VALUE:
+              var value = source.slice(start, p);
+              errorHandler.warning('attribute "' + value + '" missed quot(")!!');
+              addAttribute(attrName, value, start);
+            case S_ATTR_END:
+              s = S_TAG_SPACE;
               break;
           }
-        else
-          switch (E) {
-            case Nt:
-              s || o.warning('attribute "' + c + '" missed value!! "' + c + '" instead2!!'), i(c, c, e), e = l, E = Ye;
+        } else {
+          switch (s) {
+            case S_ATTR_SPACE:
+              if (!isHTML) {
+                errorHandler.warning('attribute "' + attrName + '" missed value!! "' + attrName + '" instead2!!');
+              }
+              addAttribute(attrName, attrName, start);
+              start = p;
+              s = S_ATTR;
               break;
-            case At:
-              o.warning('attribute space is required"' + c + '"!!');
-            case Kt:
-              E = Ye, e = l;
+            case S_ATTR_END:
+              errorHandler.warning('attribute space is required"' + attrName + '"!!');
+            case S_TAG_SPACE:
+              s = S_ATTR;
+              start = p;
               break;
-            case Yt:
-              E = gt, e = l;
+            case S_EQ:
+              s = S_ATTR_NOQUOT_VALUE;
+              start = p;
               break;
-            case hr:
+            case S_TAG_CLOSE:
               throw new Error("elements closed character '/' and '>' must be connected to");
           }
+        }
     }
-    l++;
+    p++;
   }
 }
-function Cn(t, e, r) {
-  for (var a = t.tagName, n = null, E = t.length; E--; ) {
-    var o = t[E], s = o.qName, i = o.value, m = s.indexOf(":");
-    if (m > 0)
-      var c = o.prefix = s.slice(0, m), u = s.slice(m + 1), l = c === "xmlns" && u;
-    else
-      u = s, c = null, l = s === "xmlns" && "";
-    o.localName = u, l !== !1 && (n == null && (n = /* @__PURE__ */ Object.create(null), Ko(r, r = /* @__PURE__ */ Object.create(null))), r[l] = n[l] = i, o.uri = An.XMLNS, e.startPrefixMapping(l, i));
+function appendElement$1(el, domBuilder, currentNSMap) {
+  var tagName = el.tagName;
+  var localNSMap = null;
+  var i = el.length;
+  while (i--) {
+    var a = el[i];
+    var qName = a.qName;
+    var value = a.value;
+    var nsp = qName.indexOf(":");
+    if (nsp > 0) {
+      var prefix = a.prefix = qName.slice(0, nsp);
+      var localName2 = qName.slice(nsp + 1);
+      var nsPrefix = prefix === "xmlns" && localName2;
+    } else {
+      localName2 = qName;
+      prefix = null;
+      nsPrefix = qName === "xmlns" && "";
+    }
+    a.localName = localName2;
+    if (nsPrefix !== false) {
+      if (localNSMap == null) {
+        localNSMap = /* @__PURE__ */ Object.create(null);
+        _copy(currentNSMap, currentNSMap = /* @__PURE__ */ Object.create(null));
+      }
+      currentNSMap[nsPrefix] = localNSMap[nsPrefix] = value;
+      a.uri = NAMESPACE$1.XMLNS;
+      domBuilder.startPrefixMapping(nsPrefix, value);
+    }
   }
-  for (var E = t.length; E--; )
-    o = t[E], o.prefix && (o.prefix === "xml" && (o.uri = An.XML), o.prefix !== "xmlns" && (o.uri = r[o.prefix]));
-  var m = a.indexOf(":");
-  m > 0 ? (c = t.prefix = a.slice(0, m), u = t.localName = a.slice(m + 1)) : (c = null, u = t.localName = a);
-  var T = t.uri = r[c || ""];
-  if (e.startElement(T, u, a, t), t.closed) {
-    if (e.endElement(T, u, a), n)
-      for (c in n)
-        ur(n, c) && e.endPrefixMapping(c);
-  } else
-    return t.currentNSMap = r, t.localNSMap = n, !0;
+  var i = el.length;
+  while (i--) {
+    a = el[i];
+    if (a.prefix) {
+      if (a.prefix === "xml") {
+        a.uri = NAMESPACE$1.XML;
+      }
+      if (a.prefix !== "xmlns") {
+        a.uri = currentNSMap[a.prefix];
+      }
+    }
+  }
+  var nsp = tagName.indexOf(":");
+  if (nsp > 0) {
+    prefix = el.prefix = tagName.slice(0, nsp);
+    localName2 = el.localName = tagName.slice(nsp + 1);
+  } else {
+    prefix = null;
+    localName2 = el.localName = tagName;
+  }
+  var ns = el.uri = currentNSMap[prefix || ""];
+  domBuilder.startElement(ns, localName2, tagName, el);
+  if (el.closed) {
+    domBuilder.endElement(ns, localName2, tagName);
+    if (localNSMap) {
+      for (prefix in localNSMap) {
+        if (hasOwn(localNSMap, prefix)) {
+          domBuilder.endPrefixMapping(prefix);
+        }
+      }
+    }
+  } else {
+    el.currentNSMap = currentNSMap;
+    el.localNSMap = localNSMap;
+    return true;
+  }
 }
-function Ul(t, e, r, a, n) {
-  var o = Sl(r);
-  if (o || Ll(r)) {
-    var s = t.indexOf("</" + r + ">", e), i = t.substring(e + 1, s);
-    return o && (i = i.replace(Ma, a)), n.characters(i, 0, i.length), s;
+function parseHtmlSpecialContent(source, elStartEnd, tagName, entityReplacer, domBuilder) {
+  var isEscapableRaw = isHTMLEscapableRawTextElement(tagName);
+  if (isEscapableRaw || isHTMLRawTextElement(tagName)) {
+    var elEndStart = source.indexOf("</" + tagName + ">", elStartEnd);
+    var text = source.substring(elStartEnd + 1, elEndStart);
+    if (isEscapableRaw) {
+      text = text.replace(ENTITY_REG, entityReplacer);
+    }
+    domBuilder.characters(text, 0, text.length);
+    return elEndStart;
   }
-  return e + 1;
+  return elStartEnd + 1;
 }
-function Ko(t, e) {
-  for (var r in t)
-    ur(t, r) && (e[r] = t[r]);
+function _copy(source, target) {
+  for (var n in source) {
+    if (hasOwn(source, n)) {
+      target[n] = source[n];
+    }
+  }
 }
-function Wo(t, e) {
-  var r = e;
-  function a(l) {
-    return l = l || 0, t.charAt(r + l);
+function parseUtils(source, start) {
+  var index = start;
+  function char(n) {
+    n = n || 0;
+    return source.charAt(index + n);
   }
-  function n(l) {
-    l = l || 1, r += l;
+  function skip(n) {
+    n = n || 1;
+    index += n;
   }
-  function o() {
-    for (var l = 0; r < t.length; ) {
-      var E = a();
-      if (E !== " " && E !== `
-` && E !== "	" && E !== "\r")
-        return l;
-      l++, n();
+  function skipBlanks() {
+    var blanks = 0;
+    while (index < source.length) {
+      var c = char();
+      if (c !== " " && c !== "\n" && c !== "	" && c !== "\r") {
+        return blanks;
+      }
+      blanks++;
+      skip();
     }
     return -1;
   }
-  function s() {
-    return t.substring(r);
+  function substringFromIndex() {
+    return source.substring(index);
   }
-  function i(l) {
-    return t.substring(r, r + l.length) === l;
+  function substringStartsWith(text) {
+    return source.substring(index, index + text.length) === text;
   }
-  function c(l) {
-    return t.substring(r, r + l.length).toUpperCase() === l.toUpperCase();
+  function substringStartsWithCaseInsensitive(text) {
+    return source.substring(index, index + text.length).toUpperCase() === text.toUpperCase();
   }
-  function u(l) {
-    var E = v.reg("^", l), m = E.exec(s());
-    return m ? (n(m[0].length), m[0]) : null;
+  function getMatch(args) {
+    var expr = g.reg("^", args);
+    var match = expr.exec(substringFromIndex());
+    if (match) {
+      skip(match[0].length);
+      return match[0];
+    }
+    return null;
   }
   return {
-    char: a,
+    char,
     getIndex: function() {
-      return r;
+      return index;
     },
-    getMatch: u,
+    getMatch,
     getSource: function() {
-      return t;
+      return source;
     },
-    skip: n,
-    skipBlanks: o,
-    substringFromIndex: s,
-    substringStartsWith: i,
-    substringStartsWithCaseInsensitive: c
+    skip,
+    skipBlanks,
+    substringFromIndex,
+    substringStartsWith,
+    substringStartsWithCaseInsensitive
   };
 }
-function wl(t, e) {
-  function r(i, c) {
-    var u = v.PI.exec(i.substringFromIndex());
-    return u ? u[1].toLowerCase() === "xml" ? c.fatalError(
-      "xml declaration is only allowed at the start of the document, but found at position " + i.getIndex()
-    ) : (i.skip(u[0].length), u[0]) : c.fatalError("processing instruction is not well-formed at position " + i.getIndex());
+function parseDoctypeInternalSubset(p, errorHandler) {
+  function parsePI(p2, errorHandler2) {
+    var match = g.PI.exec(p2.substringFromIndex());
+    if (!match) {
+      return errorHandler2.fatalError("processing instruction is not well-formed at position " + p2.getIndex());
+    }
+    if (match[1].toLowerCase() === "xml") {
+      return errorHandler2.fatalError(
+        "xml declaration is only allowed at the start of the document, but found at position " + p2.getIndex()
+      );
+    }
+    p2.skip(match[0].length);
+    return match[0];
   }
-  var a = t.getSource();
-  if (t.char() === "[") {
-    t.skip(1);
-    for (var n = t.getIndex(); t.getIndex() < a.length; ) {
-      if (t.skipBlanks(), t.char() === "]") {
-        var o = a.substring(n, t.getIndex());
-        return t.skip(1), o;
+  var source = p.getSource();
+  if (p.char() === "[") {
+    p.skip(1);
+    var intSubsetStart = p.getIndex();
+    while (p.getIndex() < source.length) {
+      p.skipBlanks();
+      if (p.char() === "]") {
+        var internalSubset = source.substring(intSubsetStart, p.getIndex());
+        p.skip(1);
+        return internalSubset;
       }
-      var s = null;
-      if (t.char() === "<" && t.char(1) === "!")
-        switch (t.char(2)) {
+      var current = null;
+      if (p.char() === "<" && p.char(1) === "!") {
+        switch (p.char(2)) {
           case "E":
-            t.char(3) === "L" ? s = t.getMatch(v.elementdecl) : t.char(3) === "N" && (s = t.getMatch(v.EntityDecl));
+            if (p.char(3) === "L") {
+              current = p.getMatch(g.elementdecl);
+            } else if (p.char(3) === "N") {
+              current = p.getMatch(g.EntityDecl);
+            }
             break;
           case "A":
-            s = t.getMatch(v.AttlistDecl);
+            current = p.getMatch(g.AttlistDecl);
             break;
           case "N":
-            s = t.getMatch(v.NotationDecl);
+            current = p.getMatch(g.NotationDecl);
             break;
           case "-":
-            s = t.getMatch(v.Comment);
+            current = p.getMatch(g.Comment);
             break;
         }
-      else if (t.char() === "<" && t.char(1) === "?")
-        s = r(t, e);
-      else if (t.char() === "%")
-        s = t.getMatch(v.PEReference);
-      else
-        return e.fatalError("Error detected in Markup declaration");
-      if (!s)
-        return e.fatalError("Error in internal subset at position " + t.getIndex());
+      } else if (p.char() === "<" && p.char(1) === "?") {
+        current = parsePI(p, errorHandler);
+      } else if (p.char() === "%") {
+        current = p.getMatch(g.PEReference);
+      } else {
+        return errorHandler.fatalError("Error detected in Markup declaration");
+      }
+      if (!current) {
+        return errorHandler.fatalError("Error in internal subset at position " + p.getIndex());
+      }
     }
-    return e.fatalError("doctype internal subset is not well-formed, missing ]");
+    return errorHandler.fatalError("doctype internal subset is not well-formed, missing ]");
   }
 }
-function Qo(t, e, r, a, n) {
-  var o = Wo(t, e);
-  switch (n ? o.char(2).toUpperCase() : o.char(2)) {
+function parseDoctypeCommentOrCData(source, start, domBuilder, errorHandler, isHTML) {
+  var p = parseUtils(source, start);
+  switch (isHTML ? p.char(2).toUpperCase() : p.char(2)) {
     case "-":
-      var s = o.getMatch(v.Comment);
-      return s ? (r.comment(s, v.COMMENT_START.length, s.length - v.COMMENT_START.length - v.COMMENT_END.length), o.getIndex()) : a.fatalError("comment is not well-formed at position " + o.getIndex());
+      var comment = p.getMatch(g.Comment);
+      if (comment) {
+        domBuilder.comment(comment, g.COMMENT_START.length, comment.length - g.COMMENT_START.length - g.COMMENT_END.length);
+        return p.getIndex();
+      } else {
+        return errorHandler.fatalError("comment is not well-formed at position " + p.getIndex());
+      }
     case "[":
-      var i = o.getMatch(v.CDSect);
-      return i ? !n && !r.currentElement ? a.fatalError("CDATA outside of element") : (r.startCDATA(), r.characters(i, v.CDATA_START.length, i.length - v.CDATA_START.length - v.CDATA_END.length), r.endCDATA(), o.getIndex()) : a.fatalError("Invalid CDATA starting at position " + e);
+      var cdata = p.getMatch(g.CDSect);
+      if (cdata) {
+        if (!isHTML && !domBuilder.currentElement) {
+          return errorHandler.fatalError("CDATA outside of element");
+        }
+        domBuilder.startCDATA();
+        domBuilder.characters(cdata, g.CDATA_START.length, cdata.length - g.CDATA_START.length - g.CDATA_END.length);
+        domBuilder.endCDATA();
+        return p.getIndex();
+      } else {
+        return errorHandler.fatalError("Invalid CDATA starting at position " + start);
+      }
     case "D": {
-      if (r.doc && r.doc.documentElement)
-        return a.fatalError("Doctype not allowed inside or after documentElement at position " + o.getIndex());
-      if (n ? !o.substringStartsWithCaseInsensitive(v.DOCTYPE_DECL_START) : !o.substringStartsWith(v.DOCTYPE_DECL_START))
-        return a.fatalError("Expected " + v.DOCTYPE_DECL_START + " at position " + o.getIndex());
-      if (o.skip(v.DOCTYPE_DECL_START.length), o.skipBlanks() < 1)
-        return a.fatalError("Expected whitespace after " + v.DOCTYPE_DECL_START + " at position " + o.getIndex());
-      var c = {
+      if (domBuilder.doc && domBuilder.doc.documentElement) {
+        return errorHandler.fatalError("Doctype not allowed inside or after documentElement at position " + p.getIndex());
+      }
+      if (isHTML ? !p.substringStartsWithCaseInsensitive(g.DOCTYPE_DECL_START) : !p.substringStartsWith(g.DOCTYPE_DECL_START)) {
+        return errorHandler.fatalError("Expected " + g.DOCTYPE_DECL_START + " at position " + p.getIndex());
+      }
+      p.skip(g.DOCTYPE_DECL_START.length);
+      if (p.skipBlanks() < 1) {
+        return errorHandler.fatalError("Expected whitespace after " + g.DOCTYPE_DECL_START + " at position " + p.getIndex());
+      }
+      var doctype = {
         name: void 0,
         publicId: void 0,
         systemId: void 0,
         internalSubset: void 0
       };
-      if (c.name = o.getMatch(v.Name), !c.name)
-        return a.fatalError("doctype name missing or contains unexpected characters at position " + o.getIndex());
-      if (n && c.name.toLowerCase() !== "html" && a.warning("Unexpected DOCTYPE in HTML document at position " + o.getIndex()), o.skipBlanks(), o.substringStartsWith(v.PUBLIC) || o.substringStartsWith(v.SYSTEM)) {
-        var u = v.ExternalID_match.exec(o.substringFromIndex());
-        if (!u)
-          return a.fatalError("doctype external id is not well-formed at position " + o.getIndex());
-        u.groups.SystemLiteralOnly !== void 0 ? c.systemId = u.groups.SystemLiteralOnly : (c.systemId = u.groups.SystemLiteral, c.publicId = u.groups.PubidLiteral), o.skip(u[0].length);
-      } else if (n && o.substringStartsWithCaseInsensitive(v.SYSTEM)) {
-        if (o.skip(v.SYSTEM.length), o.skipBlanks() < 1)
-          return a.fatalError("Expected whitespace after " + v.SYSTEM + " at position " + o.getIndex());
-        if (c.systemId = o.getMatch(v.ABOUT_LEGACY_COMPAT_SystemLiteral), !c.systemId)
-          return a.fatalError(
-            "Expected " + v.ABOUT_LEGACY_COMPAT + " in single or double quotes after " + v.SYSTEM + " at position " + o.getIndex()
-          );
+      doctype.name = p.getMatch(g.Name);
+      if (!doctype.name)
+        return errorHandler.fatalError("doctype name missing or contains unexpected characters at position " + p.getIndex());
+      if (isHTML && doctype.name.toLowerCase() !== "html") {
+        errorHandler.warning("Unexpected DOCTYPE in HTML document at position " + p.getIndex());
       }
-      return n && c.systemId && !v.ABOUT_LEGACY_COMPAT_SystemLiteral.test(c.systemId) && a.warning("Unexpected doctype.systemId in HTML document at position " + o.getIndex()), n || (o.skipBlanks(), c.internalSubset = wl(o, a)), o.skipBlanks(), o.char() !== ">" ? a.fatalError("doctype not terminated with > at position " + o.getIndex()) : (o.skip(1), r.startDTD(c.name, c.publicId, c.systemId, c.internalSubset), r.endDTD(), o.getIndex());
+      p.skipBlanks();
+      if (p.substringStartsWith(g.PUBLIC) || p.substringStartsWith(g.SYSTEM)) {
+        var match = g.ExternalID_match.exec(p.substringFromIndex());
+        if (!match) {
+          return errorHandler.fatalError("doctype external id is not well-formed at position " + p.getIndex());
+        }
+        if (match.groups.SystemLiteralOnly !== void 0) {
+          doctype.systemId = match.groups.SystemLiteralOnly;
+        } else {
+          doctype.systemId = match.groups.SystemLiteral;
+          doctype.publicId = match.groups.PubidLiteral;
+        }
+        p.skip(match[0].length);
+      } else if (isHTML && p.substringStartsWithCaseInsensitive(g.SYSTEM)) {
+        p.skip(g.SYSTEM.length);
+        if (p.skipBlanks() < 1) {
+          return errorHandler.fatalError("Expected whitespace after " + g.SYSTEM + " at position " + p.getIndex());
+        }
+        doctype.systemId = p.getMatch(g.ABOUT_LEGACY_COMPAT_SystemLiteral);
+        if (!doctype.systemId) {
+          return errorHandler.fatalError(
+            "Expected " + g.ABOUT_LEGACY_COMPAT + " in single or double quotes after " + g.SYSTEM + " at position " + p.getIndex()
+          );
+        }
+      }
+      if (isHTML && doctype.systemId && !g.ABOUT_LEGACY_COMPAT_SystemLiteral.test(doctype.systemId)) {
+        errorHandler.warning("Unexpected doctype.systemId in HTML document at position " + p.getIndex());
+      }
+      if (!isHTML) {
+        p.skipBlanks();
+        doctype.internalSubset = parseDoctypeInternalSubset(p, errorHandler);
+      }
+      p.skipBlanks();
+      if (p.char() !== ">") {
+        return errorHandler.fatalError("doctype not terminated with > at position " + p.getIndex());
+      }
+      p.skip(1);
+      domBuilder.startDTD(doctype.name, doctype.publicId, doctype.systemId, doctype.internalSubset);
+      domBuilder.endDTD();
+      return p.getIndex();
     }
     default:
-      return a.fatalError('Not well-formed XML starting with "<!" at position ' + e);
+      return errorHandler.fatalError('Not well-formed XML starting with "<!" at position ' + start);
   }
 }
-function Fl(t, e, r, a) {
-  var n = t.substring(e).match(v.PI);
-  if (!n)
-    return a.fatalError("Invalid processing instruction starting at position " + e);
-  if (n[1].toLowerCase() === "xml") {
-    if (e > 0)
-      return a.fatalError(
-        "processing instruction at position " + e + " is an xml declaration which is only at the start of the document"
+function parseProcessingInstruction(source, start, domBuilder, errorHandler) {
+  var match = source.substring(start).match(g.PI);
+  if (!match) {
+    return errorHandler.fatalError("Invalid processing instruction starting at position " + start);
+  }
+  if (match[1].toLowerCase() === "xml") {
+    if (start > 0) {
+      return errorHandler.fatalError(
+        "processing instruction at position " + start + " is an xml declaration which is only at the start of the document"
       );
-    if (!v.XMLDecl.test(t.substring(e)))
-      return a.fatalError("xml declaration is not well-formed");
+    }
+    if (!g.XMLDecl.test(source.substring(start))) {
+      return errorHandler.fatalError("xml declaration is not well-formed");
+    }
   }
-  return r.processingInstruction(n[1], n[2]), e + n[0].length;
+  domBuilder.processingInstruction(match[1], match[2]);
+  return start + match[0].length;
 }
-function Jo() {
+function ElementAttributes() {
   this.attributeNames = /* @__PURE__ */ Object.create(null);
 }
-Jo.prototype = {
-  setTagName: function(t) {
-    if (!v.QName_exact.test(t))
-      throw new Error("invalid tagName:" + t);
-    this.tagName = t;
+ElementAttributes.prototype = {
+  setTagName: function(tagName) {
+    if (!g.QName_exact.test(tagName)) {
+      throw new Error("invalid tagName:" + tagName);
+    }
+    this.tagName = tagName;
   },
-  addValue: function(t, e, r) {
-    if (!v.QName_exact.test(t))
-      throw new Error("invalid attribute:" + t);
-    this.attributeNames[t] = this.length, this[this.length++] = { qName: t, value: e, offset: r };
+  addValue: function(qName, value, offset) {
+    if (!g.QName_exact.test(qName)) {
+      throw new Error("invalid attribute:" + qName);
+    }
+    this.attributeNames[qName] = this.length;
+    this[this.length++] = { qName, value, offset };
   },
   length: 0,
-  getLocalName: function(t) {
-    return this[t].localName;
+  getLocalName: function(i) {
+    return this[i].localName;
   },
-  getLocator: function(t) {
-    return this[t].locator;
+  getLocator: function(i) {
+    return this[i].locator;
   },
-  getQName: function(t) {
-    return this[t].qName;
+  getQName: function(i) {
+    return this[i].qName;
   },
-  getURI: function(t) {
-    return this[t].uri;
+  getURI: function(i) {
+    return this[i].uri;
   },
-  getValue: function(t) {
-    return this[t].value;
+  getValue: function(i) {
+    return this[i].value;
   }
   //	,getIndex:function(uri, localName)){
   //		if(localName){
@@ -9444,44 +10986,94 @@ Jo.prototype = {
   //	getType:function(uri,localName){}
   //	getType:function(i){},
 };
-Hr.XMLReader = Yo;
-Hr.parseUtils = Wo;
-Hr.parseDoctypeCommentOrCData = Qo;
-var _t = H, xl = j, Ml = Tt, Dn = Ho, Pl = Hr, Bl = xl.DOMImplementation, Xl = _t.hasDefaultHTMLNamespace, kl = _t.isHTMLMimeType, $l = _t.isValidMimeType, Zo = _t.MIME_TYPE, aa = _t.NAMESPACE, vn = Ml.ParseError, Gl = Pl.XMLReader;
-function es(t) {
-  return t.replace(/\r[\n\u0085]/g, `
-`).replace(/[\r\u0085\u2028\u2029]/g, `
-`);
+sax$1.XMLReader = XMLReader$1;
+sax$1.parseUtils = parseUtils;
+sax$1.parseDoctypeCommentOrCData = parseDoctypeCommentOrCData;
+var conventions$1 = conventions$5;
+var dom = dom$1;
+var errors = errors$3;
+var entities = entities$1;
+var sax = sax$1;
+var DOMImplementation = dom.DOMImplementation;
+var hasDefaultHTMLNamespace = conventions$1.hasDefaultHTMLNamespace;
+var isHTMLMimeType = conventions$1.isHTMLMimeType;
+var isValidMimeType = conventions$1.isValidMimeType;
+var MIME_TYPE = conventions$1.MIME_TYPE;
+var NAMESPACE = conventions$1.NAMESPACE;
+var ParseError = errors.ParseError;
+var XMLReader = sax.XMLReader;
+function normalizeLineEndings(input) {
+  return input.replace(/\r[\n\u0085]/g, "\n").replace(/[\r\u0085\u2028\u2029]/g, "\n");
 }
-function ts(t) {
-  if (t = t || {}, t.locator === void 0 && (t.locator = !0), this.assign = t.assign || _t.assign, this.domHandler = t.domHandler || jr, this.onError = t.onError || t.errorHandler, t.errorHandler && typeof t.errorHandler != "function")
+function DOMParser$1(options2) {
+  options2 = options2 || {};
+  if (options2.locator === void 0) {
+    options2.locator = true;
+  }
+  this.assign = options2.assign || conventions$1.assign;
+  this.domHandler = options2.domHandler || DOMHandler;
+  this.onError = options2.onError || options2.errorHandler;
+  if (options2.errorHandler && typeof options2.errorHandler !== "function") {
     throw new TypeError("errorHandler object is no longer supported, switch to onError!");
-  t.errorHandler && t.errorHandler("warning", "The `errorHandler` option has been deprecated, use `onError` instead!", this), this.normalizeLineEndings = t.normalizeLineEndings || es, this.locator = !!t.locator, this.xmlns = this.assign(/* @__PURE__ */ Object.create(null), t.xmlns);
+  } else if (options2.errorHandler) {
+    options2.errorHandler("warning", "The `errorHandler` option has been deprecated, use `onError` instead!", this);
+  }
+  this.normalizeLineEndings = options2.normalizeLineEndings || normalizeLineEndings;
+  this.locator = !!options2.locator;
+  this.xmlns = this.assign(/* @__PURE__ */ Object.create(null), options2.xmlns);
 }
-ts.prototype.parseFromString = function(t, e) {
-  if (!$l(e))
-    throw new TypeError('DOMParser.parseFromString: the provided mimeType "' + e + '" is not valid.');
-  var r = this.assign(/* @__PURE__ */ Object.create(null), this.xmlns), a = Dn.XML_ENTITIES, n = r[""] || null;
-  Xl(e) ? (a = Dn.HTML_ENTITIES, n = aa.HTML) : e === Zo.XML_SVG_IMAGE && (n = aa.SVG), r[""] = n, r.xml = r.xml || aa.XML;
-  var o = new this.domHandler({
-    mimeType: e,
-    defaultNamespace: n,
+DOMParser$1.prototype.parseFromString = function(source, mimeType) {
+  if (!isValidMimeType(mimeType)) {
+    throw new TypeError('DOMParser.parseFromString: the provided mimeType "' + mimeType + '" is not valid.');
+  }
+  var defaultNSMap = this.assign(/* @__PURE__ */ Object.create(null), this.xmlns);
+  var entityMap = entities.XML_ENTITIES;
+  var defaultNamespace = defaultNSMap[""] || null;
+  if (hasDefaultHTMLNamespace(mimeType)) {
+    entityMap = entities.HTML_ENTITIES;
+    defaultNamespace = NAMESPACE.HTML;
+  } else if (mimeType === MIME_TYPE.XML_SVG_IMAGE) {
+    defaultNamespace = NAMESPACE.SVG;
+  }
+  defaultNSMap[""] = defaultNamespace;
+  defaultNSMap.xml = defaultNSMap.xml || NAMESPACE.XML;
+  var domBuilder = new this.domHandler({
+    mimeType,
+    defaultNamespace,
     onError: this.onError
-  }), s = this.locator ? {} : void 0;
-  this.locator && o.setDocumentLocator(s);
-  var i = new Gl();
-  i.errorHandler = o, i.domBuilder = o;
-  var c = !_t.isHTMLMimeType(e);
-  return c && typeof t != "string" && i.errorHandler.fatalError("source is not a string"), i.parse(this.normalizeLineEndings(String(t)), r, a), o.doc.documentElement || i.errorHandler.fatalError("missing root element"), o.doc;
+  });
+  var locator = this.locator ? {} : void 0;
+  if (this.locator) {
+    domBuilder.setDocumentLocator(locator);
+  }
+  var sax2 = new XMLReader();
+  sax2.errorHandler = domBuilder;
+  sax2.domBuilder = domBuilder;
+  var isXml = !conventions$1.isHTMLMimeType(mimeType);
+  if (isXml && typeof source !== "string") {
+    sax2.errorHandler.fatalError("source is not a string");
+  }
+  sax2.parse(this.normalizeLineEndings(String(source)), defaultNSMap, entityMap);
+  if (!domBuilder.doc.documentElement) {
+    sax2.errorHandler.fatalError("missing root element");
+  }
+  return domBuilder.doc;
 };
-function jr(t) {
-  var e = t || {};
-  this.mimeType = e.mimeType || Zo.XML_APPLICATION, this.defaultNamespace = e.defaultNamespace || null, this.cdata = !1, this.currentElement = void 0, this.doc = void 0, this.locator = void 0, this.onError = e.onError;
+function DOMHandler(options2) {
+  var opt = options2 || {};
+  this.mimeType = opt.mimeType || MIME_TYPE.XML_APPLICATION;
+  this.defaultNamespace = opt.defaultNamespace || null;
+  this.cdata = false;
+  this.currentElement = void 0;
+  this.doc = void 0;
+  this.locator = void 0;
+  this.onError = opt.onError;
 }
-function ht(t, e) {
-  e.lineNumber = t.lineNumber, e.columnNumber = t.columnNumber;
+function position(locator, node) {
+  node.lineNumber = locator.lineNumber;
+  node.columnNumber = locator.columnNumber;
 }
-jr.prototype = {
+DOMHandler.prototype = {
   /**
    * Either creates an XML or an HTML document and stores it under `this.doc`.
    * If it is an XML document, `this.defaultNamespace` is used to create it,
@@ -9491,40 +11083,57 @@ jr.prototype = {
    * @see http://www.saxproject.org/apidoc/org/xml/sax/ContentHandler.html
    */
   startDocument: function() {
-    var t = new Bl();
-    this.doc = kl(this.mimeType) ? t.createHTMLDocument(!1) : t.createDocument(this.defaultNamespace, "");
+    var impl = new DOMImplementation();
+    this.doc = isHTMLMimeType(this.mimeType) ? impl.createHTMLDocument(false) : impl.createDocument(this.defaultNamespace, "");
   },
-  startElement: function(t, e, r, a) {
-    var n = this.doc, o = n.createElementNS(t, r || e), s = a.length;
-    Ir(this, o), this.currentElement = o, this.locator && ht(this.locator, o);
-    for (var i = 0; i < s; i++) {
-      var t = a.getURI(i), c = a.getValue(i), r = a.getQName(i), u = n.createAttributeNS(t, r);
-      this.locator && ht(a.getLocator(i), u), u.value = u.nodeValue = c, o.setAttributeNode(u);
+  startElement: function(namespaceURI, localName2, qName, attrs) {
+    var doc = this.doc;
+    var el = doc.createElementNS(namespaceURI, qName || localName2);
+    var len = attrs.length;
+    appendElement(this, el);
+    this.currentElement = el;
+    this.locator && position(this.locator, el);
+    for (var i = 0; i < len; i++) {
+      var namespaceURI = attrs.getURI(i);
+      var value = attrs.getValue(i);
+      var qName = attrs.getQName(i);
+      var attr = doc.createAttributeNS(namespaceURI, qName);
+      this.locator && position(attrs.getLocator(i), attr);
+      attr.value = attr.nodeValue = value;
+      el.setAttributeNode(attr);
     }
   },
-  endElement: function(t, e, r) {
+  endElement: function(namespaceURI, localName2, qName) {
     this.currentElement = this.currentElement.parentNode;
   },
-  startPrefixMapping: function(t, e) {
+  startPrefixMapping: function(prefix, uri) {
   },
-  endPrefixMapping: function(t) {
+  endPrefixMapping: function(prefix) {
   },
-  processingInstruction: function(t, e) {
-    var r = this.doc.createProcessingInstruction(t, e);
-    this.locator && ht(this.locator, r), Ir(this, r);
+  processingInstruction: function(target, data) {
+    var ins = this.doc.createProcessingInstruction(target, data);
+    this.locator && position(this.locator, ins);
+    appendElement(this, ins);
   },
-  ignorableWhitespace: function(t, e, r) {
+  ignorableWhitespace: function(ch, start, length) {
   },
-  characters: function(t, e, r) {
-    if (t = Sn.apply(this, arguments), t) {
-      if (this.cdata)
-        var a = this.doc.createCDATASection(t);
-      else
-        var a = this.doc.createTextNode(t);
-      this.currentElement ? this.currentElement.appendChild(a) : /^\s*$/.test(t) && this.doc.appendChild(a), this.locator && ht(this.locator, a);
+  characters: function(chars2, start, length) {
+    chars2 = _toString.apply(this, arguments);
+    if (chars2) {
+      if (this.cdata) {
+        var charNode = this.doc.createCDATASection(chars2);
+      } else {
+        var charNode = this.doc.createTextNode(chars2);
+      }
+      if (this.currentElement) {
+        this.currentElement.appendChild(charNode);
+      } else if (/^\s*$/.test(chars2)) {
+        this.doc.appendChild(charNode);
+      }
+      this.locator && position(this.locator, charNode);
     }
   },
-  skippedEntity: function(t) {
+  skippedEntity: function(name) {
   },
   endDocument: function() {
     this.doc.normalize();
@@ -9535,46 +11144,53 @@ jr.prototype = {
    *
    * @param {Locator} locator
    */
-  setDocumentLocator: function(t) {
-    t && (t.lineNumber = 0), this.locator = t;
+  setDocumentLocator: function(locator) {
+    if (locator) {
+      locator.lineNumber = 0;
+    }
+    this.locator = locator;
   },
   //LexicalHandler
-  comment: function(t, e, r) {
-    t = Sn.apply(this, arguments);
-    var a = this.doc.createComment(t);
-    this.locator && ht(this.locator, a), Ir(this, a);
+  comment: function(chars2, start, length) {
+    chars2 = _toString.apply(this, arguments);
+    var comm = this.doc.createComment(chars2);
+    this.locator && position(this.locator, comm);
+    appendElement(this, comm);
   },
   startCDATA: function() {
-    this.cdata = !0;
+    this.cdata = true;
   },
   endCDATA: function() {
-    this.cdata = !1;
+    this.cdata = false;
   },
-  startDTD: function(t, e, r, a) {
-    var n = this.doc.implementation;
-    if (n && n.createDocumentType) {
-      var o = n.createDocumentType(t, e, r, a);
-      this.locator && ht(this.locator, o), Ir(this, o), this.doc.doctype = o;
+  startDTD: function(name, publicId, systemId, internalSubset) {
+    var impl = this.doc.implementation;
+    if (impl && impl.createDocumentType) {
+      var dt = impl.createDocumentType(name, publicId, systemId, internalSubset);
+      this.locator && position(this.locator, dt);
+      appendElement(this, dt);
+      this.doc.doctype = dt;
     }
   },
-  reportError: function(t, e) {
-    if (typeof this.onError == "function")
+  reportError: function(level, message) {
+    if (typeof this.onError === "function") {
       try {
-        this.onError(t, e, this);
-      } catch (r) {
-        throw new vn("Reporting " + t + ' "' + e + '" caused ' + r, this.locator);
+        this.onError(level, message, this);
+      } catch (e) {
+        throw new ParseError("Reporting " + level + ' "' + message + '" caused ' + e, this.locator);
       }
-    else
-      console.error("[xmldom " + t + "]	" + e, ql(this.locator));
+    } else {
+      console.error("[xmldom " + level + "]	" + message, _locator(this.locator));
+    }
   },
   /**
    * @see http://www.saxproject.org/apidoc/org/xml/sax/ErrorHandler.html
    */
-  warning: function(t) {
-    this.reportError("warning", t);
+  warning: function(message) {
+    this.reportError("warning", message);
   },
-  error: function(t) {
-    this.reportError("error", t);
+  error: function(message) {
+    this.reportError("error", message);
   },
   /**
    * This function reports a fatal error and throws a ParseError.
@@ -9586,183 +11202,233 @@ jr.prototype = {
    * @throws {ParseError}
    * Always throws a ParseError with the provided message.
    */
-  fatalError: function(t) {
-    throw this.reportError("fatalError", t), new vn(t, this.locator);
+  fatalError: function(message) {
+    this.reportError("fatalError", message);
+    throw new ParseError(message, this.locator);
   }
 };
-function ql(t) {
-  if (t)
-    return `
-@#[line:` + t.lineNumber + ",col:" + t.columnNumber + "]";
+function _locator(l) {
+  if (l) {
+    return "\n@#[line:" + l.lineNumber + ",col:" + l.columnNumber + "]";
+  }
 }
-function Sn(t, e, r) {
-  return typeof t == "string" ? t.substr(e, r) : t.length >= e + r || e ? new java.lang.String(t, e, r) + "" : t;
+function _toString(chars2, start, length) {
+  if (typeof chars2 == "string") {
+    return chars2.substr(start, length);
+  } else {
+    if (chars2.length >= start + length || start) {
+      return new java.lang.String(chars2, start, length) + "";
+    }
+    return chars2;
+  }
 }
 "endDTD,startEntity,endEntity,attributeDecl,elementDecl,externalEntityDecl,internalEntityDecl,resolveEntity,getExternalSubset,notationDecl,unparsedEntityDecl".replace(
   /\w+/g,
-  function(t) {
-    jr.prototype[t] = function() {
+  function(key) {
+    DOMHandler.prototype[key] = function() {
       return null;
     };
   }
 );
-function Ir(t, e) {
-  t.currentElement ? t.currentElement.appendChild(e) : t.doc.appendChild(e);
+function appendElement(handler, node) {
+  if (!handler.currentElement) {
+    handler.doc.appendChild(node);
+  } else {
+    handler.currentElement.appendChild(node);
+  }
 }
-function Vl(t) {
-  if (t === "error") throw "onErrorStopParsing";
+function onErrorStopParsing(level) {
+  if (level === "error") throw "onErrorStopParsing";
 }
-function zl() {
+function onWarningStopParsing() {
   throw "onWarningStopParsing";
 }
-$t.__DOMHandler = jr;
-$t.DOMParser = ts;
-$t.normalizeLineEndings = es;
-$t.onErrorStopParsing = Vl;
-$t.onWarningStopParsing = zl;
-var qt = H;
-qt.assign;
-qt.hasDefaultHTMLNamespace;
-qt.isHTMLMimeType;
-qt.isValidMimeType;
-qt.MIME_TYPE;
-qt.NAMESPACE;
-var Hl = $t, rs = Hl.DOMParser;
-const jl = "http://www.portalfiscal.inf.br/nfe", Rn = "http://www.w3.org/2000/09/xmldsig#";
-function Yl(t) {
-  return t.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/\t/g, "&#x9;").replace(/\n/g, "&#xA;").replace(/\r/g, "&#xD;");
+domParser$1.__DOMHandler = DOMHandler;
+domParser$1.DOMParser = DOMParser$1;
+domParser$1.normalizeLineEndings = normalizeLineEndings;
+domParser$1.onErrorStopParsing = onErrorStopParsing;
+domParser$1.onWarningStopParsing = onWarningStopParsing;
+var conventions = conventions$5;
+conventions.assign;
+conventions.hasDefaultHTMLNamespace;
+conventions.isHTMLMimeType;
+conventions.isValidMimeType;
+conventions.MIME_TYPE;
+conventions.NAMESPACE;
+var domParser = domParser$1;
+var DOMParser = domParser.DOMParser;
+const NFE_NAMESPACE$1 = "http://www.portalfiscal.inf.br/nfe";
+const DSIG_NAMESPACE = "http://www.w3.org/2000/09/xmldsig#";
+function escapeAttr(value) {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/\t/g, "&#x9;").replace(/\n/g, "&#xA;").replace(/\r/g, "&#xD;");
 }
-function Kl(t) {
-  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#xD;");
+function escapeText(value) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#xD;");
 }
-function Ln(t) {
-  return t.localName || t.nodeName.replace(/^.*:/, "");
+function localName(node) {
+  return node.localName || node.nodeName.replace(/^.*:/, "");
 }
-function Pa(t) {
-  if (t.nodeType === 3)
-    return Kl(t.nodeValue ?? "");
-  if (t.nodeType !== 1)
-    return "";
-  const e = t, r = e.nodeName, a = [];
-  Ln(e) === "infNFe" && !e.getAttribute("xmlns") && a.push(`xmlns="${jl}"`);
-  const n = [];
-  for (let i = 0; i < e.attributes.length; i += 1) {
-    const c = e.attributes.item(i);
-    c && n.push({ name: c.name, value: c.value });
+function canonicalize(node) {
+  if (node.nodeType === 3) {
+    return escapeText(node.nodeValue ?? "");
   }
-  n.sort((i, c) => i.name.localeCompare(c.name)).forEach((i) => {
-    i.name === "xmlns" && Ln(e) === "infNFe" || a.push(`${i.name}="${Yl(i.value)}"`);
+  if (node.nodeType !== 1) {
+    return "";
+  }
+  const element = node;
+  const name = element.nodeName;
+  const attrs = [];
+  if (localName(element) === "infNFe" && !element.getAttribute("xmlns")) {
+    attrs.push(`xmlns="${NFE_NAMESPACE$1}"`);
+  }
+  const rawAttrs = [];
+  for (let index = 0; index < element.attributes.length; index += 1) {
+    const attr = element.attributes.item(index);
+    if (!attr) continue;
+    rawAttrs.push({ name: attr.name, value: attr.value });
+  }
+  rawAttrs.sort((left, right) => left.name.localeCompare(right.name)).forEach((attr) => {
+    if (attr.name === "xmlns" && localName(element) === "infNFe") return;
+    attrs.push(`${attr.name}="${escapeAttr(attr.value)}"`);
   });
-  const o = a.length > 0 ? `<${r} ${a.join(" ")}>` : `<${r}>`;
-  let s = "";
-  for (let i = 0; i < e.childNodes.length; i += 1)
-    s += Pa(e.childNodes.item(i));
-  return `${o}${s}</${r}>`;
+  const open = attrs.length > 0 ? `<${name} ${attrs.join(" ")}>` : `<${name}>`;
+  let children2 = "";
+  for (let index = 0; index < element.childNodes.length; index += 1) {
+    children2 += canonicalize(element.childNodes.item(index));
+  }
+  return `${open}${children2}</${name}>`;
 }
-function Wl(t, e) {
-  var a;
-  const r = t.match(new RegExp(`-----BEGIN ${e}-----([\\s\\S]*?)-----END ${e}-----`));
-  return ((a = r == null ? void 0 : r[1]) == null ? void 0 : a.replace(/\s+/g, "")) ?? "";
+function extractPemBody(pem, label) {
+  var _a;
+  const match = pem.match(new RegExp(`-----BEGIN ${label}-----([\\s\\S]*?)-----END ${label}-----`));
+  return ((_a = match == null ? void 0 : match[1]) == null ? void 0 : _a.replace(/\s+/g, "")) ?? "";
 }
-function On(t, e) {
-  const r = t.match(new RegExp(`-----BEGIN ${e}-----[\\s\\S]*?-----END ${e}-----`));
-  return (r == null ? void 0 : r[0]) ?? "";
+function extractPemBlock(pem, label) {
+  const match = pem.match(new RegExp(`-----BEGIN ${label}-----[\\s\\S]*?-----END ${label}-----`));
+  return (match == null ? void 0 : match[0]) ?? "";
 }
-function Ql(t) {
-  var a;
-  const e = (a = t.certificatePath) == null ? void 0 : a.trim();
-  if (!e)
-    throw new D({
+function extractCertificate(config2) {
+  var _a;
+  const certificatePath = (_a = config2.certificatePath) == null ? void 0 : _a.trim();
+  if (!certificatePath) {
+    throw new FiscalError({
       code: "CERTIFICATE_NOT_CONFIGURED",
       message: "Caminho do certificado A1 nao configurado.",
       category: "CERTIFICATE"
     });
-  if (!he.existsSync(e))
-    throw new D({
+  }
+  if (!fs$1.existsSync(certificatePath)) {
+    throw new FiscalError({
       code: "CERTIFICATE_FILE_NOT_FOUND",
-      message: `Arquivo do certificado nao encontrado: ${e}`,
+      message: `Arquivo do certificado nao encontrado: ${certificatePath}`,
       category: "CERTIFICATE"
     });
-  if (!t.certificatePassword)
-    throw new D({
+  }
+  if (!config2.certificatePassword) {
+    throw new FiscalError({
       code: "CERTIFICATE_PASSWORD_REQUIRED",
       message: "Senha do certificado A1 nao configurada.",
       category: "CERTIFICATE"
     });
-  const r = We.extname(e).toLowerCase();
-  if (![".pfx", ".p12"].includes(r))
-    throw new D({
+  }
+  const extension = path$1.extname(certificatePath).toLowerCase();
+  if (![".pfx", ".p12"].includes(extension)) {
+    throw new FiscalError({
       code: "CERTIFICATE_FORMAT_NOT_SUPPORTED",
       message: "Assinatura NFC-e direta suporta certificado A1 .pfx/.p12.",
       category: "CERTIFICATE"
     });
+  }
   try {
-    const n = fa(["-in", e, "-nocerts", "-nodes"], t.certificatePassword), o = fa(["-in", e, "-clcerts", "-nokeys"], t.certificatePassword), s = On(n, "PRIVATE KEY") || On(n, "RSA PRIVATE KEY"), i = Wl(o, "CERTIFICATE");
-    if (!s)
+    const privateKeyPem = readPkcs12WithOpenSsl(["-in", certificatePath, "-nocerts", "-nodes"], config2.certificatePassword);
+    const certificatePem = readPkcs12WithOpenSsl(["-in", certificatePath, "-clcerts", "-nokeys"], config2.certificatePassword);
+    const privateKeyBlock = extractPemBlock(privateKeyPem, "PRIVATE KEY") || extractPemBlock(privateKeyPem, "RSA PRIVATE KEY");
+    const certificateBody = extractPemBody(certificatePem, "CERTIFICATE");
+    if (!privateKeyBlock) {
       throw new Error("Chave privada nao encontrada no arquivo A1.");
-    if (!i)
+    }
+    if (!certificateBody) {
       throw new Error("Certificado publico nao encontrado no arquivo A1.");
-    return { privateKeyPem: s, certificateBody: i };
-  } catch (n) {
-    throw new D({
+    }
+    return { privateKeyPem: privateKeyBlock, certificateBody };
+  } catch (error) {
+    throw new FiscalError({
       code: "CERTIFICATE_PKCS12_EXTRACT_FAILED",
       message: "Falha ao extrair chave/certificado do A1 para assinatura XML.",
       category: "CERTIFICATE",
-      details: n == null ? void 0 : n.details,
-      cause: n
+      details: error == null ? void 0 : error.details,
+      cause: error
     });
   }
 }
-function Jl(t) {
-  const e = [], r = new rs({
-    onError: (n, o) => e.push(String(o))
-  }).parseFromString(t, "application/xml");
-  if (e.length > 0)
-    throw new D({
+function findInfNFe(xml) {
+  const parserErrors = [];
+  const doc = new DOMParser({
+    onError: (_level, message) => parserErrors.push(String(message))
+  }).parseFromString(xml, "application/xml");
+  if (parserErrors.length > 0) {
+    throw new FiscalError({
       code: "NFCE_XML_MALFORMED",
-      message: `XML NFC-e malformado antes da assinatura: ${e.join(" | ")}`,
+      message: `XML NFC-e malformado antes da assinatura: ${parserErrors.join(" | ")}`,
       category: "VALIDATION",
-      details: { parserErrors: e }
+      details: { parserErrors }
     });
-  const a = r.getElementsByTagName("infNFe").item(0);
-  if (!a)
-    throw new D({
+  }
+  const infNFe = doc.getElementsByTagName("infNFe").item(0);
+  if (!infNFe) {
+    throw new FiscalError({
       code: "NFCE_XML_INF_NFE_NOT_FOUND",
       message: "XML NFC-e nao contem grupo infNFe para assinatura.",
       category: "VALIDATION"
     });
-  return a;
+  }
+  return infNFe;
 }
-function Zl(t) {
-  const e = [], r = new rs({
-    onError: (a, n) => e.push(String(n))
-  }).parseFromString(t, "application/xml");
-  if (e.length > 0 || !r.documentElement)
-    throw new D({
+function canonicalizeXmlFragment(xml) {
+  const parserErrors = [];
+  const doc = new DOMParser({
+    onError: (_level, message) => parserErrors.push(String(message))
+  }).parseFromString(xml, "application/xml");
+  if (parserErrors.length > 0 || !doc.documentElement) {
+    throw new FiscalError({
       code: "NFCE_XML_SIGNATURE_FRAGMENT_INVALID",
-      message: `Fragmento XML de assinatura invalido: ${e.join(" | ")}`,
+      message: `Fragmento XML de assinatura invalido: ${parserErrors.join(" | ")}`,
       category: "VALIDATION",
-      details: { parserErrors: e }
+      details: { parserErrors }
     });
-  return Pa(r.documentElement);
+  }
+  return canonicalize(doc.documentElement);
 }
-function ed(t) {
-  return t.replace(/>\s+</g, "><").trim();
+function compactXml$2(xml) {
+  return xml.replace(/>\s+</g, "><").trim();
 }
-class td {
-  sign(e, r) {
-    const a = ed(e), n = Jl(a), o = n.getAttribute("Id");
-    if (!o)
-      throw new D({
+class NfceXmlSigningService {
+  sign(xml, config2) {
+    const normalizedXml = compactXml$2(xml);
+    const infNFe = findInfNFe(normalizedXml);
+    const id = infNFe.getAttribute("Id");
+    if (!id) {
+      throw new FiscalError({
         code: "NFCE_XML_ID_NOT_FOUND",
         message: "infNFe nao possui atributo Id para assinatura.",
         category: "VALIDATION"
       });
-    const { privateKeyPem: s, certificateBody: i } = Ql(r), c = Pa(n), u = no("sha1").update(c, "utf8").digest("base64"), l = `<SignedInfo xmlns="${Rn}"><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#${o}"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>${u}</DigestValue></Reference></SignedInfo>`, E = Zl(l), m = bs("RSA-SHA1").update(E, "utf8").sign(s, "base64"), T = `<Signature xmlns="${Rn}">${l}<SignatureValue>${m}</SignatureValue><KeyInfo><X509Data><X509Certificate>${i}</X509Certificate></X509Data></KeyInfo></Signature>`;
-    return a.includes("</infNFeSupl>") ? a.replace("</infNFeSupl>", `</infNFeSupl>${T}`) : a.replace("</infNFe>", `</infNFe>${T}`);
+    }
+    const { privateKeyPem, certificateBody } = extractCertificate(config2);
+    const canonicalInfNFe = canonicalize(infNFe);
+    const digestValue = createHash("sha1").update(canonicalInfNFe, "utf8").digest("base64");
+    const signedInfo = `<SignedInfo xmlns="${DSIG_NAMESPACE}"><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#${id}"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>${digestValue}</DigestValue></Reference></SignedInfo>`;
+    const canonicalSignedInfo = canonicalizeXmlFragment(signedInfo);
+    const signatureValue = createSign("RSA-SHA1").update(canonicalSignedInfo, "utf8").sign(privateKeyPem, "base64");
+    const signatureXml = `<Signature xmlns="${DSIG_NAMESPACE}">${signedInfo}<SignatureValue>${signatureValue}</SignatureValue><KeyInfo><X509Data><X509Certificate>${certificateBody}</X509Certificate></X509Data></KeyInfo></Signature>`;
+    if (normalizedXml.includes("</infNFeSupl>")) {
+      return normalizedXml.replace("</infNFeSupl>", `</infNFeSupl>${signatureXml}`);
+    }
+    return normalizedXml.replace("</infNFe>", `</infNFe>${signatureXml}`);
   }
 }
-const rd = new td(), ad = {
+const nfceXmlSigningService = new NfceXmlSigningService();
+const SP_NFCE_ENDPOINTS = {
   homologation: {
     statusServico: "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeStatusServico4.asmx",
     autorizacao: "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeAutorizacao4.asmx",
@@ -9773,546 +11439,679 @@ const rd = new td(), ad = {
     autorizacao: "https://nfce.fazenda.sp.gov.br/ws/NFeAutorizacao4.asmx",
     retAutorizacao: "https://nfce.fazenda.sp.gov.br/ws/NFeRetAutorizacao4.asmx"
   }
-}, nd = {
+};
+const IBGE_UF_CODES = {
   SP: "35"
 };
-function Ba(t) {
-  return (t.uf ?? "SP").trim().toUpperCase();
+function resolveUf(config2) {
+  return (config2.uf ?? "SP").trim().toUpperCase();
 }
-function od(t) {
-  const e = Ba(t);
-  if (e !== "SP")
-    throw new D({
+function assertSpNfce(config2) {
+  const uf = resolveUf(config2);
+  if (uf !== "SP") {
+    throw new FiscalError({
       code: "SEFAZ_UF_NOT_SUPPORTED",
-      message: `SEFAZ direta para NFC-e ainda esta configurada somente para SP. UF recebida: ${e}.`,
+      message: `SEFAZ direta para NFC-e ainda esta configurada somente para SP. UF recebida: ${uf}.`,
       category: "CONFIGURATION"
     });
+  }
 }
-function Xa(t, e) {
-  var s;
-  od(t);
-  const r = (s = t.sefazBaseUrl) == null ? void 0 : s.trim(), a = ad[t.environment][e];
-  if (!r)
-    return a;
-  let n = r.replace(/homologacao\.nfe\.fazenda\.sp\.gov\.br/gi, "homologacao.nfce.fazenda.sp.gov.br").replace(/\/\/nfe\.fazenda\.sp\.gov\.br/gi, "//nfce.fazenda.sp.gov.br");
-  if (!/nfce\.fazenda\.sp\.gov\.br/i.test(n))
-    return a;
-  const o = {
+function resolveSpNfceServiceUrl(config2, service) {
+  var _a;
+  assertSpNfce(config2);
+  const configuredBaseUrl = (_a = config2.sefazBaseUrl) == null ? void 0 : _a.trim();
+  const defaultUrl = SP_NFCE_ENDPOINTS[config2.environment][service];
+  if (!configuredBaseUrl) {
+    return defaultUrl;
+  }
+  let normalized = configuredBaseUrl.replace(/homologacao\.nfe\.fazenda\.sp\.gov\.br/gi, "homologacao.nfce.fazenda.sp.gov.br").replace(/\/\/nfe\.fazenda\.sp\.gov\.br/gi, "//nfce.fazenda.sp.gov.br");
+  if (!/nfce\.fazenda\.sp\.gov\.br/i.test(normalized)) {
+    return defaultUrl;
+  }
+  const serviceFileByName = {
     statusServico: "NFeStatusServico4.asmx",
     autorizacao: "NFeAutorizacao4.asmx",
     retAutorizacao: "NFeRetAutorizacao4.asmx"
   };
-  return n.endsWith(".asmx") ? (n = n.replace(/NFe(?:StatusServico|Autorizacao|RetAutorizacao)4\.asmx$/i, o[e]), n = n.replace(/nfe(?:statusservico|autorizacao|retautorizacao)4\.asmx$/i, o[e]), n) : `${n.replace(/\/+$/, "")}/${o[e]}`;
+  if (normalized.endsWith(".asmx")) {
+    normalized = normalized.replace(/NFe(?:StatusServico|Autorizacao|RetAutorizacao)4\.asmx$/i, serviceFileByName[service]);
+    normalized = normalized.replace(/nfe(?:statusservico|autorizacao|retautorizacao)4\.asmx$/i, serviceFileByName[service]);
+    return normalized;
+  }
+  return `${normalized.replace(/\/+$/, "")}/${serviceFileByName[service]}`;
 }
-function sd(t) {
-  return Xa(t, "statusServico");
+function resolveStatusServicoUrl(config2) {
+  return resolveSpNfceServiceUrl(config2, "statusServico");
 }
-function id(t) {
-  return Xa(t, "autorizacao");
+function resolveAutorizacaoUrl(config2) {
+  return resolveSpNfceServiceUrl(config2, "autorizacao");
 }
-function cd(t) {
-  return Xa(t, "retAutorizacao");
+function resolveRetAutorizacaoUrl(config2) {
+  return resolveSpNfceServiceUrl(config2, "retAutorizacao");
 }
-function yn(t) {
-  var e, r, a;
-  if (t.provider !== "sefaz-direct")
-    throw new D({
+function validateSefazDirectConfig(config2) {
+  var _a, _b, _c;
+  if (config2.provider !== "sefaz-direct") {
+    throw new FiscalError({
       code: "SEFAZ_PROVIDER_INVALID",
       message: "O teste SEFAZ direto exige provider sefaz-direct.",
       category: "CONFIGURATION"
     });
-  if (t.environment !== "homologation" && t.environment !== "production")
-    throw new D({
+  }
+  if (config2.environment !== "homologation" && config2.environment !== "production") {
+    throw new FiscalError({
       code: "SEFAZ_ENVIRONMENT_INVALID",
       message: "Ambiente fiscal invalido.",
       category: "CONFIGURATION"
     });
-  if ((t.model ?? 65) !== 65)
-    throw new D({
+  }
+  if ((config2.model ?? 65) !== 65) {
+    throw new FiscalError({
       code: "SEFAZ_MODEL_NOT_SUPPORTED",
       message: "O diagnostico atual suporta apenas NFC-e modelo 65.",
       category: "CONFIGURATION"
     });
-  if (!((e = t.certificatePath) != null && e.trim()))
-    throw new D({
+  }
+  if (!((_a = config2.certificatePath) == null ? void 0 : _a.trim())) {
+    throw new FiscalError({
       code: "CERTIFICATE_NOT_CONFIGURED",
       message: "Caminho do certificado A1 nao configurado.",
       category: "CERTIFICATE"
     });
-  if (!he.existsSync(t.certificatePath))
-    throw new D({
+  }
+  if (!fs$1.existsSync(config2.certificatePath)) {
+    throw new FiscalError({
       code: "CERTIFICATE_FILE_NOT_FOUND",
-      message: `Arquivo do certificado nao encontrado: ${t.certificatePath}`,
+      message: `Arquivo do certificado nao encontrado: ${config2.certificatePath}`,
       category: "CERTIFICATE"
     });
-  if (!t.certificatePassword)
-    throw new D({
+  }
+  if (!config2.certificatePassword) {
+    throw new FiscalError({
       code: "CERTIFICATE_PASSWORD_REQUIRED",
       message: "Senha do certificado A1 nao configurada.",
       category: "CERTIFICATE"
     });
-  if (!((r = t.cscId) != null && r.trim()))
-    throw new D({
+  }
+  if (!((_b = config2.cscId) == null ? void 0 : _b.trim())) {
+    throw new FiscalError({
       code: "CSC_ID_REQUIRED",
       message: "CSC ID nao configurado.",
       category: "CONFIGURATION"
     });
-  if (!((a = t.cscToken) != null && a.trim()))
-    throw new D({
+  }
+  if (!((_c = config2.cscToken) == null ? void 0 : _c.trim())) {
+    throw new FiscalError({
       code: "CSC_TOKEN_REQUIRED",
       message: "CSC Token nao configurado.",
       category: "CONFIGURATION"
     });
+  }
 }
-function ud(t) {
-  const e = Ba(t), r = nd[e];
-  if (!r)
-    throw new D({
+function buildStatusServicoSoap(config2) {
+  const uf = resolveUf(config2);
+  const cUf = IBGE_UF_CODES[uf];
+  if (!cUf) {
+    throw new FiscalError({
       code: "SEFAZ_UF_CODE_NOT_MAPPED",
-      message: `Codigo IBGE da UF ${e} nao esta mapeado para consulta de status.`,
+      message: `Codigo IBGE da UF ${uf} nao esta mapeado para consulta de status.`,
       category: "CONFIGURATION"
     });
-  return `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4"><consStatServ xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${t.environment === "production" ? "1" : "2"}</tpAmb><cUF>${r}</cUF><xServ>STATUS</xServ></consStatServ></nfeDadosMsg></soap12:Body></soap12:Envelope>`;
+  }
+  const tpAmb = config2.environment === "production" ? "1" : "2";
+  return `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4"><consStatServ xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${tpAmb}</tpAmb><cUF>${cUf}</cUF><xServ>STATUS</xServ></consStatServ></nfeDadosMsg></soap12:Body></soap12:Envelope>`;
 }
-const ld = {
+const SOAP_ACTIONS = {
   status: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF",
   autorizacao: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4/nfeAutorizacaoLote",
   retAutorizacao: "http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4/nfeRetAutorizacaoLote"
 };
-function as(t) {
-  if (!(t instanceof D)) return !1;
-  const e = t.details;
-  return t.code === "SEFAZ_NETWORK_OR_TLS_ERROR" && ((e == null ? void 0 : e.originalCode) === "UNABLE_TO_GET_ISSUER_CERT_LOCALLY" || (e == null ? void 0 : e.originalCode) === "SELF_SIGNED_CERT_IN_CHAIN" || /unable to get local issuer certificate|self-signed certificate/i.test((e == null ? void 0 : e.originalMessage) ?? t.message));
+function isLocalIssuerCertificateError(error) {
+  if (!(error instanceof FiscalError)) return false;
+  const details = error.details;
+  return error.code === "SEFAZ_NETWORK_OR_TLS_ERROR" && ((details == null ? void 0 : details.originalCode) === "UNABLE_TO_GET_ISSUER_CERT_LOCALLY" || (details == null ? void 0 : details.originalCode) === "SELF_SIGNED_CERT_IN_CHAIN" || /unable to get local issuer certificate|self-signed certificate/i.test((details == null ? void 0 : details.originalMessage) ?? error.message));
 }
-function Fr(t, e, r, a = {}) {
-  return new Promise((n, o) => {
-    const s = Date.now(), i = ld[a.action ?? "status"], c = a.serviceName ?? "SEFAZ", u = ws.request(
-      t,
+function postSoapWithCertificate(url, body, config2, options2 = {}) {
+  return new Promise((resolve, reject) => {
+    const startedAt = Date.now();
+    const soapAction = SOAP_ACTIONS[options2.action ?? "status"];
+    const serviceName = options2.serviceName ?? "SEFAZ";
+    const request = https.request(
+      url,
       {
         method: "POST",
-        pfx: he.readFileSync(r.certificatePath),
-        passphrase: r.certificatePassword ?? void 0,
-        ca: r.caBundlePath ? he.readFileSync(r.caBundlePath) : void 0,
-        rejectUnauthorized: a.allowUnauthorizedServerCertificate !== !0,
+        pfx: fs$1.readFileSync(config2.certificatePath),
+        passphrase: config2.certificatePassword ?? void 0,
+        ca: config2.caBundlePath ? fs$1.readFileSync(config2.caBundlePath) : void 0,
+        rejectUnauthorized: options2.allowUnauthorizedServerCertificate !== true,
         headers: {
-          "content-type": `application/soap+xml; charset=utf-8; action="${i}"`,
-          "content-length": Buffer.byteLength(e, "utf8"),
-          soapaction: i
+          "content-type": `application/soap+xml; charset=utf-8; action="${soapAction}"`,
+          "content-length": Buffer.byteLength(body, "utf8"),
+          soapaction: soapAction
         },
         timeout: 3e4
       },
-      (l) => {
-        let E = "";
-        l.setEncoding("utf8"), l.on("data", (m) => {
-          E += m;
-        }), l.on("end", () => {
-          if (!l.statusCode || l.statusCode < 200 || l.statusCode >= 300) {
-            const m = E.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-            o(new D({
+      (response) => {
+        let data = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          data += chunk;
+        });
+        response.on("end", () => {
+          if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+            const sefazMessage = data.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+            reject(new FiscalError({
               code: "SEFAZ_HTTP_ERROR",
-              message: `SEFAZ retornou HTTP ${l.statusCode ?? "sem status"} em ${Date.now() - s}ms.${m ? ` Corpo: ${m.slice(0, 500)}` : ""}`,
+              message: `SEFAZ retornou HTTP ${response.statusCode ?? "sem status"} em ${Date.now() - startedAt}ms.${sefazMessage ? ` Corpo: ${sefazMessage.slice(0, 500)}` : ""}`,
               category: "SEFAZ",
-              retryable: !0,
+              retryable: true,
               details: {
-                url: t,
-                statusCode: l.statusCode,
-                headers: l.headers,
-                body: E
+                url,
+                statusCode: response.statusCode,
+                headers: response.headers,
+                body: data
               }
             }));
             return;
           }
-          n(E);
+          resolve(data);
         });
       }
     );
-    u.on("timeout", () => {
-      u.destroy(new Error(`Timeout de 30000ms ao chamar ${c}.`));
-    }), u.on("error", (l) => {
-      o(new D({
+    request.on("timeout", () => {
+      request.destroy(new Error(`Timeout de 30000ms ao chamar ${serviceName}.`));
+    });
+    request.on("error", (error) => {
+      reject(new FiscalError({
         code: "SEFAZ_NETWORK_OR_TLS_ERROR",
-        message: `Falha de rede/TLS ao chamar SEFAZ: ${l.message}`,
+        message: `Falha de rede/TLS ao chamar SEFAZ: ${error.message}`,
         category: "NETWORK",
-        retryable: !0,
-        cause: l,
+        retryable: true,
+        cause: error,
         details: {
-          url: t,
-          originalCode: l.code ?? null,
-          originalMessage: l.message
+          url,
+          originalCode: error.code ?? null,
+          originalMessage: error.message
         }
       }));
-    }), u.write(e, "utf8"), u.end();
+    });
+    request.write(body, "utf8");
+    request.end();
   });
 }
-async function dd(t, e, r) {
+async function postStatusServicoSoap(url, body, config2) {
   try {
     return {
-      rawResponse: await Fr(t, e, r, {
+      rawResponse: await postSoapWithCertificate(url, body, config2, {
         action: "status",
         serviceName: "NFeStatusServico4"
       }),
       tlsValidation: "verified",
       warning: null
     };
-  } catch (a) {
-    if (r.environment === "homologation" && as(a))
+  } catch (error) {
+    if (config2.environment === "homologation" && isLocalIssuerCertificateError(error)) {
       return {
-        rawResponse: await Fr(t, e, r, {
+        rawResponse: await postSoapWithCertificate(url, body, config2, {
           action: "status",
           serviceName: "NFeStatusServico4",
-          allowUnauthorizedServerCertificate: !0
+          allowUnauthorizedServerCertificate: true
         }),
         tlsValidation: "bypassed-homologation",
         warning: "A cadeia TLS do servidor da SEFAZ nao foi validada pelo Node/Electron. O diagnostico repetiu a chamada em homologacao sem validar o certificado do servidor. Para producao, configure a cadeia de CA confiavel no ambiente."
       };
-    throw a;
+    }
+    throw error;
   }
 }
-async function bn(t, e, r, a) {
-  const n = a === "autorizacao" ? "NFeAutorizacao4" : a === "retAutorizacao" ? "NFeRetAutorizacao4" : "NFeStatusServico4";
+async function postSefazSoap(url, body, config2, action) {
+  const serviceName = action === "autorizacao" ? "NFeAutorizacao4" : action === "retAutorizacao" ? "NFeRetAutorizacao4" : "NFeStatusServico4";
   try {
     return {
-      rawResponse: await Fr(t, e, r, { action: a, serviceName: n }),
+      rawResponse: await postSoapWithCertificate(url, body, config2, { action, serviceName }),
       tlsValidation: "verified",
       warning: null
     };
-  } catch (o) {
-    if (r.environment === "homologation" && as(o))
+  } catch (error) {
+    if (config2.environment === "homologation" && isLocalIssuerCertificateError(error)) {
       return {
-        rawResponse: await Fr(t, e, r, {
-          action: a,
-          serviceName: n,
-          allowUnauthorizedServerCertificate: !0
+        rawResponse: await postSoapWithCertificate(url, body, config2, {
+          action,
+          serviceName,
+          allowUnauthorizedServerCertificate: true
         }),
         tlsValidation: "bypassed-homologation",
         warning: "A cadeia TLS do servidor da SEFAZ nao foi validada pelo Node/Electron. A chamada foi repetida em homologacao sem validar o certificado do servidor."
       };
-    throw o;
+    }
+    throw error;
   }
 }
-function be(t, e) {
-  var a;
-  const r = t.match(new RegExp(`<[^:>]*:?${e}[^>]*>([^<]*)</[^:>]*:?${e}>`, "i"));
-  return ((a = r == null ? void 0 : r[1]) == null ? void 0 : a.trim()) ?? null;
+function extractXmlTag(xml, tagName) {
+  var _a;
+  const match = xml.match(new RegExp(`<[^:>]*:?${tagName}[^>]*>([^<]*)</[^:>]*:?${tagName}>`, "i"));
+  return ((_a = match == null ? void 0 : match[1]) == null ? void 0 : _a.trim()) ?? null;
 }
-function Ed(t, e) {
-  const r = t.match(new RegExp(`(<[^:>]*:?${e}[^>]*>[\\s\\S]*?</[^:>]*:?${e}>)`, "i"));
-  return (r == null ? void 0 : r[1]) ?? null;
+function extractXmlBlock(xml, tagName) {
+  const match = xml.match(new RegExp(`(<[^:>]*:?${tagName}[^>]*>[\\s\\S]*?</[^:>]*:?${tagName}>)`, "i"));
+  return (match == null ? void 0 : match[1]) ?? null;
 }
-function ns(t) {
-  return t.replace(/^\s*<\?xml[^?]*\?>\s*/i, "").trim();
+function stripXmlDeclaration(xml) {
+  return xml.replace(/^\s*<\?xml[^?]*\?>\s*/i, "").trim();
 }
-function xr(t) {
-  return t.replace(/>\s+</g, "><").trim();
+function compactXml$1(xml) {
+  return xml.replace(/>\s+</g, "><").trim();
 }
-function md(t) {
-  const e = String(Date.now()).slice(-15).padStart(15, "0"), r = xr(ns(t));
-  return xr(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4"><enviNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><idLote>${e}</idLote><indSinc>1</indSinc>` + r + "</enviNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>");
+function buildAutorizacaoSoap(signedXml) {
+  const idLote = String(Date.now()).slice(-15).padStart(15, "0");
+  const nfeXml = compactXml$1(stripXmlDeclaration(signedXml));
+  return compactXml$1(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4"><enviNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><idLote>${idLote}</idLote><indSinc>1</indSinc>` + nfeXml + `</enviNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>`);
 }
-function pd(t, e) {
-  return e ? xr(`<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">${ns(t)}${e}</nfeProc>`) : null;
+function buildAuthorizedXml(signedXml, protocolXml) {
+  if (!protocolXml) return null;
+  return compactXml$1(`<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">${stripXmlDeclaration(signedXml)}${protocolXml}</nfeProc>`);
 }
-function Td(t, e) {
-  const r = t.environment === "production" ? "1" : "2";
-  return xr(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4"><consReciNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${r}</tpAmb><nRec>${e}</nRec></consReciNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>`);
+function buildRetAutorizacaoSoap(config2, receiptNumber) {
+  const tpAmb = config2.environment === "production" ? "1" : "2";
+  return compactXml$1(`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4"><consReciNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${tpAmb}</tpAmb><nRec>${receiptNumber}</nRec></consReciNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>`);
 }
-function Un(t, e, r, a) {
-  const n = be(r, "cStat"), o = be(r, "xMotivo") ?? "Resposta de autorizacao recebida sem xMotivo.", s = Ed(r, "protNFe"), c = (s ? be(s, "cStat") : null) ?? n, u = s ? be(s, "xMotivo") ?? o : o, l = be(r, "nRec"), E = s ? be(s, "nProt") : null, m = s ? be(s, "dhRecbto") : null, T = s ? be(s, "chNFe") : t.accessKey;
-  if (c === "100" || c === "150") {
-    const h = pd(e, s);
+function mapAuthorizationResponse(request, signedXml, rawResponse, providerWarning) {
+  const loteStatus = extractXmlTag(rawResponse, "cStat");
+  const statusMessage = extractXmlTag(rawResponse, "xMotivo") ?? "Resposta de autorizacao recebida sem xMotivo.";
+  const protocolXml = extractXmlBlock(rawResponse, "protNFe");
+  const protocolStatus = protocolXml ? extractXmlTag(protocolXml, "cStat") : null;
+  const effectiveStatus = protocolStatus ?? loteStatus;
+  const effectiveMessage = protocolXml ? extractXmlTag(protocolXml, "xMotivo") ?? statusMessage : statusMessage;
+  const receiptNumber = extractXmlTag(rawResponse, "nRec");
+  const protocol = protocolXml ? extractXmlTag(protocolXml, "nProt") : null;
+  const authorizedAt = protocolXml ? extractXmlTag(protocolXml, "dhRecbto") : null;
+  const accessKey = protocolXml ? extractXmlTag(protocolXml, "chNFe") : request.accessKey;
+  if (effectiveStatus === "100" || effectiveStatus === "150") {
+    const xmlAuthorized = buildAuthorizedXml(signedXml, protocolXml);
     return {
       status: "AUTHORIZED",
       provider: "sefaz-direct",
-      accessKey: T,
-      protocol: E,
-      receiptNumber: l,
-      statusCode: c,
-      statusMessage: u,
-      authorizedAt: m,
-      issuedAt: t.issuedAt,
-      xmlBuilt: t.xmlBuilt ?? null,
-      xmlSigned: e,
-      xmlSent: e,
-      xmlAuthorized: h,
-      qrCodeUrl: t.qrCodeUrl ?? null,
-      rawResponse: { rawResponse: r, warning: a ?? null }
+      accessKey,
+      protocol,
+      receiptNumber,
+      statusCode: effectiveStatus,
+      statusMessage: effectiveMessage,
+      authorizedAt,
+      issuedAt: request.issuedAt,
+      xmlBuilt: request.xmlBuilt ?? null,
+      xmlSigned: signedXml,
+      xmlSent: signedXml,
+      xmlAuthorized,
+      qrCodeUrl: request.qrCodeUrl ?? null,
+      rawResponse: { rawResponse, warning: providerWarning ?? null }
     };
   }
-  return n === "103" || n === "105" ? {
-    status: "PENDING",
-    provider: "sefaz-direct",
-    accessKey: t.accessKey,
-    receiptNumber: l,
-    statusCode: n,
-    statusMessage: o,
-    issuedAt: t.issuedAt,
-    xmlBuilt: t.xmlBuilt ?? null,
-    xmlSigned: e,
-    xmlSent: e,
-    qrCodeUrl: t.qrCodeUrl ?? null,
-    rawResponse: { rawResponse: r, warning: a ?? null }
-  } : {
+  if (loteStatus === "103" || loteStatus === "105") {
+    return {
+      status: "PENDING",
+      provider: "sefaz-direct",
+      accessKey: request.accessKey,
+      receiptNumber,
+      statusCode: loteStatus,
+      statusMessage,
+      issuedAt: request.issuedAt,
+      xmlBuilt: request.xmlBuilt ?? null,
+      xmlSigned: signedXml,
+      xmlSent: signedXml,
+      qrCodeUrl: request.qrCodeUrl ?? null,
+      rawResponse: { rawResponse, warning: providerWarning ?? null }
+    };
+  }
+  return {
     status: "REJECTED",
     provider: "sefaz-direct",
-    accessKey: t.accessKey,
-    receiptNumber: l,
-    protocol: E,
-    statusCode: c ?? "SEFAZ_AUTHORIZATION_REJECTED",
-    statusMessage: u,
-    issuedAt: t.issuedAt,
-    xmlBuilt: t.xmlBuilt ?? null,
-    xmlSigned: e,
-    xmlSent: e,
-    qrCodeUrl: t.qrCodeUrl ?? null,
-    rawResponse: { rawResponse: r, warning: a ?? null }
+    accessKey: request.accessKey,
+    receiptNumber,
+    protocol,
+    statusCode: effectiveStatus ?? "SEFAZ_AUTHORIZATION_REJECTED",
+    statusMessage: effectiveMessage,
+    issuedAt: request.issuedAt,
+    xmlBuilt: request.xmlBuilt ?? null,
+    xmlSigned: signedXml,
+    xmlSent: signedXml,
+    qrCodeUrl: request.qrCodeUrl ?? null,
+    rawResponse: { rawResponse, warning: providerWarning ?? null }
   };
 }
-class _d {
+class SefazDirectFiscalProvider {
   constructor() {
-    Re(this, "providerId", "sefaz-direct");
+    __publicField(this, "providerId", "sefaz-direct");
   }
-  async authorizeNfce(e, r) {
-    if (yn(r), !e.xmlBuilt)
-      throw new D({
+  async authorizeNfce(request, config2) {
+    validateSefazDirectConfig(config2);
+    if (!request.xmlBuilt) {
+      throw new FiscalError({
         code: "NFCE_XML_NOT_BUILT",
         message: "XML NFC-e gerado nao foi informado ao provider SEFAZ.",
         category: "VALIDATION"
       });
-    const a = id(r), n = Date.now();
-    N.info(`[SEFAZ_DIRECT] Iniciando autorizacao NFC-e. saleId=${e.saleId} accessKey=${e.accessKey ?? "sem-chave"} ambiente=${r.environment} endpoint=${a}`), N.info(`[SEFAZ_DIRECT] Assinando XML NFC-e. saleId=${e.saleId}`);
-    const o = rd.sign(e.xmlBuilt, r);
-    N.info(`[SEFAZ_DIRECT] XML NFC-e assinado. saleId=${e.saleId}`);
-    const s = md(o);
-    N.info(`[SEFAZ_DIRECT] Enviando lote NFeAutorizacao4. saleId=${e.saleId} endpoint=${a}`);
-    const i = await bn(a, s, r, "autorizacao"), c = Un(e, o, i.rawResponse, i.warning);
-    if (N.info(`[SEFAZ_DIRECT] Resposta NFeAutorizacao4. saleId=${e.saleId} cStat=${c.statusCode ?? "sem-cStat"} status=${c.status} motivo=${c.statusMessage}`), c.status === "PENDING" && c.receiptNumber) {
-      const u = cd(r), l = Td(r, c.receiptNumber);
-      N.info(`[SEFAZ_DIRECT] Consultando NFeRetAutorizacao4. saleId=${e.saleId} nRec=${c.receiptNumber} endpoint=${u}`);
-      const E = await bn(u, l, r, "retAutorizacao"), m = Un(e, o, E.rawResponse, E.warning ?? i.warning);
-      return N.info(`[SEFAZ_DIRECT] Resposta NFeRetAutorizacao4. saleId=${e.saleId} cStat=${m.statusCode ?? "sem-cStat"} status=${m.status} motivo=${m.statusMessage}`), {
-        ...m,
+    }
+    const url = resolveAutorizacaoUrl(config2);
+    const startedAt = Date.now();
+    logger.info(`[SEFAZ_DIRECT] Iniciando autorizacao NFC-e. saleId=${request.saleId} accessKey=${request.accessKey ?? "sem-chave"} ambiente=${config2.environment} endpoint=${url}`);
+    logger.info(`[SEFAZ_DIRECT] Assinando XML NFC-e. saleId=${request.saleId}`);
+    const signedXml = nfceXmlSigningService.sign(request.xmlBuilt, config2);
+    logger.info(`[SEFAZ_DIRECT] XML NFC-e assinado. saleId=${request.saleId}`);
+    const soapRequest = buildAutorizacaoSoap(signedXml);
+    logger.info(`[SEFAZ_DIRECT] Enviando lote NFeAutorizacao4. saleId=${request.saleId} endpoint=${url}`);
+    const response = await postSefazSoap(url, soapRequest, config2, "autorizacao");
+    const result = mapAuthorizationResponse(request, signedXml, response.rawResponse, response.warning);
+    logger.info(`[SEFAZ_DIRECT] Resposta NFeAutorizacao4. saleId=${request.saleId} cStat=${result.statusCode ?? "sem-cStat"} status=${result.status} motivo=${result.statusMessage}`);
+    if (result.status === "PENDING" && result.receiptNumber) {
+      const retUrl = resolveRetAutorizacaoUrl(config2);
+      const retRequest = buildRetAutorizacaoSoap(config2, result.receiptNumber);
+      logger.info(`[SEFAZ_DIRECT] Consultando NFeRetAutorizacao4. saleId=${request.saleId} nRec=${result.receiptNumber} endpoint=${retUrl}`);
+      const retResponse = await postSefazSoap(retUrl, retRequest, config2, "retAutorizacao");
+      const retResult = mapAuthorizationResponse(request, signedXml, retResponse.rawResponse, retResponse.warning ?? response.warning);
+      logger.info(`[SEFAZ_DIRECT] Resposta NFeRetAutorizacao4. saleId=${request.saleId} cStat=${retResult.statusCode ?? "sem-cStat"} status=${retResult.status} motivo=${retResult.statusMessage}`);
+      return {
+        ...retResult,
         rawResponse: {
-          ...typeof m.rawResponse == "object" && m.rawResponse ? m.rawResponse : {},
-          authorizationUrl: a,
-          retAutorizacaoUrl: u,
-          responseTimeMs: Date.now() - n
+          ...typeof retResult.rawResponse === "object" && retResult.rawResponse ? retResult.rawResponse : {},
+          authorizationUrl: url,
+          retAutorizacaoUrl: retUrl,
+          responseTimeMs: Date.now() - startedAt
         }
       };
     }
     return {
-      ...c,
+      ...result,
       rawResponse: {
-        ...typeof c.rawResponse == "object" && c.rawResponse ? c.rawResponse : {},
-        url: a,
-        responseTimeMs: Date.now() - n
+        ...typeof result.rawResponse === "object" && result.rawResponse ? result.rawResponse : {},
+        url,
+        responseTimeMs: Date.now() - startedAt
       }
     };
   }
-  async cancelNfce(e, r) {
-    throw new D({
+  async cancelNfce(_request, _config) {
+    throw new FiscalError({
       code: "SEFAZ_DIRECT_NOT_IMPLEMENTED",
       message: "Provider SEFAZ direto ainda não implementado.",
       category: "PROVIDER"
     });
   }
-  async consultStatus(e, r) {
-    throw new D({
+  async consultStatus(_request, _config) {
+    throw new FiscalError({
       code: "SEFAZ_DIRECT_NOT_IMPLEMENTED",
       message: "Provider SEFAZ direto ainda não implementado.",
       category: "PROVIDER"
     });
   }
-  async testStatusServico(e) {
-    yn(e);
-    const r = sd(e), a = ud(e), n = Date.now(), o = await dd(r, a, e), s = Date.now() - n, i = o.rawResponse, c = be(i, "cStat"), u = be(i, "xMotivo") ?? "Resposta recebida da SEFAZ sem xMotivo.";
+  async testStatusServico(config2) {
+    validateSefazDirectConfig(config2);
+    const url = resolveStatusServicoUrl(config2);
+    const rawRequest = buildStatusServicoSoap(config2);
+    const startedAt = Date.now();
+    const response = await postStatusServicoSoap(url, rawRequest, config2);
+    const responseTimeMs = Date.now() - startedAt;
+    const rawResponse = response.rawResponse;
+    const statusCode = extractXmlTag(rawResponse, "cStat");
+    const statusMessage = extractXmlTag(rawResponse, "xMotivo") ?? "Resposta recebida da SEFAZ sem xMotivo.";
     return {
       provider: "sefaz-direct",
-      environment: e.environment,
-      uf: Ba(e),
+      environment: config2.environment,
+      uf: resolveUf(config2),
       model: 65,
       service: "NFeStatusServico4",
-      url: r,
-      success: c === "107",
-      statusCode: c,
-      statusMessage: u,
-      responseTimeMs: s,
-      rawRequest: a,
-      rawResponse: i,
+      url,
+      success: statusCode === "107",
+      statusCode,
+      statusMessage,
+      responseTimeMs,
+      rawRequest,
+      rawResponse,
       checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      tlsValidation: o.tlsValidation,
-      warning: o.warning
+      tlsValidation: response.tlsValidation,
+      warning: response.warning
     };
   }
 }
-class fd {
+class FiscalProviderFactory {
   constructor() {
-    Re(this, "providers");
+    __publicField(this, "providers");
     this.providers = {
-      mock: new Zc(),
-      "sefaz-direct": new _d(),
-      gateway: new Qc()
+      mock: new MockFiscalProvider(),
+      "sefaz-direct": new SefazDirectFiscalProvider(),
+      gateway: new GatewayFiscalProvider()
     };
   }
-  resolve(e) {
-    return this.providers[e.provider];
+  resolve(config2) {
+    return this.providers[config2.provider];
   }
 }
-class Nd {
-  constructor(e, r) {
-    Re(this, "workerId");
-    this.repository = e, this.processor = r, this.workerId = `main-${process.pid}`;
+class SqliteFiscalQueueService {
+  constructor(repository2, processor) {
+    __publicField(this, "workerId");
+    this.repository = repository2;
+    this.processor = processor;
+    this.workerId = `main-${process.pid}`;
   }
-  async enqueue(e) {
-    return this.repository.enqueue(e);
+  async enqueue(request) {
+    return this.repository.enqueue(request);
   }
   async processNext() {
-    const e = (/* @__PURE__ */ new Date()).toISOString(), r = this.repository.claimNextQueueItem(e, this.workerId);
-    return r ? this.processClaimedItem(r) : (N.info("[FiscalQueue] Nenhum item pronto para processamento."), null);
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const item = this.repository.claimNextQueueItem(now, this.workerId);
+    if (!item) {
+      logger.info("[FiscalQueue] Nenhum item pronto para processamento.");
+      return null;
+    }
+    return this.processClaimedItem(item);
   }
-  async processById(e) {
-    const r = (/* @__PURE__ */ new Date()).toISOString(), a = this.repository.claimQueueItemById(e, r, this.workerId);
-    return a ? this.processClaimedItem(a) : (N.warn(`[FiscalQueue] Item ${e} nao encontrado ou nao esta pronto para processamento.`), this.repository.findQueueItemById(e));
+  async processById(queueId) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const item = this.repository.claimQueueItemById(queueId, now, this.workerId);
+    if (!item) {
+      logger.warn(`[FiscalQueue] Item ${queueId} nao encontrado ou nao esta pronto para processamento.`);
+      return this.repository.findQueueItemById(queueId);
+    }
+    return this.processClaimedItem(item);
   }
-  async processClaimedItem(e) {
-    N.info(`[FiscalQueue] Iniciando job ${e.id} (${e.operation}).`);
+  async processClaimedItem(item) {
+    logger.info(`[FiscalQueue] Iniciando job ${item.id} (${item.operation}).`);
     try {
-      const r = await this.processor(e);
-      r.status === "AUTHORIZED" || r.status === "REJECTED" || r.status === "CANCELLED" || r.status === "COMPLETED" ? this.repository.markQueueItemDone(e.id, (/* @__PURE__ */ new Date()).toISOString(), r.result) : r.status === "FAILED_RETRYABLE" || r.status === "PENDING_EXTERNAL" ? this.repository.markQueueItemFailed(
-        e.id,
-        r.statusCode ?? r.status,
-        r.statusMessage ?? "Aguardando novo processamento fiscal.",
-        r.nextRetryAt ?? new Date(Date.now() + Math.max(e.attempts, 1) * 6e4).toISOString(),
-        (/* @__PURE__ */ new Date()).toISOString(),
-        r.result
-      ) : this.repository.markQueueItemFailed(
-        e.id,
-        r.statusCode ?? r.status,
-        r.statusMessage ?? "Falha fiscal definitiva.",
-        null,
-        (/* @__PURE__ */ new Date()).toISOString(),
-        r.result
-      ), N.info(`[FiscalQueue] Job ${e.id} concluido com status ${r.status}.`);
-    } catch (r) {
-      const a = me(r, "FISCAL_QUEUE_PROCESS_FAILED"), n = a.retryable ? new Date(Date.now() + e.attempts * 6e4).toISOString() : null;
+      const result = await this.processor(item);
+      if (result.status === "AUTHORIZED" || result.status === "REJECTED" || result.status === "CANCELLED" || result.status === "COMPLETED") {
+        this.repository.markQueueItemDone(item.id, (/* @__PURE__ */ new Date()).toISOString(), result.result);
+      } else if (result.status === "FAILED_RETRYABLE" || result.status === "PENDING_EXTERNAL") {
+        this.repository.markQueueItemFailed(
+          item.id,
+          result.statusCode ?? result.status,
+          result.statusMessage ?? "Aguardando novo processamento fiscal.",
+          result.nextRetryAt ?? new Date(Date.now() + Math.max(item.attempts, 1) * 6e4).toISOString(),
+          (/* @__PURE__ */ new Date()).toISOString(),
+          result.result
+        );
+      } else {
+        this.repository.markQueueItemFailed(
+          item.id,
+          result.statusCode ?? result.status,
+          result.statusMessage ?? "Falha fiscal definitiva.",
+          null,
+          (/* @__PURE__ */ new Date()).toISOString(),
+          result.result
+        );
+      }
+      logger.info(`[FiscalQueue] Job ${item.id} concluido com status ${result.status}.`);
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_QUEUE_PROCESS_FAILED");
+      const nextRetryAt = fiscalError.retryable ? new Date(Date.now() + item.attempts * 6e4).toISOString() : null;
       this.repository.markQueueItemFailed(
-        e.id,
-        a.code,
-        a.message,
-        n,
+        item.id,
+        fiscalError.code,
+        fiscalError.message,
+        nextRetryAt,
         (/* @__PURE__ */ new Date()).toISOString(),
         {
-          success: !1,
-          statusCode: a.code,
-          statusMessage: a.message,
-          category: a.category,
-          details: a.details ?? null
+          success: false,
+          statusCode: fiscalError.code,
+          statusMessage: fiscalError.message,
+          category: fiscalError.category,
+          details: fiscalError.details ?? null
         }
-      ), N.error(`[FiscalQueue] Job ${e.id} falhou: ${a.code} - ${a.message}`);
+      );
+      logger.error(`[FiscalQueue] Job ${item.id} falhou: ${fiscalError.code} - ${fiscalError.message}`);
     }
-    return this.repository.findQueueItemById(e.id);
+    return this.repository.findQueueItemById(item.id);
   }
-  async retry(e) {
-    const r = this.repository.findQueueItemById(e);
-    return r ? (this.repository.markQueueItemFailed(
-      e,
-      r.lastErrorCode ?? "MANUAL_RETRY",
-      r.lastErrorMessage ?? "Reprocessamento manual.",
+  async retry(queueId) {
+    const item = this.repository.findQueueItemById(queueId);
+    if (!item) {
+      return null;
+    }
+    this.repository.markQueueItemFailed(
+      queueId,
+      item.lastErrorCode ?? "MANUAL_RETRY",
+      item.lastErrorMessage ?? "Reprocessamento manual.",
       (/* @__PURE__ */ new Date()).toISOString(),
       (/* @__PURE__ */ new Date()).toISOString()
-    ), this.processNext()) : null;
+    );
+    return this.processNext();
   }
-  async list(e = 20) {
-    return this.repository.listQueueItems(e);
+  async list(limit = 20) {
+    return this.repository.listQueueItems(limit);
   }
   async getSummary() {
     return this.repository.summarizeQueue();
   }
 }
-function wn(t) {
-  return String(t ?? "").replace(/\D/g, "");
+function normalizeDigits(value) {
+  return String(value ?? "").replace(/\D/g, "");
 }
-function se(t) {
-  return String(t ?? "").trim().toUpperCase();
+function normalizeText(value) {
+  return String(value ?? "").trim().toUpperCase();
 }
-function gd(t) {
-  return /^\d{8}$/.test(t);
+function isValidNcm(value) {
+  return /^\d{8}$/.test(value);
 }
-function Ad(t) {
-  return /^\d{4}$/.test(t);
+function isValidCfop(value) {
+  return /^\d{4}$/.test(value);
 }
-function hd(t) {
-  return /^[0-8]$/.test(t);
+function isValidOrigin(value) {
+  return /^[0-8]$/.test(value);
 }
-function Id(t) {
-  return /^\d{7}$/.test(t);
+function isValidCest(value) {
+  return /^\d{7}$/.test(value);
 }
-function Cd(t) {
-  return /^(SEM GTIN|\d{8}|\d{12,14})$/.test(t);
+function isValidGtin(value) {
+  return /^(SEM GTIN|\d{8}|\d{12,14})$/.test(value);
 }
-function Fn(t, e) {
-  return Math.abs(t - e) < 0.01;
+function almostEqual(left, right) {
+  return Math.abs(left - right) < 0.01;
 }
-function Dd(t) {
-  return {
+function paymentLabel(method) {
+  const labels = {
     DINHEIRO: "Dinheiro",
     PIX: "PIX",
     DEBITO: "Cartão de débito",
     CREDITO: "Cartão de crédito",
     VOUCHER: "Voucher",
     OUTROS: "Outros"
-  }[t];
+  };
+  return labels[method];
 }
-class vd {
-  validateAuthorizeRequest(e, r) {
-    const a = [], n = Ie.findById(e.companyId);
-    if (n || a.push({
-      code: "STORE_NOT_FOUND",
-      message: `Store fiscal ${e.companyId} não encontrada.`,
-      field: "companyId",
-      severity: "error"
-    }), (!e.series || e.series <= 0) && a.push({
-      code: "SERIES_INVALID",
-      message: "Série fiscal inválida.",
-      field: "series",
-      severity: "error"
-    }), (!e.number || e.number <= 0) && a.push({
-      code: "NUMBER_INVALID",
-      message: "Número fiscal inválido.",
-      field: "number",
-      severity: "error"
-    }), e.issuedAt || a.push({
-      code: "ISSUED_AT_REQUIRED",
-      message: "Data/hora de emissão não informada.",
-      field: "issuedAt",
-      severity: "error"
-    }), this.validateEmitter(e, r, (n == null ? void 0 : n.environment) ?? null, a), this.validatePayments(e, a), this.validateItems(e, a), this.validateRuntimeConfig(e, r, a), a.some((o) => o.severity === "error")) {
-      const o = a.filter((s) => s.severity === "error").map((s) => s.message).join(" | ");
-      throw new D({
+class FiscalPreTransmissionValidator {
+  validateAuthorizeRequest(request, config2) {
+    const issues = [];
+    const store = storeRepository.findById(request.companyId);
+    if (!store) {
+      issues.push({
+        code: "STORE_NOT_FOUND",
+        message: `Store fiscal ${request.companyId} não encontrada.`,
+        field: "companyId",
+        severity: "error"
+      });
+    }
+    if (!request.series || request.series <= 0) {
+      issues.push({
+        code: "SERIES_INVALID",
+        message: "Série fiscal inválida.",
+        field: "series",
+        severity: "error"
+      });
+    }
+    if (!request.number || request.number <= 0) {
+      issues.push({
+        code: "NUMBER_INVALID",
+        message: "Número fiscal inválido.",
+        field: "number",
+        severity: "error"
+      });
+    }
+    if (!request.issuedAt) {
+      issues.push({
+        code: "ISSUED_AT_REQUIRED",
+        message: "Data/hora de emissão não informada.",
+        field: "issuedAt",
+        severity: "error"
+      });
+    }
+    this.validateEmitter(request, config2, (store == null ? void 0 : store.environment) ?? null, issues);
+    this.validatePayments(request, issues);
+    this.validateItems(request, issues);
+    this.validateRuntimeConfig(request, config2, issues);
+    if (issues.some((issue) => issue.severity === "error")) {
+      const message = issues.filter((issue) => issue.severity === "error").map((issue) => issue.message).join(" | ");
+      throw new FiscalError({
         code: "FISCAL_PREREQUISITES_NOT_MET",
-        message: o || "A venda não está pronta para emissão fiscal.",
+        message: message || "A venda não está pronta para emissão fiscal.",
         category: "VALIDATION",
-        retryable: !1,
-        details: a
+        retryable: false,
+        details: issues
       });
     }
   }
-  validateEmitter(e, r, a, n) {
-    const o = e.emitter;
-    wn(o.cnpj).length !== 14 && n.push({ code: "EMITTER_CNPJ_INVALID", message: "CNPJ do emitente inválido.", field: "emitter.cnpj", severity: "error" }), se(o.stateRegistration) || n.push({ code: "EMITTER_IE_REQUIRED", message: "IE do emitente é obrigatória.", field: "emitter.stateRegistration", severity: "error" }), se(o.taxRegimeCode) || n.push({ code: "EMITTER_CRT_REQUIRED", message: "CRT do emitente é obrigatório.", field: "emitter.taxRegimeCode", severity: "error" }), se(o.legalName) || n.push({ code: "EMITTER_LEGAL_NAME_REQUIRED", message: "Razão social do emitente é obrigatória.", field: "emitter.legalName", severity: "error" }), se(o.tradeName) || n.push({ code: "EMITTER_TRADE_NAME_REQUIRED", message: "Nome fantasia do emitente é obrigatório.", field: "emitter.tradeName", severity: "error" }), (!se(o.address.street) || !se(o.address.number) || !se(o.address.neighborhood)) && n.push({ code: "EMITTER_ADDRESS_INCOMPLETE", message: "Endereço do emitente está incompleto.", field: "emitter.address", severity: "error" }), (!se(o.address.city) || !se(o.address.state)) && n.push({ code: "EMITTER_CITY_STATE_REQUIRED", message: "Cidade e UF do emitente são obrigatórias.", field: "emitter.address.city", severity: "error" }), wn(o.address.cityIbgeCode).length !== 7 && n.push({ code: "EMITTER_CITY_IBGE_INVALID", message: "Código IBGE do município do emitente é inválido.", field: "emitter.address.cityIbgeCode", severity: "error" }), e.environment !== r.environment && n.push({
-      code: "ENVIRONMENT_MISMATCH",
-      message: "Ambiente do request diverge da configuração fiscal ativa.",
-      field: "environment",
-      severity: "error"
-    }), a && e.environment !== a && n.push({
-      code: "STORE_ENVIRONMENT_MISMATCH",
-      message: "Ambiente fiscal da store diverge do request de emissão.",
-      field: "environment",
-      severity: "error"
-    });
+  validateEmitter(request, config2, storeEnvironment, issues) {
+    const emitter = request.emitter;
+    if (normalizeDigits(emitter.cnpj).length !== 14) {
+      issues.push({ code: "EMITTER_CNPJ_INVALID", message: "CNPJ do emitente inválido.", field: "emitter.cnpj", severity: "error" });
+    }
+    if (!normalizeText(emitter.stateRegistration)) {
+      issues.push({ code: "EMITTER_IE_REQUIRED", message: "IE do emitente é obrigatória.", field: "emitter.stateRegistration", severity: "error" });
+    }
+    if (!normalizeText(emitter.taxRegimeCode)) {
+      issues.push({ code: "EMITTER_CRT_REQUIRED", message: "CRT do emitente é obrigatório.", field: "emitter.taxRegimeCode", severity: "error" });
+    }
+    if (!normalizeText(emitter.legalName)) {
+      issues.push({ code: "EMITTER_LEGAL_NAME_REQUIRED", message: "Razão social do emitente é obrigatória.", field: "emitter.legalName", severity: "error" });
+    }
+    if (!normalizeText(emitter.tradeName)) {
+      issues.push({ code: "EMITTER_TRADE_NAME_REQUIRED", message: "Nome fantasia do emitente é obrigatório.", field: "emitter.tradeName", severity: "error" });
+    }
+    if (!normalizeText(emitter.address.street) || !normalizeText(emitter.address.number) || !normalizeText(emitter.address.neighborhood)) {
+      issues.push({ code: "EMITTER_ADDRESS_INCOMPLETE", message: "Endereço do emitente está incompleto.", field: "emitter.address", severity: "error" });
+    }
+    if (!normalizeText(emitter.address.city) || !normalizeText(emitter.address.state)) {
+      issues.push({ code: "EMITTER_CITY_STATE_REQUIRED", message: "Cidade e UF do emitente são obrigatórias.", field: "emitter.address.city", severity: "error" });
+    }
+    if (normalizeDigits(emitter.address.cityIbgeCode).length !== 7) {
+      issues.push({ code: "EMITTER_CITY_IBGE_INVALID", message: "Código IBGE do município do emitente é inválido.", field: "emitter.address.cityIbgeCode", severity: "error" });
+    }
+    if (request.environment !== config2.environment) {
+      issues.push({
+        code: "ENVIRONMENT_MISMATCH",
+        message: "Ambiente do request diverge da configuração fiscal ativa.",
+        field: "environment",
+        severity: "error"
+      });
+    }
+    if (storeEnvironment && request.environment !== storeEnvironment) {
+      issues.push({
+        code: "STORE_ENVIRONMENT_MISMATCH",
+        message: "Ambiente fiscal da store diverge do request de emissão.",
+        field: "environment",
+        severity: "error"
+      });
+    }
   }
-  validatePayments(e, r) {
-    if (e.payments.length === 0) {
-      r.push({
+  validatePayments(request, issues) {
+    if (request.payments.length === 0) {
+      issues.push({
         code: "PAYMENTS_REQUIRED",
         message: "A venda precisa ter ao menos um pagamento fiscal.",
         field: "payments",
@@ -10320,41 +12119,54 @@ class vd {
       });
       return;
     }
-    const a = e.payments.reduce((o, s) => o + Number(s.amount || 0), 0);
-    Fn(a, e.totals.finalAmount) || r.push({
-      code: "PAYMENTS_TOTAL_MISMATCH",
-      message: "A soma dos pagamentos não corresponde ao total da venda.",
-      field: "payments",
-      severity: "error"
-    }), e.payments.forEach((o, s) => {
-      o.amount <= 0 && r.push({
-        code: "PAYMENT_AMOUNT_INVALID",
-        message: `Pagamento ${s + 1} (${Dd(o.method)}) com valor inválido.`,
-        field: `payments[${s}].amount`,
-        severity: "error"
-      }), (o.changeAmount ?? 0) > 0 && o.method !== "DINHEIRO" && r.push({
-        code: "PAYMENT_CHANGE_REQUIRES_CASH",
-        message: "Troco só pode ser informado em pagamento em dinheiro.",
-        field: `payments[${s}].changeAmount`,
-        severity: "error"
-      }), o.method === "DINHEIRO" && (o.receivedAmount ?? 0) < o.amount && r.push({
-        code: "CASH_RECEIVED_AMOUNT_INVALID",
-        message: `Pagamento ${s + 1} em dinheiro com valor recebido menor que o valor pago.`,
-        field: `payments[${s}].receivedAmount`,
+    const totalPayments = request.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    if (!almostEqual(totalPayments, request.totals.finalAmount)) {
+      issues.push({
+        code: "PAYMENTS_TOTAL_MISMATCH",
+        message: "A soma dos pagamentos não corresponde ao total da venda.",
+        field: "payments",
         severity: "error"
       });
+    }
+    request.payments.forEach((payment, index) => {
+      if (payment.amount <= 0) {
+        issues.push({
+          code: "PAYMENT_AMOUNT_INVALID",
+          message: `Pagamento ${index + 1} (${paymentLabel(payment.method)}) com valor inválido.`,
+          field: `payments[${index}].amount`,
+          severity: "error"
+        });
+      }
+      if ((payment.changeAmount ?? 0) > 0 && payment.method !== "DINHEIRO") {
+        issues.push({
+          code: "PAYMENT_CHANGE_REQUIRES_CASH",
+          message: `Troco só pode ser informado em pagamento em dinheiro.`,
+          field: `payments[${index}].changeAmount`,
+          severity: "error"
+        });
+      }
+      if (payment.method === "DINHEIRO" && (payment.receivedAmount ?? 0) < payment.amount) {
+        issues.push({
+          code: "CASH_RECEIVED_AMOUNT_INVALID",
+          message: `Pagamento ${index + 1} em dinheiro com valor recebido menor que o valor pago.`,
+          field: `payments[${index}].receivedAmount`,
+          severity: "error"
+        });
+      }
     });
-    const n = e.payments.reduce((o, s) => o + Number(s.changeAmount ?? 0), 0);
-    Fn(n, e.totals.changeAmount) || r.push({
-      code: "PAYMENTS_CHANGE_MISMATCH",
-      message: "O troco dos pagamentos diverge do troco total da venda.",
-      field: "payments",
-      severity: "error"
-    });
+    const totalChange = request.payments.reduce((sum, payment) => sum + Number(payment.changeAmount ?? 0), 0);
+    if (!almostEqual(totalChange, request.totals.changeAmount)) {
+      issues.push({
+        code: "PAYMENTS_CHANGE_MISMATCH",
+        message: "O troco dos pagamentos diverge do troco total da venda.",
+        field: "payments",
+        severity: "error"
+      });
+    }
   }
-  validateItems(e, r) {
-    if (e.items.length === 0) {
-      r.push({
+  validateItems(request, issues) {
+    if (request.items.length === 0) {
+      issues.push({
         code: "ITEMS_REQUIRED",
         message: "A venda precisa ter itens para emissão NFC-e.",
         field: "items",
@@ -10362,21 +12174,63 @@ class vd {
       });
       return;
     }
-    e.items.forEach((a, n) => {
-      const o = a.id ?? null;
-      gd(a.tax.ncm) || r.push({ code: "ITEM_NCM_INVALID", message: "NCM ausente ou inválido.", field: `items[${n}].tax.ncm`, severity: "error", itemIndex: n, itemId: o }), Ad(a.tax.cfop) || r.push({ code: "ITEM_CFOP_INVALID", message: "CFOP ausente ou inválido.", field: `items[${n}].tax.cfop`, severity: "error", itemIndex: n, itemId: o }), hd(a.tax.originCode) || r.push({ code: "ITEM_ORIGIN_INVALID", message: "Origem fiscal ausente ou inválida.", field: `items[${n}].tax.originCode`, severity: "error", itemIndex: n, itemId: o }), !a.tax.csosn && !a.tax.icmsCst && r.push({ code: "ITEM_ICMS_CLASSIFICATION_REQUIRED", message: "CST/CSOSN de ICMS é obrigatório.", field: `items[${n}].tax`, severity: "error", itemIndex: n, itemId: o }), se(a.tax.pisCst) || r.push({ code: "ITEM_PIS_CST_REQUIRED", message: "CST de PIS é obrigatório.", field: `items[${n}].tax.pisCst`, severity: "error", itemIndex: n, itemId: o }), se(a.tax.cofinsCst) || r.push({ code: "ITEM_COFINS_CST_REQUIRED", message: "CST de COFINS é obrigatório.", field: `items[${n}].tax.cofinsCst`, severity: "error", itemIndex: n, itemId: o }), a.tax.cest && !Id(a.tax.cest) && r.push({ code: "ITEM_CEST_INVALID", message: "CEST informado é inválido.", field: `items[${n}].tax.cest`, severity: "error", itemIndex: n, itemId: o }), a.gtin && !Cd(a.gtin) && r.push({ code: "ITEM_GTIN_INVALID", message: "GTIN informado é inválido.", field: `items[${n}].gtin`, severity: "error", itemIndex: n, itemId: o });
+    request.items.forEach((item, index) => {
+      const itemId = item.id ?? null;
+      if (!isValidNcm(item.tax.ncm)) {
+        issues.push({ code: "ITEM_NCM_INVALID", message: "NCM ausente ou inválido.", field: `items[${index}].tax.ncm`, severity: "error", itemIndex: index, itemId });
+      }
+      if (!isValidCfop(item.tax.cfop)) {
+        issues.push({ code: "ITEM_CFOP_INVALID", message: "CFOP ausente ou inválido.", field: `items[${index}].tax.cfop`, severity: "error", itemIndex: index, itemId });
+      }
+      if (!isValidOrigin(item.tax.originCode)) {
+        issues.push({ code: "ITEM_ORIGIN_INVALID", message: "Origem fiscal ausente ou inválida.", field: `items[${index}].tax.originCode`, severity: "error", itemIndex: index, itemId });
+      }
+      if (!item.tax.csosn && !item.tax.icmsCst) {
+        issues.push({ code: "ITEM_ICMS_CLASSIFICATION_REQUIRED", message: "CST/CSOSN de ICMS é obrigatório.", field: `items[${index}].tax`, severity: "error", itemIndex: index, itemId });
+      }
+      if (!normalizeText(item.tax.pisCst)) {
+        issues.push({ code: "ITEM_PIS_CST_REQUIRED", message: "CST de PIS é obrigatório.", field: `items[${index}].tax.pisCst`, severity: "error", itemIndex: index, itemId });
+      }
+      if (!normalizeText(item.tax.cofinsCst)) {
+        issues.push({ code: "ITEM_COFINS_CST_REQUIRED", message: "CST de COFINS é obrigatório.", field: `items[${index}].tax.cofinsCst`, severity: "error", itemIndex: index, itemId });
+      }
+      if (item.tax.cest && !isValidCest(item.tax.cest)) {
+        issues.push({ code: "ITEM_CEST_INVALID", message: "CEST informado é inválido.", field: `items[${index}].tax.cest`, severity: "error", itemIndex: index, itemId });
+      }
+      if (item.gtin && !isValidGtin(item.gtin)) {
+        issues.push({ code: "ITEM_GTIN_INVALID", message: "GTIN informado é inválido.", field: `items[${index}].gtin`, severity: "error", itemIndex: index, itemId });
+      }
     });
   }
-  validateRuntimeConfig(e, r, a) {
-    r.provider !== "mock" && (se(r.cscId) || a.push({ code: "CSC_ID_REQUIRED", message: "CSC ID é obrigatório para NFC-e real.", field: "config.cscId", severity: "error" }), se(r.cscToken) || a.push({ code: "CSC_TOKEN_REQUIRED", message: "CSC Token é obrigatório para NFC-e real.", field: "config.cscToken", severity: "error" })), r.provider === "gateway" && (se(r.gatewayBaseUrl) || a.push({ code: "GATEWAY_BASE_URL_REQUIRED", message: "URL base do gateway fiscal não configurada.", field: "config.gatewayBaseUrl", severity: "error" }), se(r.gatewayApiKey) || a.push({ code: "GATEWAY_API_KEY_REQUIRED", message: "API key do gateway fiscal não configurada.", field: "config.gatewayApiKey", severity: "error" })), e.environment === "production" && r.provider === "mock" && a.push({
-      code: "MOCK_PROVIDER_NOT_ALLOWED_IN_PRODUCTION",
-      message: "Provider mock não pode ser usado em produção.",
-      field: "config.provider",
-      severity: "error"
-    });
+  validateRuntimeConfig(request, config2, issues) {
+    if (config2.provider !== "mock") {
+      if (!normalizeText(config2.cscId)) {
+        issues.push({ code: "CSC_ID_REQUIRED", message: "CSC ID é obrigatório para NFC-e real.", field: "config.cscId", severity: "error" });
+      }
+      if (!normalizeText(config2.cscToken)) {
+        issues.push({ code: "CSC_TOKEN_REQUIRED", message: "CSC Token é obrigatório para NFC-e real.", field: "config.cscToken", severity: "error" });
+      }
+    }
+    if (config2.provider === "gateway") {
+      if (!normalizeText(config2.gatewayBaseUrl)) {
+        issues.push({ code: "GATEWAY_BASE_URL_REQUIRED", message: "URL base do gateway fiscal não configurada.", field: "config.gatewayBaseUrl", severity: "error" });
+      }
+      if (!normalizeText(config2.gatewayApiKey)) {
+        issues.push({ code: "GATEWAY_API_KEY_REQUIRED", message: "API key do gateway fiscal não configurada.", field: "config.gatewayApiKey", severity: "error" });
+      }
+    }
+    if (request.environment === "production" && config2.provider === "mock") {
+      issues.push({
+        code: "MOCK_PROVIDER_NOT_ALLOWED_IN_PRODUCTION",
+        message: "Provider mock não pode ser usado em produção.",
+        field: "config.provider",
+        severity: "error"
+      });
+    }
   }
 }
-const Sd = new vd(), Rd = {
+const fiscalPreTransmissionValidator = new FiscalPreTransmissionValidator();
+const UF_CODES = {
   AC: "12",
   AL: "27",
   AP: "16",
@@ -10405,669 +12259,856 @@ const Sd = new vd(), Rd = {
   SE: "28",
   TO: "17"
 };
-function Ld(t) {
-  return String(t ?? "").replace(/\D/g, "");
+function onlyDigits$1(value) {
+  return String(value ?? "").replace(/\D/g, "");
 }
-function na(t, e) {
-  return Ld(t).padStart(e, "0").slice(-e);
+function leftPad(value, length) {
+  return onlyDigits$1(value).padStart(length, "0").slice(-length);
 }
-function Od(t) {
-  let e = 2, r = 0;
-  for (let o = t.length - 1; o >= 0; o -= 1)
-    r += Number(t[o]) * e, e = e === 9 ? 2 : e + 1;
-  const n = 11 - r % 11;
-  return n >= 10 ? "0" : String(n);
+function modulo11CheckDigit(base) {
+  let weight = 2;
+  let sum = 0;
+  for (let index = base.length - 1; index >= 0; index -= 1) {
+    sum += Number(base[index]) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  const mod = sum % 11;
+  const digit = 11 - mod;
+  return digit >= 10 ? "0" : String(digit);
 }
-function yd(t) {
-  const e = new Date(t);
-  if (Number.isNaN(e.getTime()))
+function yearMonthFromIssuedAt(issuedAt) {
+  const date = new Date(issuedAt);
+  if (Number.isNaN(date.getTime())) {
     throw new Error("Data de emissao invalida para gerar chave de acesso.");
-  return `${String(e.getFullYear()).slice(-2)}${String(e.getMonth() + 1).padStart(2, "0")}`;
+  }
+  return `${String(date.getFullYear()).slice(-2)}${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
-class bd {
-  generate(e) {
-    var i;
-    const r = Rd[e.uf.toUpperCase()];
-    if (!r)
-      throw new Error(`UF sem codigo IBGE configurado para chave NFC-e: ${e.uf}`);
-    const a = na(e.cnpj, 14);
-    if (a.length !== 14 || /^0+$/.test(a))
+class NfceAccessKeyService {
+  generate(input) {
+    var _a;
+    const ufCode = UF_CODES[input.uf.toUpperCase()];
+    if (!ufCode) {
+      throw new Error(`UF sem codigo IBGE configurado para chave NFC-e: ${input.uf}`);
+    }
+    const cnpj = leftPad(input.cnpj, 14);
+    if (cnpj.length !== 14 || /^0+$/.test(cnpj)) {
       throw new Error("CNPJ invalido para gerar chave de acesso NFC-e.");
-    const n = ((i = e.numericCode) == null ? void 0 : i.replace(/\D/g, "").padStart(8, "0").slice(-8)) ?? Ca.randomInt(0, 1e8).toString().padStart(8, "0"), o = [
-      r,
-      yd(e.issuedAt),
-      a,
+    }
+    const numericCode = ((_a = input.numericCode) == null ? void 0 : _a.replace(/\D/g, "").padStart(8, "0").slice(-8)) ?? crypto$1.randomInt(0, 1e8).toString().padStart(8, "0");
+    const base = [
+      ufCode,
+      yearMonthFromIssuedAt(input.issuedAt),
+      cnpj,
       "65",
-      na(e.series, 3),
-      na(e.number, 9),
-      String(e.emissionType),
-      n
-    ].join(""), s = Od(o);
+      leftPad(input.series, 3),
+      leftPad(input.number, 9),
+      String(input.emissionType),
+      numericCode
+    ].join("");
+    const checkDigit = modulo11CheckDigit(base);
     return {
-      accessKey: `${o}${s}`,
-      numericCode: n,
-      checkDigit: s,
-      ufCode: r,
-      yearMonth: o.slice(2, 6)
+      accessKey: `${base}${checkDigit}`,
+      numericCode,
+      checkDigit,
+      ufCode,
+      yearMonth: base.slice(2, 6)
     };
   }
 }
-const Ud = new bd(), wd = "http://www.portalfiscal.inf.br/nfe", Fd = "GalbertoPDV-0.1.0", xd = "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL", Md = "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
-function L(t) {
-  return String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+const nfceAccessKeyService = new NfceAccessKeyService();
+const NFE_NAMESPACE = "http://www.portalfiscal.inf.br/nfe";
+const PROC_VERSION = "GalbertoPDV-0.1.0";
+const HOMOLOGATION_FIRST_ITEM_DESCRIPTION = "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
+const HOMOLOGATION_CUSTOMER_NAME = "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
+function escapeXml(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
-function Pd(t) {
-  return t.replace(/>\s+</g, "><").trim();
+function compactXml(xml) {
+  return xml.replace(/>\s+</g, "><").trim();
 }
-function os(t) {
-  const e = ne(t);
-  return e ? String(Number(e)) : "";
+function normalizeCscId(value) {
+  const digits = onlyDigits(value);
+  if (!digits) return "";
+  return String(Number(digits));
 }
-function ss(t) {
-  const e = t === "production" ? "www.nfce.fazenda.sp.gov.br" : "www.homologacao.nfce.fazenda.sp.gov.br";
+function buildSpNfcePublicUrls(environment) {
+  const host = environment === "production" ? "www.nfce.fazenda.sp.gov.br" : "www.homologacao.nfce.fazenda.sp.gov.br";
   return {
-    qrCodeBaseUrl: `https://${e}/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx`,
-    publicConsultUrl: `https://${e}/consulta`
+    qrCodeBaseUrl: `https://${host}/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx`,
+    publicConsultUrl: `https://${host}/consulta`
   };
 }
-function Bd(t) {
-  return no("sha1").update(t, "utf8").digest("hex").toUpperCase();
+function sha1Hex(value) {
+  return createHash("sha1").update(value, "utf8").digest("hex").toUpperCase();
 }
-function is(t, e) {
-  const r = os(t.cscId), a = String(t.cscToken ?? "").trim(), n = t.environment === "production" ? "1" : "2", o = "2", { qrCodeBaseUrl: s } = ss(t.environment), i = Bd(`${e}|${o}|${n}|${r}${a}`), c = `${e}|${o}|${n}|${r}|${i}`;
-  return `${s}?p=${c}`;
+function buildQrCodeUrl(context, accessKey) {
+  const cscId = normalizeCscId(context.cscId);
+  const cscToken = String(context.cscToken ?? "").trim();
+  const tpAmb = context.environment === "production" ? "1" : "2";
+  const qrCodeVersion = "2";
+  const { qrCodeBaseUrl } = buildSpNfcePublicUrls(context.environment);
+  const hash = sha1Hex(`${accessKey}|${qrCodeVersion}|${tpAmb}|${cscId}${cscToken}`);
+  const parameter = `${accessKey}|${qrCodeVersion}|${tpAmb}|${cscId}|${hash}`;
+  return `${qrCodeBaseUrl}?p=${parameter}`;
 }
-function ne(t) {
-  return String(t ?? "").replace(/\D/g, "");
+function onlyDigits(value) {
+  return String(value ?? "").replace(/\D/g, "");
 }
-function ge(t) {
-  return Number(t ?? 0).toFixed(2);
+function money(value) {
+  return Number(value ?? 0).toFixed(2);
 }
-function ae(t) {
-  return Math.round(Number(t ?? 0) * 100);
+function moneyToCents(value) {
+  return Math.round(Number(value ?? 0) * 100);
 }
-function xn(t) {
-  return (t / 100).toFixed(2);
+function centsToMoney(value) {
+  return (value / 100).toFixed(2);
 }
-function oa(t, e) {
-  const r = ae(t.grossAmount), a = Math.max(0, Math.min(e, r));
+function cloneItemWithFiscalAmounts(item, discountCents) {
+  const grossCents = moneyToCents(item.grossAmount);
+  const safeDiscountCents = Math.max(0, Math.min(discountCents, grossCents));
   return {
-    ...t,
-    discountAmount: a / 100,
-    totalAmount: Math.max(r - a, 0) / 100
+    ...item,
+    discountAmount: safeDiscountCents / 100,
+    totalAmount: Math.max(grossCents - safeDiscountCents, 0) / 100
   };
 }
-function ka(t) {
-  return t.reduce((e, r) => e + ae(r.discountAmount), 0);
+function sumItemDiscountCents(items) {
+  return items.reduce((sum, item) => sum + moneyToCents(item.discountAmount), 0);
 }
-function Xd(t, e) {
-  const r = ae(e), a = ka(t), n = r - a;
-  if (n <= 0 || t.length === 0)
-    return t.map((u) => oa(u, ae(u.discountAmount)));
-  const o = t.map((u) => {
-    const l = ae(u.grossAmount), E = Math.max(0, Math.min(ae(u.discountAmount), l));
+function allocateTotalDiscountAcrossItems(items, totalDiscountAmount) {
+  const totalDiscountCents = moneyToCents(totalDiscountAmount);
+  const currentDiscountCents = sumItemDiscountCents(items);
+  const extraDiscountCents = totalDiscountCents - currentDiscountCents;
+  if (extraDiscountCents <= 0 || items.length === 0) {
+    return items.map((item) => cloneItemWithFiscalAmounts(item, moneyToCents(item.discountAmount)));
+  }
+  const itemStates = items.map((item) => {
+    const grossCents = moneyToCents(item.grossAmount);
+    const currentCents = Math.max(0, Math.min(moneyToCents(item.discountAmount), grossCents));
     return {
-      item: u,
-      grossCents: l,
-      currentCents: E,
-      remainingCents: Math.max(l - E, 0),
+      item,
+      grossCents,
+      currentCents,
+      remainingCents: Math.max(grossCents - currentCents, 0),
       allocatedExtraCents: 0
     };
-  }), s = o.reduce((u, l) => u + l.remainingCents, 0);
-  if (s <= 0)
-    return o.map((u) => oa(u.item, u.currentCents));
-  let i = 0;
-  for (const u of o) {
-    const l = Math.floor(n * u.remainingCents / s);
-    u.allocatedExtraCents = Math.min(l, u.remainingCents), i += u.allocatedExtraCents;
+  });
+  const totalRemainingCents = itemStates.reduce((sum, item) => sum + item.remainingCents, 0);
+  if (totalRemainingCents <= 0) {
+    return itemStates.map((state) => cloneItemWithFiscalAmounts(state.item, state.currentCents));
   }
-  let c = n - i;
-  for (const u of o) {
-    if (c <= 0) break;
-    const l = u.remainingCents - u.allocatedExtraCents;
-    if (l <= 0) continue;
-    const E = Math.min(l, c);
-    u.allocatedExtraCents += E, c -= E;
+  let allocatedCents = 0;
+  for (const state of itemStates) {
+    const proportionalCents = Math.floor(extraDiscountCents * state.remainingCents / totalRemainingCents);
+    state.allocatedExtraCents = Math.min(proportionalCents, state.remainingCents);
+    allocatedCents += state.allocatedExtraCents;
   }
-  return o.map((u) => oa(
-    u.item,
-    u.currentCents + u.allocatedExtraCents
+  let remainderCents = extraDiscountCents - allocatedCents;
+  for (const state of itemStates) {
+    if (remainderCents <= 0) break;
+    const capacityCents = state.remainingCents - state.allocatedExtraCents;
+    if (capacityCents <= 0) continue;
+    const incrementCents = Math.min(capacityCents, remainderCents);
+    state.allocatedExtraCents += incrementCents;
+    remainderCents -= incrementCents;
+  }
+  return itemStates.map((state) => cloneItemWithFiscalAmounts(
+    state.item,
+    state.currentCents + state.allocatedExtraCents
   ));
 }
-function Mn(t) {
-  return Number(t ?? 0).toFixed(4);
+function quantity(value) {
+  return Number(value ?? 0).toFixed(4);
 }
-function kd(t) {
-  const r = t.trim().match(
+function normalizeIsoWithTimezone(value) {
+  const normalized = value.trim();
+  const alreadyHasTimezone = normalized.match(
     /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?([+-]\d{2}:\d{2}|Z)$/
   );
-  if (r) {
-    const [, u, l, E] = r;
-    return `${u}T${l}${E === "Z" ? "+00:00" : E}`;
+  if (alreadyHasTimezone) {
+    const [, datePart, timePart, offset2] = alreadyHasTimezone;
+    return `${datePart}T${timePart}${offset2 === "Z" ? "+00:00" : offset2}`;
   }
-  const a = new Date(t);
-  if (Number.isNaN(a.getTime())) return t;
-  const n = (u) => String(u).padStart(2, "0"), o = -a.getTimezoneOffset(), s = o >= 0 ? "+" : "-", i = Math.abs(o), c = `${s}${n(Math.floor(i / 60))}:${n(i % 60)}`;
-  return `${a.getFullYear()}-${n(a.getMonth() + 1)}-${n(a.getDate())}T${n(a.getHours())}:${n(a.getMinutes())}:${n(a.getSeconds())}${c}`;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (part) => String(part).padStart(2, "0");
+  const offsetMinutes = -date.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const absoluteOffset = Math.abs(offsetMinutes);
+  const offset = `${sign}${pad(Math.floor(absoluteOffset / 60))}:${pad(absoluteOffset % 60)}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${offset}`;
 }
-function $d(t) {
-  const e = String(t ?? "").trim();
-  return e.length > 0 ? e : "SEM GTIN";
+function gtin(value) {
+  const normalized = String(value ?? "").trim();
+  return normalized.length > 0 ? normalized : "SEM GTIN";
 }
-function Gd(t) {
-  return {
+function paymentCode(method) {
+  const map = {
     DINHEIRO: "01",
     CREDITO: "03",
     DEBITO: "04",
     VOUCHER: "99",
     PIX: "17",
     OUTROS: "99"
-  }[t] ?? "99";
+  };
+  return map[method] ?? "99";
 }
-function qd(t) {
-  return ["03", "04", "17"].includes(t) ? "<card><tpIntegra>2</tpIntegra></card>" : "";
+function paymentCardXml(code) {
+  if (!["03", "04", "17"].includes(code)) {
+    return "";
+  }
+  return "<card><tpIntegra>2</tpIntegra></card>";
 }
-function cs(t) {
-  return t.method === "DINHEIRO" && t.receivedAmount != null ? ae(t.receivedAmount) : ae(t.amount);
+function paymentXmlAmountCents(payment) {
+  if (payment.method === "DINHEIRO" && payment.receivedAmount != null) {
+    return moneyToCents(payment.receivedAmount);
+  }
+  return moneyToCents(payment.amount);
 }
-function $a(t) {
-  return ["1", "4"].includes(String(t ?? "").trim());
+function isSimpleNationalCrt(taxRegimeCode) {
+  return ["1", "4"].includes(String(taxRegimeCode ?? "").trim());
 }
-function Vd(t, e) {
-  if ($a(e.emitter.taxRegimeCode))
-    return !1;
-  const r = t.tax.icmsCst || "00";
-  return !["40", "41", "50"].includes(r);
+function shouldTotalizeIcmsBase(item, context) {
+  if (isSimpleNationalCrt(context.emitter.taxRegimeCode)) {
+    return false;
+  }
+  const cst = item.tax.icmsCst || "00";
+  return !["40", "41", "50"].includes(cst);
 }
-function zd(t, e) {
-  return t.reduce(
-    (r, a) => (Vd(a, e) && (r.baseAmount += Number(a.totalAmount ?? 0)), r),
+function calculateIcmsTotals(items, context) {
+  return items.reduce(
+    (totals, item) => {
+      if (shouldTotalizeIcmsBase(item, context)) {
+        totals.baseAmount += Number(item.totalAmount ?? 0);
+      }
+      return totals;
+    },
     { baseAmount: 0, amount: 0 }
   );
 }
-function Hd(t, e) {
-  const r = L(t.tax.originCode || "0");
-  if ($a(e.emitter.taxRegimeCode)) {
-    const n = t.tax.csosn || "102";
-    return `<ICMS><ICMSSN102><orig>${r}</orig><CSOSN>${L(n)}</CSOSN></ICMSSN102></ICMS>`;
+function icmsXml(item, context) {
+  const origin = escapeXml(item.tax.originCode || "0");
+  if (isSimpleNationalCrt(context.emitter.taxRegimeCode)) {
+    const csosn = item.tax.csosn || "102";
+    return `<ICMS><ICMSSN102><orig>${origin}</orig><CSOSN>${escapeXml(csosn)}</CSOSN></ICMSSN102></ICMS>`;
   }
-  const a = t.tax.icmsCst || "00";
-  return ["40", "41", "50"].includes(a) ? `<ICMS><ICMS40><orig>${r}</orig><CST>${L(a)}</CST></ICMS40></ICMS>` : `<ICMS><ICMS00><orig>${r}</orig><CST>${L(a)}</CST><modBC>3</modBC><vBC>${ge(t.totalAmount)}</vBC><pICMS>0.00</pICMS><vICMS>0.00</vICMS></ICMS00></ICMS>`;
+  const cst = item.tax.icmsCst || "00";
+  if (["40", "41", "50"].includes(cst)) {
+    return `<ICMS><ICMS40><orig>${origin}</orig><CST>${escapeXml(cst)}</CST></ICMS40></ICMS>`;
+  }
+  return `<ICMS><ICMS00><orig>${origin}</orig><CST>${escapeXml(cst)}</CST><modBC>3</modBC><vBC>${money(item.totalAmount)}</vBC><pICMS>0.00</pICMS><vICMS>0.00</vICMS></ICMS00></ICMS>`;
 }
-function jd(t) {
-  const e = t.tax.pisCst || "49";
-  return ["04", "05", "06", "07", "08", "09"].includes(e) ? `<PIS><PISNT><CST>${L(e)}</CST></PISNT></PIS>` : ["01", "02"].includes(e) ? `<PIS><PISAliq><CST>${L(e)}</CST><vBC>${ge(t.totalAmount)}</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISAliq></PIS>` : `<PIS><PISOutr><CST>${L(e)}</CST><vBC>0.00</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISOutr></PIS>`;
+function pisXml(item) {
+  const cst = item.tax.pisCst || "49";
+  if (["04", "05", "06", "07", "08", "09"].includes(cst)) {
+    return `<PIS><PISNT><CST>${escapeXml(cst)}</CST></PISNT></PIS>`;
+  }
+  if (["01", "02"].includes(cst)) {
+    return `<PIS><PISAliq><CST>${escapeXml(cst)}</CST><vBC>${money(item.totalAmount)}</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISAliq></PIS>`;
+  }
+  return `<PIS><PISOutr><CST>${escapeXml(cst)}</CST><vBC>0.00</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISOutr></PIS>`;
 }
-function Yd(t) {
-  const e = t.tax.cofinsCst || "49";
-  return ["04", "05", "06", "07", "08", "09"].includes(e) ? `<COFINS><COFINSNT><CST>${L(e)}</CST></COFINSNT></COFINS>` : ["01", "02"].includes(e) ? `<COFINS><COFINSAliq><CST>${L(e)}</CST><vBC>${ge(t.totalAmount)}</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSAliq></COFINS>` : `<COFINS><COFINSOutr><CST>${L(e)}</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>`;
+function cofinsXml(item) {
+  const cst = item.tax.cofinsCst || "49";
+  if (["04", "05", "06", "07", "08", "09"].includes(cst)) {
+    return `<COFINS><COFINSNT><CST>${escapeXml(cst)}</CST></COFINSNT></COFINS>`;
+  }
+  if (["01", "02"].includes(cst)) {
+    return `<COFINS><COFINSAliq><CST>${escapeXml(cst)}</CST><vBC>${money(item.totalAmount)}</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSAliq></COFINS>`;
+  }
+  return `<COFINS><COFINSOutr><CST>${escapeXml(cst)}</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>`;
 }
-function Kd(t, e, r) {
-  const a = t.id || String(e + 1), n = $d(t.gtin), o = t.discountAmount > 0 ? `<vDesc>${ge(t.discountAmount)}</vDesc>` : "", s = r.environment === "homologation" && e === 0 ? xd : t.description;
-  return `<det nItem="${e + 1}">
+function itemXml(item, index, context) {
+  const itemCode = item.id || String(index + 1);
+  const itemGtin = gtin(item.gtin);
+  const discount = item.discountAmount > 0 ? `<vDesc>${money(item.discountAmount)}</vDesc>` : "";
+  const description = context.environment === "homologation" && index === 0 ? HOMOLOGATION_FIRST_ITEM_DESCRIPTION : item.description;
+  return `<det nItem="${index + 1}">
 <prod>
-<cProd>${L(a)}</cProd>
-<cEAN>${L(n)}</cEAN>
-<xProd>${L(s)}</xProd>
-<NCM>${L(ne(t.tax.ncm))}</NCM>
-${t.tax.cest ? `<CEST>${L(ne(t.tax.cest))}</CEST>` : ""}
-<CFOP>${L(ne(t.tax.cfop))}</CFOP>
-<uCom>${L(t.unit)}</uCom>
-<qCom>${Mn(t.quantity)}</qCom>
-<vUnCom>${ge(t.unitPrice)}</vUnCom>
-<vProd>${ge(t.grossAmount)}</vProd>
-<cEANTrib>${L(n)}</cEANTrib>
-<uTrib>${L(t.unit)}</uTrib>
-<qTrib>${Mn(t.quantity)}</qTrib>
-<vUnTrib>${ge(t.unitPrice)}</vUnTrib>
-${o}
+<cProd>${escapeXml(itemCode)}</cProd>
+<cEAN>${escapeXml(itemGtin)}</cEAN>
+<xProd>${escapeXml(description)}</xProd>
+<NCM>${escapeXml(onlyDigits(item.tax.ncm))}</NCM>
+${item.tax.cest ? `<CEST>${escapeXml(onlyDigits(item.tax.cest))}</CEST>` : ""}
+<CFOP>${escapeXml(onlyDigits(item.tax.cfop))}</CFOP>
+<uCom>${escapeXml(item.unit)}</uCom>
+<qCom>${quantity(item.quantity)}</qCom>
+<vUnCom>${money(item.unitPrice)}</vUnCom>
+<vProd>${money(item.grossAmount)}</vProd>
+<cEANTrib>${escapeXml(itemGtin)}</cEANTrib>
+<uTrib>${escapeXml(item.unit)}</uTrib>
+<qTrib>${quantity(item.quantity)}</qTrib>
+<vUnTrib>${money(item.unitPrice)}</vUnTrib>
+${discount}
 <indTot>1</indTot>
 </prod>
 <imposto>
-${Hd(t, r)}
-${jd(t)}
-${Yd(t)}
+${icmsXml(item, context)}
+${pisXml(item)}
+${cofinsXml(item)}
 </imposto>
 </det>`;
 }
-function Wd(t, e) {
-  const r = ne(t == null ? void 0 : t.cpfCnpj);
-  if (!r) return "";
-  const a = r.length === 14 ? "CNPJ" : "CPF", n = e === "homologation" ? Md : t == null ? void 0 : t.name, o = n ? `<xNome>${L(n)}</xNome>` : "";
+function customerXml(customer, environment) {
+  const document = onlyDigits(customer == null ? void 0 : customer.cpfCnpj);
+  if (!document) return "";
+  const documentTag = document.length === 14 ? "CNPJ" : "CPF";
+  const customerName = environment === "homologation" ? HOMOLOGATION_CUSTOMER_NAME : customer == null ? void 0 : customer.name;
+  const name = customerName ? `<xNome>${escapeXml(customerName)}</xNome>` : "";
   return `<dest>
-<${a}>${r}</${a}>
-${o}
+<${documentTag}>${document}</${documentTag}>
+${name}
 <indIEDest>9</indIEDest>
 </dest>`;
 }
-function us(t, e) {
-  const r = t.reduce((o, s) => o + cs(s), 0), a = ae(e), n = r - a;
-  return { paidAmountCents: r, finalAmountCents: a, changeAmountCents: n };
+function calculatePaymentTotals(payments, finalAmount) {
+  const paidAmountCents = payments.reduce((sum, payment) => sum + paymentXmlAmountCents(payment), 0);
+  const finalAmountCents = moneyToCents(finalAmount);
+  const changeAmountCents = paidAmountCents - finalAmountCents;
+  return { paidAmountCents, finalAmountCents, changeAmountCents };
 }
-function Qd(t, e) {
-  const r = us(t, e);
-  return `<pag>${t.map((n) => {
-    const o = Gd(n.method), s = o === "99" && n.description ? `<xPag>${L(n.description)}</xPag>` : "";
-    return `<detPag><indPag>0</indPag><tPag>${o}</tPag>${s}<vPag>${xn(cs(n))}</vPag>${qd(o)}</detPag>`;
-  }).join("")}${r.changeAmountCents > 0 ? `<vTroco>${xn(r.changeAmountCents)}</vTroco>` : ""}</pag>`;
+function paymentsXml(payments, finalAmount) {
+  const paymentTotals = calculatePaymentTotals(payments, finalAmount);
+  const details = payments.map((payment) => {
+    const code = paymentCode(payment.method);
+    const description = code === "99" && payment.description ? `<xPag>${escapeXml(payment.description)}</xPag>` : "";
+    return `<detPag><indPag>0</indPag><tPag>${code}</tPag>${description}<vPag>${centsToMoney(paymentXmlAmountCents(payment))}</vPag>${paymentCardXml(code)}</detPag>`;
+  }).join("");
+  return `<pag>${details}${paymentTotals.changeAmountCents > 0 ? `<vTroco>${centsToMoney(paymentTotals.changeAmountCents)}</vTroco>` : ""}</pag>`;
 }
-function Jd(t) {
-  return t ? `<infRespTec>
-<CNPJ>${ne(t.cnpj)}</CNPJ>
-<xContato>${L(t.contactName)}</xContato>
-<email>${L(t.email)}</email>
-<fone>${ne(t.phone)}</fone>
-${t.csrtId ? `<idCSRT>${L(t.csrtId)}</idCSRT>` : ""}
-${t.csrtHash ? `<hashCSRT>${L(t.csrtHash)}</hashCSRT>` : ""}
-</infRespTec>` : "";
+function technicalResponsibleXml(input) {
+  if (!input) return "";
+  return `<infRespTec>
+<CNPJ>${onlyDigits(input.cnpj)}</CNPJ>
+<xContato>${escapeXml(input.contactName)}</xContato>
+<email>${escapeXml(input.email)}</email>
+<fone>${onlyDigits(input.phone)}</fone>
+${input.csrtId ? `<idCSRT>${escapeXml(input.csrtId)}</idCSRT>` : ""}
+${input.csrtHash ? `<hashCSRT>${escapeXml(input.csrtHash)}</hashCSRT>` : ""}
+</infRespTec>`;
 }
-function Zd(t, e) {
-  const r = is(t, e), { publicConsultUrl: a } = ss(t.environment);
-  return `<infNFeSupl><qrCode><![CDATA[${r}]]></qrCode><urlChave>${L(a)}</urlChave></infNFeSupl>`;
+function infNFeSuplXml(context, accessKey) {
+  const qrCodeUrl = buildQrCodeUrl(context, accessKey);
+  const { publicConsultUrl } = buildSpNfcePublicUrls(context.environment);
+  return `<infNFeSupl><qrCode><![CDATA[${qrCodeUrl}]]></qrCode><urlChave>${escapeXml(publicConsultUrl)}</urlChave></infNFeSupl>`;
 }
-function eE(t) {
-  const e = [], r = [], { input: a, effectiveItems: n } = t, o = (h, g, y) => e.push({ code: h, message: g, field: y, severity: "error" }), s = (h, g, y) => r.push({ code: h, message: g, field: y, severity: "warning" });
-  t.accessKey.accessKey.length !== 44 && o("ACCESS_KEY_INVALID", "Chave de acesso deve ter 44 digitos.", "accessKey"), a.items.length || o("ITEMS_REQUIRED", "NFC-e deve possuir ao menos um item.", "items"), a.payments.length || o("PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments"), ne(a.fiscalContext.emitter.cnpj) || o("EMITTER_CNPJ_REQUIRED", "CNPJ do emitente e obrigatorio.", "fiscalContext.emitter.cnpj"), ne(a.fiscalContext.emitter.address.cityIbgeCode) || o("CMUNFG_REQUIRED", "Codigo IBGE do municipio de fato gerador e obrigatorio.", "fiscalContext.emitter.address.cityIbgeCode"), os(a.fiscalContext.cscId) || o("CSC_ID_REQUIRED", "CSC ID e obrigatorio para gerar QR Code NFC-e.", "fiscalContext.cscId"), String(a.fiscalContext.cscToken ?? "").trim() || o("CSC_TOKEN_REQUIRED", "CSC Token e obrigatorio para gerar QR Code NFC-e.", "fiscalContext.cscToken"), a.items.forEach((h, g) => {
-    ne(h.tax.ncm).length !== 8 && o("ITEM_NCM_INVALID", "NCM deve ter 8 digitos.", `items[${g}].tax.ncm`), ne(h.tax.cfop).length !== 4 && o("ITEM_CFOP_INVALID", "CFOP deve ter 4 digitos.", `items[${g}].tax.cfop`), ae(h.discountAmount) > ae(h.grossAmount) && o("ITEM_DISCOUNT_EXCEEDS_GROSS", "Desconto do item nao pode ser maior que o valor bruto.", `items[${g}].discountAmount`), $a(a.fiscalContext.emitter.taxRegimeCode) && h.tax.csosn && !["102", "103", "300", "400"].includes(h.tax.csosn) && s("ITEM_CSOSN_LIMITED_SUPPORT", `CSOSN ${h.tax.csosn} sera serializado no grupo ICMSSN102; valide a regra fiscal antes de transmitir.`, `items[${g}].tax.csosn`);
+function validateDocument(model) {
+  const errors2 = [];
+  const warnings = [];
+  const { input, effectiveItems } = model;
+  const addError = (code, message, field) => errors2.push({ code, message, field, severity: "error" });
+  const addWarning = (code, message, field) => warnings.push({ code, message, field, severity: "warning" });
+  if (model.accessKey.accessKey.length !== 44) addError("ACCESS_KEY_INVALID", "Chave de acesso deve ter 44 digitos.", "accessKey");
+  if (!input.items.length) addError("ITEMS_REQUIRED", "NFC-e deve possuir ao menos um item.", "items");
+  if (!input.payments.length) addError("PAYMENTS_REQUIRED", "NFC-e exige grupo de pagamento.", "payments");
+  if (!onlyDigits(input.fiscalContext.emitter.cnpj)) addError("EMITTER_CNPJ_REQUIRED", "CNPJ do emitente e obrigatorio.", "fiscalContext.emitter.cnpj");
+  if (!onlyDigits(input.fiscalContext.emitter.address.cityIbgeCode)) addError("CMUNFG_REQUIRED", "Codigo IBGE do municipio de fato gerador e obrigatorio.", "fiscalContext.emitter.address.cityIbgeCode");
+  if (!normalizeCscId(input.fiscalContext.cscId)) addError("CSC_ID_REQUIRED", "CSC ID e obrigatorio para gerar QR Code NFC-e.", "fiscalContext.cscId");
+  if (!String(input.fiscalContext.cscToken ?? "").trim()) addError("CSC_TOKEN_REQUIRED", "CSC Token e obrigatorio para gerar QR Code NFC-e.", "fiscalContext.cscToken");
+  input.items.forEach((item, index) => {
+    if (onlyDigits(item.tax.ncm).length !== 8) addError("ITEM_NCM_INVALID", "NCM deve ter 8 digitos.", `items[${index}].tax.ncm`);
+    if (onlyDigits(item.tax.cfop).length !== 4) addError("ITEM_CFOP_INVALID", "CFOP deve ter 4 digitos.", `items[${index}].tax.cfop`);
+    if (moneyToCents(item.discountAmount) > moneyToCents(item.grossAmount)) {
+      addError("ITEM_DISCOUNT_EXCEEDS_GROSS", "Desconto do item nao pode ser maior que o valor bruto.", `items[${index}].discountAmount`);
+    }
+    if (isSimpleNationalCrt(input.fiscalContext.emitter.taxRegimeCode) && item.tax.csosn && !["102", "103", "300", "400"].includes(item.tax.csosn)) {
+      addWarning("ITEM_CSOSN_LIMITED_SUPPORT", `CSOSN ${item.tax.csosn} sera serializado no grupo ICMSSN102; valide a regra fiscal antes de transmitir.`, `items[${index}].tax.csosn`);
+    }
   });
-  const i = ae(a.totals.productsAmount), c = ae(a.totals.finalAmount), u = ae(a.totals.discountAmount), l = ka(n), E = n.reduce((h, g) => h + ae(g.totalAmount), 0);
-  u !== l && o("TOTAL_DISCOUNT_DIFFERS_FROM_ITEMS", "Desconto total da NFC-e deve ser igual a soma dos descontos dos itens.", "totals.discountAmount"), i - u !== c && o("TOTAL_FINAL_AMOUNT_INVALID", "Valor final deve ser valor dos produtos menos desconto total.", "totals.finalAmount"), E !== c && o("ITEM_TOTALS_DIFFERS_FROM_FINAL_AMOUNT", "Somatorio liquido dos itens deve ser igual ao valor final da NFC-e.", "items");
-  const m = us(a.payments, a.totals.finalAmount);
-  m.paidAmountCents < m.finalAmountCents && o("PAYMENTS_TOTAL_UNDERPAID", "A soma dos pagamentos da NFC-e e menor que o valor total da nota.", "payments");
-  const T = Math.max(m.changeAmountCents, 0);
-  return ae(a.totals.changeAmount) !== T && o("PAYMENTS_CHANGE_INVALID", "Troco informado diverge de soma(detPag/vPag) - vNF.", "totals.changeAmount"), { ok: e.length === 0, errors: e, warnings: r };
+  const productsAmountCents = moneyToCents(input.totals.productsAmount);
+  const finalAmountCents = moneyToCents(input.totals.finalAmount);
+  const discountAmountCents = moneyToCents(input.totals.discountAmount);
+  const effectiveItemsDiscountCents = sumItemDiscountCents(effectiveItems);
+  const effectiveItemsTotalCents = effectiveItems.reduce((sum, item) => sum + moneyToCents(item.totalAmount), 0);
+  if (discountAmountCents !== effectiveItemsDiscountCents) {
+    addError("TOTAL_DISCOUNT_DIFFERS_FROM_ITEMS", "Desconto total da NFC-e deve ser igual a soma dos descontos dos itens.", "totals.discountAmount");
+  }
+  if (productsAmountCents - discountAmountCents !== finalAmountCents) {
+    addError("TOTAL_FINAL_AMOUNT_INVALID", "Valor final deve ser valor dos produtos menos desconto total.", "totals.finalAmount");
+  }
+  if (effectiveItemsTotalCents !== finalAmountCents) {
+    addError("ITEM_TOTALS_DIFFERS_FROM_FINAL_AMOUNT", "Somatorio liquido dos itens deve ser igual ao valor final da NFC-e.", "items");
+  }
+  const paymentTotals = calculatePaymentTotals(input.payments, input.totals.finalAmount);
+  if (paymentTotals.paidAmountCents < paymentTotals.finalAmountCents) {
+    addError("PAYMENTS_TOTAL_UNDERPAID", "A soma dos pagamentos da NFC-e e menor que o valor total da nota.", "payments");
+  }
+  const expectedChangeCents = Math.max(paymentTotals.changeAmountCents, 0);
+  if (moneyToCents(input.totals.changeAmount) !== expectedChangeCents) {
+    addError("PAYMENTS_CHANGE_INVALID", "Troco informado diverge de soma(detPag/vPag) - vNF.", "totals.changeAmount");
+  }
+  return { ok: errors2.length === 0, errors: errors2, warnings };
 }
-function tE(t) {
-  const { input: e, accessKey: r } = t, a = e.fiscalContext, n = a.emitter, o = n.address, s = a.environment === "production" ? "1" : "2", i = 1, c = t.effectiveItems, u = zd(c, a), l = ka(c) / 100;
+function serializeDocument(model) {
+  const { input, accessKey } = model;
+  const context = input.fiscalContext;
+  const emitter = context.emitter;
+  const address = emitter.address;
+  const tpAmb = context.environment === "production" ? "1" : "2";
+  const tpEmis = 1;
+  const items = model.effectiveItems;
+  const icmsTotals = calculateIcmsTotals(items, context);
+  const totalDiscountAmount = sumItemDiscountCents(items) / 100;
   return `<?xml version="1.0" encoding="UTF-8"?>
-<NFe xmlns="${wd}">
-<infNFe versao="4.00" Id="NFe${r.accessKey}">
+<NFe xmlns="${NFE_NAMESPACE}">
+<infNFe versao="4.00" Id="NFe${accessKey.accessKey}">
 <ide>
-<cUF>${r.ufCode}</cUF>
-<cNF>${r.numericCode}</cNF>
-<natOp>${L(e.sale.natureOperation || "VENDA")}</natOp>
+<cUF>${accessKey.ufCode}</cUF>
+<cNF>${accessKey.numericCode}</cNF>
+<natOp>${escapeXml(input.sale.natureOperation || "VENDA")}</natOp>
 <mod>65</mod>
-<serie>${e.sale.series}</serie>
-<nNF>${e.sale.number}</nNF>
-<dhEmi>${L(kd(e.sale.issuedAt))}</dhEmi>
+<serie>${input.sale.series}</serie>
+<nNF>${input.sale.number}</nNF>
+<dhEmi>${escapeXml(normalizeIsoWithTimezone(input.sale.issuedAt))}</dhEmi>
 <tpNF>1</tpNF>
 <idDest>1</idDest>
-<cMunFG>${ne(o.cityIbgeCode)}</cMunFG>
+<cMunFG>${onlyDigits(address.cityIbgeCode)}</cMunFG>
 <tpImp>4</tpImp>
-<tpEmis>${i}</tpEmis>
-<cDV>${r.checkDigit}</cDV>
-<tpAmb>${s}</tpAmb>
+<tpEmis>${tpEmis}</tpEmis>
+<cDV>${accessKey.checkDigit}</cDV>
+<tpAmb>${tpAmb}</tpAmb>
 <finNFe>1</finNFe>
 <indFinal>1</indFinal>
 <indPres>1</indPres>
 <procEmi>0</procEmi>
-<verProc>${L(Fd)}</verProc>
+<verProc>${escapeXml(PROC_VERSION)}</verProc>
 </ide>
 <emit>
-<CNPJ>${ne(n.cnpj)}</CNPJ>
-<xNome>${L(n.legalName)}</xNome>
-${n.tradeName ? `<xFant>${L(n.tradeName)}</xFant>` : ""}
+<CNPJ>${onlyDigits(emitter.cnpj)}</CNPJ>
+<xNome>${escapeXml(emitter.legalName)}</xNome>
+${emitter.tradeName ? `<xFant>${escapeXml(emitter.tradeName)}</xFant>` : ""}
 <enderEmit>
-<xLgr>${L(o.street)}</xLgr>
-<nro>${L(o.number)}</nro>
-<xBairro>${L(o.neighborhood)}</xBairro>
-<cMun>${ne(o.cityIbgeCode)}</cMun>
-<xMun>${L(o.city)}</xMun>
-<UF>${L(o.state)}</UF>
-<CEP>${ne(o.zipCode)}</CEP>
+<xLgr>${escapeXml(address.street)}</xLgr>
+<nro>${escapeXml(address.number)}</nro>
+<xBairro>${escapeXml(address.neighborhood)}</xBairro>
+<cMun>${onlyDigits(address.cityIbgeCode)}</cMun>
+<xMun>${escapeXml(address.city)}</xMun>
+<UF>${escapeXml(address.state)}</UF>
+<CEP>${onlyDigits(address.zipCode)}</CEP>
 <cPais>1058</cPais>
 <xPais>BRASIL</xPais>
 </enderEmit>
-<IE>${ne(n.stateRegistration)}</IE>
-<CRT>${L(n.taxRegimeCode)}</CRT>
+<IE>${onlyDigits(emitter.stateRegistration)}</IE>
+<CRT>${escapeXml(emitter.taxRegimeCode)}</CRT>
 </emit>
-${Wd(e.customer, a.environment)}
-${c.map((E, m) => Kd(E, m, a)).join("")}
+${customerXml(input.customer, context.environment)}
+${items.map((item, index) => itemXml(item, index, context)).join("")}
 <total>
 <ICMSTot>
-<vBC>${ge(u.baseAmount)}</vBC>
-<vICMS>${ge(u.amount)}</vICMS>
+<vBC>${money(icmsTotals.baseAmount)}</vBC>
+<vICMS>${money(icmsTotals.amount)}</vICMS>
 <vICMSDeson>0.00</vICMSDeson>
 <vFCP>0.00</vFCP>
 <vBCST>0.00</vBCST>
 <vST>0.00</vST>
 <vFCPST>0.00</vFCPST>
 <vFCPSTRet>0.00</vFCPSTRet>
-<vProd>${ge(e.totals.productsAmount)}</vProd>
+<vProd>${money(input.totals.productsAmount)}</vProd>
 <vFrete>0.00</vFrete>
 <vSeg>0.00</vSeg>
-<vDesc>${ge(l)}</vDesc>
+<vDesc>${money(totalDiscountAmount)}</vDesc>
 <vII>0.00</vII>
 <vIPI>0.00</vIPI>
 <vIPIDevol>0.00</vIPIDevol>
 <vPIS>0.00</vPIS>
 <vCOFINS>0.00</vCOFINS>
 <vOutro>0.00</vOutro>
-<vNF>${ge(e.totals.finalAmount)}</vNF>
+<vNF>${money(input.totals.finalAmount)}</vNF>
 </ICMSTot>
 </total>
 <transp><modFrete>9</modFrete></transp>
-${Qd(e.payments, e.totals.finalAmount)}
-${e.sale.additionalInfo ? `<infAdic><infCpl>${L(e.sale.additionalInfo)}</infCpl></infAdic>` : ""}
-${Jd(e.technicalResponsible)}
+${paymentsXml(input.payments, input.totals.finalAmount)}
+${input.sale.additionalInfo ? `<infAdic><infCpl>${escapeXml(input.sale.additionalInfo)}</infCpl></infAdic>` : ""}
+${technicalResponsibleXml(input.technicalResponsible)}
 </infNFe>
-${Zd(a, r.accessKey)}
+${infNFeSuplXml(context, accessKey.accessKey)}
 </NFe>`;
 }
-class rE {
-  build(e) {
-    const r = Ud.generate({
-      uf: e.fiscalContext.uf,
-      issuedAt: e.sale.issuedAt,
-      cnpj: e.fiscalContext.emitter.cnpj,
+class NfceXmlBuilderService {
+  build(input) {
+    const accessKey = nfceAccessKeyService.generate({
+      uf: input.fiscalContext.uf,
+      issuedAt: input.sale.issuedAt,
+      cnpj: input.fiscalContext.emitter.cnpj,
       model: 65,
-      series: e.sale.series,
-      number: e.sale.number,
+      series: input.sale.series,
+      number: input.sale.number,
       emissionType: 1,
-      environment: e.fiscalContext.environment
-    }), a = Xd(e.items, e.totals.discountAmount), n = { accessKey: r, input: e, effectiveItems: a }, o = eE(n);
-    if (!o.ok)
+      environment: input.fiscalContext.environment
+    });
+    const effectiveItems = allocateTotalDiscountAcrossItems(input.items, input.totals.discountAmount);
+    const model = { accessKey, input, effectiveItems };
+    const validation = validateDocument(model);
+    if (!validation.ok) {
       return {
-        accessKey: r.accessKey,
-        numericCode: r.numericCode,
-        checkDigit: r.checkDigit,
+        accessKey: accessKey.accessKey,
+        numericCode: accessKey.numericCode,
+        checkDigit: accessKey.checkDigit,
         xml: "",
         qrCodeUrl: null,
-        validation: o
+        validation
       };
-    const s = is(e.fiscalContext, r.accessKey);
+    }
+    const qrCodeUrl = buildQrCodeUrl(input.fiscalContext, accessKey.accessKey);
     return {
-      accessKey: r.accessKey,
-      numericCode: r.numericCode,
-      checkDigit: r.checkDigit,
-      xml: Pd(tE(n)),
-      qrCodeUrl: s,
-      validation: o
+      accessKey: accessKey.accessKey,
+      numericCode: accessKey.numericCode,
+      checkDigit: accessKey.checkDigit,
+      xml: compactXml(serializeDocument(model)),
+      qrCodeUrl,
+      validation
     };
   }
-  buildAuthorizeXml(e, r) {
+  buildAuthorizeXml(request, fiscalContext) {
     return this.build({
-      fiscalContext: r,
+      fiscalContext,
       sale: {
-        id: e.saleId,
-        issuedAt: e.issuedAt,
-        series: e.series,
-        number: e.number,
-        additionalInfo: e.additionalInfo
+        id: request.saleId,
+        issuedAt: request.issuedAt,
+        series: request.series,
+        number: request.number,
+        additionalInfo: request.additionalInfo
       },
-      customer: e.customer,
-      items: e.items,
-      payments: e.payments,
-      totals: e.totals
+      customer: request.customer,
+      items: request.items,
+      payments: request.payments,
+      totals: request.totals
     });
   }
 }
-const ls = new rE();
-class aE {
-  constructor(e, r, a, n, o, s) {
-    this.repository = e, this.queueService = r, this.certificateService = a, this.danfeService = n, this.configService = o, this.resolveProvider = s;
+const nfceXmlBuilderService = new NfceXmlBuilderService();
+class DefaultFiscalService {
+  constructor(repository2, queueService2, certificateService2, danfeService2, configService2, resolveProvider) {
+    this.repository = repository2;
+    this.queueService = queueService2;
+    this.certificateService = certificateService2;
+    this.danfeService = danfeService2;
+    this.configService = configService2;
+    this.resolveProvider = resolveProvider;
   }
   async getConfig() {
     return this.configService.getConfigView();
   }
-  async saveConfig(e) {
-    return this.configService.saveConfig(e);
+  async saveConfig(input) {
+    return this.configService.saveConfig(input);
   }
-  async authorizeNfce(e) {
-    const r = this.repository.findBySaleId(e.saleId);
-    if ((r == null ? void 0 : r.status) === "AUTHORIZED")
+  async authorizeNfce(request) {
+    const existing = this.repository.findBySaleId(request.saleId);
+    if ((existing == null ? void 0 : existing.status) === "AUTHORIZED") {
       return {
         status: "AUTHORIZED",
         provider: this.configService.getConfig().provider,
-        accessKey: r.accessKey,
-        protocol: r.authorizationProtocol,
-        statusCode: r.statusCode,
-        statusMessage: r.statusMessage ?? "Documento já autorizado.",
-        authorizedAt: r.authorizedAt,
-        xmlAuthorized: r.xmlAuthorized,
-        xmlSent: r.xmlSent,
-        qrCodeUrl: r.qrCodeUrl
+        accessKey: existing.accessKey,
+        protocol: existing.authorizationProtocol,
+        statusCode: existing.statusCode,
+        statusMessage: existing.statusMessage ?? "Documento já autorizado.",
+        authorizedAt: existing.authorizedAt,
+        xmlAuthorized: existing.xmlAuthorized,
+        xmlSent: existing.xmlSent,
+        qrCodeUrl: existing.qrCodeUrl
       };
-    const a = r ?? this.repository.createPendingDocument(e), n = Qe.resolve(e.companyId), o = Da.validateAuthorizeReadiness(n, e);
-    if (!o.ok)
-      throw new D({
+    }
+    const persisted = existing ?? this.repository.createPendingDocument(request);
+    const context = fiscalContextResolver.resolve(request.companyId);
+    const readiness = fiscalReadinessValidator.validateAuthorizeReadiness(context, request);
+    if (!readiness.ok) {
+      throw new FiscalError({
         code: "FISCAL_READINESS_FAILED",
-        message: o.errors.map((c) => c.message).join(" | "),
+        message: readiness.errors.map((issue) => issue.message).join(" | "),
         category: "VALIDATION",
-        details: o
-      });
-    const s = Qe.resolveProviderConfig(e.companyId);
-    Sd.validateAuthorizeRequest(e, s), this.repository.updateStatus(a.id, "PENDING");
-    const i = ls.buildAuthorizeXml(e, n);
-    if (!i.validation.ok) {
-      const c = i.validation.errors.map((u) => u.message).join(" | ");
-      throw this.repository.updateStatus(a.id, "ERROR", "NFCE_XML_BUILD_FAILED", c), new D({
-        code: "NFCE_XML_BUILD_FAILED",
-        message: c,
-        category: "VALIDATION",
-        details: i.validation
+        details: readiness
       });
     }
-    this.repository.updateTransmissionArtifacts(a.id, {
-      issuedAt: e.issuedAt,
-      accessKey: i.accessKey,
-      xmlBuilt: i.xml
-    }), e.accessKey = i.accessKey, e.xmlBuilt = i.xml, e.qrCodeUrl = i.qrCodeUrl ?? null;
+    const config2 = fiscalContextResolver.resolveProviderConfig(request.companyId);
+    fiscalPreTransmissionValidator.validateAuthorizeRequest(request, config2);
+    this.repository.updateStatus(persisted.id, "PENDING");
+    const builtXml = nfceXmlBuilderService.buildAuthorizeXml(request, context);
+    if (!builtXml.validation.ok) {
+      const message = builtXml.validation.errors.map((issue) => issue.message).join(" | ");
+      this.repository.updateStatus(persisted.id, "ERROR", "NFCE_XML_BUILD_FAILED", message);
+      throw new FiscalError({
+        code: "NFCE_XML_BUILD_FAILED",
+        message,
+        category: "VALIDATION",
+        details: builtXml.validation
+      });
+    }
+    this.repository.updateTransmissionArtifacts(persisted.id, {
+      issuedAt: request.issuedAt,
+      accessKey: builtXml.accessKey,
+      xmlBuilt: builtXml.xml
+    });
+    request.accessKey = builtXml.accessKey;
+    request.xmlBuilt = builtXml.xml;
+    request.qrCodeUrl = builtXml.qrCodeUrl ?? null;
     try {
-      await this.certificateService.assertCertificateReady(s);
-      const u = await this.resolveProvider(s).authorizeNfce(e, s), l = {
-        ...u,
-        issuedAt: u.issuedAt ?? e.issuedAt,
-        accessKey: i.accessKey,
-        xmlBuilt: u.xmlBuilt ?? i.xml,
-        qrCodeUrl: u.qrCodeUrl ?? i.qrCodeUrl ?? null
+      await this.certificateService.assertCertificateReady(config2);
+      const provider = this.resolveProvider(config2);
+      const response = await provider.authorizeNfce(request, config2);
+      const enrichedResponse = {
+        ...response,
+        issuedAt: response.issuedAt ?? request.issuedAt,
+        accessKey: builtXml.accessKey,
+        xmlBuilt: response.xmlBuilt ?? builtXml.xml,
+        qrCodeUrl: response.qrCodeUrl ?? builtXml.qrCodeUrl ?? null
       };
-      if (l.status === "AUTHORIZED") {
-        const E = this.repository.markAsAuthorized(a.id, l), m = await this.danfeService.generate(E);
-        this.repository.updateDanfePath(E.id, m.danfePath);
-      } else
-        this.repository.markAsRejected(a.id, l);
-      return l;
-    } catch (c) {
-      const u = me(c, "FISCAL_AUTHORIZE_FAILED");
-      if (this.repository.updateStatus(a.id, "ERROR", u.code, u.message), e.offlineFallbackMode === "queue" || u.retryable)
-        return await this.queueService.enqueue({
-          saleId: e.saleId,
-          documentId: a.id,
+      if (enrichedResponse.status === "AUTHORIZED") {
+        const document = this.repository.markAsAuthorized(persisted.id, enrichedResponse);
+        const danfe = await this.danfeService.generate(document);
+        this.repository.updateDanfePath(document.id, danfe.danfePath);
+      } else {
+        this.repository.markAsRejected(persisted.id, enrichedResponse);
+      }
+      return enrichedResponse;
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_AUTHORIZE_FAILED");
+      this.repository.updateStatus(persisted.id, "ERROR", fiscalError.code, fiscalError.message);
+      if (request.offlineFallbackMode === "queue" || fiscalError.retryable) {
+        await this.queueService.enqueue({
+          saleId: request.saleId,
+          documentId: persisted.id,
           operation: "AUTHORIZE_NFCE",
-          idempotencyKey: e.idempotencyKey,
-          payload: e
-        }), this.repository.updateStatus(a.id, "QUEUED", u.code, u.message), {
+          idempotencyKey: request.idempotencyKey,
+          payload: request
+        });
+        this.repository.updateStatus(persisted.id, "QUEUED", fiscalError.code, fiscalError.message);
+        return {
           status: "QUEUED",
-          provider: s.provider,
-          statusCode: u.code,
-          statusMessage: u.message
+          provider: config2.provider,
+          statusCode: fiscalError.code,
+          statusMessage: fiscalError.message
         };
-      throw u;
+      }
+      throw fiscalError;
     }
   }
-  async cancelNfce(e) {
-    const r = this.repository.findById(e.documentId);
-    if (!r)
-      throw new D({
+  async cancelNfce(request) {
+    const document = this.repository.findById(request.documentId);
+    if (!document) {
+      throw new FiscalError({
         code: "FISCAL_DOCUMENT_NOT_FOUND",
-        message: `Documento fiscal ${e.documentId} não encontrado.`,
+        message: `Documento fiscal ${request.documentId} não encontrado.`,
         category: "VALIDATION"
       });
-    if (r.status === "CANCELLED")
+    }
+    if (document.status === "CANCELLED") {
       return {
         status: "CANCELLED",
         provider: this.configService.getConfig().provider,
-        cancellationProtocol: r.cancellationProtocol,
-        cancelledAt: r.cancelledAt,
-        statusCode: r.statusCode,
-        statusMessage: r.statusMessage ?? "Documento já cancelado.",
-        xmlCancellation: r.xmlCancellation
+        cancellationProtocol: document.cancellationProtocol,
+        cancelledAt: document.cancelledAt,
+        statusCode: document.statusCode,
+        statusMessage: document.statusMessage ?? "Documento já cancelado.",
+        xmlCancellation: document.xmlCancellation
       };
-    const a = Qe.resolveProviderConfig(r.companyId), o = await this.resolveProvider(a).cancelNfce(e, a);
-    return this.repository.markAsCancelled(r.id, e, o), o;
+    }
+    const config2 = fiscalContextResolver.resolveProviderConfig(document.companyId);
+    const provider = this.resolveProvider(config2);
+    const response = await provider.cancelNfce(request, config2);
+    this.repository.markAsCancelled(document.id, request, response);
+    return response;
   }
-  async consultStatusByAccessKey(e) {
-    const r = this.configService.getConfig(), n = await this.resolveProvider(r).consultStatus({ accessKey: e }, r), o = this.repository.findByAccessKey(e);
-    return o && this.repository.updateStatus(o.id, n.status, n.statusCode, n.statusMessage), n;
+  async consultStatusByAccessKey(accessKey) {
+    const config2 = this.configService.getConfig();
+    const provider = this.resolveProvider(config2);
+    const response = await provider.consultStatus({ accessKey }, config2);
+    const document = this.repository.findByAccessKey(accessKey);
+    if (document) {
+      this.repository.updateStatus(document.id, response.status, response.statusCode, response.statusMessage);
+    }
+    return response;
   }
   async runStatusServiceDiagnostic() {
-    const e = this.configService.getConfig(), r = `fiscal:test-status:${Date.now()}`;
-    N.info(`[FiscalDiagnostic] Criando job ${r} para NFeStatusServico4.`);
-    const a = await this.queueService.enqueue({
+    const config2 = this.configService.getConfig();
+    const idempotencyKey = `fiscal:test-status:${Date.now()}`;
+    logger.info(`[FiscalDiagnostic] Criando job ${idempotencyKey} para NFeStatusServico4.`);
+    const item = await this.queueService.enqueue({
       saleId: 0,
       documentId: null,
       operation: "TEST_STATUS_NFCE",
-      idempotencyKey: r,
+      idempotencyKey,
       maxAttempts: 1,
       payload: {
         saleId: 0,
         operation: "TEST_STATUS_NFCE",
-        provider: e.provider,
-        environment: e.environment,
-        uf: e.uf ?? "SP",
-        model: e.model ?? 65,
+        provider: config2.provider,
+        environment: config2.environment,
+        uf: config2.uf ?? "SP",
+        model: config2.model ?? 65,
         requestedAt: (/* @__PURE__ */ new Date()).toISOString()
       }
     });
-    return await this.queueService.processById(a.id) ?? a;
+    const processed = await this.queueService.processById(item.id);
+    return processed ?? item;
   }
-  async getDanfe(e) {
-    const r = this.repository.findById(e);
-    if (!r)
-      throw new D({
+  async getDanfe(documentId) {
+    const document = this.repository.findById(documentId);
+    if (!document) {
+      throw new FiscalError({
         code: "DANFE_DOCUMENT_NOT_FOUND",
-        message: `Documento fiscal ${e} não encontrado.`,
+        message: `Documento fiscal ${documentId} não encontrado.`,
         category: "VALIDATION"
       });
-    const a = await this.danfeService.recover(r);
-    if (a)
-      return a;
-    const n = await this.danfeService.generate(r);
-    return this.repository.updateDanfePath(e, n.danfePath), n;
+    }
+    const recovered = await this.danfeService.recover(document);
+    if (recovered) {
+      return recovered;
+    }
+    const generated = await this.danfeService.generate(document);
+    this.repository.updateDanfePath(documentId, generated.danfePath);
+    return generated;
   }
-  async enqueuePending(e) {
-    return this.queueService.enqueue(e);
+  async enqueuePending(request) {
+    return this.queueService.enqueue(request);
   }
-  async reprocessQueueItem(e) {
-    return this.queueService.retry(e);
+  async reprocessQueueItem(queueId) {
+    return this.queueService.retry(queueId);
   }
-  async listQueue(e = 20) {
-    return this.queueService.list(e);
+  async listQueue(limit = 20) {
+    return this.queueService.list(limit);
   }
   async getQueueSummary() {
     return this.queueService.getSummary();
   }
 }
-const Ga = new Wc();
-Ga.ensureSchema();
-const ds = new Gc(), Es = new fd(), qa = new wc(), nE = new yc();
-let Mr;
-function oE(t) {
-  return t.status === "AUTHORIZED" ? {
-    status: "AUTHORIZED",
-    statusCode: t.statusCode ?? null,
-    statusMessage: t.statusMessage
-  } : t.status === "REJECTED" ? {
-    status: "REJECTED",
-    statusCode: t.statusCode ?? null,
-    statusMessage: t.statusMessage
-  } : t.status === "QUEUED" || t.status === "PENDING" || t.status === "CONTINGENCY" ? {
-    status: "PENDING_EXTERNAL",
-    statusCode: t.statusCode ?? null,
-    statusMessage: t.statusMessage
-  } : {
+const repository = new SqliteFiscalRepository();
+repository.ensureSchema();
+const configService = new FiscalSettingsService();
+const providerFactory = new FiscalProviderFactory();
+const certificateService = new FileSystemCertificateService();
+const danfeService = new HtmlDanfeService();
+let fiscalServiceRef;
+function mapAuthorizeQueueResult(response) {
+  if (response.status === "AUTHORIZED") {
+    return {
+      status: "AUTHORIZED",
+      statusCode: response.statusCode ?? null,
+      statusMessage: response.statusMessage
+    };
+  }
+  if (response.status === "REJECTED") {
+    return {
+      status: "REJECTED",
+      statusCode: response.statusCode ?? null,
+      statusMessage: response.statusMessage
+    };
+  }
+  if (response.status === "QUEUED" || response.status === "PENDING" || response.status === "CONTINGENCY") {
+    return {
+      status: "PENDING_EXTERNAL",
+      statusCode: response.statusCode ?? null,
+      statusMessage: response.statusMessage
+    };
+  }
+  return {
     status: "FAILED_RETRYABLE",
-    statusCode: t.statusCode ?? null,
-    statusMessage: t.statusMessage
+    statusCode: response.statusCode ?? null,
+    statusMessage: response.statusMessage
   };
 }
-function sE(t) {
-  return t.status === "CANCELLED" ? {
-    status: "CANCELLED",
-    statusCode: t.statusCode ?? null,
-    statusMessage: t.statusMessage
-  } : {
+function mapCancelQueueResult(response) {
+  if (response.status === "CANCELLED") {
+    return {
+      status: "CANCELLED",
+      statusCode: response.statusCode ?? null,
+      statusMessage: response.statusMessage
+    };
+  }
+  return {
     status: "FAILED_FINAL",
-    statusCode: t.statusCode ?? null,
-    statusMessage: t.statusMessage
+    statusCode: response.statusCode ?? null,
+    statusMessage: response.statusMessage
   };
 }
-const ms = new Nd(Ga, async (t) => {
-  const e = t.payload;
-  if (t.operation === "AUTHORIZE_NFCE") {
-    const r = await Mr.authorizeNfce(e);
-    return oE(r);
+const queueService = new SqliteFiscalQueueService(repository, async (item) => {
+  const payload = item.payload;
+  if (item.operation === "AUTHORIZE_NFCE") {
+    const response = await fiscalServiceRef.authorizeNfce(payload);
+    return mapAuthorizeQueueResult(response);
   }
-  if (t.operation === "CANCEL_NFCE") {
-    const r = await Mr.cancelNfce(e);
-    return sE(r);
+  if (item.operation === "CANCEL_NFCE") {
+    const response = await fiscalServiceRef.cancelNfce(payload);
+    return mapCancelQueueResult(response);
   }
-  if (t.operation === "TEST_STATUS_NFCE") {
-    const r = Qe.resolveProviderConfig();
-    N.info(`[FiscalDiagnostic] Iniciando NFeStatusServico4 provider=${r.provider} ambiente=${r.environment} uf=${r.uf ?? "SP"}.`), await qa.assertCertificateReady(r), N.info("[FiscalDiagnostic] Certificado validado com sucesso.");
-    const n = await Es.resolve(r).testStatusServico(r);
-    return N.info(`[FiscalDiagnostic] NFeStatusServico4 finalizado url=${n.url} cStat=${n.statusCode ?? "sem cStat"} xMotivo=${n.statusMessage}.`), {
-      status: n.success ? "COMPLETED" : "FAILED_FINAL",
-      statusCode: n.statusCode ?? "SEFAZ_STATUS_FAILED",
-      statusMessage: n.statusMessage,
-      result: n
+  if (item.operation === "TEST_STATUS_NFCE") {
+    const config2 = fiscalContextResolver.resolveProviderConfig();
+    logger.info(`[FiscalDiagnostic] Iniciando NFeStatusServico4 provider=${config2.provider} ambiente=${config2.environment} uf=${config2.uf ?? "SP"}.`);
+    await certificateService.assertCertificateReady(config2);
+    logger.info("[FiscalDiagnostic] Certificado validado com sucesso.");
+    const provider = providerFactory.resolve(config2);
+    const result = await provider.testStatusServico(config2);
+    logger.info(`[FiscalDiagnostic] NFeStatusServico4 finalizado url=${result.url} cStat=${result.statusCode ?? "sem cStat"} xMotivo=${result.statusMessage}.`);
+    return {
+      status: result.success ? "COMPLETED" : "FAILED_FINAL",
+      statusCode: result.statusCode ?? "SEFAZ_STATUS_FAILED",
+      statusMessage: result.statusMessage,
+      result
     };
   }
   return {
     status: "FAILED_FINAL",
     statusCode: "QUEUE_OPERATION_NOT_SUPPORTED",
-    statusMessage: `Operação de fila não suportada: ${t.operation}`
+    statusMessage: `Operação de fila não suportada: ${item.operation}`
   };
 });
-Mr = new aE(
-  Ga,
-  ms,
-  qa,
-  nE,
-  ds,
-  (t) => Es.resolve(t)
+fiscalServiceRef = new DefaultFiscalService(
+  repository,
+  queueService,
+  certificateService,
+  danfeService,
+  configService,
+  (config2) => providerFactory.resolve(config2)
 );
-const Le = Mr, iE = ds, ps = ms, cE = qa, Pn = Qe, uE = Da, Bn = Yc;
-let Xn = !1;
-function lE(t = 15e3) {
-  Xn || (Xn = !0, setInterval(() => {
-    ps.processNext();
-  }, t));
+const fiscalService = fiscalServiceRef;
+const fiscalConfigService = configService;
+const fiscalQueueService = queueService;
+const fiscalCertificateService = certificateService;
+const fiscalContextService = fiscalContextResolver;
+const fiscalReadinessService = fiscalReadinessValidator;
+const fiscalStoreConfigService = fiscalStoreService;
+let fiscalQueueWorkerStarted = false;
+function startFiscalQueueWorker(intervalMs = 15e3) {
+  if (fiscalQueueWorkerStarted) {
+    return;
+  }
+  fiscalQueueWorkerStarted = true;
+  setInterval(() => {
+    void fiscalQueueService.processNext();
+  }, intervalMs);
 }
-function sa(t) {
+function mapDocument(row) {
   return {
-    id: t.id,
-    saleId: t.sale_id,
-    storeId: t.store_id,
-    model: t.model,
-    series: t.series,
-    number: t.number,
-    accessKey: t.access_key,
-    environment: t.environment,
-    status: t.status,
-    issuedDatetime: t.issued_datetime,
-    xml: t.xml,
-    xmlSigned: t.xml_signed,
-    xmlAuthorized: t.xml_authorized,
-    xmlCancellation: t.xml_cancellation,
-    protocol: t.protocol,
-    receiptNumber: t.receipt_number,
-    qrCodeUrl: t.qr_code_url,
-    authorizationDatetime: t.authorization_datetime,
-    cancelDatetime: t.cancel_datetime,
-    contingencyType: t.contingency_type,
-    rejectionCode: t.rejection_code,
-    rejectionReason: t.rejection_reason,
-    danfePath: t.danfe_path,
-    provider: t.provider,
-    createdAt: t.created_at,
-    updatedAt: t.updated_at
+    id: row.id,
+    saleId: row.sale_id,
+    storeId: row.store_id,
+    model: row.model,
+    series: row.series,
+    number: row.number,
+    accessKey: row.access_key,
+    environment: row.environment,
+    status: row.status,
+    issuedDatetime: row.issued_datetime,
+    xml: row.xml,
+    xmlSigned: row.xml_signed,
+    xmlAuthorized: row.xml_authorized,
+    xmlCancellation: row.xml_cancellation,
+    protocol: row.protocol,
+    receiptNumber: row.receipt_number,
+    qrCodeUrl: row.qr_code_url,
+    authorizationDatetime: row.authorization_datetime,
+    cancelDatetime: row.cancel_datetime,
+    contingencyType: row.contingency_type,
+    rejectionCode: row.rejection_code,
+    rejectionReason: row.rejection_reason,
+    danfePath: row.danfe_path,
+    provider: row.provider,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
-class dE {
-  createPending(e) {
-    const r = d.prepare(`
+class FiscalDocumentRepository {
+  createPending(input) {
+    const result = db.prepare(`
       INSERT INTO fiscal_documents (
         sale_id, store_id, model, series, number, access_key, environment, status,
         issued_datetime, xml, xml_signed, xml_authorized, xml_cancellation, protocol, receipt_number, qr_code_url, authorization_datetime,
@@ -11075,34 +13116,37 @@ class dE {
         provider, created_at, updated_at
       ) VALUES (?, ?, 65, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
-      e.saleId,
-      e.storeId,
-      e.series,
-      e.number,
-      e.accessKey ?? null,
-      e.environment,
-      e.status,
-      e.issuedDatetime ?? null,
-      e.xml ?? null,
-      e.xmlSigned ?? null,
-      e.xmlAuthorized ?? null,
-      e.xmlCancellation ?? null,
-      e.protocol ?? null,
-      e.receiptNumber ?? null,
-      e.qrCodeUrl ?? null,
-      e.authorizationDatetime ?? null,
-      e.cancelDatetime ?? null,
-      e.contingencyType ?? null,
-      e.rejectionCode ?? null,
-      e.rejectionReason ?? null,
-      e.danfePath ?? null,
-      e.provider ?? null
+      input.saleId,
+      input.storeId,
+      input.series,
+      input.number,
+      input.accessKey ?? null,
+      input.environment,
+      input.status,
+      input.issuedDatetime ?? null,
+      input.xml ?? null,
+      input.xmlSigned ?? null,
+      input.xmlAuthorized ?? null,
+      input.xmlCancellation ?? null,
+      input.protocol ?? null,
+      input.receiptNumber ?? null,
+      input.qrCodeUrl ?? null,
+      input.authorizationDatetime ?? null,
+      input.cancelDatetime ?? null,
+      input.contingencyType ?? null,
+      input.rejectionCode ?? null,
+      input.rejectionReason ?? null,
+      input.danfePath ?? null,
+      input.provider ?? null
     );
-    return this.findById(Number(r.lastInsertRowid));
+    return this.findById(Number(result.lastInsertRowid));
   }
-  upsertBySale(e) {
-    const r = this.findBySaleId(e.saleId);
-    return r ? (d.prepare(`
+  upsertBySale(input) {
+    const existing = this.findBySaleId(input.saleId);
+    if (!existing) {
+      return this.createPending(input);
+    }
+    db.prepare(`
       UPDATE fiscal_documents
       SET
         store_id = ?,
@@ -11129,44 +13173,45 @@ class dE {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      e.storeId,
-      e.series,
-      e.number,
-      e.accessKey ?? r.accessKey ?? null,
-      e.environment,
-      e.status,
-      e.issuedDatetime ?? r.issuedDatetime ?? null,
-      e.xml ?? r.xml ?? null,
-      e.xmlSigned ?? r.xmlSigned ?? null,
-      e.xmlAuthorized ?? r.xmlAuthorized ?? null,
-      e.xmlCancellation ?? r.xmlCancellation ?? null,
-      e.protocol ?? r.protocol ?? null,
-      e.receiptNumber ?? r.receiptNumber ?? null,
-      e.qrCodeUrl ?? r.qrCodeUrl ?? null,
-      e.authorizationDatetime ?? r.authorizationDatetime ?? null,
-      e.cancelDatetime ?? r.cancelDatetime ?? null,
-      e.contingencyType ?? r.contingencyType ?? null,
-      e.rejectionCode ?? r.rejectionCode ?? null,
-      e.rejectionReason ?? r.rejectionReason ?? null,
-      e.danfePath ?? r.danfePath ?? null,
-      e.provider ?? r.provider ?? null,
-      r.id
-    ), this.findById(r.id)) : this.createPending(e);
+      input.storeId,
+      input.series,
+      input.number,
+      input.accessKey ?? existing.accessKey ?? null,
+      input.environment,
+      input.status,
+      input.issuedDatetime ?? existing.issuedDatetime ?? null,
+      input.xml ?? existing.xml ?? null,
+      input.xmlSigned ?? existing.xmlSigned ?? null,
+      input.xmlAuthorized ?? existing.xmlAuthorized ?? null,
+      input.xmlCancellation ?? existing.xmlCancellation ?? null,
+      input.protocol ?? existing.protocol ?? null,
+      input.receiptNumber ?? existing.receiptNumber ?? null,
+      input.qrCodeUrl ?? existing.qrCodeUrl ?? null,
+      input.authorizationDatetime ?? existing.authorizationDatetime ?? null,
+      input.cancelDatetime ?? existing.cancelDatetime ?? null,
+      input.contingencyType ?? existing.contingencyType ?? null,
+      input.rejectionCode ?? existing.rejectionCode ?? null,
+      input.rejectionReason ?? existing.rejectionReason ?? null,
+      input.danfePath ?? existing.danfePath ?? null,
+      input.provider ?? existing.provider ?? null,
+      existing.id
+    );
+    return this.findById(existing.id);
   }
-  findById(e) {
-    const r = d.prepare("SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1").get(e);
-    return r ? sa(r) : null;
+  findById(id) {
+    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE id = ? LIMIT 1`).get(id);
+    return row ? mapDocument(row) : null;
   }
-  findBySaleId(e) {
-    const r = d.prepare("SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1").get(e);
-    return r ? sa(r) : null;
+  findBySaleId(saleId) {
+    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE sale_id = ? LIMIT 1`).get(saleId);
+    return row ? mapDocument(row) : null;
   }
-  findByAccessKey(e) {
-    const r = d.prepare("SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1").get(e);
-    return r ? sa(r) : null;
+  findByAccessKey(accessKey) {
+    const row = db.prepare(`SELECT * FROM fiscal_documents WHERE access_key = ? LIMIT 1`).get(accessKey);
+    return row ? mapDocument(row) : null;
   }
-  markCancelled(e, r, a) {
-    d.prepare(`
+  markCancelled(id, cancelDatetime, protocol) {
+    db.prepare(`
       UPDATE fiscal_documents
       SET
         status = 'CANCELLED',
@@ -11174,10 +13219,11 @@ class dE {
         protocol = COALESCE(?, protocol),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(r, a ?? null, e);
+    `).run(cancelDatetime, protocol ?? null, id);
   }
 }
-const dt = new dE(), Xe = {
+const fiscalDocumentRepository = new FiscalDocumentRepository();
+const FiscalDocumentStatuses = {
   DRAFT: "DRAFT",
   QUEUED: "QUEUED",
   SIGNING: "SIGNING",
@@ -11187,7 +13233,8 @@ const dt = new dE(), Xe = {
   CANCELLED: "CANCELLED",
   CONTINGENCY: "CONTINGENCY",
   ERROR: "ERROR"
-}, nt = {
+};
+const FiscalEventTypes = {
   XML_GENERATED: "XML_GENERATED",
   XML_SIGNED: "XML_SIGNED",
   AUTHORIZATION_REQUESTED: "AUTHORIZATION_REQUESTED",
@@ -11202,63 +13249,80 @@ const dt = new dE(), Xe = {
   CONTINGENCY_ACTIVATED: "CONTINGENCY_ACTIVATED",
   CONTINGENCY_SYNC_REQUESTED: "CONTINGENCY_SYNC_REQUESTED"
 };
-class EE {
-  getOrReserveForSale(e, r) {
-    const a = dt.findBySaleId(e);
-    return a ? {
-      series: a.series,
-      number: a.number
-    } : Ie.reserveNextNfceNumber(r);
+class FiscalNumberingService {
+  getOrReserveForSale(saleId, storeId) {
+    const existing = fiscalDocumentRepository.findBySaleId(saleId);
+    if (existing) {
+      return {
+        series: existing.series,
+        number: existing.number
+      };
+    }
+    return storeRepository.reserveNextNfceNumber(storeId);
   }
 }
-const mE = new EE();
-function kn(t) {
-  return {
+const fiscalNumberingService = new FiscalNumberingService();
+function mapPaymentMethod(tpag) {
+  const map = {
     "01": "DINHEIRO",
     "03": "CREDITO",
     "04": "DEBITO",
-    10: "VOUCHER",
-    17: "PIX"
-  }[t] ?? "OUTROS";
+    "10": "VOUCHER",
+    "17": "PIX"
+  };
+  return map[tpag] ?? "OUTROS";
 }
-function $n(t) {
-  return t === 1 ? "production" : "homologation";
+function mapEnvironment(ambiente) {
+  return ambiente === 1 ? "production" : "homologation";
 }
-function pE(t) {
-  return t.length === 0 ? "OUTROS" : new Set(t.map((r) => r.method)).size === 1 ? t[0].method : "OUTROS";
+function resolvePrimaryPaymentMethod(payments) {
+  if (payments.length === 0) {
+    return "OUTROS";
+  }
+  const unique = new Set(payments.map((payment) => payment.method));
+  return unique.size === 1 ? payments[0].method : "OUTROS";
 }
-function It(t, e, r = "") {
-  return String(t ?? e ?? "").trim() || r;
+function taxValue(primary, fallback, defaultValue = "") {
+  const value = String(primary ?? fallback ?? "").trim();
+  return value || defaultValue;
 }
-function TE(t) {
-  return ["1", "4"].includes(String(t.taxRegimeCode ?? "").trim());
+function isSimpleNationalStore(store) {
+  return ["1", "4"].includes(String(store.taxRegimeCode ?? "").trim());
 }
-function _E(t) {
-  const e = String(t ?? "").trim();
-  if (["1", "2", "3", "4"].includes(e))
-    return e;
-  throw new Error(`CRT/regime tributario invalido na company legada: ${e || "vazio"}.`);
+function toTaxRegimeCode(value) {
+  const normalized = String(value ?? "").trim();
+  if (["1", "2", "3", "4"].includes(normalized)) {
+    return normalized;
+  }
+  throw new Error(`CRT/regime tributario invalido na company legada: ${normalized || "vazio"}.`);
 }
-function Gn(t, e) {
-  return TE(t) ? {
-    csosn: e.csosn ?? "102",
-    icmsCst: e.icms_cst
-  } : {
+function resolveIcmsTaxForStore(store, item) {
+  if (isSimpleNationalStore(store)) {
+    return {
+      csosn: item.csosn ?? "102",
+      icmsCst: item.icms_cst
+    };
+  }
+  return {
     csosn: null,
-    icmsCst: e.icms_cst ?? "00"
+    icmsCst: item.icms_cst ?? "00"
   };
 }
-function fE(t) {
-  const e = String(t ?? "").trim().toUpperCase();
-  return e === "AC" ? "-05:00" : ["AM", "MS", "MT", "RO", "RR"].includes(e) ? "-04:00" : "-03:00";
+function fiscalOffsetForUf(uf) {
+  const normalizedUf = String(uf ?? "").trim().toUpperCase();
+  if (normalizedUf === "AC") return "-05:00";
+  if (["AM", "MS", "MT", "RO", "RR"].includes(normalizedUf)) return "-04:00";
+  return "-03:00";
 }
-function NE(t) {
-  const e = new Date(Date.now() - 12e4), r = (n) => String(n).padStart(2, "0"), a = fE(t);
-  return `${e.getFullYear()}-${r(e.getMonth() + 1)}-${r(e.getDate())}T${r(e.getHours())}:${r(e.getMinutes())}:${r(e.getSeconds())}${a}`;
+function nowInIssuerFiscalIso(uf) {
+  const emissionDate = new Date(Date.now() - 12e4);
+  const pad = (part) => String(part).padStart(2, "0");
+  const offset = fiscalOffsetForUf(uf);
+  return `${emissionDate.getFullYear()}-${pad(emissionDate.getMonth() + 1)}-${pad(emissionDate.getDate())}T${pad(emissionDate.getHours())}:${pad(emissionDate.getMinutes())}:${pad(emissionDate.getSeconds())}${offset}`;
 }
-class gE {
+class PdvSaleFiscalAdapter {
   loadActiveCompany() {
-    return d.prepare(`
+    const company = db.prepare(`
       SELECT
         nome_fantasia,
         razao_social,
@@ -11280,52 +13344,56 @@ class gE {
       FROM company
       WHERE ativo = 1
       LIMIT 1
-    `).get() ?? null;
+    `).get();
+    return company ?? null;
   }
   resolveActiveStore() {
-    const e = Ie.findActive();
-    if (e)
-      return e;
-    const r = this.loadActiveCompany();
-    if (!r)
+    const existingStore = storeRepository.findActive();
+    if (existingStore) {
+      return existingStore;
+    }
+    const company = this.loadActiveCompany();
+    if (!company) {
       throw new Error("Nenhuma store ativa encontrada e não existe company ativa para criar o espelho fiscal.");
-    return Ie.create({
+    }
+    return storeRepository.create({
       code: "MAIN",
-      name: r.nome_fantasia,
-      legalName: r.razao_social,
-      cnpj: r.cnpj,
-      stateRegistration: r.inscricao_estadual,
-      taxRegimeCode: _E(r.crt),
-      environment: $n(r.ambiente_emissao),
-      cscId: r.csc_id,
-      cscToken: r.csc_token,
-      defaultSeries: Number(r.serie_nfce ?? 1),
-      nextNfceNumber: Number(r.proximo_numero_nfce ?? 1),
-      addressStreet: r.rua,
-      addressNumber: r.numero,
-      addressNeighborhood: r.bairro,
-      addressCity: r.cidade,
-      addressState: r.uf,
-      addressZipCode: r.cep,
-      addressCityIbgeCode: r.cod_municipio_ibge,
-      active: !0
+      name: company.nome_fantasia,
+      legalName: company.razao_social,
+      cnpj: company.cnpj,
+      stateRegistration: company.inscricao_estadual,
+      taxRegimeCode: toTaxRegimeCode(company.crt),
+      environment: mapEnvironment(company.ambiente_emissao),
+      cscId: company.csc_id,
+      cscToken: company.csc_token,
+      defaultSeries: Number(company.serie_nfce ?? 1),
+      nextNfceNumber: Number(company.proximo_numero_nfce ?? 1),
+      addressStreet: company.rua,
+      addressNumber: company.numero,
+      addressNeighborhood: company.bairro,
+      addressCity: company.cidade,
+      addressState: company.uf,
+      addressZipCode: company.cep,
+      addressCityIbgeCode: company.cod_municipio_ibge,
+      active: true
     });
   }
-  loadLegacySale(e) {
-    const r = d.prepare(`
+  loadLegacySale(legacySaleId) {
+    const sale = db.prepare(`
       SELECT
         id, ambiente, data_emissao, valor_produtos, valor_desconto,
         valor_total, valor_troco, cliente_nome, cpf_cliente, cnpj_cliente
       FROM vendas
       WHERE id = ?
       LIMIT 1
-    `).get(e);
-    if (!r)
-      throw new Error(`Venda ${e} não encontrada para emissão fiscal.`);
-    return r;
+    `).get(legacySaleId);
+    if (!sale) {
+      throw new Error(`Venda ${legacySaleId} não encontrada para emissão fiscal.`);
+    }
+    return sale;
   }
-  loadLegacyItems(e) {
-    return d.prepare(`
+  loadLegacyItems(legacySaleId) {
+    return db.prepare(`
       SELECT
         vi.id,
         vi.produto_id,
@@ -11353,365 +13421,405 @@ class gE {
         ON product.id = vi.produto_id
       WHERE vi.venda_id = ?
       ORDER BY vi.id ASC
-    `).all(e);
+    `).all(legacySaleId);
   }
-  loadLegacyPayments(e) {
-    return d.prepare(`
+  loadLegacyPayments(legacySaleId) {
+    return db.prepare(`
       SELECT id, tpag, valor, valor_recebido, troco, descricao_outro
       FROM venda_pagamento
       WHERE venda_id = ?
       ORDER BY id ASC
-    `).all(e);
+    `).all(legacySaleId);
   }
-  buildAuthorizeRequest(e, r, a, n) {
-    const o = this.loadLegacySale(e), s = Ie.findById(r);
-    if (!s)
-      throw new Error(`Store fiscal ${r} não encontrada para emissão.`);
-    const i = this.loadLegacyItems(e), c = this.loadLegacyPayments(e).map((l) => ({
-      method: kn(l.tpag),
-      amount: Number(l.valor ?? 0),
-      receivedAmount: l.valor_recebido != null ? Number(l.valor_recebido) : void 0,
-      changeAmount: l.troco != null ? Number(l.troco) : void 0,
-      description: l.descricao_outro ?? null
-    })), u = NE(s.addressState);
+  buildAuthorizeRequest(legacySaleId, storeId, series, number) {
+    const sale = this.loadLegacySale(legacySaleId);
+    const store = storeRepository.findById(storeId);
+    if (!store) {
+      throw new Error(`Store fiscal ${storeId} não encontrada para emissão.`);
+    }
+    const items = this.loadLegacyItems(legacySaleId);
+    const payments = this.loadLegacyPayments(legacySaleId).map((payment) => ({
+      method: mapPaymentMethod(payment.tpag),
+      amount: Number(payment.valor ?? 0),
+      receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : void 0,
+      changeAmount: payment.troco != null ? Number(payment.troco) : void 0,
+      description: payment.descricao_outro ?? null
+    }));
+    const fiscalIssuedAt = nowInIssuerFiscalIso(store.addressState);
     return {
-      saleId: o.id,
-      companyId: s.id,
-      number: n,
-      series: a,
-      environment: $n(o.ambiente),
-      paymentMethod: pE(c),
-      payments: c,
-      issuedAt: u,
+      saleId: sale.id,
+      companyId: store.id,
+      number,
+      series,
+      environment: mapEnvironment(sale.ambiente),
+      paymentMethod: resolvePrimaryPaymentMethod(payments),
+      payments,
+      issuedAt: fiscalIssuedAt,
       emitter: {
-        cnpj: s.cnpj,
-        stateRegistration: s.stateRegistration,
-        legalName: s.legalName,
-        tradeName: s.name,
-        taxRegimeCode: s.taxRegimeCode,
+        cnpj: store.cnpj,
+        stateRegistration: store.stateRegistration,
+        legalName: store.legalName,
+        tradeName: store.name,
+        taxRegimeCode: store.taxRegimeCode,
         address: {
-          street: s.addressStreet,
-          number: s.addressNumber,
-          neighborhood: s.addressNeighborhood,
-          city: s.addressCity,
-          state: s.addressState,
-          zipCode: s.addressZipCode,
-          cityIbgeCode: s.addressCityIbgeCode
+          street: store.addressStreet,
+          number: store.addressNumber,
+          neighborhood: store.addressNeighborhood,
+          city: store.addressCity,
+          state: store.addressState,
+          zipCode: store.addressZipCode,
+          cityIbgeCode: store.addressCityIbgeCode
         }
       },
       customer: {
-        name: o.cliente_nome ?? void 0,
-        cpfCnpj: o.cpf_cliente ?? o.cnpj_cliente ?? null
+        name: sale.cliente_nome ?? void 0,
+        cpfCnpj: sale.cpf_cliente ?? sale.cnpj_cliente ?? null
       },
-      items: i.map((l) => {
-        const E = Gn(s, l);
+      items: items.map((item) => {
+        const icmsTax = resolveIcmsTaxForStore(store, item);
         return {
-          id: l.produto_id ?? l.codigo_produto,
-          description: l.nome_produto,
-          unit: l.unidade_comercial,
-          quantity: Number(l.quantidade_comercial ?? 0),
-          unitPrice: Number(l.valor_unitario_comercial ?? 0),
-          grossAmount: Number(l.valor_bruto ?? 0),
-          discountAmount: Number(l.valor_desconto ?? 0),
-          totalAmount: Number(l.subtotal ?? 0),
-          gtin: l.gtin,
+          id: item.produto_id ?? item.codigo_produto,
+          description: item.nome_produto,
+          unit: item.unidade_comercial,
+          quantity: Number(item.quantidade_comercial ?? 0),
+          unitPrice: Number(item.valor_unitario_comercial ?? 0),
+          grossAmount: Number(item.valor_bruto ?? 0),
+          discountAmount: Number(item.valor_desconto ?? 0),
+          totalAmount: Number(item.subtotal ?? 0),
+          gtin: item.gtin,
           tax: {
-            ncm: l.ncm ?? "",
-            cfop: It(l.cfop, null, "5102"),
-            cest: l.cest,
-            originCode: It(l.origin_code, null, "0"),
-            csosn: E.csosn,
-            icmsCst: E.icmsCst,
-            pisCst: l.pis_cst ?? "49",
-            cofinsCst: l.cofins_cst ?? "49"
+            ncm: item.ncm ?? "",
+            cfop: taxValue(item.cfop, null, "5102"),
+            cest: item.cest,
+            originCode: taxValue(item.origin_code, null, "0"),
+            csosn: icmsTax.csosn,
+            icmsCst: icmsTax.icmsCst,
+            pisCst: item.pis_cst ?? "49",
+            cofinsCst: item.cofins_cst ?? "49"
           }
         };
       }),
       totals: {
-        productsAmount: Number(o.valor_produtos ?? 0),
-        discountAmount: Number(o.valor_desconto ?? 0),
-        finalAmount: Number(o.valor_total ?? 0),
-        receivedAmount: c.reduce((l, E) => l + Number(E.receivedAmount ?? E.amount ?? 0), 0),
-        changeAmount: c.reduce((l, E) => l + Number(E.changeAmount ?? 0), 0) || Number(o.valor_troco ?? 0)
+        productsAmount: Number(sale.valor_produtos ?? 0),
+        discountAmount: Number(sale.valor_desconto ?? 0),
+        finalAmount: Number(sale.valor_total ?? 0),
+        receivedAmount: payments.reduce((sum, payment) => sum + Number(payment.receivedAmount ?? payment.amount ?? 0), 0),
+        changeAmount: payments.reduce((sum, payment) => sum + Number(payment.changeAmount ?? 0), 0) || Number(sale.valor_troco ?? 0)
       },
-      additionalInfo: `Venda PDV ${o.id}`,
+      additionalInfo: `Venda PDV ${sale.id}`,
       offlineFallbackMode: "queue",
-      idempotencyKey: `nfce-sale-${o.id}`
+      idempotencyKey: `nfce-sale-${sale.id}`
     };
   }
-  mirrorLegacySale(e) {
-    const r = this.resolveActiveStore(), a = this.loadLegacySale(e), n = this.loadLegacyItems(e), o = this.loadLegacyPayments(e), s = `legacy-sale:${e}`, c = vr.findByExternalReference(s) ?? vr.create({
-      storeId: r.id,
-      customerName: a.cliente_nome ?? null,
-      customerDocument: a.cpf_cliente ?? a.cnpj_cliente ?? null,
+  mirrorLegacySale(legacySaleId) {
+    const store = this.resolveActiveStore();
+    const sale = this.loadLegacySale(legacySaleId);
+    const items = this.loadLegacyItems(legacySaleId);
+    const payments = this.loadLegacyPayments(legacySaleId);
+    const externalReference = `legacy-sale:${legacySaleId}`;
+    const existing = salesRepository.findByExternalReference(externalReference);
+    const aggregate = existing ?? salesRepository.create({
+      storeId: store.id,
+      customerName: sale.cliente_nome ?? null,
+      customerDocument: sale.cpf_cliente ?? sale.cnpj_cliente ?? null,
       status: "PAID",
-      subtotalAmount: Number(a.valor_produtos ?? 0),
-      discountAmount: Number(a.valor_desconto ?? 0),
-      totalAmount: Number(a.valor_total ?? 0),
-      changeAmount: Number(a.valor_troco ?? 0),
-      externalReference: s,
-      items: n.map((m) => {
-        const T = Gn(r, m);
+      subtotalAmount: Number(sale.valor_produtos ?? 0),
+      discountAmount: Number(sale.valor_desconto ?? 0),
+      totalAmount: Number(sale.valor_total ?? 0),
+      changeAmount: Number(sale.valor_troco ?? 0),
+      externalReference,
+      items: items.map((item) => {
+        const icmsTax = resolveIcmsTaxForStore(store, item);
         return {
-          productId: m.produto_id ?? m.codigo_produto,
-          description: m.nome_produto,
-          unit: m.unidade_comercial,
-          quantity: Number(m.quantidade_comercial ?? 0),
-          unitPrice: Number(m.valor_unitario_comercial ?? 0),
-          grossAmount: Number(m.valor_bruto ?? 0),
-          discountAmount: Number(m.valor_desconto ?? 0),
-          totalAmount: Number(m.subtotal ?? 0),
-          ncm: m.ncm ?? null,
-          cfop: It(m.cfop, null, "5102"),
-          cest: m.cest,
-          originCode: It(m.origin_code, null, "0"),
+          productId: item.produto_id ?? item.codigo_produto,
+          description: item.nome_produto,
+          unit: item.unidade_comercial,
+          quantity: Number(item.quantidade_comercial ?? 0),
+          unitPrice: Number(item.valor_unitario_comercial ?? 0),
+          grossAmount: Number(item.valor_bruto ?? 0),
+          discountAmount: Number(item.valor_desconto ?? 0),
+          totalAmount: Number(item.subtotal ?? 0),
+          ncm: item.ncm ?? null,
+          cfop: taxValue(item.cfop, null, "5102"),
+          cest: item.cest,
+          originCode: taxValue(item.origin_code, null, "0"),
           taxSnapshot: {
-            ncm: m.ncm,
-            cfop: It(m.cfop, null, "5102"),
-            cest: m.cest,
-            originCode: It(m.origin_code, null, "0"),
-            csosn: T.csosn,
-            icmsCst: T.icmsCst,
-            pisCst: m.pis_cst ?? "49",
-            cofinsCst: m.cofins_cst ?? "49"
+            ncm: item.ncm,
+            cfop: taxValue(item.cfop, null, "5102"),
+            cest: item.cest,
+            originCode: taxValue(item.origin_code, null, "0"),
+            csosn: icmsTax.csosn,
+            icmsCst: icmsTax.icmsCst,
+            pisCst: item.pis_cst ?? "49",
+            cofinsCst: item.cofins_cst ?? "49"
           }
         };
       }),
-      payments: o.map((m) => ({
-        method: kn(m.tpag),
-        amount: Number(m.valor ?? 0),
-        receivedAmount: m.valor_recebido != null ? Number(m.valor_recebido) : Number(m.valor ?? 0),
-        changeAmount: Number(m.troco ?? 0),
-        integrationReference: m.descricao_outro ?? null
+      payments: payments.map((payment) => ({
+        method: mapPaymentMethod(payment.tpag),
+        amount: Number(payment.valor ?? 0),
+        receivedAmount: payment.valor_recebido != null ? Number(payment.valor_recebido) : Number(payment.valor ?? 0),
+        changeAmount: Number(payment.troco ?? 0),
+        integrationReference: payment.descricao_outro ?? null
       }))
-    }), u = mE.getOrReserveForSale(c.sale.id, r.id), l = this.buildAuthorizeRequest(e, r.id, u.series, u.number), E = dt.upsertBySale({
-      saleId: c.sale.id,
-      storeId: r.id,
-      series: u.series,
-      number: u.number,
-      environment: l.environment,
-      status: Xe.DRAFT,
-      issuedDatetime: l.issuedAt,
-      contingencyType: l.offlineFallbackMode === "queue" ? "queue" : null,
+    });
+    const numbering = fiscalNumberingService.getOrReserveForSale(aggregate.sale.id, store.id);
+    const request = this.buildAuthorizeRequest(legacySaleId, store.id, numbering.series, numbering.number);
+    const persistedDocument = fiscalDocumentRepository.upsertBySale({
+      saleId: aggregate.sale.id,
+      storeId: store.id,
+      series: numbering.series,
+      number: numbering.number,
+      environment: request.environment,
+      status: FiscalDocumentStatuses.DRAFT,
+      issuedDatetime: request.issuedAt,
+      contingencyType: request.offlineFallbackMode === "queue" ? "queue" : null,
       provider: null
     });
     return {
-      request: l,
-      store: r,
-      mirroredSale: c,
-      mirroredFiscalDocument: E
+      request,
+      store,
+      mirroredSale: aggregate,
+      mirroredFiscalDocument: persistedDocument
     };
   }
-  findMirroredSaleByLegacyId(e) {
-    return vr.findByExternalReference(`legacy-sale:${e}`);
+  findMirroredSaleByLegacyId(legacySaleId) {
+    return salesRepository.findByExternalReference(`legacy-sale:${legacySaleId}`);
   }
 }
-const ia = new gE();
-function qn(t) {
+const pdvSaleFiscalAdapter = new PdvSaleFiscalAdapter();
+function mapEvent(row) {
   return {
-    id: t.id,
-    fiscalDocumentId: t.fiscal_document_id,
-    eventType: t.event_type,
-    payloadJson: t.payload_json,
-    responseJson: t.response_json,
-    status: t.status,
-    createdAt: t.created_at
+    id: row.id,
+    fiscalDocumentId: row.fiscal_document_id,
+    eventType: row.event_type,
+    payloadJson: row.payload_json,
+    responseJson: row.response_json,
+    status: row.status,
+    createdAt: row.created_at
   };
 }
-class AE {
-  create(e) {
-    const r = d.prepare(`
+class FiscalEventRepository {
+  create(input) {
+    const result = db.prepare(`
       INSERT INTO fiscal_events (
         fiscal_document_id, event_type, payload_json, response_json, status, created_at
       ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).run(
-      e.fiscalDocumentId,
-      e.eventType,
-      e.payload ? _a(e.payload) : null,
-      e.response ? _a(e.response) : null,
-      e.status
+      input.fiscalDocumentId,
+      input.eventType,
+      input.payload ? serializeJson(input.payload) : null,
+      input.response ? serializeJson(input.response) : null,
+      input.status
     );
-    return this.findById(Number(r.lastInsertRowid));
+    return this.findById(Number(result.lastInsertRowid));
   }
-  findById(e) {
-    const r = d.prepare("SELECT * FROM fiscal_events WHERE id = ? LIMIT 1").get(e);
-    return r ? qn(r) : null;
+  findById(id) {
+    const row = db.prepare(`SELECT * FROM fiscal_events WHERE id = ? LIMIT 1`).get(id);
+    return row ? mapEvent(row) : null;
   }
-  listByFiscalDocument(e) {
-    return d.prepare(`
+  listByFiscalDocument(fiscalDocumentId) {
+    const rows = db.prepare(`
       SELECT * FROM fiscal_events
       WHERE fiscal_document_id = ?
       ORDER BY created_at DESC, id DESC
-    `).all(e).map(qn);
+    `).all(fiscalDocumentId);
+    return rows.map(mapEvent);
   }
 }
-const ot = new AE();
-class hE {
-  generateXml(e) {
-    const r = ia.mirrorLegacySale(e), a = {
-      ...r.request,
-      saleId: r.mirroredSale.sale.id,
-      companyId: r.store.id,
-      idempotencyKey: `nfce-sale-${r.mirroredSale.sale.id}`
-    }, n = Qe.resolve(r.store.id), o = Da.validateAuthorizeReadiness(n, a);
-    if (!o.ok) {
-      const c = o.errors.map((u) => u.message).join(" | ");
-      return dt.upsertBySale({
-        saleId: r.mirroredSale.sale.id,
-        storeId: r.store.id,
-        series: a.series,
-        number: a.number,
-        environment: a.environment,
-        status: Xe.ERROR,
-        issuedDatetime: a.issuedAt,
+const fiscalEventRepository = new FiscalEventRepository();
+class IssueFiscalDocumentForSaleService {
+  generateXml(legacySaleId) {
+    const mirrored = pdvSaleFiscalAdapter.mirrorLegacySale(legacySaleId);
+    const fiscalRequest = {
+      ...mirrored.request,
+      saleId: mirrored.mirroredSale.sale.id,
+      companyId: mirrored.store.id,
+      idempotencyKey: `nfce-sale-${mirrored.mirroredSale.sale.id}`
+    };
+    const context = fiscalContextResolver.resolve(mirrored.store.id);
+    const readiness = fiscalReadinessValidator.validateAuthorizeReadiness(context, fiscalRequest);
+    if (!readiness.ok) {
+      const message = readiness.errors.map((issue) => issue.message).join(" | ");
+      fiscalDocumentRepository.upsertBySale({
+        saleId: mirrored.mirroredSale.sale.id,
+        storeId: mirrored.store.id,
+        series: fiscalRequest.series,
+        number: fiscalRequest.number,
+        environment: fiscalRequest.environment,
+        status: FiscalDocumentStatuses.ERROR,
+        issuedDatetime: fiscalRequest.issuedAt,
         rejectionCode: "FISCAL_READINESS_FAILED",
-        rejectionReason: c
-      }), {
-        success: !1,
-        saleId: e,
+        rejectionReason: message
+      });
+      return {
+        success: false,
+        saleId: legacySaleId,
         fiscal: {
           status: "ERROR",
           statusCode: "FISCAL_READINESS_FAILED",
-          statusMessage: c,
-          documentId: r.mirroredFiscalDocument.id
+          statusMessage: message,
+          documentId: mirrored.mirroredFiscalDocument.id
         },
-        validation: o
+        validation: readiness
       };
     }
-    const s = ls.buildAuthorizeXml(a, n), i = dt.upsertBySale({
-      saleId: r.mirroredSale.sale.id,
-      storeId: r.store.id,
-      series: a.series,
-      number: a.number,
-      environment: a.environment,
-      status: s.validation.ok ? Xe.DRAFT : Xe.ERROR,
-      issuedDatetime: a.issuedAt,
-      accessKey: s.accessKey,
-      xml: s.xml || null,
-      rejectionCode: s.validation.ok ? null : "NFCE_XML_BUILD_FAILED",
-      rejectionReason: s.validation.ok ? null : s.validation.errors.map((c) => c.message).join(" | ")
+    const built = nfceXmlBuilderService.buildAuthorizeXml(fiscalRequest, context);
+    const document = fiscalDocumentRepository.upsertBySale({
+      saleId: mirrored.mirroredSale.sale.id,
+      storeId: mirrored.store.id,
+      series: fiscalRequest.series,
+      number: fiscalRequest.number,
+      environment: fiscalRequest.environment,
+      status: built.validation.ok ? FiscalDocumentStatuses.DRAFT : FiscalDocumentStatuses.ERROR,
+      issuedDatetime: fiscalRequest.issuedAt,
+      accessKey: built.accessKey,
+      xml: built.xml || null,
+      rejectionCode: built.validation.ok ? null : "NFCE_XML_BUILD_FAILED",
+      rejectionReason: built.validation.ok ? null : built.validation.errors.map((issue) => issue.message).join(" | ")
     });
-    return ot.create({
-      fiscalDocumentId: i.id,
-      eventType: nt.XML_GENERATED,
+    fiscalEventRepository.create({
+      fiscalDocumentId: document.id,
+      eventType: FiscalEventTypes.XML_GENERATED,
       payload: {
-        legacySaleId: e,
+        legacySaleId,
         action: "GENERATE_XML_ONLY",
-        accessKey: s.accessKey,
-        warnings: s.validation.warnings
+        accessKey: built.accessKey,
+        warnings: built.validation.warnings
       },
-      status: i.status
-    }), {
-      success: s.validation.ok,
-      saleId: e,
+      status: document.status
+    });
+    return {
+      success: built.validation.ok,
+      saleId: legacySaleId,
       fiscal: {
-        status: i.status,
-        accessKey: i.accessKey,
-        statusCode: s.validation.ok ? "XML_BUILT" : "NFCE_XML_BUILD_FAILED",
-        statusMessage: s.validation.ok ? "XML NFC-e gerado e persistido." : "Falha ao montar XML NFC-e.",
-        documentId: i.id
+        status: document.status,
+        accessKey: document.accessKey,
+        statusCode: built.validation.ok ? "XML_BUILT" : "NFCE_XML_BUILD_FAILED",
+        statusMessage: built.validation.ok ? "XML NFC-e gerado e persistido." : "Falha ao montar XML NFC-e.",
+        documentId: document.id
       },
-      validation: s.validation
+      validation: built.validation
     };
   }
-  async execute(e) {
+  async execute(legacySaleId) {
     try {
-      const r = ia.mirrorLegacySale(e), a = {
-        ...r.request,
-        saleId: r.mirroredSale.sale.id,
-        companyId: r.store.id,
-        idempotencyKey: `nfce-sale-${r.mirroredSale.sale.id}`
+      const mirrored = pdvSaleFiscalAdapter.mirrorLegacySale(legacySaleId);
+      const fiscalRequest = {
+        ...mirrored.request,
+        saleId: mirrored.mirroredSale.sale.id,
+        companyId: mirrored.store.id,
+        idempotencyKey: `nfce-sale-${mirrored.mirroredSale.sale.id}`
       };
-      ot.create({
-        fiscalDocumentId: r.mirroredFiscalDocument.id,
-        eventType: nt.AUTHORIZATION_REQUESTED,
-        payload: { legacySaleId: e, request: a },
-        status: Xe.TRANSMITTING
+      fiscalEventRepository.create({
+        fiscalDocumentId: mirrored.mirroredFiscalDocument.id,
+        eventType: FiscalEventTypes.AUTHORIZATION_REQUESTED,
+        payload: { legacySaleId, request: fiscalRequest },
+        status: FiscalDocumentStatuses.TRANSMITTING
       });
-      const n = await Le.authorizeNfce(a), o = dt.findBySaleId(r.mirroredSale.sale.id);
-      return o && (n.xmlSigned && ot.create({
-        fiscalDocumentId: o.id,
-        eventType: nt.XML_SIGNED,
-        payload: {
-          legacySaleId: e,
-          accessKey: n.accessKey,
-          provider: n.provider
-        },
-        status: Xe.SIGNING
-      }), ot.create({
-        fiscalDocumentId: o.id,
-        eventType: nt.AUTHORIZATION_RESPONSE,
-        payload: { legacySaleId: e, request: a },
-        response: n,
-        status: n.status
-      }), n.status === "AUTHORIZED" && ot.create({
-        fiscalDocumentId: o.id,
-        eventType: nt.AUTHORIZED,
-        payload: { legacySaleId: e, accessKey: n.accessKey },
-        response: n,
-        status: Xe.AUTHORIZED
-      }), n.status === "REJECTED" && ot.create({
-        fiscalDocumentId: o.id,
-        eventType: nt.REJECTED,
-        payload: { legacySaleId: e, accessKey: n.accessKey },
-        response: n,
-        status: Xe.REJECTED
-      })), {
-        success: !0,
-        saleId: e,
+      const response = await fiscalService.authorizeNfce(fiscalRequest);
+      const document = fiscalDocumentRepository.findBySaleId(mirrored.mirroredSale.sale.id);
+      if (document) {
+        if (response.xmlSigned) {
+          fiscalEventRepository.create({
+            fiscalDocumentId: document.id,
+            eventType: FiscalEventTypes.XML_SIGNED,
+            payload: {
+              legacySaleId,
+              accessKey: response.accessKey,
+              provider: response.provider
+            },
+            status: FiscalDocumentStatuses.SIGNING
+          });
+        }
+        fiscalEventRepository.create({
+          fiscalDocumentId: document.id,
+          eventType: FiscalEventTypes.AUTHORIZATION_RESPONSE,
+          payload: { legacySaleId, request: fiscalRequest },
+          response,
+          status: response.status
+        });
+        if (response.status === "AUTHORIZED") {
+          fiscalEventRepository.create({
+            fiscalDocumentId: document.id,
+            eventType: FiscalEventTypes.AUTHORIZED,
+            payload: { legacySaleId, accessKey: response.accessKey },
+            response,
+            status: FiscalDocumentStatuses.AUTHORIZED
+          });
+        }
+        if (response.status === "REJECTED") {
+          fiscalEventRepository.create({
+            fiscalDocumentId: document.id,
+            eventType: FiscalEventTypes.REJECTED,
+            payload: { legacySaleId, accessKey: response.accessKey },
+            response,
+            status: FiscalDocumentStatuses.REJECTED
+          });
+        }
+      }
+      return {
+        success: true,
+        saleId: legacySaleId,
         fiscal: {
-          status: n.status,
-          accessKey: n.accessKey,
-          protocol: n.protocol,
-          receiptNumber: n.receiptNumber,
-          qrCodeUrl: n.qrCodeUrl,
-          authorizedAt: n.authorizedAt,
-          statusCode: n.statusCode,
-          statusMessage: n.statusMessage,
-          documentId: (o == null ? void 0 : o.id) ?? null,
-          provider: n.provider
+          status: response.status,
+          accessKey: response.accessKey,
+          protocol: response.protocol,
+          receiptNumber: response.receiptNumber,
+          qrCodeUrl: response.qrCodeUrl,
+          authorizedAt: response.authorizedAt,
+          statusCode: response.statusCode,
+          statusMessage: response.statusMessage,
+          documentId: (document == null ? void 0 : document.id) ?? null,
+          provider: response.provider
         }
       };
-    } catch (r) {
-      const a = me(r, "ISSUE_FISCAL_SALE_FAILED"), n = ia.findMirroredSaleByLegacyId(e), o = n ? dt.findBySaleId(n.sale.id) : dt.findBySaleId(e);
-      return o && ot.create({
-        fiscalDocumentId: o.id,
-        eventType: nt.PROVIDER_ERROR,
-        payload: { legacySaleId: e },
-        response: {
-          status: "ERROR",
-          statusCode: a.code,
-          statusMessage: a.message
-        },
-        status: Xe.ERROR
-      }), {
-        success: !1,
-        saleId: e,
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "ISSUE_FISCAL_SALE_FAILED");
+      const mirroredSale = pdvSaleFiscalAdapter.findMirroredSaleByLegacyId(legacySaleId);
+      const document = mirroredSale ? fiscalDocumentRepository.findBySaleId(mirroredSale.sale.id) : fiscalDocumentRepository.findBySaleId(legacySaleId);
+      if (document) {
+        fiscalEventRepository.create({
+          fiscalDocumentId: document.id,
+          eventType: FiscalEventTypes.PROVIDER_ERROR,
+          payload: { legacySaleId },
+          response: {
+            status: "ERROR",
+            statusCode: fiscalError.code,
+            statusMessage: fiscalError.message
+          },
+          status: FiscalDocumentStatuses.ERROR
+        });
+      }
+      return {
+        success: false,
+        saleId: legacySaleId,
         fiscal: {
           status: "ERROR",
-          statusCode: a.code,
-          statusMessage: a.message,
-          documentId: (o == null ? void 0 : o.id) ?? null
+          statusCode: fiscalError.code,
+          statusMessage: fiscalError.message,
+          documentId: (document == null ? void 0 : document.id) ?? null
         }
       };
     }
   }
 }
-const Ts = new hE();
-let _s = null;
-function Vn(t) {
-  _s = t;
+const issueFiscalDocumentForSaleService = new IssueFiscalDocumentForSaleService();
+let currentSessionId = null;
+function setCurrentSession(id) {
+  currentSessionId = id;
 }
-function Va() {
-  return _s;
+function getCurrentSession() {
+  return currentSessionId;
 }
-const IE = {
+const ROLE_ALIASES = {
   admin: ["admin", "administrador", "administrator", "dono", "owner"],
   manager: ["gerente", "gestor", "manager", "supervisor"],
   cashier: ["caixa", "operador", "operador de caixa", "atendente", "vendedor"],
   stock: ["estoque", "almoxarife"],
   unknown: []
-}, CE = {
+};
+const ROLE_PERMISSIONS = {
   admin: [
     "pdv:access",
     "home:access",
@@ -11741,20 +13849,21 @@ const IE = {
   stock: ["home:access", "products:view", "products:manage"],
   unknown: []
 };
-function DE(t) {
-  const e = String(t ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  for (const [r, a] of Object.entries(IE))
-    if (a.includes(e)) return r;
+function normalizeRole(role) {
+  const normalized = String(role ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  for (const [roleKey, aliases] of Object.entries(ROLE_ALIASES)) {
+    if (aliases.includes(normalized)) return roleKey;
+  }
   return "unknown";
 }
-function vE(t) {
-  return CE[DE(t)];
+function getPermissionsForRole(role) {
+  return ROLE_PERMISSIONS[normalizeRole(role)];
 }
-function fs(t, e) {
-  return vE(t).includes(e);
+function hasPermission(role, permission) {
+  return getPermissionsForRole(role).includes(permission);
 }
-function SE(t) {
-  return {
+function getPermissionDeniedMessage(permission) {
+  const messages = {
     "home:access": "Seu perfil não pode acessar a tela inicial.",
     "pdv:access": "Seu perfil não pode acessar o caixa.",
     "sales:view": "Seu perfil não pode consultar vendas.",
@@ -11767,321 +13876,375 @@ function SE(t) {
     "printers:manage": "Somente gerente ou administrador pode gerenciar impressoras.",
     "integrations:manage": "Somente gerente ou administrador pode gerenciar integrações.",
     "fiscal:manage": "Somente gerente ou administrador pode gerenciar configurações fiscais."
-  }[t];
+  };
+  return messages[permission];
 }
-function Ns() {
-  const t = Va();
-  return t ? d.prepare(`
+function getCurrentUser() {
+  const sessionId = getCurrentSession();
+  if (!sessionId) return null;
+  const user = db.prepare(`
     SELECT u.id, u.nome, u.funcao, u.ativo
     FROM sessions s
     INNER JOIN usuarios u ON u.id = s.user_id
     WHERE s.id = ?
       AND s.active = 1
     LIMIT 1
-  `).get(t) ?? null : null;
+  `).get(sessionId);
+  return user ?? null;
 }
-function A(t) {
-  const e = Ns();
-  if (!e || !e.ativo)
+function assertCurrentUserPermission(permission) {
+  const user = getCurrentUser();
+  if (!user || !user.ativo) {
     throw new Error("Sessão inválida ou usuário inativo.");
-  if (!fs(e.funcao, t))
-    throw new Error(SE(t));
-  return e;
+  }
+  if (!hasPermission(user.funcao, permission)) {
+    throw new Error(getPermissionDeniedMessage(permission));
+  }
+  return user;
 }
-function Lt(t) {
-  const e = Ns();
-  return !!(e && e.ativo && fs(e.funcao, t));
+function currentUserHasPermission(permission) {
+  const user = getCurrentUser();
+  return Boolean(user && user.ativo && hasPermission(user.funcao, permission));
 }
-function RE() {
-  p.handle("fiscal:get-runtime-config", async () => (A("fiscal:manage"), Le.getConfig())), p.handle("fiscal:get-context", async (t, e) => (A("fiscal:manage"), Pn.resolve(e))), p.handle("fiscal:get-active-store", async () => (A("fiscal:manage"), Bn.getActiveStore())), p.handle("fiscal:save-active-store", async (t, e) => {
+function registerFiscalHandlers() {
+  ipcMain.handle("fiscal:get-runtime-config", async () => {
+    assertCurrentUserPermission("fiscal:manage");
+    return fiscalService.getConfig();
+  });
+  ipcMain.handle("fiscal:get-context", async (_event, storeId) => {
+    assertCurrentUserPermission("fiscal:manage");
+    return fiscalContextService.resolve(storeId);
+  });
+  ipcMain.handle("fiscal:get-active-store", async () => {
+    assertCurrentUserPermission("fiscal:manage");
+    return fiscalStoreConfigService.getActiveStore();
+  });
+  ipcMain.handle("fiscal:save-active-store", async (_event, input) => {
     try {
-      return A("fiscal:manage"), {
-        success: !0,
-        data: Bn.saveActiveStore(e)
-      };
-    } catch (r) {
-      const a = me(r, "FISCAL_STORE_SAVE_FAILED");
+      assertCurrentUserPermission("fiscal:manage");
       return {
-        success: !1,
-        error: {
-          code: a.code,
-          message: a.message,
-          category: a.category,
-          retryable: a.retryable
-        }
+        success: true,
+        data: fiscalStoreConfigService.saveActiveStore(input)
       };
-    }
-  }), p.handle("fiscal:validate-readiness", async (t, e) => {
-    A("fiscal:manage");
-    const r = Pn.resolve(e);
-    return uE.validateContext(r);
-  }), p.handle("fiscal:save-runtime-config", async (t, e) => {
-    try {
-      return A("fiscal:manage"), await Le.saveConfig(e);
-    } catch (r) {
-      const a = me(r, "FISCAL_CONFIG_SAVE_FAILED");
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_STORE_SAVE_FAILED");
       return {
-        success: !1,
+        success: false,
         error: {
-          code: a.code,
-          message: a.message,
-          category: a.category,
-          retryable: a.retryable
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
         }
       };
     }
-  }), p.handle("fiscal:get-certificate-info", async () => (A("fiscal:manage"), cE.getCertificateInfo(iE.getConfig()))), p.handle("fiscal:authorize-nfce", async (t, e) => {
+  });
+  ipcMain.handle("fiscal:validate-readiness", async (_event, storeId) => {
+    assertCurrentUserPermission("fiscal:manage");
+    const context = fiscalContextService.resolve(storeId);
+    return fiscalReadinessService.validateContext(context);
+  });
+  ipcMain.handle("fiscal:save-runtime-config", async (_event, input) => {
     try {
-      return A("fiscal:manage"), {
-        success: !0,
-        data: await Le.authorizeNfce(e)
-      };
-    } catch (r) {
-      const a = me(r, "FISCAL_AUTHORIZE_FAILED");
+      assertCurrentUserPermission("fiscal:manage");
+      return await fiscalService.saveConfig(input);
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_CONFIG_SAVE_FAILED");
       return {
-        success: !1,
+        success: false,
         error: {
-          code: a.code,
-          message: a.message,
-          category: a.category,
-          retryable: a.retryable
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
         }
       };
     }
-  }), p.handle("fiscal:generate-nfce-xml-for-sale", async (t, e) => {
+  });
+  ipcMain.handle("fiscal:get-certificate-info", async () => {
+    assertCurrentUserPermission("fiscal:manage");
+    return fiscalCertificateService.getCertificateInfo(fiscalConfigService.getConfig());
+  });
+  ipcMain.handle("fiscal:authorize-nfce", async (_event, request) => {
     try {
-      return A("fiscal:manage"), {
-        success: !0,
-        data: Ts.generateXml(e)
-      };
-    } catch (r) {
-      const a = me(r, "FISCAL_XML_BUILD_FAILED");
+      assertCurrentUserPermission("fiscal:manage");
       return {
-        success: !1,
-        error: {
-          code: a.code,
-          message: a.message,
-          category: a.category,
-          retryable: a.retryable
-        }
+        success: true,
+        data: await fiscalService.authorizeNfce(request)
       };
-    }
-  }), p.handle("fiscal:cancel-nfce", async (t, e) => {
-    try {
-      return A("fiscal:manage"), {
-        success: !0,
-        data: await Le.cancelNfce(e)
-      };
-    } catch (r) {
-      const a = me(r, "FISCAL_CANCEL_FAILED");
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_AUTHORIZE_FAILED");
       return {
-        success: !1,
+        success: false,
         error: {
-          code: a.code,
-          message: a.message,
-          category: a.category,
-          retryable: a.retryable
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
         }
       };
     }
-  }), p.handle("fiscal:consult-status", async (t, e) => {
+  });
+  ipcMain.handle("fiscal:generate-nfce-xml-for-sale", async (_event, legacySaleId) => {
     try {
-      return A("fiscal:manage"), {
-        success: !0,
-        data: await Le.consultStatusByAccessKey(e)
-      };
-    } catch (r) {
-      const a = me(r, "FISCAL_CONSULT_FAILED");
+      assertCurrentUserPermission("fiscal:manage");
       return {
-        success: !1,
-        error: {
-          code: a.code,
-          message: a.message,
-          category: a.category,
-          retryable: a.retryable
-        }
+        success: true,
+        data: issueFiscalDocumentForSaleService.generateXml(legacySaleId)
       };
-    }
-  }), p.handle("fiscal:get-danfe", async (t, e) => {
-    try {
-      return A("fiscal:manage"), {
-        success: !0,
-        data: await Le.getDanfe(e)
-      };
-    } catch (r) {
-      const a = me(r, "FISCAL_DANFE_FAILED");
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_XML_BUILD_FAILED");
       return {
-        success: !1,
+        success: false,
         error: {
-          code: a.code,
-          message: a.message,
-          category: a.category,
-          retryable: a.retryable
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
         }
       };
     }
-  }), p.handle("fiscal:get-queue-summary", async () => (A("fiscal:manage"), Le.getQueueSummary())), p.handle("fiscal:list-queue", async (t, e = 20) => (A("fiscal:manage"), Le.listQueue(e))), p.handle("fiscal:reprocess-queue-item", async (t, e) => {
+  });
+  ipcMain.handle("fiscal:cancel-nfce", async (_event, request) => {
     try {
-      return A("fiscal:manage"), {
-        success: !0,
-        data: await Le.reprocessQueueItem(e)
-      };
-    } catch (r) {
-      const a = me(r, "FISCAL_REPROCESS_FAILED");
+      assertCurrentUserPermission("fiscal:manage");
       return {
-        success: !1,
+        success: true,
+        data: await fiscalService.cancelNfce(request)
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_CANCEL_FAILED");
+      return {
+        success: false,
         error: {
-          code: a.code,
-          message: a.message,
-          category: a.category,
-          retryable: a.retryable
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
         }
       };
     }
-  }), p.handle("fiscal:process-next-queue-item", async () => {
+  });
+  ipcMain.handle("fiscal:consult-status", async (_event, accessKey) => {
     try {
-      return A("fiscal:manage"), N.info("[FiscalIPC] fiscal:process-next-queue-item recebido."), {
-        success: !0,
-        data: await ps.processNext()
+      assertCurrentUserPermission("fiscal:manage");
+      return {
+        success: true,
+        data: await fiscalService.consultStatusByAccessKey(accessKey)
       };
-    } catch (t) {
-      const e = me(t, "FISCAL_PROCESS_QUEUE_FAILED");
-      return N.error(`[FiscalIPC] Falha em fiscal:process-next-queue-item: ${e.code} - ${e.message}`), {
-        success: !1,
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_CONSULT_FAILED");
+      return {
+        success: false,
         error: {
-          code: e.code,
-          message: e.message,
-          category: e.category,
-          retryable: e.retryable
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
         }
       };
     }
-  }), p.handle("fiscal:run-status-diagnostic", async () => {
+  });
+  ipcMain.handle("fiscal:get-danfe", async (_event, documentId) => {
     try {
-      return A("fiscal:manage"), N.info("[FiscalIPC] fiscal:run-status-diagnostic recebido."), {
-        success: !0,
-        data: await Le.runStatusServiceDiagnostic()
+      assertCurrentUserPermission("fiscal:manage");
+      return {
+        success: true,
+        data: await fiscalService.getDanfe(documentId)
       };
-    } catch (t) {
-      const e = me(t, "FISCAL_STATUS_DIAGNOSTIC_FAILED");
-      return N.error(`[FiscalIPC] Falha em fiscal:run-status-diagnostic: ${e.code} - ${e.message}`), {
-        success: !1,
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_DANFE_FAILED");
+      return {
+        success: false,
         error: {
-          code: e.code,
-          message: e.message,
-          category: e.category,
-          retryable: e.retryable
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
+        }
+      };
+    }
+  });
+  ipcMain.handle("fiscal:get-queue-summary", async () => {
+    assertCurrentUserPermission("fiscal:manage");
+    return fiscalService.getQueueSummary();
+  });
+  ipcMain.handle("fiscal:list-queue", async (_event, limit = 20) => {
+    assertCurrentUserPermission("fiscal:manage");
+    return fiscalService.listQueue(limit);
+  });
+  ipcMain.handle("fiscal:reprocess-queue-item", async (_event, queueId) => {
+    try {
+      assertCurrentUserPermission("fiscal:manage");
+      return {
+        success: true,
+        data: await fiscalService.reprocessQueueItem(queueId)
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_REPROCESS_FAILED");
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
+        }
+      };
+    }
+  });
+  ipcMain.handle("fiscal:process-next-queue-item", async () => {
+    try {
+      assertCurrentUserPermission("fiscal:manage");
+      logger.info("[FiscalIPC] fiscal:process-next-queue-item recebido.");
+      return {
+        success: true,
+        data: await fiscalQueueService.processNext()
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_PROCESS_QUEUE_FAILED");
+      logger.error(`[FiscalIPC] Falha em fiscal:process-next-queue-item: ${fiscalError.code} - ${fiscalError.message}`);
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
+        }
+      };
+    }
+  });
+  ipcMain.handle("fiscal:run-status-diagnostic", async () => {
+    try {
+      assertCurrentUserPermission("fiscal:manage");
+      logger.info("[FiscalIPC] fiscal:run-status-diagnostic recebido.");
+      return {
+        success: true,
+        data: await fiscalService.runStatusServiceDiagnostic()
+      };
+    } catch (error) {
+      const fiscalError = normalizeFiscalError(error, "FISCAL_STATUS_DIAGNOSTIC_FAILED");
+      logger.error(`[FiscalIPC] Falha em fiscal:run-status-diagnostic: ${fiscalError.code} - ${fiscalError.message}`);
+      return {
+        success: false,
+        error: {
+          code: fiscalError.code,
+          message: fiscalError.message,
+          category: fiscalError.category,
+          retryable: fiscalError.retryable
         }
       };
     }
   });
 }
-function zn(t) {
+function mapPrintedDocument(row) {
   return {
-    id: Number(t.id),
-    documentType: t.document_type,
-    referenceType: t.reference_type,
-    referenceId: Number(t.reference_id),
-    saleId: t.sale_id === null ? null : Number(t.sale_id),
-    cashSessionId: t.cash_session_id === null ? null : Number(t.cash_session_id),
-    printerId: t.printer_id === null ? null : Number(t.printer_id),
-    title: t.title,
-    status: t.status,
-    templateVersion: t.template_version,
-    payloadJson: t.payload_json,
-    contentHtml: t.content_html,
-    printCount: Number(t.print_count ?? 0),
-    lastPrintedAt: t.last_printed_at ?? null,
-    lastError: t.last_error ?? null,
-    createdAt: t.created_at,
-    updatedAt: t.updated_at
+    id: Number(row.id),
+    documentType: row.document_type,
+    referenceType: row.reference_type,
+    referenceId: Number(row.reference_id),
+    saleId: row.sale_id === null ? null : Number(row.sale_id),
+    cashSessionId: row.cash_session_id === null ? null : Number(row.cash_session_id),
+    printerId: row.printer_id === null ? null : Number(row.printer_id),
+    title: row.title,
+    status: row.status,
+    templateVersion: row.template_version,
+    payloadJson: row.payload_json,
+    contentHtml: row.content_html,
+    printCount: Number(row.print_count ?? 0),
+    lastPrintedAt: row.last_printed_at ?? null,
+    lastError: row.last_error ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
-function Hn(t) {
+function mapPrintJob(row) {
   return {
-    id: Number(t.id),
-    printedDocumentId: Number(t.printed_document_id),
-    printerId: t.printer_id === null ? null : Number(t.printer_id),
-    triggerSource: t.trigger_source,
-    status: t.status,
-    errorMessage: t.error_message ?? null,
-    copies: Number(t.copies ?? 1),
-    attemptedAt: t.attempted_at,
-    completedAt: t.completed_at ?? null
+    id: Number(row.id),
+    printedDocumentId: Number(row.printed_document_id),
+    printerId: row.printer_id === null ? null : Number(row.printer_id),
+    triggerSource: row.trigger_source,
+    status: row.status,
+    errorMessage: row.error_message ?? null,
+    copies: Number(row.copies ?? 1),
+    attemptedAt: row.attempted_at,
+    completedAt: row.completed_at ?? null
   };
 }
-function LE(t) {
-  return {
+function paymentLabelFromCode(code) {
+  const labels = {
     "01": "Dinheiro",
     "02": "Cheque",
     "03": "Cartao de Credito",
     "04": "Cartao de Debito",
-    10: "Vale Alimentacao",
-    11: "Vale Refeicao",
-    12: "Vale Presente",
-    13: "Vale Combustivel",
-    15: "Boleto",
-    17: "PIX",
-    99: "Outros"
-  }[t] ?? `Pagamento ${t}`;
+    "10": "Vale Alimentacao",
+    "11": "Vale Refeicao",
+    "12": "Vale Presente",
+    "13": "Vale Combustivel",
+    "15": "Boleto",
+    "17": "PIX",
+    "99": "Outros"
+  };
+  return labels[code] ?? `Pagamento ${code}`;
 }
-function OE(t) {
-  const e = [
-    t.endereco,
-    t.numero,
-    t.bairro,
-    t.cidade,
-    t.uf,
-    t.cep
+function buildStoreAddress(row) {
+  const parts = [
+    row.endereco,
+    row.numero,
+    row.bairro,
+    row.cidade,
+    row.uf,
+    row.cep
   ].filter(Boolean);
-  return e.length > 0 ? e.join(" - ") : null;
+  return parts.length > 0 ? parts.join(" - ") : null;
 }
-class yE {
-  mapPrinter(e) {
+class PrintDocumentRepository {
+  mapPrinter(row) {
     return {
-      id: Number(e.id),
-      name: e.name,
-      display_name: e.display_name ?? null,
-      brand: e.brand ?? null,
-      model: e.model ?? null,
-      connection_type: e.connection_type ?? null,
-      driver_name: e.driver_name ?? null,
-      driver_version: e.driver_version ?? null,
-      photo_path: e.photo_path ?? null,
-      notes: e.notes ?? null,
-      is_default: Number(e.is_default ?? 0),
-      installed_at: e.installed_at ?? null,
-      paper_width_mm: Number(e.paper_width_mm ?? 80),
-      content_width_mm: Number(e.content_width_mm ?? 76),
-      base_font_size_px: Number(e.base_font_size_px ?? 13),
-      line_height: Number(e.line_height ?? 1.5),
-      receipt_settings_json: e.receipt_settings_json ?? null
+      id: Number(row.id),
+      name: row.name,
+      display_name: row.display_name ?? null,
+      brand: row.brand ?? null,
+      model: row.model ?? null,
+      connection_type: row.connection_type ?? null,
+      driver_name: row.driver_name ?? null,
+      driver_version: row.driver_version ?? null,
+      photo_path: row.photo_path ?? null,
+      notes: row.notes ?? null,
+      is_default: Number(row.is_default ?? 0),
+      installed_at: row.installed_at ?? null,
+      paper_width_mm: Number(row.paper_width_mm ?? 80),
+      content_width_mm: Number(row.content_width_mm ?? 76),
+      base_font_size_px: Number(row.base_font_size_px ?? 13),
+      line_height: Number(row.line_height ?? 1.5),
+      receipt_settings_json: row.receipt_settings_json ?? null
     };
   }
-  findByReference(e, r, a) {
-    const n = d.prepare(`
+  findByReference(documentType, referenceType, referenceId) {
+    const row = db.prepare(`
       SELECT *
       FROM printed_documents
       WHERE document_type = ?
         AND reference_type = ?
         AND reference_id = ?
       LIMIT 1
-    `).get(e, r, a);
-    return n ? zn(n) : null;
+    `).get(documentType, referenceType, referenceId);
+    return row ? mapPrintedDocument(row) : null;
   }
-  findById(e) {
-    const r = d.prepare(`
+  findById(documentId) {
+    const row = db.prepare(`
       SELECT *
       FROM printed_documents
       WHERE id = ?
       LIMIT 1
-    `).get(e);
-    return r ? zn(r) : null;
+    `).get(documentId);
+    return row ? mapPrintedDocument(row) : null;
   }
-  upsertDocument(e) {
-    const r = this.findByReference(e.documentType, e.referenceType, e.referenceId);
-    if (r)
-      return d.prepare(`
+  upsertDocument(input) {
+    const existing = this.findByReference(input.documentType, input.referenceType, input.referenceId);
+    if (existing) {
+      db.prepare(`
         UPDATE printed_documents
         SET
           sale_id = ?,
@@ -12096,18 +14259,20 @@ class yE {
           updated_at = datetime('now')
         WHERE id = ?
       `).run(
-        e.saleId ?? null,
-        e.cashSessionId ?? null,
-        e.printerId ?? null,
-        e.title,
-        e.status,
-        e.templateVersion,
-        e.payloadJson,
-        e.contentHtml,
-        e.lastError ?? null,
-        r.id
-      ), this.findById(r.id);
-    const a = d.prepare(`
+        input.saleId ?? null,
+        input.cashSessionId ?? null,
+        input.printerId ?? null,
+        input.title,
+        input.status,
+        input.templateVersion,
+        input.payloadJson,
+        input.contentHtml,
+        input.lastError ?? null,
+        existing.id
+      );
+      return this.findById(existing.id);
+    }
+    const result = db.prepare(`
       INSERT INTO printed_documents (
         document_type,
         reference_type,
@@ -12124,23 +14289,23 @@ class yE {
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      e.documentType,
-      e.referenceType,
-      e.referenceId,
-      e.saleId ?? null,
-      e.cashSessionId ?? null,
-      e.printerId ?? null,
-      e.title,
-      e.status,
-      e.templateVersion,
-      e.payloadJson,
-      e.contentHtml,
-      e.lastError ?? null
+      input.documentType,
+      input.referenceType,
+      input.referenceId,
+      input.saleId ?? null,
+      input.cashSessionId ?? null,
+      input.printerId ?? null,
+      input.title,
+      input.status,
+      input.templateVersion,
+      input.payloadJson,
+      input.contentHtml,
+      input.lastError ?? null
     );
-    return this.findById(Number(a.lastInsertRowid));
+    return this.findById(Number(result.lastInsertRowid));
   }
-  markDocumentPrinted(e, r) {
-    d.prepare(`
+  markDocumentPrinted(documentId, printerId) {
+    db.prepare(`
       UPDATE printed_documents
       SET
         status = 'PRINTED',
@@ -12150,10 +14315,10 @@ class yE {
         last_error = NULL,
         updated_at = datetime('now')
       WHERE id = ?
-    `).run(r, e);
+    `).run(printerId, documentId);
   }
-  markDocumentFailed(e, r, a, n) {
-    d.prepare(`
+  markDocumentFailed(documentId, status, errorMessage, printerId) {
+    db.prepare(`
       UPDATE printed_documents
       SET
         status = ?,
@@ -12161,10 +14326,10 @@ class yE {
         last_error = ?,
         updated_at = datetime('now')
       WHERE id = ?
-    `).run(r, n, a, e);
+    `).run(status, printerId, errorMessage, documentId);
   }
-  createPrintJob(e) {
-    const r = d.prepare(`
+  createPrintJob(input) {
+    const result = db.prepare(`
       INSERT INTO print_jobs (
         printed_document_id,
         printer_id,
@@ -12175,57 +14340,60 @@ class yE {
       )
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      e.printedDocumentId,
-      e.printerId ?? null,
-      e.triggerSource,
-      e.status,
-      e.errorMessage ?? null,
-      e.copies ?? 1
-    ), a = d.prepare(`
+      input.printedDocumentId,
+      input.printerId ?? null,
+      input.triggerSource,
+      input.status,
+      input.errorMessage ?? null,
+      input.copies ?? 1
+    );
+    const row = db.prepare(`
       SELECT *
       FROM print_jobs
       WHERE id = ?
       LIMIT 1
-    `).get(r.lastInsertRowid);
-    return Hn(a);
+    `).get(result.lastInsertRowid);
+    return mapPrintJob(row);
   }
-  listDocumentJobs(e) {
-    return d.prepare(`
+  listDocumentJobs(documentId) {
+    const rows = db.prepare(`
       SELECT *
       FROM print_jobs
       WHERE printed_document_id = ?
       ORDER BY id DESC
-    `).all(e).map(Hn);
+    `).all(documentId);
+    return rows.map(mapPrintJob);
   }
   getDefaultPrinter() {
-    const e = d.prepare(`
+    const row = db.prepare(`
       SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
              notes, is_default, installed_at, paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json
       FROM printers
       WHERE is_default = 1
       LIMIT 1
     `).get();
-    return e ? this.mapPrinter(e) : null;
+    if (!row) return null;
+    return this.mapPrinter(row);
   }
-  findPrinterById(e) {
-    const r = d.prepare(`
+  findPrinterById(printerId) {
+    const row = db.prepare(`
       SELECT id, name, display_name, brand, model, connection_type, driver_name, driver_version, photo_path,
              notes, is_default, installed_at, paper_width_mm, content_width_mm, base_font_size_px, line_height, receipt_settings_json
       FROM printers
       WHERE id = ?
       LIMIT 1
-    `).get(e);
-    return r ? this.mapPrinter(r) : null;
+    `).get(printerId);
+    return row ? this.mapPrinter(row) : null;
   }
-  buildTestSaleReceiptData(e, r) {
-    var n;
-    const a = r.templateMode === "custom" ? ((n = r.headerTitle) == null ? void 0 : n.trim()) || e.display_name || "Galberto PDV" : e.display_name || "Galberto PDV";
+  buildTestSaleReceiptData(printer, settings) {
+    var _a;
+    const headerTitle = settings.templateMode === "custom" ? ((_a = settings.headerTitle) == null ? void 0 : _a.trim()) || printer.display_name || "Galberto PDV" : printer.display_name || "Galberto PDV";
     return {
       saleId: 999999,
       emittedAt: (/* @__PURE__ */ new Date()).toISOString(),
       movedAt: (/* @__PURE__ */ new Date()).toISOString(),
       status: "FINALIZADA",
-      storeName: a,
+      storeName: headerTitle,
       storeLegalName: "GALBERTO PDV LTDA",
       storeDocument: "12.345.678/0001-99",
       storeAddress: "Rua Exemplo, 123 - Centro - Cidade/UF - 70000-000",
@@ -12280,14 +14448,14 @@ class yE {
       }
     };
   }
-  appendPrinterLog(e, r) {
-    d.prepare(`
+  appendPrinterLog(printerId, message) {
+    db.prepare(`
       INSERT INTO printer_logs (printer_id, message)
       VALUES (?, ?)
-    `).run(e, r);
+    `).run(printerId, message);
   }
-  loadSaleReceiptData(e) {
-    const r = d.prepare(`
+  loadSaleReceiptData(saleId) {
+    const sale = db.prepare(`
       SELECT
         v.id,
         v.data_emissao,
@@ -12320,10 +14488,11 @@ class yE {
       LEFT JOIN usuarios u ON CAST(u.id AS TEXT) = CAST(cs.operator_id AS TEXT)
       WHERE v.id = ?
       LIMIT 1
-    `).get(e);
-    if (!r)
-      throw new Error(`Venda não encontrada para impressão: ${e}`);
-    const a = d.prepare(`
+    `).get(saleId);
+    if (!sale) {
+      throw new Error(`Venda não encontrada para impressão: ${saleId}`);
+    }
+    const items = db.prepare(`
       SELECT
         produto_id,
         codigo_produto,
@@ -12336,7 +14505,8 @@ class yE {
       FROM venda_itens
       WHERE venda_id = ?
       ORDER BY id
-    `).all(e), n = d.prepare(`
+    `).all(saleId);
+    const payments = db.prepare(`
       SELECT
         tpag,
         valor,
@@ -12345,62 +14515,63 @@ class yE {
       FROM venda_pagamento
       WHERE venda_id = ?
       ORDER BY id
-    `).all(e), o = d.prepare(`
+    `).all(saleId);
+    const fiscal = db.prepare(`
       SELECT fd.status, fd.access_key, fd.protocol, fd.authorization_datetime, fd.qr_code_url
       FROM fiscal_documents fd
       INNER JOIN sales s ON s.id = fd.sale_id
       WHERE s.external_reference = ?
       ORDER BY fd.id DESC
       LIMIT 1
-    `).get(`legacy-sale:${e}`);
+    `).get(`legacy-sale:${saleId}`);
     return {
-      saleId: Number(r.id),
-      emittedAt: r.data_emissao,
-      movedAt: r.data_movimento ?? null,
-      status: r.status,
-      storeName: r.nome_fantasia ?? r.razao_social ?? "Galberto PDV",
-      storeLegalName: r.razao_social ?? null,
-      storeDocument: r.cnpj ?? null,
-      storeAddress: OE(r),
-      operatorName: r.operator_name ?? null,
-      operatorId: r.operator_id === null ? null : String(r.operator_id),
-      pdvId: r.pdv_id ?? null,
-      customerName: r.cliente_nome ?? null,
-      customerDocument: r.cpf_cliente ?? null,
-      items: a.map((s) => ({
-        productId: String(s.produto_id),
-        code: s.codigo_produto ?? null,
-        description: s.nome_produto,
-        quantity: Number(s.quantidade_comercial ?? 0),
-        unitPrice: Number(s.valor_unitario_comercial ?? 0),
-        grossAmount: Number(s.valor_bruto ?? 0),
-        discountAmount: Number(s.valor_desconto ?? 0),
-        totalAmount: Number(s.subtotal ?? 0)
+      saleId: Number(sale.id),
+      emittedAt: sale.data_emissao,
+      movedAt: sale.data_movimento ?? null,
+      status: sale.status,
+      storeName: sale.nome_fantasia ?? sale.razao_social ?? "Galberto PDV",
+      storeLegalName: sale.razao_social ?? null,
+      storeDocument: sale.cnpj ?? null,
+      storeAddress: buildStoreAddress(sale),
+      operatorName: sale.operator_name ?? null,
+      operatorId: sale.operator_id === null ? null : String(sale.operator_id),
+      pdvId: sale.pdv_id ?? null,
+      customerName: sale.cliente_nome ?? null,
+      customerDocument: sale.cpf_cliente ?? null,
+      items: items.map((item) => ({
+        productId: String(item.produto_id),
+        code: item.codigo_produto ?? null,
+        description: item.nome_produto,
+        quantity: Number(item.quantidade_comercial ?? 0),
+        unitPrice: Number(item.valor_unitario_comercial ?? 0),
+        grossAmount: Number(item.valor_bruto ?? 0),
+        discountAmount: Number(item.valor_desconto ?? 0),
+        totalAmount: Number(item.subtotal ?? 0)
       })),
-      payments: n.map((s) => ({
-        paymentCode: s.tpag,
-        paymentLabel: LE(s.tpag),
-        amount: Number(s.valor ?? 0),
-        receivedAmount: Number(s.valor_recebido ?? s.valor ?? 0),
-        changeAmount: Number(s.troco ?? 0)
+      payments: payments.map((payment) => ({
+        paymentCode: payment.tpag,
+        paymentLabel: paymentLabelFromCode(payment.tpag),
+        amount: Number(payment.valor ?? 0),
+        receivedAmount: Number(payment.valor_recebido ?? payment.valor ?? 0),
+        changeAmount: Number(payment.troco ?? 0)
       })),
-      subtotalAmount: Number(r.valor_produtos ?? 0),
-      discountAmount: Number(r.valor_desconto ?? 0),
-      totalAmount: Number(r.valor_total ?? 0),
-      changeAmount: Number(r.valor_troco ?? 0),
-      notes: r.observacao ?? null,
-      fiscal: o ? {
-        status: o.status ?? null,
-        accessKey: o.access_key ?? null,
-        protocol: o.protocol ?? null,
-        statusMessage: o.status ?? null,
-        authorizationDatetime: o.authorization_datetime ?? null,
-        qrCodeUrl: o.qr_code_url ?? null
+      subtotalAmount: Number(sale.valor_produtos ?? 0),
+      discountAmount: Number(sale.valor_desconto ?? 0),
+      totalAmount: Number(sale.valor_total ?? 0),
+      changeAmount: Number(sale.valor_troco ?? 0),
+      notes: sale.observacao ?? null,
+      fiscal: fiscal ? {
+        status: fiscal.status ?? null,
+        accessKey: fiscal.access_key ?? null,
+        protocol: fiscal.protocol ?? null,
+        statusMessage: fiscal.status ?? null,
+        authorizationDatetime: fiscal.authorization_datetime ?? null,
+        qrCodeUrl: fiscal.qr_code_url ?? null
       } : null
     };
   }
-  loadCashReceiptData(e, r) {
-    const a = d.prepare(`
+  loadCashReceiptData(sessionId, documentType) {
+    const row = db.prepare(`
       SELECT
         s.id,
         s.operator_id,
@@ -12430,135 +14601,144 @@ class yE {
       LEFT JOIN usuarios u ON CAST(u.id AS TEXT) = CAST(s.operator_id AS TEXT)
       WHERE s.id = ?
       LIMIT 1
-    `).get(e);
-    if (!a)
-      throw new Error(`Sessão de caixa não encontrada para impressão: ${e}`);
+    `).get(sessionId);
+    if (!row) {
+      throw new Error(`Sessão de caixa não encontrada para impressão: ${sessionId}`);
+    }
     return {
-      cashSessionId: Number(a.id),
-      documentType: r,
-      operatorName: a.operator_name ?? null,
-      operatorId: a.operator_id === null ? null : String(a.operator_id),
-      pdvId: a.pdv_id,
-      openingAmount: Number(a.opening_cash_amount ?? 0),
-      closingAmount: a.closing_cash_amount === null ? null : Number(a.closing_cash_amount),
-      expectedAmount: a.expected_cash_amount === null ? null : Number(a.expected_cash_amount),
-      differenceAmount: a.closing_difference === null ? null : Number(a.closing_difference),
-      totalSalesCash: Number(a.total_vendas_dinheiro ?? 0),
-      totalWithdrawals: Number(a.total_sangrias ?? 0),
-      openedAt: a.opened_at,
-      closedAt: a.closed_at ?? null,
-      openingNotes: a.opening_notes ?? null,
-      closingNotes: a.closing_notes ?? null
+      cashSessionId: Number(row.id),
+      documentType,
+      operatorName: row.operator_name ?? null,
+      operatorId: row.operator_id === null ? null : String(row.operator_id),
+      pdvId: row.pdv_id,
+      openingAmount: Number(row.opening_cash_amount ?? 0),
+      closingAmount: row.closing_cash_amount === null ? null : Number(row.closing_cash_amount),
+      expectedAmount: row.expected_cash_amount === null ? null : Number(row.expected_cash_amount),
+      differenceAmount: row.closing_difference === null ? null : Number(row.closing_difference),
+      totalSalesCash: Number(row.total_vendas_dinheiro ?? 0),
+      totalWithdrawals: Number(row.total_sangrias ?? 0),
+      openedAt: row.opened_at,
+      closedAt: row.closed_at ?? null,
+      openingNotes: row.opening_notes ?? null,
+      closingNotes: row.closing_notes ?? null
     };
   }
-  hasPrintedDocumentForSale(e) {
-    const r = d.prepare(`
+  hasPrintedDocumentForSale(saleId) {
+    const row = db.prepare(`
       SELECT COUNT(*) AS total
       FROM printed_documents
       WHERE sale_id = ?
         AND document_type = 'SALE_RECEIPT'
-    `).get(e);
-    return Number(r.total ?? 0) > 0;
+    `).get(saleId);
+    return Number(row.total ?? 0) > 0;
   }
-  logInfo(e) {
-    N.info(`[printing] ${e}`);
+  logInfo(message) {
+    logger.info(`[printing] ${message}`);
   }
 }
-const $ = new yE();
-class bE {
-  async printHtml(e) {
-    const r = Number(e.paperWidthMm ?? 80), a = Math.max(360, Math.round(r / 25.4 * 96) + 48), n = new ce({
-      show: !1,
-      width: a,
+const printDocumentRepository = new PrintDocumentRepository();
+class ElectronReceiptPrinter {
+  async printHtml(params) {
+    const paperWidthMm = Number(params.paperWidthMm ?? 80);
+    const viewportWidthPx = Math.max(360, Math.round(paperWidthMm / 25.4 * 96) + 48);
+    const printWindow = new BrowserWindow({
+      show: false,
+      width: viewportWidthPx,
       height: 1280,
       webPreferences: {
-        sandbox: !0
+        sandbox: true
       }
     });
     try {
-      const o = `data:text/html;charset=utf-8,${encodeURIComponent(e.html)}`;
-      await n.loadURL(o), await new Promise((s, i) => {
-        n.webContents.print(
+      const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(params.html)}`;
+      await printWindow.loadURL(dataUrl);
+      await new Promise((resolve, reject) => {
+        printWindow.webContents.print(
           {
-            silent: !0,
-            printBackground: !0,
-            deviceName: e.printerName,
+            silent: true,
+            printBackground: true,
+            deviceName: params.printerName,
             margins: {
               marginType: "none"
             }
           },
-          (c, u) => {
-            if (!c) {
-              i(new Error(u || "Falha desconhecida na impressão."));
+          (success, failureReason) => {
+            if (!success) {
+              reject(new Error(failureReason || "Falha desconhecida na impressão."));
               return;
             }
-            s();
+            resolve();
           }
         );
       });
-    } catch (o) {
-      throw N.error(`[printing] erro ao imprimir "${e.title}": ${o instanceof Error ? o.message : String(o)}`), o;
+    } catch (error) {
+      logger.error(`[printing] erro ao imprimir "${params.title}": ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     } finally {
-      n.isDestroyed() || n.destroy();
+      if (!printWindow.isDestroyed()) {
+        printWindow.destroy();
+      }
     }
   }
 }
-const jn = new bE();
-function M(t) {
-  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const electronReceiptPrinter = new ElectronReceiptPrinter();
+function escapeHtml(value) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-function ue(t) {
-  return t.toLocaleString("pt-BR", {
+function formatMoney(value) {
+  return value.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL"
   });
 }
-function ca(t) {
-  if (!t) return "—";
-  const e = new Date(t);
-  return Number.isNaN(e.getTime()) ? t : e.toLocaleString("pt-BR");
+function formatDateTime(value) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString("pt-BR");
 }
-function UE(t) {
-  if (!(t != null && t.receipt_settings_json)) return {};
+function getReceiptSettings(printer) {
+  if (!(printer == null ? void 0 : printer.receipt_settings_json)) return {};
   try {
-    return JSON.parse(t.receipt_settings_json);
+    return JSON.parse(printer.receipt_settings_json);
   } catch {
     return {};
   }
 }
-function wE(t) {
-  return t.templateMode === "custom";
+function isCustomMode(settings) {
+  return settings.templateMode === "custom";
 }
-function FE(t) {
+function resolveLayout(printer) {
   return {
-    paperWidthMm: Number((t == null ? void 0 : t.paper_width_mm) ?? 80),
-    contentWidthMm: Number((t == null ? void 0 : t.content_width_mm) ?? 76),
-    baseFontSizePx: Number((t == null ? void 0 : t.base_font_size_px) ?? 14),
-    lineHeight: Number((t == null ? void 0 : t.line_height) ?? 1.55)
+    paperWidthMm: Number((printer == null ? void 0 : printer.paper_width_mm) ?? 80),
+    contentWidthMm: Number((printer == null ? void 0 : printer.content_width_mm) ?? 76),
+    baseFontSizePx: Number((printer == null ? void 0 : printer.base_font_size_px) ?? 14),
+    lineHeight: Number((printer == null ? void 0 : printer.line_height) ?? 1.55)
   };
 }
-function Yn(t, e, r) {
-  const a = FE(r), n = Math.max((a.paperWidthMm - a.contentWidthMm) / 2, 0);
+function renderDocumentShell(title, body, printer) {
+  const layout = resolveLayout(printer);
+  const sidePadding = Math.max((layout.paperWidthMm - layout.contentWidthMm) / 2, 0);
   return `<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <title>${M(t)}</title>
+    <title>${escapeHtml(title)}</title>
     <style>
       @page {
-        size: ${a.paperWidthMm}mm auto;
+        size: ${layout.paperWidthMm}mm auto;
         margin: 0;
       }
 
       html, body {
         margin: 0;
         padding: 0;
-        width: ${a.paperWidthMm}mm;
+        width: ${layout.paperWidthMm}mm;
         font-family: "Courier New", monospace;
         color: #000000;
         background: #ffffff;
-        font-size: ${a.baseFontSizePx}px;
-        line-height: ${a.lineHeight};
+        font-size: ${layout.baseFontSizePx}px;
+        line-height: ${layout.lineHeight};
         font-weight: 600;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -12567,12 +14747,12 @@ function Yn(t, e, r) {
 
       body {
         box-sizing: border-box;
-        padding: 1.2mm ${n}mm 0.8mm;
+        padding: 1.2mm ${sidePadding}mm 0.8mm;
       }
 
       .receipt {
         box-sizing: border-box;
-        width: ${a.contentWidthMm}mm;
+        width: ${layout.contentWidthMm}mm;
         padding-bottom: 0;
       }
 
@@ -12613,112 +14793,118 @@ function Yn(t, e, r) {
       }
       .footer-note {
         margin-top: 6px;
-        font-size: ${Math.max(a.baseFontSizePx - 2, 10)}px;
+        font-size: ${Math.max(layout.baseFontSizePx - 2, 10)}px;
         color: #000000;
       }
     </style>
   </head>
-  <body><div class="receipt">${e}</div></body>
+  <body><div class="receipt">${body}</div></body>
 </html>`;
 }
-class xE {
-  renderSaleReceipt(e, r) {
-    var c, u;
-    const a = UE(r), n = wE(a), o = e.items.map((l) => `
+class ThermalReceiptRenderer {
+  renderSaleReceipt(data, printer) {
+    var _a, _b;
+    const settings = getReceiptSettings(printer);
+    const useCustomMode = isCustomMode(settings);
+    const itemsHtml = data.items.map((item) => `
       <div class="item">
-        <div class="item-name">${M(l.description)}</div>
+        <div class="item-name">${escapeHtml(item.description)}</div>
         <div class="item-meta">
-          <span>${l.quantity.toFixed(3).replace(".", ",")} x ${ue(l.unitPrice)}</span>
-          <span class="strong">${ue(l.totalAmount)}</span>
+          <span>${item.quantity.toFixed(3).replace(".", ",")} x ${formatMoney(item.unitPrice)}</span>
+          <span class="strong">${formatMoney(item.totalAmount)}</span>
         </div>
-        ${l.discountAmount > 0 ? `<div class="muted">Desconto: ${ue(l.discountAmount)}</div>` : ""}
-        ${(!n || a.showItemCodes !== !1) && l.code ? `<div class="muted">Cod.: ${M(l.code)}</div>` : ""}
+        ${item.discountAmount > 0 ? `<div class="muted">Desconto: ${formatMoney(item.discountAmount)}</div>` : ""}
+        ${(useCustomMode ? settings.showItemCodes !== false : true) && item.code ? `<div class="muted">Cod.: ${escapeHtml(item.code)}</div>` : ""}
       </div>
-    `).join(""), s = e.payments.map((l) => `
+    `).join("");
+    const paymentsHtml = data.payments.map((payment) => `
       <div class="row">
-        <span class="label">${M(l.paymentLabel)}</span>
-        <span class="value">${ue(l.amount)}</span>
+        <span class="label">${escapeHtml(payment.paymentLabel)}</span>
+        <span class="value">${formatMoney(payment.amount)}</span>
       </div>
-    `).join(""), i = `
+    `).join("");
+    const body = `
       <div class="center">
-        ${n && a.showLogo && a.logoPath ? `<div class="footer-note">LOGO: ${M(a.logoPath)}</div>` : ""}
-        <div class="strong">${M(n && ((c = a.headerTitle) == null ? void 0 : c.trim()) || e.storeName)}</div>
-        ${(!n || a.showLegalName !== !1) && e.storeLegalName && e.storeLegalName !== e.storeName ? `<div>${M(e.storeLegalName)}</div>` : ""}
-        ${(!n || a.showDocument !== !1) && e.storeDocument ? `<div>CNPJ: ${M(e.storeDocument)}</div>` : ""}
-        ${(!n || a.showAddress !== !1) && e.storeAddress ? `<div>${M(e.storeAddress)}</div>` : ""}
-        ${n && a.headerMessage ? `<div class="footer-note">${M(a.headerMessage)}</div>` : ""}
+        ${useCustomMode && settings.showLogo && settings.logoPath ? `<div class="footer-note">LOGO: ${escapeHtml(settings.logoPath)}</div>` : ""}
+        <div class="strong">${escapeHtml(useCustomMode ? ((_a = settings.headerTitle) == null ? void 0 : _a.trim()) || data.storeName : data.storeName)}</div>
+        ${(useCustomMode ? settings.showLegalName !== false : true) && data.storeLegalName && data.storeLegalName !== data.storeName ? `<div>${escapeHtml(data.storeLegalName)}</div>` : ""}
+        ${(useCustomMode ? settings.showDocument !== false : true) && data.storeDocument ? `<div>CNPJ: ${escapeHtml(data.storeDocument)}</div>` : ""}
+        ${(useCustomMode ? settings.showAddress !== false : true) && data.storeAddress ? `<div>${escapeHtml(data.storeAddress)}</div>` : ""}
+        ${useCustomMode && settings.headerMessage ? `<div class="footer-note">${escapeHtml(settings.headerMessage)}</div>` : ""}
       </div>
 
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Venda</span><span class="value">#${e.saleId}</span></div>
-      <div class="row"><span class="label">Data/Hora</span><span class="value">${M(ca(e.movedAt ?? e.emittedAt))}</span></div>
-      ${!n || a.showOperator !== !1 ? `<div class="row"><span class="label">Operador</span><span class="value">${M(e.operatorName ?? "Não informado")}</span></div>` : ""}
-      <div class="row"><span class="label">PDV</span><span class="value">${M(e.pdvId ?? "—")}</span></div>
-      ${!n || a.showCustomer !== !1 ? `<div class="row"><span class="label">Cliente</span><span class="value">${M(e.customerName ?? "Consumidor final")}</span></div>` : ""}
-      ${(!n || a.showCustomer !== !1) && e.customerDocument ? `<div class="row"><span class="label">Documento</span><span class="value">${M(e.customerDocument)}</span></div>` : ""}
+      <div class="row"><span class="label">Venda</span><span class="value">#${data.saleId}</span></div>
+      <div class="row"><span class="label">Data/Hora</span><span class="value">${escapeHtml(formatDateTime(data.movedAt ?? data.emittedAt))}</span></div>
+      ${(useCustomMode ? settings.showOperator !== false : true) ? `<div class="row"><span class="label">Operador</span><span class="value">${escapeHtml(data.operatorName ?? "Não informado")}</span></div>` : ""}
+      <div class="row"><span class="label">PDV</span><span class="value">${escapeHtml(data.pdvId ?? "—")}</span></div>
+      ${(useCustomMode ? settings.showCustomer !== false : true) ? `<div class="row"><span class="label">Cliente</span><span class="value">${escapeHtml(data.customerName ?? "Consumidor final")}</span></div>` : ""}
+      ${(useCustomMode ? settings.showCustomer !== false : true) && data.customerDocument ? `<div class="row"><span class="label">Documento</span><span class="value">${escapeHtml(data.customerDocument)}</span></div>` : ""}
 
       <div class="separator"></div>
-      ${o}
+      ${itemsHtml}
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Subtotal</span><span class="value">${ue(e.subtotalAmount)}</span></div>
-      ${e.discountAmount > 0 ? `<div class="row"><span class="label">Descontos</span><span class="value">${ue(e.discountAmount)}</span></div>` : ""}
-      <div class="row"><span class="label strong">TOTAL</span><span class="value">${ue(e.totalAmount)}</span></div>
-      ${e.changeAmount > 0 ? `<div class="row"><span class="label">Troco</span><span class="value">${ue(e.changeAmount)}</span></div>` : ""}
+      <div class="row"><span class="label">Subtotal</span><span class="value">${formatMoney(data.subtotalAmount)}</span></div>
+      ${data.discountAmount > 0 ? `<div class="row"><span class="label">Descontos</span><span class="value">${formatMoney(data.discountAmount)}</span></div>` : ""}
+      <div class="row"><span class="label strong">TOTAL</span><span class="value">${formatMoney(data.totalAmount)}</span></div>
+      ${data.changeAmount > 0 ? `<div class="row"><span class="label">Troco</span><span class="value">${formatMoney(data.changeAmount)}</span></div>` : ""}
 
-      ${!n || a.showPaymentBreakdown !== !1 ? `
+      ${(useCustomMode ? settings.showPaymentBreakdown !== false : true) ? `
         <div class="separator"></div>
         <div class="strong">Pagamentos</div>
-        ${s}
+        ${paymentsHtml}
       ` : ""}
 
-      ${(!n || a.showFiscalSection !== !1) && e.fiscal ? `
+      ${(useCustomMode ? settings.showFiscalSection !== false : true) && data.fiscal ? `
         <div class="separator"></div>
         <div class="strong">Situação fiscal</div>
-        <div class="row"><span class="label">Status</span><span class="value">${M(e.fiscal.status ?? "—")}</span></div>
-        ${e.fiscal.protocol ? `<div class="row"><span class="label">Protocolo</span><span class="value">${M(e.fiscal.protocol)}</span></div>` : ""}
-        ${e.fiscal.accessKey ? `<div class="footer-note mono">Chave: ${M(e.fiscal.accessKey)}</div>` : ""}
+        <div class="row"><span class="label">Status</span><span class="value">${escapeHtml(data.fiscal.status ?? "—")}</span></div>
+        ${data.fiscal.protocol ? `<div class="row"><span class="label">Protocolo</span><span class="value">${escapeHtml(data.fiscal.protocol)}</span></div>` : ""}
+        ${data.fiscal.accessKey ? `<div class="footer-note mono">Chave: ${escapeHtml(data.fiscal.accessKey)}</div>` : ""}
       ` : ""}
 
-      ${e.notes ? `<div class="footer-note">Obs.: ${M(e.notes)}</div>` : ""}
-      ${n && a.footerMessage ? `<div class="footer-note">${M(a.footerMessage)}</div>` : ""}
+      ${data.notes ? `<div class="footer-note">Obs.: ${escapeHtml(data.notes)}</div>` : ""}
+      ${useCustomMode && settings.footerMessage ? `<div class="footer-note">${escapeHtml(settings.footerMessage)}</div>` : ""}
 
       <div class="separator"></div>
       <div class="center footer-note">
-        ${M(n && ((u = a.thankYouMessage) == null ? void 0 : u.trim()) || "Documento impresso pelo Galberto PDV")}<br />
+        ${escapeHtml(useCustomMode ? ((_b = settings.thankYouMessage) == null ? void 0 : _b.trim()) || "Documento impresso pelo Galberto PDV" : "Documento impresso pelo Galberto PDV")}<br />
         Guarde este comprovante para conferência.
       </div>
     `;
-    return Yn(`Cupom de venda #${e.saleId}`, i, r);
+    return renderDocumentShell(`Cupom de venda #${data.saleId}`, body, printer);
   }
-  renderCashReceipt(e, r) {
-    const a = e.documentType === "CASH_CLOSING_RECEIPT", n = a ? "Comprovante de Fechamento de Caixa" : "Comprovante de Abertura de Caixa", o = `
+  renderCashReceipt(data, printer) {
+    const isClosing = data.documentType === "CASH_CLOSING_RECEIPT";
+    const title = isClosing ? "Comprovante de Fechamento de Caixa" : "Comprovante de Abertura de Caixa";
+    const body = `
       <div class="center">
-        <div class="strong">${M(n)}</div>
+        <div class="strong">${escapeHtml(title)}</div>
       </div>
 
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Sessão</span><span class="value">#${e.cashSessionId}</span></div>
-      <div class="row"><span class="label">Operador</span><span class="value">${M(e.operatorName ?? "Não informado")}</span></div>
-      <div class="row"><span class="label">PDV</span><span class="value">${M(e.pdvId)}</span></div>
-      <div class="row"><span class="label">Aberto em</span><span class="value">${M(ca(e.openedAt))}</span></div>
-      ${a ? `<div class="row"><span class="label">Fechado em</span><span class="value">${M(ca(e.closedAt))}</span></div>` : ""}
+      <div class="row"><span class="label">Sessão</span><span class="value">#${data.cashSessionId}</span></div>
+      <div class="row"><span class="label">Operador</span><span class="value">${escapeHtml(data.operatorName ?? "Não informado")}</span></div>
+      <div class="row"><span class="label">PDV</span><span class="value">${escapeHtml(data.pdvId)}</span></div>
+      <div class="row"><span class="label">Aberto em</span><span class="value">${escapeHtml(formatDateTime(data.openedAt))}</span></div>
+      ${isClosing ? `<div class="row"><span class="label">Fechado em</span><span class="value">${escapeHtml(formatDateTime(data.closedAt))}</span></div>` : ""}
 
       <div class="separator"></div>
 
-      <div class="row"><span class="label">Fundo inicial</span><span class="value">${ue(e.openingAmount)}</span></div>
-      ${a ? `
-        <div class="row"><span class="label">Vendas em dinheiro</span><span class="value">${ue(e.totalSalesCash)}</span></div>
-        <div class="row"><span class="label">Sangrias</span><span class="value">${ue(e.totalWithdrawals)}</span></div>
-        <div class="row"><span class="label">Valor esperado</span><span class="value">${ue(e.expectedAmount ?? 0)}</span></div>
-        <div class="row"><span class="label">Valor contado</span><span class="value">${ue(e.closingAmount ?? 0)}</span></div>
-        <div class="row"><span class="label">Diferença</span><span class="value">${ue(e.differenceAmount ?? 0)}</span></div>
+      <div class="row"><span class="label">Fundo inicial</span><span class="value">${formatMoney(data.openingAmount)}</span></div>
+      ${isClosing ? `
+        <div class="row"><span class="label">Vendas em dinheiro</span><span class="value">${formatMoney(data.totalSalesCash)}</span></div>
+        <div class="row"><span class="label">Sangrias</span><span class="value">${formatMoney(data.totalWithdrawals)}</span></div>
+        <div class="row"><span class="label">Valor esperado</span><span class="value">${formatMoney(data.expectedAmount ?? 0)}</span></div>
+        <div class="row"><span class="label">Valor contado</span><span class="value">${formatMoney(data.closingAmount ?? 0)}</span></div>
+        <div class="row"><span class="label">Diferença</span><span class="value">${formatMoney(data.differenceAmount ?? 0)}</span></div>
       ` : ""}
 
-      ${e.openingNotes ? `<div class="footer-note">Obs. abertura: ${M(e.openingNotes)}</div>` : ""}
-      ${a && e.closingNotes ? `<div class="footer-note">Obs. fechamento: ${M(e.closingNotes)}</div>` : ""}
+      ${data.openingNotes ? `<div class="footer-note">Obs. abertura: ${escapeHtml(data.openingNotes)}</div>` : ""}
+      ${isClosing && data.closingNotes ? `<div class="footer-note">Obs. fechamento: ${escapeHtml(data.closingNotes)}</div>` : ""}
 
       <div class="separator"></div>
       <div class="center footer-note">
@@ -12726,555 +14912,767 @@ class xE {
         Conferência operacional de caixa.
       </div>
     `;
-    return Yn(n, o, r);
+    return renderDocumentShell(title, body, printer);
   }
-  renderFromStoredDocument(e) {
-    return e.contentHtml;
+  renderFromStoredDocument(document) {
+    return document.contentHtml;
   }
 }
-const Wt = new xE();
-function ua(t, e, r) {
-  const n = {
+const thermalReceiptRenderer = new ThermalReceiptRenderer();
+function createMessage(documentType, action, printerName) {
+  const labels = {
     SALE_RECEIPT: "cupom da venda",
     CASH_OPENING_RECEIPT: "comprovante de abertura de caixa",
     CASH_CLOSING_RECEIPT: "comprovante de fechamento de caixa"
-  }[t];
-  return e === "printed" ? `${n} impresso${r ? ` em ${r}` : ""}.` : e === "skipped" ? `Nenhuma impressora padrão configurada para imprimir o ${n}.` : `Falha ao imprimir o ${n}.`;
+  };
+  const label = labels[documentType];
+  if (action === "printed") {
+    return `${label} impresso${printerName ? ` em ${printerName}` : ""}.`;
+  }
+  if (action === "skipped") {
+    return `Nenhuma impressora padrão configurada para imprimir o ${label}.`;
+  }
+  return `Falha ao imprimir o ${label}.`;
 }
-class ME {
-  async printTestReceipt(e) {
-    const r = $.findPrinterById(e);
-    if (!r)
+class PrintDocumentService {
+  async printTestReceipt(printerId) {
+    const printer = printDocumentRepository.findPrinterById(printerId);
+    if (!printer) {
       return {
-        success: !1,
+        success: false,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
         message: "Impressora não encontrada para teste.",
         jobId: 0,
-        reprint: !1
+        reprint: false
       };
-    const a = $.buildTestSaleReceiptData(r, {}), n = Wt.renderSaleReceipt(a, r);
+    }
+    const sample = printDocumentRepository.buildTestSaleReceiptData(printer, {});
+    const html = thermalReceiptRenderer.renderSaleReceipt(sample, printer);
     try {
-      return await jn.printHtml({
-        html: n,
-        printerName: r.name,
-        title: `Teste ${r.display_name ?? r.name}`,
-        paperWidthMm: r.paper_width_mm
-      }), $.appendPrinterLog(r.id, "Impressão de teste enviada."), {
-        success: !0,
+      await electronReceiptPrinter.printHtml({
+        html,
+        printerName: printer.name,
+        title: `Teste ${printer.display_name ?? printer.name}`,
+        paperWidthMm: printer.paper_width_mm
+      });
+      printDocumentRepository.appendPrinterLog(printer.id, "Impressão de teste enviada.");
+      return {
+        success: true,
         status: "SUCCESS",
         documentId: 0,
-        printerId: r.id,
-        printerName: r.display_name ?? r.name,
-        message: `Teste de impressão enviado para ${r.display_name ?? r.name}.`,
+        printerId: printer.id,
+        printerName: printer.display_name ?? printer.name,
+        message: `Teste de impressão enviado para ${printer.display_name ?? printer.name}.`,
         jobId: 0,
-        reprint: !1
+        reprint: false
       };
-    } catch (o) {
-      const s = o instanceof Error ? o.message : "Falha desconhecida na impressão de teste.";
-      return $.appendPrinterLog(r.id, `Teste de impressão falhou: ${s}`), {
-        success: !1,
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Falha desconhecida na impressão de teste.";
+      printDocumentRepository.appendPrinterLog(printer.id, `Teste de impressão falhou: ${errorMessage}`);
+      return {
+        success: false,
         status: "FAILED",
         documentId: 0,
-        printerId: r.id,
-        printerName: r.display_name ?? r.name,
-        message: s,
+        printerId: printer.id,
+        printerName: printer.display_name ?? printer.name,
+        message: errorMessage,
         jobId: 0,
-        reprint: !1
+        reprint: false
       };
     }
   }
-  async printSaleReceipt(e, r) {
-    const a = $.loadSaleReceiptData(e), n = $.getDefaultPrinter(), o = {
-      ...a,
-      fiscal: r.fiscal ?? a.fiscal
-    }, s = `Cupom de venda #${e}`, i = Wt.renderSaleReceipt(o, n), c = $.upsertDocument({
+  async printSaleReceipt(saleId, options2) {
+    const saleData = printDocumentRepository.loadSaleReceiptData(saleId);
+    const printer = printDocumentRepository.getDefaultPrinter();
+    const mergedData = {
+      ...saleData,
+      fiscal: options2.fiscal ?? saleData.fiscal
+    };
+    const title = `Cupom de venda #${saleId}`;
+    const html = thermalReceiptRenderer.renderSaleReceipt(mergedData, printer);
+    const document = printDocumentRepository.upsertDocument({
       documentType: "SALE_RECEIPT",
       referenceType: "SALE",
-      referenceId: e,
-      saleId: e,
-      title: s,
+      referenceId: saleId,
+      saleId,
+      title,
       status: "PENDING",
       templateVersion: "thermal-v1",
-      payloadJson: JSON.stringify(o),
-      contentHtml: i,
+      payloadJson: JSON.stringify(mergedData),
+      contentHtml: html,
       lastError: null
     });
-    return this.dispatchToPrinter(c, r.triggerSource, !1);
+    return this.dispatchToPrinter(document, options2.triggerSource, false);
   }
-  async printCashOpeningReceipt(e, r) {
-    const a = $.loadCashReceiptData(e, "CASH_OPENING_RECEIPT");
-    return this.printCashReceipt(a, r, !1);
+  async printCashOpeningReceipt(sessionId, triggerSource) {
+    const data = printDocumentRepository.loadCashReceiptData(sessionId, "CASH_OPENING_RECEIPT");
+    return this.printCashReceipt(data, triggerSource, false);
   }
-  async printCashClosingReceipt(e, r) {
-    const a = $.loadCashReceiptData(e, "CASH_CLOSING_RECEIPT");
-    return this.printCashReceipt(a, r, !1);
+  async printCashClosingReceipt(sessionId, triggerSource) {
+    const data = printDocumentRepository.loadCashReceiptData(sessionId, "CASH_CLOSING_RECEIPT");
+    return this.printCashReceipt(data, triggerSource, false);
   }
-  async reprintSaleReceipt(e) {
-    let r = $.findByReference("SALE_RECEIPT", "SALE", e);
-    if (!r)
-      return this.printSaleReceipt(e, { triggerSource: "MANUAL" });
-    const a = $.getDefaultPrinter();
+  async reprintSaleReceipt(saleId) {
+    let document = printDocumentRepository.findByReference("SALE_RECEIPT", "SALE", saleId);
+    if (!document) {
+      return this.printSaleReceipt(saleId, { triggerSource: "MANUAL" });
+    }
+    const printer = printDocumentRepository.getDefaultPrinter();
     try {
-      const n = JSON.parse(r.payloadJson);
-      r = $.upsertDocument({
-        documentType: r.documentType,
-        referenceType: r.referenceType,
-        referenceId: r.referenceId,
-        saleId: r.saleId,
-        cashSessionId: r.cashSessionId,
-        printerId: (a == null ? void 0 : a.id) ?? r.printerId,
-        title: r.title,
-        status: r.status,
-        templateVersion: r.templateVersion,
-        payloadJson: r.payloadJson,
-        contentHtml: Wt.renderSaleReceipt(n, a),
-        lastError: r.lastError
+      const payload = JSON.parse(document.payloadJson);
+      document = printDocumentRepository.upsertDocument({
+        documentType: document.documentType,
+        referenceType: document.referenceType,
+        referenceId: document.referenceId,
+        saleId: document.saleId,
+        cashSessionId: document.cashSessionId,
+        printerId: (printer == null ? void 0 : printer.id) ?? document.printerId,
+        title: document.title,
+        status: document.status,
+        templateVersion: document.templateVersion,
+        payloadJson: document.payloadJson,
+        contentHtml: thermalReceiptRenderer.renderSaleReceipt(payload, printer),
+        lastError: document.lastError
       });
     } catch {
-      r = $.upsertDocument({
-        documentType: r.documentType,
-        referenceType: r.referenceType,
-        referenceId: r.referenceId,
-        saleId: r.saleId,
-        cashSessionId: r.cashSessionId,
-        printerId: (a == null ? void 0 : a.id) ?? r.printerId,
-        title: r.title,
-        status: r.status,
-        templateVersion: r.templateVersion,
-        payloadJson: r.payloadJson,
-        contentHtml: r.contentHtml,
-        lastError: r.lastError
+      document = printDocumentRepository.upsertDocument({
+        documentType: document.documentType,
+        referenceType: document.referenceType,
+        referenceId: document.referenceId,
+        saleId: document.saleId,
+        cashSessionId: document.cashSessionId,
+        printerId: (printer == null ? void 0 : printer.id) ?? document.printerId,
+        title: document.title,
+        status: document.status,
+        templateVersion: document.templateVersion,
+        payloadJson: document.payloadJson,
+        contentHtml: document.contentHtml,
+        lastError: document.lastError
       });
     }
-    return this.dispatchToPrinter(r, "MANUAL", !0);
+    return this.dispatchToPrinter(document, "MANUAL", true);
   }
-  async printCashReceipt(e, r, a) {
-    const n = $.getDefaultPrinter(), o = e.documentType === "CASH_OPENING_RECEIPT" ? `Abertura de caixa #${e.cashSessionId}` : `Fechamento de caixa #${e.cashSessionId}`, s = Wt.renderCashReceipt(e, n), i = $.upsertDocument({
-      documentType: e.documentType,
+  async printCashReceipt(data, triggerSource, reprint) {
+    const printer = printDocumentRepository.getDefaultPrinter();
+    const title = data.documentType === "CASH_OPENING_RECEIPT" ? `Abertura de caixa #${data.cashSessionId}` : `Fechamento de caixa #${data.cashSessionId}`;
+    const html = thermalReceiptRenderer.renderCashReceipt(data, printer);
+    const document = printDocumentRepository.upsertDocument({
+      documentType: data.documentType,
       referenceType: "CASH_SESSION",
-      referenceId: e.cashSessionId,
-      cashSessionId: e.cashSessionId,
-      title: o,
+      referenceId: data.cashSessionId,
+      cashSessionId: data.cashSessionId,
+      title,
       status: "PENDING",
       templateVersion: "thermal-v1",
-      payloadJson: JSON.stringify(e),
-      contentHtml: s,
+      payloadJson: JSON.stringify(data),
+      contentHtml: html,
       lastError: null
     });
-    return this.dispatchToPrinter(i, r, a);
+    return this.dispatchToPrinter(document, triggerSource, reprint);
   }
-  async dispatchToPrinter(e, r, a) {
-    const n = $.getDefaultPrinter();
-    if (!n) {
-      $.markDocumentFailed(e.id, "PENDING", "Nenhuma impressora padrão configurada.", null);
-      const o = $.createPrintJob({
-        printedDocumentId: e.id,
+  async dispatchToPrinter(document, triggerSource, reprint) {
+    const printer = printDocumentRepository.getDefaultPrinter();
+    if (!printer) {
+      printDocumentRepository.markDocumentFailed(document.id, "PENDING", "Nenhuma impressora padrão configurada.", null);
+      const job = printDocumentRepository.createPrintJob({
+        printedDocumentId: document.id,
         printerId: null,
-        triggerSource: r,
+        triggerSource,
         status: "SKIPPED",
         errorMessage: "Nenhuma impressora padrão configurada."
       });
       return {
-        success: !1,
+        success: false,
         status: "SKIPPED",
-        documentId: e.id,
+        documentId: document.id,
         printerId: null,
         printerName: null,
-        message: ua(e.documentType, "skipped"),
-        jobId: o.id,
-        reprint: a
+        message: createMessage(document.documentType, "skipped"),
+        jobId: job.id,
+        reprint
       };
     }
     try {
-      await jn.printHtml({
-        html: Wt.renderFromStoredDocument(e),
-        printerName: n.name,
-        title: e.title,
-        paperWidthMm: n.paper_width_mm
-      }), $.markDocumentPrinted(e.id, n.id), $.appendPrinterLog(n.id, `${e.title} enviado para impressão.`);
-      const o = $.createPrintJob({
-        printedDocumentId: e.id,
-        printerId: n.id,
-        triggerSource: r,
+      await electronReceiptPrinter.printHtml({
+        html: thermalReceiptRenderer.renderFromStoredDocument(document),
+        printerName: printer.name,
+        title: document.title,
+        paperWidthMm: printer.paper_width_mm
+      });
+      printDocumentRepository.markDocumentPrinted(document.id, printer.id);
+      printDocumentRepository.appendPrinterLog(printer.id, `${document.title} enviado para impressão.`);
+      const job = printDocumentRepository.createPrintJob({
+        printedDocumentId: document.id,
+        printerId: printer.id,
+        triggerSource,
         status: "SUCCESS"
       });
       return {
-        success: !0,
+        success: true,
         status: "SUCCESS",
-        documentId: e.id,
-        printerId: n.id,
-        printerName: n.display_name ?? n.name,
-        message: ua(e.documentType, "printed", n.display_name ?? n.name),
-        jobId: o.id,
-        reprint: a
+        documentId: document.id,
+        printerId: printer.id,
+        printerName: printer.display_name ?? printer.name,
+        message: createMessage(document.documentType, "printed", printer.display_name ?? printer.name),
+        jobId: job.id,
+        reprint
       };
-    } catch (o) {
-      const s = o instanceof Error ? o.message : "Falha desconhecida na impressão.";
-      $.markDocumentFailed(e.id, "FAILED", s, n.id), $.appendPrinterLog(n.id, `${e.title} falhou: ${s}`);
-      const i = $.createPrintJob({
-        printedDocumentId: e.id,
-        printerId: n.id,
-        triggerSource: r,
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Falha desconhecida na impressão.";
+      printDocumentRepository.markDocumentFailed(document.id, "FAILED", errorMessage, printer.id);
+      printDocumentRepository.appendPrinterLog(printer.id, `${document.title} falhou: ${errorMessage}`);
+      const job = printDocumentRepository.createPrintJob({
+        printedDocumentId: document.id,
+        printerId: printer.id,
+        triggerSource,
         status: "FAILED",
-        errorMessage: s
+        errorMessage
       });
       return {
-        success: !1,
+        success: false,
         status: "FAILED",
-        documentId: e.id,
-        printerId: n.id,
-        printerName: n.display_name ?? n.name,
-        message: `${ua(e.documentType, "failed")} ${s}`,
-        jobId: i.id,
-        reprint: a
+        documentId: document.id,
+        printerId: printer.id,
+        printerName: printer.display_name ?? printer.name,
+        message: `${createMessage(document.documentType, "failed")} ${errorMessage}`,
+        jobId: job.id,
+        reprint
       };
     }
   }
 }
-const lr = new ME();
-function PE(t) {
-  const e = Number((t == null ? void 0 : t.valorDesconto) ?? (t == null ? void 0 : t.valor_desconto) ?? 0), r = Array.isArray(t == null ? void 0 : t.itens) ? t.itens.some((a) => Number((a == null ? void 0 : a.valor_desconto) ?? (a == null ? void 0 : a.valorDesconto) ?? 0) > 0) : !1;
-  return e > 0 || r;
+const printDocumentService = new PrintDocumentService();
+function payloadHasDiscount(vendaPayload) {
+  const totalDiscount = Number((vendaPayload == null ? void 0 : vendaPayload.valorDesconto) ?? (vendaPayload == null ? void 0 : vendaPayload.valor_desconto) ?? 0);
+  const itemDiscount = Array.isArray(vendaPayload == null ? void 0 : vendaPayload.itens) ? vendaPayload.itens.some((item) => Number((item == null ? void 0 : item.valor_desconto) ?? (item == null ? void 0 : item.valorDesconto) ?? 0) > 0) : false;
+  return totalDiscount > 0 || itemDiscount;
 }
-function la(t) {
-  if (PE(t) && !Lt("discounts:apply"))
+function assertDiscountPermission(vendaPayload) {
+  if (payloadHasDiscount(vendaPayload) && !currentUserHasPermission("discounts:apply")) {
     throw new Error("Somente gerente ou administrador pode conceder descontos.");
+  }
 }
-function BE() {
-  p.handle("vendas:finalizar-com-baixa-estoque", async (t, e) => {
-    la(e), Wi(e);
-    const r = typeof e == "number" ? e : e.vendaId, a = await Ts.execute(r);
-    let n;
+function registerSalesHandlers() {
+  ipcMain.handle("vendas:finalizar-com-baixa-estoque", async (_, vendaPayload) => {
+    assertDiscountPermission(vendaPayload);
+    finalizarVendaComBaixaEstoque(vendaPayload);
+    const vendaId = typeof vendaPayload === "number" ? vendaPayload : vendaPayload.vendaId;
+    const fiscalResult = await issueFiscalDocumentForSaleService.execute(vendaId);
+    let printResult;
     try {
-      n = await lr.printSaleReceipt(r, {
+      printResult = await printDocumentService.printSaleReceipt(vendaId, {
         triggerSource: "AUTO",
-        fiscal: a.fiscal ?? null
+        fiscal: fiscalResult.fiscal ?? null
       });
-    } catch (o) {
-      n = {
-        success: !1,
+    } catch (error) {
+      printResult = {
+        success: false,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
-        message: o instanceof Error ? o.message : "Falha ao imprimir o cupom da venda.",
+        message: error instanceof Error ? error.message : "Falha ao imprimir o cupom da venda.",
         jobId: 0,
-        reprint: !1
+        reprint: false
       };
     }
     return {
-      success: !0,
-      vendaId: r,
-      fiscal: a.fiscal,
-      print: n
+      success: true,
+      vendaId,
+      fiscal: fiscalResult.fiscal,
+      print: printResult
     };
-  }), p.handle("vendas:get", (t, e) => ec(e)), p.handle("vendas:cancelar", (t, e) => Ki(e)), p.handle("vendas:buscarPorId", (t, e) => tc(e)), p.handle("vendas:finalizada-pendente-pagamento", (t, e) => (la(e), Wa(e, "ABERTA_PAGAMENTO", (e == null ? void 0 : e.id) ?? null))), p.handle("vendas:pausar", (t, e) => (la(e), Wa(e, "PAUSADA", (e == null ? void 0 : e.id) ?? null)));
+  });
+  ipcMain.handle("vendas:get", (_, params) => {
+    return listarVendas(params);
+  });
+  ipcMain.handle("vendas:cancelar", (_, venda) => {
+    return cancelarVenda(venda);
+  });
+  ipcMain.handle("vendas:buscarPorId", (_, vendaId) => {
+    return buscarVendaPorId(vendaId);
+  });
+  ipcMain.handle("vendas:finalizada-pendente-pagamento", (_, venda) => {
+    assertDiscountPermission(venda);
+    const vendaId = salvarVendaPendente(venda, "ABERTA_PAGAMENTO", (venda == null ? void 0 : venda.id) ?? null);
+    return vendaId;
+  });
+  ipcMain.handle("vendas:pausar", (_, venda) => {
+    assertDiscountPermission(venda);
+    const vendaId = salvarVendaPendente(venda, "PAUSADA", (venda == null ? void 0 : venda.id) ?? null);
+    return vendaId;
+  });
 }
-let Ct = null, Dt = null, vt = null, St = null, Pe = null, Rt = null, st = null, it = null;
-const ke = import.meta.dirname;
-process.env.APP_ROOT = F.join(ke, "..");
-function XE() {
-  p.handle("app:open-external-url", async (c, u) => (await to.openExternal(u), !0)), p.on("window:open:sales-search", () => {
-    if (st && !st.isDestroyed()) {
-      st.focus();
+let viewVendaWindow = null;
+let viewUsuarioWindow = null;
+let cadastrarUsuarioWindow = null;
+let editUserWindow = null;
+let searchProductWindow = null;
+let configAppWindow = null;
+let searchSalesWindow = null;
+let pdvWindow = null;
+const __dirname$2 = import.meta.dirname;
+process.env.APP_ROOT = path__default.join(__dirname$2, "..");
+function registerWindowHandlers() {
+  ipcMain.handle("app:open-external-url", async (_event, url) => {
+    await shell.openExternal(url);
+    return true;
+  });
+  ipcMain.on("window:open:sales-search", () => {
+    if (searchSalesWindow && !searchSalesWindow.isDestroyed()) {
+      searchSalesWindow.focus();
       return;
     }
-    t();
+    createSearchSalesWindow();
   });
-  function t() {
-    st = new ce({
+  function createSearchSalesWindow() {
+    searchSalesWindow = new BrowserWindow({
       title: "Vendas",
       width: 600,
       height: 530,
-      center: !0,
-      maximizable: !1,
+      center: true,
+      maximizable: false,
       webPreferences: {
-        preload: F.join(ke, "preload.mjs"),
-        contextIsolation: !0,
-        nodeIntegration: !1
+        preload: path__default.join(__dirname$2, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false
       }
-    }), st.maximize(), Q ? st.loadURL(`${Q}#/sales/search`) : st.loadFile(F.join("dist/index.html"), {
-      hash: "/sales/search"
     });
+    searchSalesWindow.maximize();
+    if (VITE_DEV_SERVER_URL) {
+      searchSalesWindow.loadURL(`${VITE_DEV_SERVER_URL}#/sales/search`);
+    } else {
+      searchSalesWindow.loadFile(path__default.join("dist/index.html"), {
+        hash: `/sales/search`
+      });
+    }
   }
-  function e() {
-    it = new ce({
+  function createPdvWindow() {
+    pdvWindow = new BrowserWindow({
       title: "Galberto PDV",
       width: 1280,
       height: 820,
-      center: !0,
-      maximizable: !0,
+      center: true,
+      maximizable: true,
       webPreferences: {
-        preload: F.join(ke, "preload.mjs"),
-        contextIsolation: !0,
-        nodeIntegration: !1
+        preload: path__default.join(__dirname$2, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false
       }
-    }), it.maximize(), Q ? it.loadURL(`${Q}#/pdv`) : it.loadFile(F.join("dist/index.html"), {
-      hash: "/pdv"
     });
+    pdvWindow.maximize();
+    if (VITE_DEV_SERVER_URL) {
+      pdvWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv`);
+    } else {
+      pdvWindow.loadFile(path__default.join("dist/index.html"), {
+        hash: "/pdv"
+      });
+    }
   }
-  function r(c) {
-    Ct = new ce({
+  function createViewVendaWindow(id) {
+    viewVendaWindow = new BrowserWindow({
       width: 764,
       height: 717,
-      title: `Venda #${c}`,
-      maximizable: !1,
+      title: `Venda #${id}`,
+      maximizable: false,
       webPreferences: {
-        preload: F.join(ke, "preload.mjs"),
-        contextIsolation: !0,
-        nodeIntegration: !1
+        preload: path__default.join(__dirname$2, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false
       }
-    }), Q ? Ct.loadURL(`${Q}#/vendas/${c}`) : Ct.loadFile(F.join("dist/index.html"), {
-      hash: `/vendas/${c}`
     });
+    if (VITE_DEV_SERVER_URL) {
+      viewVendaWindow.loadURL(`${VITE_DEV_SERVER_URL}#/vendas/${id}`);
+    } else {
+      viewVendaWindow.loadFile(path__default.join("dist/index.html"), {
+        hash: `/vendas/${id}`
+      });
+    }
   }
-  function a() {
-    Pe = new ce({
+  function createSearchProductWindow() {
+    searchProductWindow = new BrowserWindow({
       title: "Search Product",
-      maximizable: !0,
+      maximizable: true,
       webPreferences: {
-        preload: F.join(ke, "preload.mjs"),
-        contextIsolation: !0,
-        nodeIntegration: !1
+        preload: path__default.join(__dirname$2, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false
       }
-    }), Q ? Pe.loadURL(`${Q}#/pdv/products/search`) : Pe.loadFile(F.join("dist/index.html"), {
-      hash: "/pdv/products/search"
     });
+    if (VITE_DEV_SERVER_URL) {
+      searchProductWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv/products/search`);
+    } else {
+      searchProductWindow.loadFile(path__default.join("dist/index.html"), {
+        hash: `/pdv/products/search`
+      });
+    }
   }
-  function n(c) {
-    Dt = new ce({
+  function createViewUsuarioWindow(id) {
+    viewUsuarioWindow = new BrowserWindow({
       width: 764,
       height: 717,
-      title: `Usuario #${c}`,
-      maximizable: !1,
+      title: `Usuario #${id}`,
+      maximizable: false,
       webPreferences: {
-        preload: F.join(ke, "preload.mjs"),
-        contextIsolation: !0,
-        nodeIntegration: !1
+        preload: path__default.join(__dirname$2, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false
       }
-    }), Q ? Dt.loadURL(`${Q}#/config/usuarios/${c}`) : Dt.loadFile(F.join("dist/index.html"), {
-      hash: `/config/usuarios/${c}`
     });
+    if (VITE_DEV_SERVER_URL) {
+      viewUsuarioWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/usuarios/${id}`);
+    } else {
+      viewUsuarioWindow.loadFile(path__default.join("dist/index.html"), {
+        hash: `/config/usuarios/${id}`
+      });
+    }
   }
-  function o() {
-    Rt = new ce({
+  function createConfigWindow() {
+    configAppWindow = new BrowserWindow({
       width: 764,
       height: 717,
-      title: "Config PDV",
-      maximizable: !1,
+      title: `Config PDV`,
+      maximizable: false,
       webPreferences: {
-        preload: F.join(ke, "preload.mjs"),
-        contextIsolation: !0,
-        nodeIntegration: !1
+        preload: path__default.join(__dirname$2, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false
       }
-    }), Q ? Rt.loadURL(`${Q}#/pdv/config/app`) : Rt.loadFile(F.join("dist/index.html"), {
-      hash: "/pdv/config/app"
     });
+    if (VITE_DEV_SERVER_URL) {
+      configAppWindow.loadURL(`${VITE_DEV_SERVER_URL}#/pdv/config/app`);
+    } else {
+      configAppWindow.loadFile(path__default.join("dist/index.html"), {
+        hash: `/pdv/config/app`
+      });
+    }
   }
-  p.on("open-search-sales-window", () => {
-    if (Pe && !Pe.isDestroyed()) {
-      Pe.focus();
+  ipcMain.on("open-search-sales-window", () => {
+    if (searchProductWindow && !searchProductWindow.isDestroyed()) {
+      searchProductWindow.focus();
       return;
     }
-    t();
-  }), p.on("window:open:config", () => {
-    if (Lt("config:access")) {
-      if (Rt && !Rt.isDestroyed()) {
-        Rt.focus();
-        return;
-      }
-      o();
-    }
-  }), p.on("window:open:pdv", () => {
-    if (Lt("pdv:access")) {
-      if (it && !it.isDestroyed()) {
-        it.focus();
-        return;
-      }
-      e();
-    }
-  }), p.on("window:open:products-search", () => {
-    if (Pe && !Pe.isDestroyed()) {
-      Pe.focus();
-      return;
-    }
-    a();
-  }), p.on("vendas:criar-janela-ver-vendas", (c, u) => {
-    if (Ct && !Ct.isDestroyed()) {
-      Ct.focus();
-      return;
-    }
-    r(u);
-  }), p.on("usuarios:criar-janela-ver-usuario", (c, u) => {
-    if (Lt("users:manage")) {
-      if (Dt && !Dt.isDestroyed()) {
-        Dt.focus();
-        return;
-      }
-      n(u);
-    }
-  }), p.on("window:open:create-user", () => {
-    if (Lt("users:manage")) {
-      if (vt && !vt.isDestroyed()) {
-        vt.focus();
-        return;
-      }
-      s();
-    }
-  }), p.on("window:open:edit-user", (c, u) => {
-    if (Lt("users:manage")) {
-      if (St && !St.isDestroyed()) {
-        St.focus();
-        return;
-      }
-      i(u);
-    }
+    createSearchSalesWindow();
   });
-  function s() {
-    vt = new ce({
+  ipcMain.on("window:open:config", () => {
+    if (!currentUserHasPermission("config:access")) {
+      return;
+    }
+    if (configAppWindow && !configAppWindow.isDestroyed()) {
+      configAppWindow.focus();
+      return;
+    }
+    createConfigWindow();
+  });
+  ipcMain.on("window:open:pdv", () => {
+    if (!currentUserHasPermission("pdv:access")) {
+      return;
+    }
+    if (pdvWindow && !pdvWindow.isDestroyed()) {
+      pdvWindow.focus();
+      return;
+    }
+    createPdvWindow();
+  });
+  ipcMain.on("window:open:products-search", () => {
+    if (searchProductWindow && !searchProductWindow.isDestroyed()) {
+      searchProductWindow.focus();
+      return;
+    }
+    createSearchProductWindow();
+  });
+  ipcMain.on("vendas:criar-janela-ver-vendas", (_, id) => {
+    if (viewVendaWindow && !viewVendaWindow.isDestroyed()) {
+      viewVendaWindow.focus();
+      return;
+    }
+    createViewVendaWindow(id);
+  });
+  ipcMain.on("usuarios:criar-janela-ver-usuario", (_, id) => {
+    if (!currentUserHasPermission("users:manage")) {
+      return;
+    }
+    if (viewUsuarioWindow && !viewUsuarioWindow.isDestroyed()) {
+      viewUsuarioWindow.focus();
+      return;
+    }
+    createViewUsuarioWindow(id);
+  });
+  ipcMain.on("window:open:create-user", () => {
+    if (!currentUserHasPermission("users:manage")) {
+      return;
+    }
+    if (cadastrarUsuarioWindow && !cadastrarUsuarioWindow.isDestroyed()) {
+      cadastrarUsuarioWindow.focus();
+      return;
+    }
+    createCadastroUsuarioWindow();
+  });
+  ipcMain.on("window:open:edit-user", (_, id) => {
+    if (!currentUserHasPermission("users:manage")) {
+      return;
+    }
+    if (editUserWindow && !editUserWindow.isDestroyed()) {
+      editUserWindow.focus();
+      return;
+    }
+    createEditUserWindow(id);
+  });
+  function createCadastroUsuarioWindow() {
+    cadastrarUsuarioWindow = new BrowserWindow({
       width: 764,
       height: 717,
-      title: "Cadastrar Usuario",
-      maximizable: !1,
+      title: `Cadastrar Usuario`,
+      maximizable: false,
       webPreferences: {
-        preload: F.join(ke, "preload.mjs"),
-        contextIsolation: !0,
-        nodeIntegration: !1
+        preload: path__default.join(__dirname$2, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false
       }
-    }), Q ? vt.loadURL(`${Q}#/config/usuarios/cadastrar_usuario`) : vt.loadFile(F.join("dist/index.html"), {
-      hash: "/config/usuarios/cadastrar_usuario"
     });
+    if (VITE_DEV_SERVER_URL) {
+      cadastrarUsuarioWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/usuarios/cadastrar_usuario`);
+    } else {
+      cadastrarUsuarioWindow.loadFile(path__default.join("dist/index.html"), {
+        hash: `/config/usuarios/cadastrar_usuario`
+      });
+    }
   }
-  function i(c) {
-    St = new ce({
+  function createEditUserWindow(id) {
+    editUserWindow = new BrowserWindow({
       width: 764,
       height: 717,
-      title: "Editar Usuario",
-      maximizable: !1,
+      title: `Editar Usuario`,
+      maximizable: false,
       webPreferences: {
-        preload: F.join(ke, "preload.mjs"),
-        contextIsolation: !0,
-        nodeIntegration: !1
+        preload: path__default.join(__dirname$2, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false
       }
-    }), Q ? St.loadURL(`${Q}#/config/users/edit_user/${c}`) : St.loadFile(F.join("dist/index.html"), {
-      hash: `/config/users/edit_user/${c}`
     });
+    if (VITE_DEV_SERVER_URL) {
+      editUserWindow.loadURL(`${VITE_DEV_SERVER_URL}#/config/users/edit_user/${id}`);
+    } else {
+      editUserWindow.loadFile(path__default.join("dist/index.html"), {
+        hash: `/config/users/edit_user/${id}`
+      });
+    }
   }
 }
-function kE() {
-  p.handle("produtos:get", (t, e) => rc(e)), p.handle("get-products-by-id", (t, e) => {
-    if (!e) throw new Error("ID inválido");
-    return ac(e);
-  }), p.handle("produtos:buscar-por-nome", (t, e) => {
-    if (!e) throw new Error("Nome Invalido");
-    return nc(e);
-  }), p.handle("produtos:buscar-por-codigo-de-barras", (t, e) => {
-    if (!e) throw new Error("Codigo de Barras invalido");
-    return oc(e);
-  }), p.handle("suggest-product-by-term", (t, e) => sc(e));
+function registerProductHandlers() {
+  ipcMain.handle("produtos:get", (_, params) => {
+    return listarProdutos(params);
+  });
+  ipcMain.handle("get-products-by-id", (_, id) => {
+    if (!id) throw new Error("ID inválido");
+    return select_product_by_id(id);
+  });
+  ipcMain.handle("produtos:buscar-por-nome", (_, termo) => {
+    if (!termo) throw new Error("Nome Invalido");
+    return buscarProdutosPorNome(termo);
+  });
+  ipcMain.handle("produtos:buscar-por-codigo-de-barras", (_, codigo) => {
+    if (!codigo) throw new Error("Codigo de Barras invalido");
+    return buscarProdutoPorCodigoBarras(codigo);
+  });
+  ipcMain.handle("suggest-product-by-term", (_, term) => {
+    return selectSuggestionProduct(term);
+  });
 }
-function $E() {
-  p.handle("printer:buscar-impressoras", async () => (A("printers:manage"), ce.getAllWindows()[0].webContents.getPrintersAsync())), p.handle("printer:add-impressora", (t, e) => (A("printers:manage"), ic(e))), p.handle("printer:listar-cadastradas", () => (A("printers:manage"), cc())), p.handle("printer:get-padrao", () => uc()), p.handle("printer:remover", (t, e) => (A("printers:manage"), Ec(e))), p.handle("printer:definir-padrao", (t, e) => (A("printers:manage"), mc(e))), p.handle("printer:atualizar-layout", (t, e, r) => (A("printers:manage"), lc(e, r))), p.handle("printer:atualizar-personalizacao", (t, e, r) => (A("printers:manage"), dc(e, r))), p.handle("printer:test-print", (t, e) => (A("printers:manage"), lr.printTestReceipt(e))), p.handle("printer:reprint-sale-receipt", (t, e) => (A("sales:view"), lr.reprintSaleReceipt(e)));
+function registerPrinterhandlers() {
+  ipcMain.handle("printer:buscar-impressoras", async () => {
+    assertCurrentUserPermission("printers:manage");
+    const win2 = BrowserWindow.getAllWindows()[0];
+    return win2.webContents.getPrintersAsync();
+  });
+  ipcMain.handle("printer:add-impressora", (_event, dados) => {
+    assertCurrentUserPermission("printers:manage");
+    return addPrinter(dados);
+  });
+  ipcMain.handle("printer:listar-cadastradas", () => {
+    assertCurrentUserPermission("printers:manage");
+    return listarPrinters();
+  });
+  ipcMain.handle("printer:get-padrao", () => {
+    return getPrinterPadrao();
+  });
+  ipcMain.handle("printer:remover", (_event, id) => {
+    assertCurrentUserPermission("printers:manage");
+    return removerPrinter(id);
+  });
+  ipcMain.handle("printer:definir-padrao", (_event, id) => {
+    assertCurrentUserPermission("printers:manage");
+    return definirPrinterPadrao(id);
+  });
+  ipcMain.handle("printer:atualizar-layout", (_event, id, dados) => {
+    assertCurrentUserPermission("printers:manage");
+    return atualizarLayoutPrinter(id, dados);
+  });
+  ipcMain.handle("printer:atualizar-personalizacao", (_event, id, receiptSettingsJson) => {
+    assertCurrentUserPermission("printers:manage");
+    return atualizarPersonalizacaoCupomPrinter(id, receiptSettingsJson);
+  });
+  ipcMain.handle("printer:test-print", (_event, printerId) => {
+    assertCurrentUserPermission("printers:manage");
+    return printDocumentService.printTestReceipt(printerId);
+  });
+  ipcMain.handle("printer:reprint-sale-receipt", (_event, saleId) => {
+    assertCurrentUserPermission("sales:view");
+    return printDocumentService.reprintSaleReceipt(saleId);
+  });
 }
-function gs(t) {
-  d.prepare(`
+function encerrarSessao(sessionId) {
+  db.prepare(`
     UPDATE sessions
     SET active = 0,
         logout_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).run(t);
+  `).run(sessionId);
 }
-function GE() {
-  p.handle("auth:login", (t, e, r) => {
-    const a = ti(e, r);
-    return Vn(a.sessionId), a;
-  }), p.handle("auth:buscar-usuario", (t, e) => {
-    if (!e) throw new Error("ID inválido");
-    return A("users:manage"), Tc(e);
-  }), p.handle("app:logoff-with-confirm", async () => {
-    N.info("Logoff solicitado pelo usuario");
-    const { response: t } = await ro.showMessageBox({
+function registerAuthHandlers() {
+  ipcMain.handle("auth:login", (_event, username, password) => {
+    const user = autenticarUsuario(username, password);
+    setCurrentSession(user.sessionId);
+    return user;
+  });
+  ipcMain.handle("auth:buscar-usuario", (_, id) => {
+    if (!id) throw new Error("ID inválido");
+    assertCurrentUserPermission("users:manage");
+    return buscarUsuario(id);
+  });
+  ipcMain.handle("app:logoff-with-confirm", async () => {
+    logger.info("Logoff solicitado pelo usuario");
+    const { response } = await dialog.showMessageBox({
       type: "question",
       buttons: ["cancelar", "sair"],
       defaultId: 1,
       cancelId: 0,
       message: "Tem certeza que deseja encerrar sessao?"
     });
-    if (t === 1) {
-      const e = Va();
-      return e && (gs(e), Vn(null)), N.info("logoff aprovado pelo usuario"), !0;
+    if (response === 1) {
+      const sessionId = getCurrentSession();
+      if (sessionId) {
+        encerrarSessao(sessionId);
+        setCurrentSession(null);
+      }
+      logger.info("logoff aprovado pelo usuario");
+      return true;
     }
-    return !1;
+    return false;
   });
 }
-function qE() {
-  p.handle("salvar-foto-usuario", async (t, e) => {
-    A("users:manage");
-    const r = De.getPath("userData"), a = F.join(r, "fotos");
-    Wr.existsSync(a) || Wr.mkdirSync(a);
-    const n = F.extname(e.nomeArquivo || ""), o = F.basename(e.nomeArquivo || "foto", n).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40), s = F.join(a, `${Date.now()}-${o}${n}`);
-    return Wr.writeFileSync(s, Buffer.from(e.buffer)), s;
-  }), p.handle("update-user", (t, e) => (A("users:manage"), Ac(e))), p.handle("disable-user", (t, e) => (A("users:manage"), hc(e))), p.handle("enable-user", (t, e) => (A("users:manage"), Ic(e))), p.handle("user:update-password", (t, e, r) => (A("users:manage"), Nc(e, r))), p.handle("get-users", (t, e) => (A("users:manage"), _c(e))), p.handle("usuarios:add", (t, e) => (A("users:manage"), fc(e))), p.handle("delete-user", (t, e) => (A("users:manage"), gc(e)));
+function registerUserHandlers() {
+  ipcMain.handle("salvar-foto-usuario", async (_, dados) => {
+    assertCurrentUserPermission("users:manage");
+    const userData = app.getPath("userData");
+    const pasta = path__default.join(userData, "fotos");
+    if (!fs$2.existsSync(pasta)) fs$2.mkdirSync(pasta);
+    const extensao = path__default.extname(dados.nomeArquivo || "");
+    const baseName = path__default.basename(dados.nomeArquivo || "foto", extensao).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
+    const caminho = path__default.join(pasta, `${Date.now()}-${baseName}${extensao}`);
+    fs$2.writeFileSync(caminho, Buffer.from(dados.buffer));
+    return caminho;
+  });
+  ipcMain.handle("update-user", (_, data) => {
+    assertCurrentUserPermission("users:manage");
+    return updateUser(data);
+  });
+  ipcMain.handle("disable-user", (_, id) => {
+    assertCurrentUserPermission("users:manage");
+    return disableUser(id);
+  });
+  ipcMain.handle("enable-user", (_, id) => {
+    assertCurrentUserPermission("users:manage");
+    return enableUser(id);
+  });
+  ipcMain.handle("user:update-password", (_event, id, newPassword) => {
+    assertCurrentUserPermission("users:manage");
+    return alterarSenhaUsuario(id, newPassword);
+  });
+  ipcMain.handle("get-users", (_, params) => {
+    assertCurrentUserPermission("users:manage");
+    return selectUsers(params);
+  });
+  ipcMain.handle("usuarios:add", (_event, dados) => {
+    assertCurrentUserPermission("users:manage");
+    return addUsuario(dados);
+  });
+  ipcMain.handle("delete-user", (_event, id) => {
+    assertCurrentUserPermission("users:manage");
+    return removerUsuario(id);
+  });
 }
-function VE() {
-  p.handle("open-cash-session", async (t, e) => {
-    console.log("Abrindo caixa com dados: ", e);
-    const r = Qi(e);
-    let a;
+function registerPosHandlers() {
+  ipcMain.handle("open-cash-session", async (_event, data) => {
+    console.log("Abrindo caixa com dados: ", data);
+    const session = insertCashSession(data);
+    let print;
     try {
-      a = await lr.printCashOpeningReceipt(r.id, "AUTO");
-    } catch (n) {
-      a = {
-        success: !1,
+      print = await printDocumentService.printCashOpeningReceipt(session.id, "AUTO");
+    } catch (error) {
+      print = {
+        success: false,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
-        message: n instanceof Error ? n.message : "Falha ao imprimir comprovante de abertura de caixa.",
+        message: error instanceof Error ? error.message : "Falha ao imprimir comprovante de abertura de caixa.",
         jobId: 0,
-        reprint: !1
+        reprint: false
       };
     }
-    return { session: r, print: a };
-  }), p.handle("close-cash-session", async (t, e) => {
-    console.log("Fechando caixa com dados: ", e);
-    const r = Zi(e);
-    let a;
+    return { session, print };
+  });
+  ipcMain.handle("close-cash-session", async (_event, data) => {
+    console.log("Fechando caixa com dados: ", data);
+    const session = closeCashSession(data);
+    let print;
     try {
-      a = await lr.printCashClosingReceipt(r.id, "AUTO");
-    } catch (n) {
-      a = {
-        success: !1,
+      print = await printDocumentService.printCashClosingReceipt(session.id, "AUTO");
+    } catch (error) {
+      print = {
+        success: false,
         status: "FAILED",
         documentId: 0,
         printerId: null,
         printerName: null,
-        message: n instanceof Error ? n.message : "Falha ao imprimir comprovante de fechamento de caixa.",
+        message: error instanceof Error ? error.message : "Falha ao imprimir comprovante de fechamento de caixa.",
         jobId: 0,
-        reprint: !1
+        reprint: false
       };
     }
-    return { session: r, print: a };
-  }), p.handle("get-open-cash-session", async (t, e) => Cc(e)), p.handle("register-cash-withdrawal", async (t, e) => (A("cash:withdraw"), Ji(e))), p.on("pdv:selecionar-produto", (t, e) => {
-    for (const r of ce.getAllWindows())
-      r.webContents.send("pdv:produto-selecionado", e);
-  }), p.on("pdv:retomar-venda", (t, e) => {
-    for (const r of ce.getAllWindows())
-      r.webContents.send("pdv:venda-retomada", e);
+    return { session, print };
+  });
+  ipcMain.handle("get-open-cash-session", async (_event, data) => {
+    return getOpenCashSession(data);
+  });
+  ipcMain.handle("register-cash-withdrawal", async (_event, data) => {
+    assertCurrentUserPermission("cash:withdraw");
+    return registerCashWithdrawal(data);
+  });
+  ipcMain.on("pdv:selecionar-produto", (_event, produto) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send("pdv:produto-selecionado", produto);
+    }
+  });
+  ipcMain.on("pdv:retomar-venda", (_event, venda) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send("pdv:venda-retomada", venda);
+    }
   });
 }
-function zE(t = 32) {
-  return Ca.randomBytes(t).toString("hex");
+function generateRandomState(size = 32) {
+  return crypto$1.randomBytes(size).toString("hex");
 }
-function da(t, e) {
-  return Buffer.from(`${t}:${e}`, "utf8").toString("base64");
+function toBasicAuth(clientId, clientSecret) {
+  return Buffer.from(`${clientId}:${clientSecret}`, "utf8").toString("base64");
 }
-class HE {
-  getByIntegrationId(e) {
-    const a = d.prepare(`
+class IntegrationRepository {
+  getByIntegrationId(integrationId) {
+    const stmt = db.prepare(`
       SELECT
         integration_id,
         access_token,
@@ -13286,20 +15684,24 @@ class HE {
         updated_at
       FROM integrations
       WHERE integration_id = ?
-    `).get(e);
-    return a ? {
-      integrationId: a.integration_id,
-      accessToken: a.access_token,
-      refreshToken: a.refresh_token,
-      tokenType: a.token_type ?? "Bearer",
-      expiresAt: a.expires_at,
-      scope: a.scope,
-      raw: a.raw_json ? JSON.parse(a.raw_json) : null,
-      updatedAt: a.updated_at
-    } : null;
+    `);
+    const row = stmt.get(integrationId);
+    if (!row) {
+      return null;
+    }
+    return {
+      integrationId: row.integration_id,
+      accessToken: row.access_token,
+      refreshToken: row.refresh_token,
+      tokenType: row.token_type ?? "Bearer",
+      expiresAt: row.expires_at,
+      scope: row.scope,
+      raw: row.raw_json ? JSON.parse(row.raw_json) : null,
+      updatedAt: row.updated_at
+    };
   }
-  save(e) {
-    d.prepare(`
+  save(token) {
+    const stmt = db.prepare(`
       INSERT INTO integrations (
         integration_id,
         access_token,
@@ -13319,255 +15721,353 @@ class HE {
         scope = excluded.scope,
         raw_json = excluded.raw_json,
         updated_at = excluded.updated_at
-    `).run(
-      e.integrationId,
-      e.accessToken,
-      e.refreshToken,
-      e.tokenType,
-      e.expiresAt,
-      e.scope ?? null,
-      e.raw ? JSON.stringify(e.raw) : null,
-      e.updatedAt
+    `);
+    stmt.run(
+      token.integrationId,
+      token.accessToken,
+      token.refreshToken,
+      token.tokenType,
+      token.expiresAt,
+      token.scope ?? null,
+      token.raw ? JSON.stringify(token.raw) : null,
+      token.updatedAt
     );
   }
-  delete(e) {
-    d.prepare(`
+  delete(integrationId) {
+    const stmt = db.prepare(`
       DELETE FROM integrations
       WHERE integration_id = ?
-    `).run(e);
+    `);
+    stmt.run(integrationId);
   }
-  isConnected(e) {
-    return !!d.prepare(`
+  isConnected(integrationId) {
+    const stmt = db.prepare(`
       SELECT 1
       FROM integrations
       WHERE integration_id = ?
       LIMIT 1
-    `).get(e);
+    `);
+    const row = stmt.get(integrationId);
+    return !!row;
   }
 }
-const ct = new HE(), jE = "https://www.bling.com.br/Api/v3/oauth/authorize", Kn = "https://api.bling.com.br/Api/v3/oauth/token", YE = "https://api.bling.com.br/oauth/revoke";
-function Be(t) {
-  const e = process.env[t];
-  if (!e)
-    throw new Error(`Variável de ambiente ausente: ${t}`);
-  return e;
+const integrationRepository = new IntegrationRepository();
+const BLING_AUTHORIZE_URL = "https://www.bling.com.br/Api/v3/oauth/authorize";
+const BLING_TOKEN_URL = "https://api.bling.com.br/Api/v3/oauth/token";
+const BLING_REVOKE_URL = "https://api.bling.com.br/oauth/revoke";
+function getRequiredEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Variável de ambiente ausente: ${name}`);
+  }
+  return value;
 }
-function KE(t) {
-  const e = new ma(t);
-  if (e.protocol !== "http:")
+function parseRedirectUri(redirectUri) {
+  const url = new URL$1(redirectUri);
+  if (url.protocol !== "http:") {
     throw new Error(
       "Para callback local no Electron, use redirect URI no formato http://127.0.0.1:PORT/callback/bling"
     );
+  }
   return {
-    hostname: e.hostname,
-    port: Number(e.port),
-    pathname: e.pathname
+    hostname: url.hostname,
+    port: Number(url.port),
+    pathname: url.pathname
   };
 }
-class WE {
+class BlingOAuthService {
   async getStatus() {
-    const e = ct.getByIntegrationId("bling");
-    if (!e)
+    const saved = integrationRepository.getByIntegrationId("bling");
+    if (!saved) {
       return {
-        connected: !1,
+        connected: false,
         expiresAt: null
       };
+    }
     try {
       await this.getValidAccessToken();
-      const r = ct.getByIntegrationId("bling");
+      const refreshed = integrationRepository.getByIntegrationId("bling");
       return {
-        connected: !0,
-        expiresAt: (r == null ? void 0 : r.expiresAt) ?? null
+        connected: true,
+        expiresAt: (refreshed == null ? void 0 : refreshed.expiresAt) ?? null
       };
-    } catch (r) {
-      return console.error("[BlingOAuthService.getStatus]", r), {
-        connected: !1,
-        expiresAt: e.expiresAt
+    } catch (error) {
+      console.error("[BlingOAuthService.getStatus]", error);
+      return {
+        connected: false,
+        expiresAt: saved.expiresAt
       };
     }
   }
   async connect() {
-    const e = Be("VITE_BLING_CLIENT_ID"), r = Be("VITE_BLING_REDIRECT_URI"), a = zE(24), n = await this.requestAuthorizationCode({
-      clientId: e,
-      redirectUri: r,
-      state: a
+    const clientId = getRequiredEnv("VITE_BLING_CLIENT_ID");
+    const redirectUri = getRequiredEnv("VITE_BLING_REDIRECT_URI");
+    const state = generateRandomState(24);
+    const code = await this.requestAuthorizationCode({
+      clientId,
+      redirectUri,
+      state
     });
-    return await this.exchangeCodeForToken(n), {
-      success: !0,
+    await this.exchangeCodeForToken(code);
+    return {
+      success: true,
       message: "Bling conectado com sucesso."
     };
   }
   async disconnect() {
-    const e = Be("VITE_BLING_CLIENT_ID"), r = Be("VITE_BLING_CLIENT_SECRET"), a = ct.getByIntegrationId("bling");
-    if (!a)
+    const clientId = getRequiredEnv("VITE_BLING_CLIENT_ID");
+    const clientSecret = getRequiredEnv("VITE_BLING_CLIENT_SECRET");
+    const saved = integrationRepository.getByIntegrationId("bling");
+    if (!saved) {
       return {
-        success: !0,
+        success: true,
         message: "Bling já estava desconectado."
       };
+    }
     try {
-      const n = new URLSearchParams({
-        token: a.refreshToken
+      const body = new URLSearchParams({
+        token: saved.refreshToken
       });
-      await fetch(YE, {
+      await fetch(BLING_REVOKE_URL, {
         method: "POST",
         headers: {
-          Authorization: `Basic ${da(e, r)}`,
+          Authorization: `Basic ${toBasicAuth(clientId, clientSecret)}`,
           "Content-Type": "application/x-www-form-urlencoded",
           Accept: "application/json"
         },
-        body: n.toString()
+        body: body.toString()
       });
-    } catch (n) {
-      console.warn("[BlingOAuthService.disconnect] falha ao revogar remotamente:", n);
+    } catch (error) {
+      console.warn("[BlingOAuthService.disconnect] falha ao revogar remotamente:", error);
     }
-    return ct.delete("bling"), {
-      success: !0,
+    integrationRepository.delete("bling");
+    return {
+      success: true,
       message: "Bling desconectado com sucesso."
     };
   }
   async getValidAccessToken() {
-    const e = ct.getByIntegrationId("bling");
-    if (!e)
+    const saved = integrationRepository.getByIntegrationId("bling");
+    if (!saved) {
       throw new Error("Bling não está conectado.");
-    if (!(new Date(e.expiresAt).getTime() <= Date.now() + 6e4))
-      return e.accessToken;
-    await this.refreshAccessToken(e.refreshToken);
-    const n = ct.getByIntegrationId("bling");
-    if (!n)
+    }
+    const expiresAtMs = new Date(saved.expiresAt).getTime();
+    const expired = expiresAtMs <= Date.now() + 6e4;
+    if (!expired) {
+      return saved.accessToken;
+    }
+    await this.refreshAccessToken(saved.refreshToken);
+    const refreshed = integrationRepository.getByIntegrationId("bling");
+    if (!refreshed) {
       throw new Error("Falha ao renovar token do Bling.");
-    return n.accessToken;
+    }
+    return refreshed.accessToken;
   }
-  async requestAuthorizationCode(e) {
-    const { hostname: r, port: a, pathname: n } = KE(e.redirectUri), o = new ma(jE);
-    return o.searchParams.set("response_type", "code"), o.searchParams.set("client_id", e.clientId), o.searchParams.set("state", e.state), o.searchParams.set("redirect_uri", e.redirectUri), await new Promise((s, i) => {
-      let c = !1;
-      const u = (m, T) => {
-        clearTimeout(T), m.close();
-      }, l = Fs.createServer((m, T) => {
+  async requestAuthorizationCode(params) {
+    const { hostname, port, pathname } = parseRedirectUri(params.redirectUri);
+    const authorizeUrl = new URL$1(BLING_AUTHORIZE_URL);
+    authorizeUrl.searchParams.set("response_type", "code");
+    authorizeUrl.searchParams.set("client_id", params.clientId);
+    authorizeUrl.searchParams.set("state", params.state);
+    authorizeUrl.searchParams.set("redirect_uri", params.redirectUri);
+    return await new Promise((resolve, reject) => {
+      let finished = false;
+      const cleanup = (server2, timeout2) => {
+        clearTimeout(timeout2);
+        server2.close();
+      };
+      const server = http.createServer((req, res) => {
         try {
-          if (!m.url)
+          if (!req.url) {
             throw new Error("Callback sem URL.");
-          const h = new ma(m.url, `http://${r}:${a}`);
-          if (h.pathname !== n) {
-            T.statusCode = 404, T.end("Not found");
+          }
+          const callbackUrl = new URL$1(req.url, `http://${hostname}:${port}`);
+          if (callbackUrl.pathname !== pathname) {
+            res.statusCode = 404;
+            res.end("Not found");
             return;
           }
-          const g = h.searchParams.get("error"), y = h.searchParams.get("code"), P = h.searchParams.get("state");
-          if (g) {
-            T.statusCode = 400, T.end("Autorização recusada ou inválida."), c || (c = !0, u(l, E), i(new Error(`Bling retornou erro no callback: ${g}`)));
+          const error = callbackUrl.searchParams.get("error");
+          const code = callbackUrl.searchParams.get("code");
+          const state = callbackUrl.searchParams.get("state");
+          if (error) {
+            res.statusCode = 400;
+            res.end("Autorização recusada ou inválida.");
+            if (!finished) {
+              finished = true;
+              cleanup(server, timeout);
+              reject(new Error(`Bling retornou erro no callback: ${error}`));
+            }
             return;
           }
-          if (!y) {
-            T.statusCode = 400, T.end("Authorization code não recebido."), c || (c = !0, u(l, E), i(new Error("Authorization code não recebido.")));
+          if (!code) {
+            res.statusCode = 400;
+            res.end("Authorization code não recebido.");
+            if (!finished) {
+              finished = true;
+              cleanup(server, timeout);
+              reject(new Error("Authorization code não recebido."));
+            }
             return;
           }
-          if (P !== e.state) {
-            T.statusCode = 400, T.end("State inválido."), c || (c = !0, u(l, E), i(new Error("State inválido no callback do Bling.")));
+          if (state !== params.state) {
+            res.statusCode = 400;
+            res.end("State inválido.");
+            if (!finished) {
+              finished = true;
+              cleanup(server, timeout);
+              reject(new Error("State inválido no callback do Bling."));
+            }
             return;
           }
-          T.statusCode = 200, T.setHeader("Content-Type", "text/html; charset=utf-8"), T.end(`
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/html; charset=utf-8");
+          res.end(`
             <html>
               <body style="font-family: Arial, sans-serif; padding: 24px;">
                 <h2>Integração concluída</h2>
                 <p>Você já pode fechar esta janela e voltar ao sistema.</p>
               </body>
             </html>
-          `), c || (c = !0, u(l, E), s(y));
-        } catch (h) {
-          c || (c = !0, u(l, E), i(h instanceof Error ? h : new Error("Erro desconhecido no callback.")));
+          `);
+          if (!finished) {
+            finished = true;
+            cleanup(server, timeout);
+            resolve(code);
+          }
+        } catch (error) {
+          if (!finished) {
+            finished = true;
+            cleanup(server, timeout);
+            reject(error instanceof Error ? error : new Error("Erro desconhecido no callback."));
+          }
         }
-      }), E = setTimeout(() => {
-        c || (c = !0, u(l, E), i(new Error("Tempo esgotado aguardando autorização do Bling.")));
+      });
+      const timeout = setTimeout(() => {
+        if (!finished) {
+          finished = true;
+          cleanup(server, timeout);
+          reject(new Error("Tempo esgotado aguardando autorização do Bling."));
+        }
       }, 12e4);
-      l.listen(a, r, async () => {
+      server.listen(port, hostname, async () => {
         try {
-          await to.openExternal(o.toString());
-        } catch (m) {
-          c || (c = !0, u(l, E), i(
-            m instanceof Error ? m : new Error("Falha ao abrir navegador para autorização.")
-          ));
+          await shell.openExternal(authorizeUrl.toString());
+        } catch (error) {
+          if (!finished) {
+            finished = true;
+            cleanup(server, timeout);
+            reject(
+              error instanceof Error ? error : new Error("Falha ao abrir navegador para autorização.")
+            );
+          }
         }
-      }), l.on("error", (m) => {
-        c || (c = !0, u(l, E), i(m instanceof Error ? m : new Error("Erro ao iniciar servidor local.")));
+      });
+      server.on("error", (error) => {
+        if (!finished) {
+          finished = true;
+          cleanup(server, timeout);
+          reject(error instanceof Error ? error : new Error("Erro ao iniciar servidor local."));
+        }
       });
     });
   }
-  async exchangeCodeForToken(e) {
-    const r = Be("VITE_BLING_CLIENT_ID"), a = Be("VITE_BLING_CLIENT_SECRET"), n = Be("VITE_BLING_REDIRECT_URI"), o = new URLSearchParams({
+  async exchangeCodeForToken(code) {
+    const clientId = getRequiredEnv("VITE_BLING_CLIENT_ID");
+    const clientSecret = getRequiredEnv("VITE_BLING_CLIENT_SECRET");
+    const redirectUri = getRequiredEnv("VITE_BLING_REDIRECT_URI");
+    const body = new URLSearchParams({
       grant_type: "authorization_code",
-      code: e,
-      redirect_uri: n
-    }), s = await fetch(Kn, {
+      code,
+      redirect_uri: redirectUri
+    });
+    const response = await fetch(BLING_TOKEN_URL, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${da(r, a)}`,
+        Authorization: `Basic ${toBasicAuth(clientId, clientSecret)}`,
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
         "enable-jwt": "1"
       },
-      body: o.toString()
-    }), i = await s.text();
-    if (!s.ok)
-      throw new Error(`Falha ao trocar code por token no Bling: ${s.status} - ${i}`);
-    const c = JSON.parse(i);
-    this.persistToken(c);
+      body: body.toString()
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(`Falha ao trocar code por token no Bling: ${response.status} - ${text}`);
+    }
+    const data = JSON.parse(text);
+    this.persistToken(data);
   }
-  async refreshAccessToken(e) {
-    const r = Be("VITE_BLING_CLIENT_ID"), a = Be("VITE_BLING_CLIENT_SECRET"), n = new URLSearchParams({
+  async refreshAccessToken(refreshToken) {
+    const clientId = getRequiredEnv("VITE_BLING_CLIENT_ID");
+    const clientSecret = getRequiredEnv("VITE_BLING_CLIENT_SECRET");
+    const body = new URLSearchParams({
       grant_type: "refresh_token",
-      refresh_token: e
-    }), o = await fetch(Kn, {
+      refresh_token: refreshToken
+    });
+    const response = await fetch(BLING_TOKEN_URL, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${da(r, a)}`,
+        Authorization: `Basic ${toBasicAuth(clientId, clientSecret)}`,
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
         "enable-jwt": "1"
       },
-      body: n.toString()
-    }), s = await o.text();
-    if (!o.ok)
-      throw new Error(`Falha ao renovar token do Bling: ${o.status} - ${s}`);
-    const i = JSON.parse(s);
-    this.persistToken(i);
+      body: body.toString()
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(`Falha ao renovar token do Bling: ${response.status} - ${text}`);
+    }
+    const data = JSON.parse(text);
+    this.persistToken(data);
   }
-  persistToken(e) {
-    const r = new Date(Date.now() + e.expires_in * 1e3).toISOString(), a = {
+  persistToken(data) {
+    const expiresAt = new Date(Date.now() + data.expires_in * 1e3).toISOString();
+    const payload = {
       integrationId: "bling",
-      accessToken: e.access_token,
-      refreshToken: e.refresh_token,
-      tokenType: e.token_type,
-      expiresAt: r,
-      scope: e.scope ?? null,
-      raw: e,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      tokenType: data.token_type,
+      expiresAt,
+      scope: data.scope ?? null,
+      raw: data,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    ct.save(a);
+    integrationRepository.save(payload);
   }
 }
-const Rr = new WE(), QE = "https://api.bling.com.br/Api/v3";
-class JE {
+const blingOAuthService = new BlingOAuthService();
+const BLING_API_BASE_URL = "https://api.bling.com.br/Api/v3";
+class BlingApiService {
   /**
    * Método genérico GET para a API da Bling.
    *
    * Permite passar query params dinamicamente.
    */
-  async get(e, r) {
-    const a = await Rr.getValidAccessToken(), n = new URL(`${QE}${e}`);
-    r && Object.entries(r).forEach(([i, c]) => {
-      c != null && n.searchParams.append(i, String(c));
-    });
-    const o = await fetch(n.toString(), {
+  async get(path2, params) {
+    const accessToken = await blingOAuthService.getValidAccessToken();
+    const url = new URL(`${BLING_API_BASE_URL}${path2}`);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== void 0 && value !== null) {
+          url.searchParams.append(key, String(value));
+        }
+      });
+    }
+    const response = await fetch(url.toString(), {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${a}`,
+        Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
         "enable-jwt": "1"
       }
-    }), s = await o.text();
-    if (!o.ok)
-      throw new Error(`Erro na API do Bling: ${o.status} - ${s}`);
-    return JSON.parse(s);
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(`Erro na API do Bling: ${response.status} - ${text}`);
+    }
+    return JSON.parse(text);
   }
   /**
    * Endpoint simples de teste da API.
@@ -13592,56 +16092,58 @@ class JE {
    * - page: número da página
    * - limit: quantidade de registros por página
    */
-  async getProducts(e) {
+  async getProducts(params) {
     return this.get("/produtos", {
-      pagina: (e == null ? void 0 : e.page) ?? 1,
-      limite: (e == null ? void 0 : e.limit) ?? 100,
-      criterio: e == null ? void 0 : e.criterio,
-      dataAlteracaoInicial: e == null ? void 0 : e.dataAlteracaoInicial
+      pagina: (params == null ? void 0 : params.page) ?? 1,
+      limite: (params == null ? void 0 : params.limit) ?? 100,
+      criterio: params == null ? void 0 : params.criterio,
+      dataAlteracaoInicial: params == null ? void 0 : params.dataAlteracaoInicial
     });
   }
-  async getProductById(e) {
-    return this.get(`/produtos/${e}`);
+  async getProductById(id) {
+    return this.get(`/produtos/${id}`);
   }
-  async getProductByCode(e) {
+  async getProductByCode(code) {
     return this.get("/produtos", {
-      codigos: e,
+      codigos: code,
       criterio: "5",
       limite: 10
     });
   }
-  async getCategories(e) {
+  async getCategories(params) {
     return this.get("/categorias/produtos", {
-      pagina: (e == null ? void 0 : e.page) ?? 1,
-      limite: (e == null ? void 0 : e.limit) ?? 100
+      pagina: (params == null ? void 0 : params.page) ?? 1,
+      limite: (params == null ? void 0 : params.limit) ?? 100
     });
   }
 }
-const Ge = new JE();
-function Yr() {
-  return Ca.randomUUID();
+const blingApiService = new BlingApiService();
+function randomId() {
+  return crypto$1.randomUUID();
 }
-function pe() {
+function nowIso() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
-function Wn(t, e) {
-  const r = new Date(t);
-  return r.setMinutes(r.getMinutes() - e), r.toISOString();
+function subtractMinutes(isoDate, minutes) {
+  const dt = new Date(isoDate);
+  dt.setMinutes(dt.getMinutes() - minutes);
+  return dt.toISOString();
 }
-class ZE {
-  countByIntegrationSource(e) {
-    return d.prepare(`
+class CategoryRepository {
+  countByIntegrationSource(integrationSource) {
+    const row = db.prepare(`
       SELECT COUNT(*) as count FROM categories
       WHERE integration_source = ? AND deleted_at IS NULL
-    `).get(e).count;
+    `).get(integrationSource);
+    return row.count;
   }
-  upsert(e) {
-    if (!(e != null && e.externalId) || !(e != null && e.name)) {
-      console.warn("[CategoryRepository] Pulando categoria inválida:", e);
+  upsert(category) {
+    if (!(category == null ? void 0 : category.externalId) || !(category == null ? void 0 : category.name)) {
+      console.warn("[CategoryRepository] Pulando categoria inválida:", category);
       return;
     }
-    const r = pe();
-    d.prepare(`
+    const now = nowIso();
+    db.prepare(`
       INSERT INTO categories (
         id, external_id, integration_source, name, active,
         remote_updated_at, last_synced_at, sync_status,
@@ -13657,88 +16159,92 @@ class ZE {
         raw_json          = excluded.raw_json,
         updated_at        = excluded.updated_at
     `).run(
-      e.id ?? Yr(),
-      e.externalId,
-      e.integrationSource,
-      e.name,
-      e.active ?? 1,
-      e.remoteUpdatedAt ?? null,
-      e.lastSyncedAt,
-      e.syncStatus ?? "synced",
-      e.raw ? JSON.stringify(e.raw) : null,
-      e.createdAt ?? r,
-      e.updatedAt ?? r
+      category.id ?? randomId(),
+      category.externalId,
+      category.integrationSource,
+      category.name,
+      category.active ?? 1,
+      category.remoteUpdatedAt ?? null,
+      category.lastSyncedAt,
+      category.syncStatus ?? "synced",
+      category.raw ? JSON.stringify(category.raw) : null,
+      category.createdAt ?? now,
+      category.updatedAt ?? now
     );
   }
-  upsertMany(e) {
-    d.transaction((a) => {
-      for (const n of a) this.upsert(n);
-    })(e);
+  upsertMany(categories) {
+    const run = db.transaction((items) => {
+      for (const item of items) this.upsert(item);
+    });
+    run(categories);
   }
-  getExternalIdsBySource(e, r) {
-    if (r.length === 0) return [];
-    const a = r.map(() => "?").join(",");
-    return d.prepare(`
+  getExternalIdsBySource(integrationSource, externalIds) {
+    if (externalIds.length === 0) return [];
+    const placeholders = externalIds.map(() => "?").join(",");
+    const rows = db.prepare(`
       SELECT external_id FROM categories
-      WHERE integration_source = ? AND external_id IN (${a})
-    `).all(e, ...r).map((o) => o.external_id);
+      WHERE integration_source = ? AND external_id IN (${placeholders})
+    `).all(integrationSource, ...externalIds);
+    return rows.map((r) => r.external_id);
   }
   /**
    * Retorna um Map de externalId -> localId para todas as categorias de uma fonte.
    * Usado pelo sync de produtos para linkar category_id sem fazer N queries.
    */
-  getAllExternalIdMap(e) {
-    const r = d.prepare(`
+  getAllExternalIdMap(integrationSource) {
+    const rows = db.prepare(`
       SELECT id, external_id FROM categories
       WHERE integration_source = ? AND deleted_at IS NULL
-    `).all(e);
-    return new Map(r.map((a) => [a.external_id, a.id]));
+    `).all(integrationSource);
+    return new Map(rows.map((r) => [r.external_id, r.id]));
   }
-  mapRow(e) {
-    let r = null;
-    if (e.raw_json)
+  mapRow(row) {
+    let raw = null;
+    if (row.raw_json) {
       try {
-        r = JSON.parse(e.raw_json);
+        raw = JSON.parse(row.raw_json);
       } catch {
-        r = e.raw_json;
+        raw = row.raw_json;
       }
+    }
     return {
-      id: e.id,
-      externalId: e.external_id,
-      integrationSource: e.integration_source,
-      name: e.name,
-      active: e.active,
-      remoteUpdatedAt: e.remote_updated_at,
-      lastSyncedAt: e.last_synced_at ?? "",
-      syncStatus: e.sync_status,
-      raw: r,
-      createdAt: e.created_at,
-      updatedAt: e.updated_at
+      id: row.id,
+      externalId: row.external_id,
+      integrationSource: row.integration_source,
+      name: row.name,
+      active: row.active,
+      remoteUpdatedAt: row.remote_updated_at,
+      lastSyncedAt: row.last_synced_at ?? "",
+      syncStatus: row.sync_status,
+      raw,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
     };
   }
 }
-const Lr = new ZE();
-class em {
-  get(e, r) {
-    const a = d.prepare(`
+const categoryRepository = new CategoryRepository();
+class SyncStateRepository {
+  get(integrationId, resource) {
+    const row = db.prepare(`
       SELECT * FROM sync_states
       WHERE integration_id = ? AND resource = ?
       LIMIT 1
-    `).get(e, r);
-    return a ? {
-      integrationId: a.integration_id,
-      resource: a.resource,
-      lastSyncAt: a.last_sync_at,
-      lastSuccessAt: a.last_success_at,
-      checkpointCursor: a.checkpoint_cursor,
-      status: a.status,
-      errorMessage: a.error_message,
-      createdAt: a.created_at,
-      updatedAt: a.updated_at
-    } : null;
+    `).get(integrationId, resource);
+    if (!row) return null;
+    return {
+      integrationId: row.integration_id,
+      resource: row.resource,
+      lastSyncAt: row.last_sync_at,
+      lastSuccessAt: row.last_success_at,
+      checkpointCursor: row.checkpoint_cursor,
+      status: row.status,
+      errorMessage: row.error_message,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
   }
-  save(e) {
-    d.prepare(`
+  save(state) {
+    db.prepare(`
       INSERT INTO sync_states (
         id, integration_id, resource, last_sync_at, last_success_at,
         checkpoint_cursor, status, error_message, created_at, updated_at
@@ -13752,74 +16258,78 @@ class em {
         error_message     = excluded.error_message,
         updated_at        = excluded.updated_at
     `).run(
-      Yr(),
-      e.integrationId,
-      e.resource,
-      e.lastSyncAt ?? null,
-      e.lastSuccessAt ?? null,
-      e.checkpointCursor ?? null,
-      e.status,
-      e.errorMessage ?? null,
-      e.createdAt,
-      e.updatedAt
+      randomId(),
+      state.integrationId,
+      state.resource,
+      state.lastSyncAt ?? null,
+      state.lastSuccessAt ?? null,
+      state.checkpointCursor ?? null,
+      state.status,
+      state.errorMessage ?? null,
+      state.createdAt,
+      state.updatedAt
     );
   }
-  markRunning(e, r) {
-    const a = pe(), n = this.get(e, r);
+  markRunning(integrationId, resource) {
+    const now = nowIso();
+    const current = this.get(integrationId, resource);
     this.save({
-      integrationId: e,
-      resource: r,
-      lastSyncAt: a,
-      lastSuccessAt: (n == null ? void 0 : n.lastSuccessAt) ?? null,
-      checkpointCursor: (n == null ? void 0 : n.checkpointCursor) ?? null,
+      integrationId,
+      resource,
+      lastSyncAt: now,
+      lastSuccessAt: (current == null ? void 0 : current.lastSuccessAt) ?? null,
+      checkpointCursor: (current == null ? void 0 : current.checkpointCursor) ?? null,
       status: "running",
       errorMessage: null,
-      createdAt: (n == null ? void 0 : n.createdAt) ?? a,
-      updatedAt: a
+      createdAt: (current == null ? void 0 : current.createdAt) ?? now,
+      updatedAt: now
     });
   }
-  markSuccess(e, r, a) {
-    const n = pe(), o = this.get(e, r);
+  markSuccess(integrationId, resource, checkpointCursor) {
+    const now = nowIso();
+    const current = this.get(integrationId, resource);
     this.save({
-      integrationId: e,
-      resource: r,
-      lastSyncAt: n,
-      lastSuccessAt: n,
-      checkpointCursor: a ?? (o == null ? void 0 : o.checkpointCursor) ?? null,
+      integrationId,
+      resource,
+      lastSyncAt: now,
+      lastSuccessAt: now,
+      checkpointCursor: checkpointCursor ?? (current == null ? void 0 : current.checkpointCursor) ?? null,
       status: "success",
       errorMessage: null,
-      createdAt: (o == null ? void 0 : o.createdAt) ?? n,
-      updatedAt: n
+      createdAt: (current == null ? void 0 : current.createdAt) ?? now,
+      updatedAt: now
     });
   }
-  markError(e, r, a) {
-    const n = pe(), o = this.get(e, r);
+  markError(integrationId, resource, errorMessage) {
+    const now = nowIso();
+    const current = this.get(integrationId, resource);
     this.save({
-      integrationId: e,
-      resource: r,
-      lastSyncAt: (o == null ? void 0 : o.lastSyncAt) ?? null,
-      lastSuccessAt: (o == null ? void 0 : o.lastSuccessAt) ?? null,
-      checkpointCursor: (o == null ? void 0 : o.checkpointCursor) ?? null,
+      integrationId,
+      resource,
+      lastSyncAt: (current == null ? void 0 : current.lastSyncAt) ?? null,
+      lastSuccessAt: (current == null ? void 0 : current.lastSuccessAt) ?? null,
+      checkpointCursor: (current == null ? void 0 : current.checkpointCursor) ?? null,
       status: "error",
-      errorMessage: a,
-      createdAt: (o == null ? void 0 : o.createdAt) ?? n,
-      updatedAt: n
+      errorMessage,
+      createdAt: (current == null ? void 0 : current.createdAt) ?? now,
+      updatedAt: now
     });
   }
 }
-const we = new em();
-class tm {
-  start(e) {
-    const r = Yr();
-    return d.prepare(`
+const syncStateRepository = new SyncStateRepository();
+class SyncLogRepository {
+  start(params) {
+    const id = randomId();
+    db.prepare(`
       INSERT INTO sync_logs (
         id, integration_id, resource, mode, status,
         started_at, items_processed, items_created, items_updated, items_failed
       ) VALUES (?, ?, ?, ?, 'running', ?, 0, 0, 0, 0)
-    `).run(r, e.integrationId, e.resource, e.mode, e.startedAt), r;
+    `).run(id, params.integrationId, params.resource, params.mode, params.startedAt);
+    return id;
   }
-  finish(e) {
-    d.prepare(`
+  finish(params) {
+    db.prepare(`
       UPDATE sync_logs SET
         status          = ?,
         finished_at     = ?,
@@ -13830,134 +16340,178 @@ class tm {
         error_message   = ?
       WHERE id = ?
     `).run(
-      e.status,
-      e.finishedAt,
-      e.itemsProcessed,
-      e.itemsCreated,
-      e.itemsUpdated,
-      e.itemsFailed,
-      e.errorMessage ?? null,
-      e.id
+      params.status,
+      params.finishedAt,
+      params.itemsProcessed,
+      params.itemsCreated,
+      params.itemsUpdated,
+      params.itemsFailed,
+      params.errorMessage ?? null,
+      params.id
     );
   }
-  listByIntegration(e, r, a = 20) {
-    return d.prepare(`
+  listByIntegration(integrationId, resource, limit = 20) {
+    const rows = db.prepare(`
       SELECT * FROM sync_logs
       WHERE integration_id = ? AND resource = ?
       ORDER BY started_at DESC
       LIMIT ?
-    `).all(e, r, a).map((o) => ({
-      id: o.id,
-      integrationId: o.integration_id,
-      resource: o.resource,
-      mode: o.mode,
-      status: o.status,
-      startedAt: o.started_at,
-      finishedAt: o.finished_at,
-      itemsProcessed: o.items_processed,
-      itemsCreated: o.items_created,
-      itemsUpdated: o.items_updated,
-      itemsFailed: o.items_failed,
-      errorMessage: o.error_message
+    `).all(integrationId, resource, limit);
+    return rows.map((row) => ({
+      id: row.id,
+      integrationId: row.integration_id,
+      resource: row.resource,
+      mode: row.mode,
+      status: row.status,
+      startedAt: row.started_at,
+      finishedAt: row.finished_at,
+      itemsProcessed: row.items_processed,
+      itemsCreated: row.items_created,
+      itemsUpdated: row.items_updated,
+      itemsFailed: row.items_failed,
+      errorMessage: row.error_message
     }));
   }
 }
-const Ze = new tm();
-async function ha(t) {
-  await new Promise((e) => setTimeout(e, t));
+const syncLogRepository = new SyncLogRepository();
+async function sleep(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
 }
-const Ke = "bling", Qt = "categories", Qn = 100;
-function rm(t) {
-  const e = [
-    t.nome,
-    t.descricao,
-    t.description
+const INTEGRATION_ID$1 = "bling";
+const RESOURCE$1 = "categories";
+const PAGE_LIMIT$1 = 100;
+function getCategoryName(category) {
+  const candidates = [
+    category.nome,
+    category.descricao,
+    category.description
   ];
-  for (const r of e)
-    if (typeof r == "string" && r.trim())
-      return r.trim();
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
   return null;
 }
-function am(t, e) {
-  if (t == null || !t.id) return null;
-  const r = rm(t);
-  return r ? {
-    externalId: String(t.id),
-    integrationSource: Ke,
-    name: r,
+function mapBlingCategory(category, now) {
+  if (category == null) return null;
+  if (!category.id) return null;
+  const name = getCategoryName(category);
+  if (!name) return null;
+  return {
+    externalId: String(category.id),
+    integrationSource: INTEGRATION_ID$1,
+    name,
     active: 1,
-    lastSyncedAt: e,
+    lastSyncedAt: now,
     syncStatus: "synced",
-    raw: t,
-    updatedAt: e
-  } : null;
+    raw: category,
+    updatedAt: now
+  };
 }
-class nm {
+class SyncCategoriesFromBlingService {
   async execute() {
-    const e = we.get(Ke, Qt), r = Lr.countByIntegrationSource(Ke), n = !e || !e.lastSuccessAt || r === 0 ? "initial" : "incremental";
-    we.markRunning(Ke, Qt);
-    const o = pe(), s = Ze.start({
-      integrationId: Ke,
-      resource: Qt,
-      mode: n,
-      startedAt: o
+    const state = syncStateRepository.get(INTEGRATION_ID$1, RESOURCE$1);
+    const localCount = categoryRepository.countByIntegrationSource(INTEGRATION_ID$1);
+    const isInitial = !state || !state.lastSuccessAt || localCount === 0;
+    const mode = isInitial ? "initial" : "incremental";
+    syncStateRepository.markRunning(INTEGRATION_ID$1, RESOURCE$1);
+    const startedAt = nowIso();
+    const logId = syncLogRepository.start({
+      integrationId: INTEGRATION_ID$1,
+      resource: RESOURCE$1,
+      mode,
+      startedAt
     });
-    let i = 0, c = 0, u = 0, l = 0;
+    let totalProcessed = 0;
+    let totalCreated = 0;
+    let totalUpdated = 0;
+    let totalFailed = 0;
     try {
-      let E = 1, m = !0;
-      for (; m; ) {
-        const h = await Ge.getCategories({ page: E, limit: Qn }), g = Array.isArray(h.data) ? h.data : [], y = g.filter((X) => X != null), P = g.length - y.length;
-        if (l += P, y.length === 0 && E === 1) {
-          m = !1;
+      let page = 1;
+      let hasMore = true;
+      while (hasMore) {
+        const response = await blingApiService.getCategories({ page, limit: PAGE_LIMIT$1 });
+        const rawItems = Array.isArray(response.data) ? response.data : [];
+        const validRaw = rawItems.filter((c) => c != null);
+        const nullsInResponse = rawItems.length - validRaw.length;
+        totalFailed += nullsInResponse;
+        if (validRaw.length === 0 && page === 1) {
+          hasMore = false;
           break;
         }
-        const Y = pe(), re = y.map((X) => am(X, Y)), B = re.filter((X) => X != null);
-        if (l += re.length - B.length, i += g.length, g.length > 0 && B.length === 0 && console.warn("[SyncCategoriesFromBlingService] Nenhuma categoria válida mapeada. Exemplo de payload:", g[0]), B.length > 0) {
-          const X = B.map((W) => W.externalId), K = new Set(
-            Lr.getExternalIdsBySource(Ke, X)
-          );
-          for (const W of B)
-            K.has(W.externalId) ? u++ : c++;
-          Lr.upsertMany(B);
+        const now = nowIso();
+        const allMapped = validRaw.map((c) => mapBlingCategory(c, now));
+        const mapped = allMapped.filter((c) => c != null);
+        totalFailed += allMapped.length - mapped.length;
+        totalProcessed += rawItems.length;
+        if (rawItems.length > 0 && mapped.length === 0) {
+          console.warn("[SyncCategoriesFromBlingService] Nenhuma categoria válida mapeada. Exemplo de payload:", rawItems[0]);
         }
-        g.length < Qn ? m = !1 : (E++, await ha(350));
+        if (mapped.length > 0) {
+          const externalIds = mapped.map((c) => c.externalId);
+          const existingIds = new Set(
+            categoryRepository.getExternalIdsBySource(INTEGRATION_ID$1, externalIds)
+          );
+          for (const c of mapped) {
+            if (existingIds.has(c.externalId)) {
+              totalUpdated++;
+            } else {
+              totalCreated++;
+            }
+          }
+          categoryRepository.upsertMany(mapped);
+        }
+        if (rawItems.length < PAGE_LIMIT$1) {
+          hasMore = false;
+        } else {
+          page++;
+          await sleep(350);
+        }
       }
-      const T = pe();
-      return we.markSuccess(Ke, Qt), Ze.finish({
-        id: s,
+      const finishedAt = nowIso();
+      syncStateRepository.markSuccess(INTEGRATION_ID$1, RESOURCE$1);
+      syncLogRepository.finish({
+        id: logId,
         status: "success",
-        finishedAt: T,
-        itemsProcessed: i,
-        itemsCreated: c,
-        itemsUpdated: u,
-        itemsFailed: l
-      }), { mode: n, processed: i, created: c, updated: u, failed: l };
-    } catch (E) {
-      const m = pe(), T = E instanceof Error ? E.message : String(E);
-      throw we.markError(Ke, Qt, T), Ze.finish({
-        id: s,
+        finishedAt,
+        itemsProcessed: totalProcessed,
+        itemsCreated: totalCreated,
+        itemsUpdated: totalUpdated,
+        itemsFailed: totalFailed
+      });
+      return { mode, processed: totalProcessed, created: totalCreated, updated: totalUpdated, failed: totalFailed };
+    } catch (error) {
+      const finishedAt = nowIso();
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      syncStateRepository.markError(INTEGRATION_ID$1, RESOURCE$1, errorMessage);
+      syncLogRepository.finish({
+        id: logId,
         status: "failed",
-        finishedAt: m,
-        itemsProcessed: i,
-        itemsCreated: c,
-        itemsUpdated: u,
-        itemsFailed: l,
-        errorMessage: T
-      }), E;
+        finishedAt,
+        itemsProcessed: totalProcessed,
+        itemsCreated: totalCreated,
+        itemsUpdated: totalUpdated,
+        itemsFailed: totalFailed,
+        errorMessage
+      });
+      throw error;
     }
   }
 }
-const As = new nm();
-class om {
-  countByIntegrationSource(e) {
-    return d.prepare(`
+const syncCategoriesFromBlingService = new SyncCategoriesFromBlingService();
+class ProductRepository {
+  countByIntegrationSource(integrationSource) {
+    const row = db.prepare(`
       SELECT COUNT(*) as count FROM products
       WHERE integration_source = ? AND deleted_at IS NULL
-    `).get(e).count;
+    `).get(integrationSource);
+    return row.count;
   }
-  upsert(e) {
-    const r = pe(), a = e.id ?? Yr();
-    d.prepare(`
+  upsert(product) {
+    const now = nowIso();
+    const localId = product.id ?? randomId();
+    db.prepare(`
       INSERT INTO products (
         id, external_id, integration_source, sku, barcode, category_id,
         name, unit, sale_price_cents, cost_price_cents, current_stock, minimum_stock,
@@ -14045,78 +16599,79 @@ class om {
         raw_json          = excluded.raw_json,
         updated_at        = excluded.updated_at
     `).run(
-      a,
-      e.externalId,
-      e.integrationSource,
-      e.sku ?? null,
-      e.barcode ?? null,
-      e.categoryId ?? null,
-      e.name,
-      e.unit ?? null,
-      e.salePriceCents,
-      e.costPriceCents,
-      e.currentStock ?? 0,
-      e.minimumStock ?? 0,
-      e.ncm ?? null,
-      e.cfop ?? null,
-      e.origin ?? null,
-      e.fixedIpiValueCents ?? null,
-      e.notes ?? null,
-      e.situation ?? null,
-      e.supplierCode ?? null,
-      e.supplierName ?? null,
-      e.location ?? null,
-      e.maximumStock ?? null,
-      e.netWeightKg ?? null,
-      e.grossWeightKg ?? null,
-      e.packagingBarcode ?? null,
-      e.widthCm ?? null,
-      e.heightCm ?? null,
-      e.depthCm ?? null,
-      e.expirationDate ?? null,
-      e.supplierProductDescription ?? null,
-      e.complementaryDescription ?? null,
-      e.itemsPerBox ?? null,
-      e.isVariation ?? null,
-      e.productionType ?? null,
-      e.ipiTaxClass ?? null,
-      e.serviceListCode ?? null,
-      e.itemType ?? null,
-      e.tagsGroup ?? null,
-      e.tags ?? null,
-      e.taxesJson ?? null,
-      e.parentCode ?? null,
-      e.integrationCode ?? null,
-      e.productGroup ?? null,
-      e.brand ?? null,
-      e.cest ?? null,
-      e.volumes ?? null,
-      e.shortDescription ?? null,
-      e.crossDockingDays ?? null,
-      e.externalImageUrls ?? null,
-      e.externalLink ?? null,
-      e.supplierWarrantyMonths ?? null,
-      e.cloneParentData ?? null,
-      e.productCondition ?? null,
-      e.freeShipping ?? null,
-      e.fciNumber ?? null,
-      e.department ?? null,
-      e.measurementUnit ?? null,
-      e.purchasePriceCents ?? null,
-      e.icmsStRetentionBaseCents ?? null,
-      e.icmsStRetentionValueCents ?? null,
-      e.icmsSubstituteOwnValueCents ?? null,
-      e.productCategoryName ?? null,
-      e.additionalInfo ?? null,
-      e.active,
-      e.remoteCreatedAt ?? null,
-      e.remoteUpdatedAt ?? null,
-      e.lastSyncedAt,
-      e.syncStatus ?? "synced",
-      e.raw ? JSON.stringify(e.raw) : null,
-      e.createdAt ?? r,
-      e.updatedAt ?? r
-    ), d.prepare(`
+      localId,
+      product.externalId,
+      product.integrationSource,
+      product.sku ?? null,
+      product.barcode ?? null,
+      product.categoryId ?? null,
+      product.name,
+      product.unit ?? null,
+      product.salePriceCents,
+      product.costPriceCents,
+      product.currentStock ?? 0,
+      product.minimumStock ?? 0,
+      product.ncm ?? null,
+      product.cfop ?? null,
+      product.origin ?? null,
+      product.fixedIpiValueCents ?? null,
+      product.notes ?? null,
+      product.situation ?? null,
+      product.supplierCode ?? null,
+      product.supplierName ?? null,
+      product.location ?? null,
+      product.maximumStock ?? null,
+      product.netWeightKg ?? null,
+      product.grossWeightKg ?? null,
+      product.packagingBarcode ?? null,
+      product.widthCm ?? null,
+      product.heightCm ?? null,
+      product.depthCm ?? null,
+      product.expirationDate ?? null,
+      product.supplierProductDescription ?? null,
+      product.complementaryDescription ?? null,
+      product.itemsPerBox ?? null,
+      product.isVariation ?? null,
+      product.productionType ?? null,
+      product.ipiTaxClass ?? null,
+      product.serviceListCode ?? null,
+      product.itemType ?? null,
+      product.tagsGroup ?? null,
+      product.tags ?? null,
+      product.taxesJson ?? null,
+      product.parentCode ?? null,
+      product.integrationCode ?? null,
+      product.productGroup ?? null,
+      product.brand ?? null,
+      product.cest ?? null,
+      product.volumes ?? null,
+      product.shortDescription ?? null,
+      product.crossDockingDays ?? null,
+      product.externalImageUrls ?? null,
+      product.externalLink ?? null,
+      product.supplierWarrantyMonths ?? null,
+      product.cloneParentData ?? null,
+      product.productCondition ?? null,
+      product.freeShipping ?? null,
+      product.fciNumber ?? null,
+      product.department ?? null,
+      product.measurementUnit ?? null,
+      product.purchasePriceCents ?? null,
+      product.icmsStRetentionBaseCents ?? null,
+      product.icmsStRetentionValueCents ?? null,
+      product.icmsSubstituteOwnValueCents ?? null,
+      product.productCategoryName ?? null,
+      product.additionalInfo ?? null,
+      product.active,
+      product.remoteCreatedAt ?? null,
+      product.remoteUpdatedAt ?? null,
+      product.lastSyncedAt,
+      product.syncStatus ?? "synced",
+      product.raw ? JSON.stringify(product.raw) : null,
+      product.createdAt ?? now,
+      product.updatedAt ?? now
+    );
+    db.prepare(`
       INSERT INTO produtos (
         id, internal_code, gtin, nome, marca, preco_custo, preco_venda,
         estoque_atual, estoque_minimo, unidade_medida, ncm, ativo, created_at, updated_at
@@ -14136,343 +16691,368 @@ class om {
         ativo = excluded.ativo,
         updated_at = excluded.updated_at
     `).run(
-      a,
-      e.sku ?? null,
-      e.barcode ?? null,
-      e.name,
-      e.brand ?? null,
-      e.costPriceCents / 100,
-      e.salePriceCents / 100,
-      e.currentStock ?? 0,
-      e.minimumStock ?? 0,
-      e.measurementUnit ?? e.unit ?? null,
-      e.ncm ?? null,
-      e.active,
-      e.createdAt ?? r,
-      e.updatedAt ?? r
+      localId,
+      product.sku ?? null,
+      product.barcode ?? null,
+      product.name,
+      product.brand ?? null,
+      product.costPriceCents / 100,
+      product.salePriceCents / 100,
+      product.currentStock ?? 0,
+      product.minimumStock ?? 0,
+      product.measurementUnit ?? product.unit ?? null,
+      product.ncm ?? null,
+      product.active,
+      product.createdAt ?? now,
+      product.updatedAt ?? now
     );
   }
-  upsertMany(e) {
-    d.transaction((a) => {
-      for (const n of a) this.upsert(n);
-    })(e);
+  upsertMany(products) {
+    const run = db.transaction((items) => {
+      for (const item of items) this.upsert(item);
+    });
+    run(products);
   }
-  getExternalIdsBySource(e, r) {
-    if (r.length === 0) return [];
-    const a = r.map(() => "?").join(",");
-    return d.prepare(`
+  getExternalIdsBySource(integrationSource, externalIds) {
+    if (externalIds.length === 0) return [];
+    const placeholders = externalIds.map(() => "?").join(",");
+    const rows = db.prepare(`
       SELECT external_id FROM products
-      WHERE integration_source = ? AND external_id IN (${a})
-    `).all(e, ...r).map((o) => o.external_id);
+      WHERE integration_source = ? AND external_id IN (${placeholders})
+    `).all(integrationSource, ...externalIds);
+    return rows.map((r) => r.external_id);
   }
-  getByExternalId(e, r) {
-    const a = d.prepare(`
+  getByExternalId(integrationSource, externalId) {
+    const row = db.prepare(`
       SELECT * FROM products
       WHERE integration_source = ? AND external_id = ?
       LIMIT 1
-    `).get(e, r);
-    return a ? this.mapRow(a) : null;
+    `).get(integrationSource, externalId);
+    return row ? this.mapRow(row) : null;
   }
-  listByIntegrationSource(e) {
-    return d.prepare(`
+  listByIntegrationSource(integrationSource) {
+    const rows = db.prepare(`
       SELECT * FROM products
       WHERE integration_source = ? AND deleted_at IS NULL
       ORDER BY name ASC
-    `).all(e).map((a) => this.mapRow(a));
+    `).all(integrationSource);
+    return rows.map((row) => this.mapRow(row));
   }
-  mapRow(e) {
-    let r = null;
-    if (e.raw_json)
+  mapRow(row) {
+    let raw = null;
+    if (row.raw_json) {
       try {
-        r = JSON.parse(e.raw_json);
+        raw = JSON.parse(row.raw_json);
       } catch {
-        r = e.raw_json;
+        raw = row.raw_json;
       }
+    }
     return {
-      id: e.id,
-      externalId: e.external_id,
-      integrationSource: e.integration_source,
-      sku: e.sku,
-      barcode: e.barcode,
-      categoryId: e.category_id,
-      name: e.name,
-      unit: e.unit,
-      salePriceCents: e.sale_price_cents,
-      costPriceCents: e.cost_price_cents,
-      currentStock: e.current_stock,
-      minimumStock: e.minimum_stock,
-      ncm: e.ncm,
-      cfop: e.cfop,
-      origin: e.origin,
-      fixedIpiValueCents: e.fixed_ipi_value_cents,
-      notes: e.notes,
-      situation: e.situation,
-      supplierCode: e.supplier_code,
-      supplierName: e.supplier_name,
-      location: e.location,
-      maximumStock: e.maximum_stock,
-      netWeightKg: e.net_weight_kg,
-      grossWeightKg: e.gross_weight_kg,
-      packagingBarcode: e.packaging_barcode,
-      widthCm: e.width_cm,
-      heightCm: e.height_cm,
-      depthCm: e.depth_cm,
-      expirationDate: e.expiration_date,
-      supplierProductDescription: e.supplier_product_description,
-      complementaryDescription: e.complementary_description,
-      itemsPerBox: e.items_per_box,
-      isVariation: e.is_variation,
-      productionType: e.production_type,
-      ipiTaxClass: e.ipi_tax_class,
-      serviceListCode: e.service_list_code,
-      itemType: e.item_type,
-      tagsGroup: e.tags_group,
-      tags: e.tags,
-      taxesJson: e.taxes_json,
-      parentCode: e.parent_code,
-      integrationCode: e.integration_code,
-      productGroup: e.product_group,
-      brand: e.brand,
-      cest: e.cest,
-      volumes: e.volumes,
-      shortDescription: e.short_description,
-      crossDockingDays: e.cross_docking_days,
-      externalImageUrls: e.external_image_urls,
-      externalLink: e.external_link,
-      supplierWarrantyMonths: e.supplier_warranty_months,
-      cloneParentData: e.clone_parent_data,
-      productCondition: e.product_condition,
-      freeShipping: e.free_shipping,
-      fciNumber: e.fci_number,
-      department: e.department,
-      measurementUnit: e.measurement_unit,
-      purchasePriceCents: e.purchase_price_cents,
-      icmsStRetentionBaseCents: e.icms_st_retention_base_cents,
-      icmsStRetentionValueCents: e.icms_st_retention_value_cents,
-      icmsSubstituteOwnValueCents: e.icms_substitute_own_value_cents,
-      productCategoryName: e.product_category_name,
-      additionalInfo: e.additional_info,
-      active: e.active,
-      remoteCreatedAt: e.remote_created_at,
-      remoteUpdatedAt: e.remote_updated_at,
-      lastSyncedAt: e.last_synced_at ?? "",
-      syncStatus: e.sync_status,
-      raw: r,
-      createdAt: e.created_at,
-      updatedAt: e.updated_at
+      id: row.id,
+      externalId: row.external_id,
+      integrationSource: row.integration_source,
+      sku: row.sku,
+      barcode: row.barcode,
+      categoryId: row.category_id,
+      name: row.name,
+      unit: row.unit,
+      salePriceCents: row.sale_price_cents,
+      costPriceCents: row.cost_price_cents,
+      currentStock: row.current_stock,
+      minimumStock: row.minimum_stock,
+      ncm: row.ncm,
+      cfop: row.cfop,
+      origin: row.origin,
+      fixedIpiValueCents: row.fixed_ipi_value_cents,
+      notes: row.notes,
+      situation: row.situation,
+      supplierCode: row.supplier_code,
+      supplierName: row.supplier_name,
+      location: row.location,
+      maximumStock: row.maximum_stock,
+      netWeightKg: row.net_weight_kg,
+      grossWeightKg: row.gross_weight_kg,
+      packagingBarcode: row.packaging_barcode,
+      widthCm: row.width_cm,
+      heightCm: row.height_cm,
+      depthCm: row.depth_cm,
+      expirationDate: row.expiration_date,
+      supplierProductDescription: row.supplier_product_description,
+      complementaryDescription: row.complementary_description,
+      itemsPerBox: row.items_per_box,
+      isVariation: row.is_variation,
+      productionType: row.production_type,
+      ipiTaxClass: row.ipi_tax_class,
+      serviceListCode: row.service_list_code,
+      itemType: row.item_type,
+      tagsGroup: row.tags_group,
+      tags: row.tags,
+      taxesJson: row.taxes_json,
+      parentCode: row.parent_code,
+      integrationCode: row.integration_code,
+      productGroup: row.product_group,
+      brand: row.brand,
+      cest: row.cest,
+      volumes: row.volumes,
+      shortDescription: row.short_description,
+      crossDockingDays: row.cross_docking_days,
+      externalImageUrls: row.external_image_urls,
+      externalLink: row.external_link,
+      supplierWarrantyMonths: row.supplier_warranty_months,
+      cloneParentData: row.clone_parent_data,
+      productCondition: row.product_condition,
+      freeShipping: row.free_shipping,
+      fciNumber: row.fci_number,
+      department: row.department,
+      measurementUnit: row.measurement_unit,
+      purchasePriceCents: row.purchase_price_cents,
+      icmsStRetentionBaseCents: row.icms_st_retention_base_cents,
+      icmsStRetentionValueCents: row.icms_st_retention_value_cents,
+      icmsSubstituteOwnValueCents: row.icms_substitute_own_value_cents,
+      productCategoryName: row.product_category_name,
+      additionalInfo: row.additional_info,
+      active: row.active,
+      remoteCreatedAt: row.remote_created_at,
+      remoteUpdatedAt: row.remote_updated_at,
+      lastSyncedAt: row.last_synced_at ?? "",
+      syncStatus: row.sync_status,
+      raw,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
     };
   }
 }
-const Ea = new om(), $e = "bling", Jt = "products", Jn = 100, sm = "5";
-function im(t, e) {
-  if (!t || typeof t != "object") return;
-  let r = t;
-  for (const a of e.split(".")) {
-    if (!r || typeof r != "object" || !(a in r)) return;
-    r = r[a];
+const productRepository = new ProductRepository();
+const INTEGRATION_ID = "bling";
+const RESOURCE = "products";
+const PAGE_LIMIT = 100;
+const PRODUCT_LIST_CRITERION = "5";
+function getNestedValue(source, path2) {
+  if (!source || typeof source !== "object") return void 0;
+  let current = source;
+  for (const key of path2.split(".")) {
+    if (!current || typeof current !== "object" || !(key in current)) return void 0;
+    current = current[key];
   }
-  return r;
+  return current;
 }
-function f(t, e) {
-  for (const r of e) {
-    const a = im(t, r);
-    if (a != null && a !== "")
-      return a;
+function pickValue(source, paths) {
+  for (const path2 of paths) {
+    const value = getNestedValue(source, path2);
+    if (value !== void 0 && value !== null && value !== "") {
+      return value;
+    }
   }
+  return void 0;
 }
-function b(t) {
-  if (t == null) return null;
-  if (typeof t == "string") {
-    const e = t.trim();
-    return e || null;
+function toNullableString(value) {
+  if (value === void 0 || value === null) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
   }
-  return typeof t == "number" || typeof t == "boolean" ? String(t) : null;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return null;
 }
-function cm(t) {
-  var r;
-  const e = ((r = b(t)) == null ? void 0 : r.replace(/\D/g, "")) ?? null;
-  return e && e.length > 0 ? e : null;
+function normalizeNcm(value) {
+  var _a;
+  const digits = ((_a = toNullableString(value)) == null ? void 0 : _a.replace(/\D/g, "")) ?? null;
+  return digits && digits.length > 0 ? digits : null;
 }
-function um(t) {
-  var r;
-  const e = ((r = b(t)) == null ? void 0 : r.replace(/\D/g, "")) ?? null;
-  return e && e.length > 0 ? e : null;
+function normalizeCest(value) {
+  var _a;
+  const digits = ((_a = toNullableString(value)) == null ? void 0 : _a.replace(/\D/g, "")) ?? null;
+  return digits && digits.length > 0 ? digits : null;
 }
-function lm(t) {
-  if (typeof t == "number")
-    return Number.isInteger(t) && t >= 0 && t <= 8 ? String(t) : null;
-  const e = b(t);
-  if (e === null) return null;
-  const r = e.match(/[0-8]/);
-  return (r == null ? void 0 : r[0]) ?? null;
+function normalizeOrigin(value) {
+  if (typeof value === "number") {
+    return Number.isInteger(value) && value >= 0 && value <= 8 ? String(value) : null;
+  }
+  const text = toNullableString(value);
+  if (text === null) return null;
+  const match = text.match(/[0-8]/);
+  return (match == null ? void 0 : match[0]) ?? null;
 }
-function Ne(t) {
-  if (t == null || t === "") return null;
-  if (typeof t == "number") return Number.isFinite(t) ? t : null;
-  if (typeof t == "string") {
-    const e = t.trim(), r = e.includes(",") ? e.replace(/\./g, "").replace(",", ".") : e, a = Number(r);
-    return Number.isFinite(a) ? a : null;
+function toNullableNumber(value) {
+  if (value === void 0 || value === null || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    const normalized = trimmed.includes(",") ? trimmed.replace(/\./g, "").replace(",", ".") : trimmed;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
 }
-function ut(t) {
-  const e = Ne(t);
-  return e == null ? null : Math.round(e * 100);
+function toMoneyCents(value) {
+  const parsed = toNullableNumber(value);
+  return parsed == null ? null : Math.round(parsed * 100);
 }
-function Zn(t) {
-  const e = Ne(t);
-  return e == null ? null : Math.round(e);
+function toNullableInteger(value) {
+  const parsed = toNullableNumber(value);
+  return parsed == null ? null : Math.round(parsed);
 }
-function Cr(t) {
-  if (t == null || t === "") return null;
-  if (typeof t == "boolean") return t ? 1 : 0;
-  if (typeof t == "number") return t === 0 ? 0 : 1;
-  if (typeof t == "string") {
-    const e = t.trim().toLowerCase();
-    if (["1", "true", "t", "sim", "s", "y", "yes", "a", "ativo"].includes(e)) return 1;
-    if (["0", "false", "f", "nao", "não", "n", "no", "i", "inativo"].includes(e)) return 0;
+function toNullableBooleanInt(value) {
+  if (value === void 0 || value === null || value === "") return null;
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (typeof value === "number") return value === 0 ? 0 : 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["1", "true", "t", "sim", "s", "y", "yes", "a", "ativo"].includes(normalized)) return 1;
+    if (["0", "false", "f", "nao", "não", "n", "no", "i", "inativo"].includes(normalized)) return 0;
   }
   return null;
 }
-function Dr(t) {
-  if (t == null || t === "") return null;
-  if (typeof t == "string") {
-    const e = t.trim();
-    return e || null;
+function serializeStructuredValue(value) {
+  if (value === void 0 || value === null || value === "") return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
   }
   try {
-    return JSON.stringify(t);
+    return JSON.stringify(value);
   } catch {
     return null;
   }
 }
-function dm(t) {
-  const e = f(t, [
+function resolveCategoryExternalId(product) {
+  const categoryId = pickValue(product, [
     "categoria.id",
     "categoriaProduto.id",
     "categoriaProdutoId"
   ]);
-  return b(e);
+  return toNullableString(categoryId);
 }
-function hs(t) {
-  return t.replace("T", " ").slice(0, 19);
+function toBlingDateTime(value) {
+  return value.replace("T", " ").slice(0, 19);
 }
-function Em(t) {
-  const e = (t == null ? void 0 : t.checkpointCursor) ?? (t == null ? void 0 : t.lastSuccessAt);
-  if (!e) return;
-  const r = e.includes("T") ? Wn(e, 2) : Wn(e.replace(" ", "T") + "Z", 2);
-  return hs(r);
+function getIncrementalCursor(state) {
+  const baseCursor = (state == null ? void 0 : state.checkpointCursor) ?? (state == null ? void 0 : state.lastSuccessAt);
+  if (!baseCursor) return void 0;
+  const cursorDate = baseCursor.includes("T") ? subtractMinutes(baseCursor, 2) : subtractMinutes(baseCursor.replace(" ", "T") + "Z", 2);
+  return toBlingDateTime(cursorDate);
 }
-function mm(t, e, r) {
-  const a = dm(t), n = ut(f(t, ["preco"])) ?? 0, o = ut(f(t, ["precoCusto"])) ?? 0, s = ut(f(t, ["precoCompra", "precoCusto"])), i = Ne(f(t, [
+function mapBlingProduct(product, now, categoryIdMap) {
+  const categoryExternalId = resolveCategoryExternalId(product);
+  const salePriceCents = toMoneyCents(pickValue(product, ["preco"])) ?? 0;
+  const costPriceCents = toMoneyCents(pickValue(product, ["precoCusto"])) ?? 0;
+  const purchasePriceCents = toMoneyCents(pickValue(product, ["precoCompra", "precoCusto"]));
+  const currentStock = toNullableNumber(pickValue(product, [
     "estoque.saldoVirtualTotal",
     "estoque.saldoFisicoTotal",
     "estoque"
-  ])) ?? 0, c = Ne(f(t, [
+  ])) ?? 0;
+  const minimumStock = toNullableNumber(pickValue(product, [
     "estoque.minimo",
     "estoqueMinimo"
-  ])) ?? 0, u = Cr(f(t, ["situacao"])) ?? 0, l = b(f(t, [
+  ])) ?? 0;
+  const activeFlag = toNullableBooleanInt(pickValue(product, ["situacao"])) ?? 0;
+  const supplierName = toNullableString(pickValue(product, [
     "fornecedor.nome",
     "fornecedor"
-  ])), E = b(f(t, [
+  ]));
+  const categoryName = toNullableString(pickValue(product, [
     "categoria.nome",
     "categoriaProduto.nome",
     "categoriaProduto"
   ]));
   return {
     // Identificação do produto no Bling e origem da integração.
-    externalId: String(t.id),
-    integrationSource: $e,
+    externalId: String(product.id),
+    integrationSource: INTEGRATION_ID,
     // Dados comerciais e de identificação. Campos ausentes viram null para manter padrão local.
-    sku: b(f(t, ["codigo"])) ?? null,
-    barcode: b(f(t, ["gtin", "codigo"])) ?? null,
-    categoryId: a ? r.get(a) ?? null : null,
-    name: t.nome,
-    unit: b(f(t, ["unidade", "unidadeMedida"])) ?? null,
+    sku: toNullableString(pickValue(product, ["codigo"])) ?? null,
+    barcode: toNullableString(pickValue(product, ["gtin", "codigo"])) ?? null,
+    categoryId: categoryExternalId ? categoryIdMap.get(categoryExternalId) ?? null : null,
+    name: product.nome,
+    unit: toNullableString(pickValue(product, ["unidade", "unidadeMedida"])) ?? null,
     // Valores monetários são armazenados em centavos para evitar problemas com ponto flutuante.
-    salePriceCents: n,
-    costPriceCents: o,
-    purchasePriceCents: s,
+    salePriceCents,
+    costPriceCents,
+    purchasePriceCents,
     // Estoque e limites locais.
-    currentStock: i,
-    minimumStock: c,
-    maximumStock: Ne(f(t, [
+    currentStock,
+    minimumStock,
+    maximumStock: toNullableNumber(pickValue(product, [
       "estoque.maximo",
       "estoqueMaximo"
     ])),
     // Espelho ampliado do Bling.
-    ncm: cm(f(t, ["ncm", "tributacao.ncm", "tributos.ncm"])),
-    cfop: b(f(t, ["cfop", "tributacao.cfop", "tributos.cfop", "cfopPadrao"])),
-    origin: lm(f(t, ["origem", "tributacao.origem", "tributos.origem"])),
-    fixedIpiValueCents: ut(f(t, ["valorIpiFixo"])),
-    notes: b(f(t, ["observacoes", "observacao"])),
-    situation: b(f(t, ["situacao"])),
-    supplierCode: b(f(t, ["codigoFornecedor"])),
-    supplierName: l,
-    location: b(f(t, ["localizacao"])),
-    netWeightKg: Ne(f(t, ["pesoLiquido"])),
-    grossWeightKg: Ne(f(t, ["pesoBruto"])),
-    packagingBarcode: b(f(t, ["gtinEmbalagem"])),
-    widthCm: Ne(f(t, ["larguraProduto", "largura"])),
-    heightCm: Ne(f(t, ["alturaProduto", "altura"])),
-    depthCm: Ne(f(t, ["profundidadeProduto", "profundidade"])),
-    expirationDate: b(f(t, ["dataValidade"])),
-    supplierProductDescription: b(f(t, [
+    ncm: normalizeNcm(pickValue(product, ["ncm", "tributacao.ncm", "tributos.ncm"])),
+    cfop: toNullableString(pickValue(product, ["cfop", "tributacao.cfop", "tributos.cfop", "cfopPadrao"])),
+    origin: normalizeOrigin(pickValue(product, ["origem", "tributacao.origem", "tributos.origem"])),
+    fixedIpiValueCents: toMoneyCents(pickValue(product, ["valorIpiFixo"])),
+    notes: toNullableString(pickValue(product, ["observacoes", "observacao"])),
+    situation: toNullableString(pickValue(product, ["situacao"])),
+    supplierCode: toNullableString(pickValue(product, ["codigoFornecedor"])),
+    supplierName,
+    location: toNullableString(pickValue(product, ["localizacao"])),
+    netWeightKg: toNullableNumber(pickValue(product, ["pesoLiquido"])),
+    grossWeightKg: toNullableNumber(pickValue(product, ["pesoBruto"])),
+    packagingBarcode: toNullableString(pickValue(product, ["gtinEmbalagem"])),
+    widthCm: toNullableNumber(pickValue(product, ["larguraProduto", "largura"])),
+    heightCm: toNullableNumber(pickValue(product, ["alturaProduto", "altura"])),
+    depthCm: toNullableNumber(pickValue(product, ["profundidadeProduto", "profundidade"])),
+    expirationDate: toNullableString(pickValue(product, ["dataValidade"])),
+    supplierProductDescription: toNullableString(pickValue(product, [
       "descricaoFornecedor",
       "descricaoProdutoFornecedor"
     ])),
-    complementaryDescription: b(f(t, ["descricaoComplementar"])),
-    itemsPerBox: Ne(f(t, ["itensPorCaixa"])),
-    isVariation: Cr(f(t, ["produtoVariacao", "variacao"])),
-    productionType: b(f(t, ["tipoProducao"])),
-    ipiTaxClass: b(f(t, ["classeEnquadramentoIpi"])),
-    serviceListCode: b(f(t, ["codigoListaServicos"])),
-    itemType: b(f(t, ["tipoItem", "tipo"])),
-    tagsGroup: Dr(f(t, ["grupoTags", "grupoDeTags"])),
-    tags: Dr(f(t, ["tags"])),
-    taxesJson: Dr(f(t, ["tributos"])),
-    parentCode: b(f(t, ["codigoPai"])),
-    integrationCode: b(f(t, ["codigoIntegracao"])),
-    productGroup: b(f(t, ["grupoProdutos", "grupoProduto"])),
-    brand: b(f(t, ["marca"])),
-    cest: um(f(t, ["cest", "tributacao.cest", "tributos.cest"])),
-    volumes: Ne(f(t, ["volumes"])),
-    shortDescription: b(f(t, ["descricaoCurta"])),
-    crossDockingDays: Zn(f(t, ["crossDocking"])),
-    externalImageUrls: Dr(f(t, ["urlImagensExternas", "imagensURL", "imagemURL"])),
-    externalLink: b(f(t, ["linkExterno"])),
-    supplierWarrantyMonths: Zn(f(t, ["mesesGarantiaFornecedor"])),
-    cloneParentData: Cr(f(t, ["clonarDadosPai"])),
-    productCondition: b(f(t, ["condicaoProduto"])),
-    freeShipping: Cr(f(t, ["freteGratis"])),
-    fciNumber: b(f(t, ["numeroFci", "numeroFCI"])),
-    department: b(f(t, ["departamento"])),
-    measurementUnit: b(f(t, ["unidadeMedida", "unidade"])),
-    icmsStRetentionBaseCents: ut(f(t, ["valorBaseIcmsStRetencao"])),
-    icmsStRetentionValueCents: ut(f(t, ["valorIcmsStRetencao"])),
-    icmsSubstituteOwnValueCents: ut(f(t, ["valorIcmsProprioSubstituto"])),
-    productCategoryName: E,
-    additionalInfo: b(f(t, ["informacoesAdicionais"])),
+    complementaryDescription: toNullableString(pickValue(product, ["descricaoComplementar"])),
+    itemsPerBox: toNullableNumber(pickValue(product, ["itensPorCaixa"])),
+    isVariation: toNullableBooleanInt(pickValue(product, ["produtoVariacao", "variacao"])),
+    productionType: toNullableString(pickValue(product, ["tipoProducao"])),
+    ipiTaxClass: toNullableString(pickValue(product, ["classeEnquadramentoIpi"])),
+    serviceListCode: toNullableString(pickValue(product, ["codigoListaServicos"])),
+    itemType: toNullableString(pickValue(product, ["tipoItem", "tipo"])),
+    tagsGroup: serializeStructuredValue(pickValue(product, ["grupoTags", "grupoDeTags"])),
+    tags: serializeStructuredValue(pickValue(product, ["tags"])),
+    taxesJson: serializeStructuredValue(pickValue(product, ["tributos"])),
+    parentCode: toNullableString(pickValue(product, ["codigoPai"])),
+    integrationCode: toNullableString(pickValue(product, ["codigoIntegracao"])),
+    productGroup: toNullableString(pickValue(product, ["grupoProdutos", "grupoProduto"])),
+    brand: toNullableString(pickValue(product, ["marca"])),
+    cest: normalizeCest(pickValue(product, ["cest", "tributacao.cest", "tributos.cest"])),
+    volumes: toNullableNumber(pickValue(product, ["volumes"])),
+    shortDescription: toNullableString(pickValue(product, ["descricaoCurta"])),
+    crossDockingDays: toNullableInteger(pickValue(product, ["crossDocking"])),
+    externalImageUrls: serializeStructuredValue(pickValue(product, ["urlImagensExternas", "imagensURL", "imagemURL"])),
+    externalLink: toNullableString(pickValue(product, ["linkExterno"])),
+    supplierWarrantyMonths: toNullableInteger(pickValue(product, ["mesesGarantiaFornecedor"])),
+    cloneParentData: toNullableBooleanInt(pickValue(product, ["clonarDadosPai"])),
+    productCondition: toNullableString(pickValue(product, ["condicaoProduto"])),
+    freeShipping: toNullableBooleanInt(pickValue(product, ["freteGratis"])),
+    fciNumber: toNullableString(pickValue(product, ["numeroFci", "numeroFCI"])),
+    department: toNullableString(pickValue(product, ["departamento"])),
+    measurementUnit: toNullableString(pickValue(product, ["unidadeMedida", "unidade"])),
+    icmsStRetentionBaseCents: toMoneyCents(pickValue(product, ["valorBaseIcmsStRetencao"])),
+    icmsStRetentionValueCents: toMoneyCents(pickValue(product, ["valorIcmsStRetencao"])),
+    icmsSubstituteOwnValueCents: toMoneyCents(pickValue(product, ["valorIcmsProprioSubstituto"])),
+    productCategoryName: categoryName,
+    additionalInfo: toNullableString(pickValue(product, ["informacoesAdicionais"])),
     // No Bling, "A" representa produto ativo.
-    active: u,
+    active: activeFlag,
     // Datas e metadados de sincronização.
-    remoteCreatedAt: b(f(t, ["dataCriacao"])),
-    remoteUpdatedAt: b(f(t, ["dataAlteracao"])),
-    lastSyncedAt: e,
+    remoteCreatedAt: toNullableString(pickValue(product, ["dataCriacao"])),
+    remoteUpdatedAt: toNullableString(pickValue(product, ["dataAlteracao"])),
+    lastSyncedAt: now,
     syncStatus: "synced",
     // Guarda o payload original para auditoria/debug e futuras evoluções do mapeamento.
-    raw: t,
-    updatedAt: e
+    raw: product,
+    updatedAt: now
   };
 }
-function eo(t) {
-  if (!t || typeof t != "object") return null;
-  const e = "produto" in t && t.produto && typeof t.produto == "object" ? t.produto : t;
-  if (!e || typeof e != "object") return null;
-  const r = e;
-  return !r.id || typeof r.nome != "string" || !r.nome.trim() ? null : r;
+function normalizeBlingProduct(item) {
+  if (!item || typeof item !== "object") return null;
+  const candidate = "produto" in item && item.produto && typeof item.produto === "object" ? item.produto : item;
+  if (!candidate || typeof candidate !== "object") return null;
+  const product = candidate;
+  if (!product.id || typeof product.nome !== "string" || !product.nome.trim()) {
+    return null;
+  }
+  return product;
 }
-class pm {
+class SyncProductsFromBlingService {
   /**
    * Executa a sincronização de produtos do Bling para o banco local.
    *
@@ -14484,208 +17064,352 @@ class pm {
    * 5. Atualiza estado e log de sincronização.
    */
   async execute() {
-    const e = we.get($e, Jt), r = Ea.countByIntegrationSource($e), a = !e || !e.lastSuccessAt || r === 0, n = a ? "initial" : "incremental", o = a ? void 0 : Em(e);
-    we.markRunning($e, Jt);
-    const s = pe(), i = Ze.start({
-      integrationId: $e,
-      resource: Jt,
-      mode: n,
-      startedAt: s
+    const state = syncStateRepository.get(INTEGRATION_ID, RESOURCE);
+    const localCount = productRepository.countByIntegrationSource(INTEGRATION_ID);
+    const isInitial = !state || !state.lastSuccessAt || localCount === 0;
+    const mode = isInitial ? "initial" : "incremental";
+    const dataAlteracaoInicial = isInitial ? void 0 : getIncrementalCursor(state);
+    syncStateRepository.markRunning(INTEGRATION_ID, RESOURCE);
+    const startedAt = nowIso();
+    const logId = syncLogRepository.start({
+      integrationId: INTEGRATION_ID,
+      resource: RESOURCE,
+      mode,
+      startedAt
     });
-    let c = 0, u = 0, l = 0, E = 0, m = (e == null ? void 0 : e.checkpointCursor) ?? null;
+    let totalProcessed = 0;
+    let totalCreated = 0;
+    let totalUpdated = 0;
+    let totalFailed = 0;
+    let checkpointCursor = (state == null ? void 0 : state.checkpointCursor) ?? null;
     try {
-      const T = Lr.getAllExternalIdMap($e);
-      let h = 1, g = !0;
-      for (; g; ) {
-        const P = await Ge.getProducts({
-          page: h,
-          limit: Jn,
-          criterio: sm,
-          dataAlteracaoInicial: o
-        }), Y = Array.isArray(P.data) ? P.data : [], re = Y.map(eo), B = re.filter((S) => S != null);
-        if (E += re.length - B.length, B.length === 0) {
-          Y.length > 0 && console.warn("[SyncProductsFromBlingService] Nenhum produto válido encontrado na página. Exemplo de payload:", Y[0]), g = !1;
+      const categoryIdMap = categoryRepository.getAllExternalIdMap(INTEGRATION_ID);
+      let page = 1;
+      let hasMore = true;
+      while (hasMore) {
+        const response = await blingApiService.getProducts({
+          page,
+          limit: PAGE_LIMIT,
+          criterio: PRODUCT_LIST_CRITERION,
+          dataAlteracaoInicial
+        });
+        const rawItems = Array.isArray(response.data) ? response.data : [];
+        const normalizedProducts = rawItems.map(normalizeBlingProduct);
+        const validRaw = normalizedProducts.filter((item) => item != null);
+        totalFailed += normalizedProducts.length - validRaw.length;
+        if (validRaw.length === 0) {
+          if (rawItems.length > 0) {
+            console.warn("[SyncProductsFromBlingService] Nenhum produto válido encontrado na página. Exemplo de payload:", rawItems[0]);
+          }
+          hasMore = false;
           break;
         }
-        const X = [];
-        for (const S of B)
+        const detailedProducts = [];
+        for (const product of validRaw) {
           try {
-            const k = await Ge.getProductById(S.id), ye = eo(k.data) ?? S;
-            X.push({ ...S, ...ye }), await ha(120);
-          } catch (k) {
-            console.warn(`[SyncProductsFromBlingService] Falha ao buscar detalhe do produto ${S.id}. Usando payload da listagem.`, k), X.push(S);
+            const detailResponse = await blingApiService.getProductById(product.id);
+            const detailed = normalizeBlingProduct(detailResponse.data) ?? product;
+            detailedProducts.push({ ...product, ...detailed });
+            await sleep(120);
+          } catch (detailError) {
+            console.warn(`[SyncProductsFromBlingService] Falha ao buscar detalhe do produto ${product.id}. Usando payload da listagem.`, detailError);
+            detailedProducts.push(product);
           }
-        const K = pe(), W = X.map((S) => mm(S, K, T)), Oe = W.filter((S) => !S.ncm || !S.origin);
-        Oe.length > 0 && console.warn("[SyncProductsFromBlingService] Produtos sem NCM/origem apos detalhe do Bling:", Oe.slice(0, 5).map((S) => ({
-          externalId: S.externalId,
-          sku: S.sku,
-          name: S.name,
-          ncm: S.ncm,
-          origin: S.origin,
-          rawKeys: S.raw && typeof S.raw == "object" ? Object.keys(S.raw) : [],
-          tributacao: S.raw && typeof S.raw == "object" ? S.raw.tributacao : void 0
-        })));
-        for (const S of W)
-          S.remoteUpdatedAt && (!m || S.remoteUpdatedAt > m) && (m = S.remoteUpdatedAt);
-        const Se = W.map((S) => S.externalId), Me = new Set(
-          Ea.getExternalIdsBySource($e, Se)
+        }
+        const now = nowIso();
+        const mapped = detailedProducts.map((product) => mapBlingProduct(product, now, categoryIdMap));
+        const missingFiscal = mapped.filter((product) => !product.ncm || !product.origin);
+        if (missingFiscal.length > 0) {
+          console.warn("[SyncProductsFromBlingService] Produtos sem NCM/origem apos detalhe do Bling:", missingFiscal.slice(0, 5).map((product) => ({
+            externalId: product.externalId,
+            sku: product.sku,
+            name: product.name,
+            ncm: product.ncm,
+            origin: product.origin,
+            rawKeys: product.raw && typeof product.raw === "object" ? Object.keys(product.raw) : [],
+            tributacao: product.raw && typeof product.raw === "object" ? product.raw.tributacao : void 0
+          })));
+        }
+        for (const product of mapped) {
+          if (product.remoteUpdatedAt && (!checkpointCursor || product.remoteUpdatedAt > checkpointCursor)) {
+            checkpointCursor = product.remoteUpdatedAt;
+          }
+        }
+        const externalIds = mapped.map((p) => p.externalId);
+        const existingIds = new Set(
+          productRepository.getExternalIdsBySource(INTEGRATION_ID, externalIds)
         );
-        for (const S of W)
-          Me.has(S.externalId) ? l++ : u++;
-        W.length > 0 && Ea.upsertMany(W), c += Y.length, Y.length < Jn ? g = !1 : (h++, await ha(350));
+        for (const p of mapped) {
+          if (existingIds.has(p.externalId)) {
+            totalUpdated++;
+          } else {
+            totalCreated++;
+          }
+        }
+        if (mapped.length > 0) {
+          productRepository.upsertMany(mapped);
+        }
+        totalProcessed += rawItems.length;
+        if (rawItems.length < PAGE_LIMIT) {
+          hasMore = false;
+        } else {
+          page++;
+          await sleep(350);
+        }
       }
-      const y = pe();
-      return we.markSuccess(
-        $e,
-        Jt,
-        m ?? hs(y)
-      ), Ze.finish({
-        id: i,
+      const finishedAt = nowIso();
+      syncStateRepository.markSuccess(
+        INTEGRATION_ID,
+        RESOURCE,
+        checkpointCursor ?? toBlingDateTime(finishedAt)
+      );
+      syncLogRepository.finish({
+        id: logId,
         status: "success",
-        finishedAt: y,
-        itemsProcessed: c,
-        itemsCreated: u,
-        itemsUpdated: l,
-        itemsFailed: E
-      }), { mode: n, processed: c, created: u, updated: l, failed: E };
-    } catch (T) {
-      const h = pe(), g = T instanceof Error ? T.message : String(T);
-      throw we.markError($e, Jt, g), Ze.finish({
-        id: i,
+        finishedAt,
+        itemsProcessed: totalProcessed,
+        itemsCreated: totalCreated,
+        itemsUpdated: totalUpdated,
+        itemsFailed: totalFailed
+      });
+      return { mode, processed: totalProcessed, created: totalCreated, updated: totalUpdated, failed: totalFailed };
+    } catch (error) {
+      const finishedAt = nowIso();
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      syncStateRepository.markError(INTEGRATION_ID, RESOURCE, errorMessage);
+      syncLogRepository.finish({
+        id: logId,
         status: "failed",
-        finishedAt: h,
-        itemsProcessed: c,
-        itemsCreated: u,
-        itemsUpdated: l,
-        itemsFailed: E,
-        errorMessage: g
-      }), T;
+        finishedAt,
+        itemsProcessed: totalProcessed,
+        itemsCreated: totalCreated,
+        itemsUpdated: totalUpdated,
+        itemsFailed: totalFailed,
+        errorMessage
+      });
+      throw error;
     }
   }
 }
-const Is = new pm();
-class Tm {
+const syncProductsFromBlingService = new SyncProductsFromBlingService();
+class SyncAllFromBlingService {
   async execute() {
-    const e = await As.execute(), r = await Is.execute();
-    return { categories: e, products: r };
+    const categories = await syncCategoriesFromBlingService.execute();
+    const products = await syncProductsFromBlingService.execute();
+    return { categories, products };
   }
 }
-const _m = new Tm();
-function fm() {
-  p.handle("integrations:status", async (t, e) => (A("integrations:manage"), e !== "bling" ? { connected: !1 } : await Rr.getStatus())), p.handle("integrations:connect", async (t, e) => {
-    if (A("integrations:manage"), e !== "bling")
-      return { success: !1, message: `Integração ${e} ainda não implementada.` };
-    try {
-      return await Rr.connect();
-    } catch (r) {
-      return console.error("[integrations:connect]", r), { success: !1, message: r instanceof Error ? r.message : "Erro ao conectar com o Bling." };
+const syncAllFromBlingService = new SyncAllFromBlingService();
+function registerIntegrationHandlers() {
+  ipcMain.handle("integrations:status", async (_event, integrationId) => {
+    assertCurrentUserPermission("integrations:manage");
+    if (integrationId !== "bling") {
+      return { connected: false };
     }
-  }), p.handle("integrations:disconnect", async (t, e) => {
-    if (A("integrations:manage"), e !== "bling")
-      return { success: !1, message: `Integração ${e} ainda não implementada.` };
-    try {
-      return await Rr.disconnect();
-    } catch (r) {
-      return console.error("[integrations:disconnect]", r), { success: !1, message: r instanceof Error ? r.message : "Erro ao desconectar Bling." };
+    return await blingOAuthService.getStatus();
+  });
+  ipcMain.handle("integrations:connect", async (_event, integrationId) => {
+    assertCurrentUserPermission("integrations:manage");
+    if (integrationId !== "bling") {
+      return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
     }
-  }), p.handle("integrations:bling:sync-all", async () => {
-    A("integrations:manage");
     try {
-      return { success: !0, ...await _m.execute() };
-    } catch (t) {
-      return console.error("[integrations:bling:sync-all]", t), {
-        success: !1,
-        message: t instanceof Error ? t.message : "Erro ao sincronizar."
+      return await blingOAuthService.connect();
+    } catch (error) {
+      console.error("[integrations:connect]", error);
+      return { success: false, message: error instanceof Error ? error.message : "Erro ao conectar com o Bling." };
+    }
+  });
+  ipcMain.handle("integrations:disconnect", async (_event, integrationId) => {
+    assertCurrentUserPermission("integrations:manage");
+    if (integrationId !== "bling") {
+      return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
+    }
+    try {
+      return await blingOAuthService.disconnect();
+    } catch (error) {
+      console.error("[integrations:disconnect]", error);
+      return { success: false, message: error instanceof Error ? error.message : "Erro ao desconectar Bling." };
+    }
+  });
+  ipcMain.handle("integrations:bling:sync-all", async () => {
+    assertCurrentUserPermission("integrations:manage");
+    try {
+      const result = await syncAllFromBlingService.execute();
+      return { success: true, ...result };
+    } catch (error) {
+      console.error("[integrations:bling:sync-all]", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Erro ao sincronizar."
       };
     }
-  }), p.handle("integrations:bling:sync", async () => {
-    A("integrations:manage");
+  });
+  ipcMain.handle("integrations:bling:sync", async () => {
+    assertCurrentUserPermission("integrations:manage");
     try {
-      return { success: !0, ...await Is.execute() };
-    } catch (t) {
-      return console.error("[integrations:bling:sync]", t), {
-        success: !1,
-        message: t instanceof Error ? t.message : "Erro ao sincronizar produtos."
+      const result = await syncProductsFromBlingService.execute();
+      return { success: true, ...result };
+    } catch (error) {
+      console.error("[integrations:bling:sync]", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Erro ao sincronizar produtos."
       };
     }
-  }), p.handle("integrations:bling:sync-categories", async () => {
-    A("integrations:manage");
+  });
+  ipcMain.handle("integrations:bling:sync-categories", async () => {
+    assertCurrentUserPermission("integrations:manage");
     try {
-      return { success: !0, ...await As.execute() };
-    } catch (t) {
-      return console.error("[integrations:bling:sync-categories]", t), {
-        success: !1,
-        message: t instanceof Error ? t.message : "Erro ao sincronizar categorias."
+      const result = await syncCategoriesFromBlingService.execute();
+      return { success: true, ...result };
+    } catch (error) {
+      console.error("[integrations:bling:sync-categories]", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Erro ao sincronizar categorias."
       };
     }
-  }), p.handle("integrations:bling:sync-status", () => (A("integrations:manage"), we.get("bling", "products"))), p.handle("integrations:bling:sync-status-categories", () => (A("integrations:manage"), we.get("bling", "categories"))), p.handle("integrations:bling:sync-logs", () => (A("integrations:manage"), Ze.listByIntegration("bling", "products", 10))), p.handle("integrations:bling:sync-logs-categories", () => (A("integrations:manage"), Ze.listByIntegration("bling", "categories", 10))), p.handle("integrations:bling:test", async () => (A("integrations:manage"), await Ge.getProducts({ page: 1, limit: 5 }))), p.handle("integrations:bling:debug-product", async (t, e) => {
-    if (A("integrations:manage"), e != null && e.id)
-      return await Ge.getProductById(e.id);
-    if (e != null && e.code) {
-      const r = await Ge.getProductByCode(e.code), a = Array.isArray(r.data) ? r.data[0] : null;
-      return a != null && a.id ? {
-        list: r,
-        detail: await Ge.getProductById(a.id)
-      } : { data: null, list: r };
+  });
+  ipcMain.handle("integrations:bling:sync-status", () => {
+    assertCurrentUserPermission("integrations:manage");
+    return syncStateRepository.get("bling", "products");
+  });
+  ipcMain.handle("integrations:bling:sync-status-categories", () => {
+    assertCurrentUserPermission("integrations:manage");
+    return syncStateRepository.get("bling", "categories");
+  });
+  ipcMain.handle("integrations:bling:sync-logs", () => {
+    assertCurrentUserPermission("integrations:manage");
+    return syncLogRepository.listByIntegration("bling", "products", 10);
+  });
+  ipcMain.handle("integrations:bling:sync-logs-categories", () => {
+    assertCurrentUserPermission("integrations:manage");
+    return syncLogRepository.listByIntegration("bling", "categories", 10);
+  });
+  ipcMain.handle("integrations:bling:test", async () => {
+    assertCurrentUserPermission("integrations:manage");
+    return await blingApiService.getProducts({ page: 1, limit: 5 });
+  });
+  ipcMain.handle("integrations:bling:debug-product", async (_event, input) => {
+    assertCurrentUserPermission("integrations:manage");
+    if (input == null ? void 0 : input.id) {
+      return await blingApiService.getProductById(input.id);
+    }
+    if (input == null ? void 0 : input.code) {
+      const list = await blingApiService.getProductByCode(input.code);
+      const first = Array.isArray(list.data) ? list.data[0] : null;
+      if (!(first == null ? void 0 : first.id)) {
+        return { data: null, list };
+      }
+      return {
+        list,
+        detail: await blingApiService.getProductById(first.id)
+      };
     }
     throw new Error("Informe id ou code para diagnosticar produto do Bling.");
-  }), p.handle("integrations:bling:test-categories", async () => (A("integrations:manage"), await Ge.getCategories({ page: 1, limit: 5 }))), p.handle("integrations:bling:test-icmp", async () => (A("integrations:manage"), await Ge.ping()));
+  });
+  ipcMain.handle("integrations:bling:test-categories", async () => {
+    assertCurrentUserPermission("integrations:manage");
+    return await blingApiService.getCategories({ page: 1, limit: 5 });
+  });
+  ipcMain.handle("integrations:bling:test-icmp", async () => {
+    assertCurrentUserPermission("integrations:manage");
+    return await blingApiService.ping();
+  });
 }
-const Cs = import.meta.dirname;
-process.env.APP_ROOT = F.join(Cs, "..");
-const Q = process.env.VITE_DEV_SERVER_URL, ym = F.join(process.env.APP_ROOT, "dist-electron"), Ds = F.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = Q ? F.join(process.env.APP_ROOT, "public") : Ds;
-let fe = null;
-function vs() {
-  fe = new ce({
-    icon: F.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+const __dirname$1 = import.meta.dirname;
+process.env.APP_ROOT = path__default.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path__default.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path__default.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path__default.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win = null;
+function createWindow() {
+  win = new BrowserWindow({
+    icon: path__default.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: F.join(Cs, "preload.mjs"),
-      contextIsolation: !0,
-      nodeIntegration: !1
+      preload: path__default.join(__dirname$1, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false
     }
-  }), fe.webContents.on("did-finish-load", () => {
-    fe == null || fe.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), fe.webContents.on("did-fail-load", (t, e, r) => {
-    N.error(`Renderer falhou ao carregar: [${e}] ${r}`);
-  }), fe.webContents.on("render-process-gone", (t, e) => {
-    N.error(`Renderer process encerrado: ${e.reason}`);
-  }), Q ? fe.loadURL(Q) : fe.loadFile(F.join(Ds, "index.html")), fe.maximize(), fe.on(
+  });
+  win.webContents.on("did-finish-load", () => {
+    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  });
+  win.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
+    logger.error(`Renderer falhou ao carregar: [${errorCode}] ${errorDescription}`);
+  });
+  win.webContents.on("render-process-gone", (_event, details) => {
+    logger.error(`Renderer process encerrado: ${details.reason}`);
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(path__default.join(RENDERER_DIST, "index.html"));
+  }
+  win.maximize();
+  win.on(
     "close",
     () => {
     }
   );
 }
-De.on("before-quit", () => {
-  const t = Va();
-  t && gs(t);
+app.on("before-quit", () => {
+  const sessionId = getCurrentSession();
+  if (sessionId) {
+    encerrarSessao(sessionId);
+  }
 });
-De.on("window-all-closed", () => {
-  process.platform !== "darwin" && (De.quit(), fe = null);
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
 });
-De.on("activate", () => {
-  ce.getAllWindows().length === 0 && vs();
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
-p.on("app:fechar-janela", () => {
-  const t = ce.getFocusedWindow();
-  t && t.close();
+ipcMain.on("app:fechar-janela", () => {
+  const win2 = BrowserWindow.getFocusedWindow();
+  if (win2) {
+    win2.close();
+  }
 });
-p.handle("app:quit-with-confirm", async () => {
-  N.info("Encerramento solicitado pelo usuário");
-  const { response: t } = await ro.showMessageBox({
+ipcMain.handle("app:quit-with-confirm", async () => {
+  logger.info("Encerramento solicitado pelo usuário");
+  const { response } = await dialog.showMessageBox({
     type: "question",
     buttons: ["Cancelar", "Sair"],
     defaultId: 1,
     cancelId: 0,
     message: "Tem certeza que deseja sair do sistema?"
   });
-  return t === 1 ? (De.quit(), !0) : !1;
+  if (response === 1) {
+    app.quit();
+    return true;
+  }
+  return false;
 });
-De.whenReady().then(() => {
-  _i(), lE(), XE(), RE(), BE(), kE(), $E(), GE(), qE(), VE(), fm(), vs(), N.info("Criado janela principal do App");
+app.whenReady().then(() => {
+  enableForeignKeys();
+  startFiscalQueueWorker();
+  registerWindowHandlers();
+  registerFiscalHandlers();
+  registerSalesHandlers();
+  registerProductHandlers();
+  registerPrinterhandlers();
+  registerAuthHandlers();
+  registerUserHandlers();
+  registerPosHandlers();
+  registerIntegrationHandlers();
+  createWindow();
+  logger.info("Criado janela principal do App");
 });
 export {
-  ym as MAIN_DIST,
-  Ds as RENDERER_DIST,
-  Q as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };
