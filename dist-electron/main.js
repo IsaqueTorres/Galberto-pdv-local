@@ -15670,6 +15670,24 @@ function generateRandomState(size = 32) {
 function toBasicAuth(clientId, clientSecret) {
   return Buffer.from(`${clientId}:${clientSecret}`, "utf8").toString("base64");
 }
+const blingAppConfig = {
+  clientId: "544f921fc8bd37fa2a319af77786addf385afffd",
+  clientSecret: "ee219a1ca80750c753d0629753ff51992354d4c7a4dcf1d877ca55a4b7db",
+  redirectUri: "http://127.0.0.1:47831/callback/bling"
+};
+function requireConfigValue(value, fieldName) {
+  if (!value.trim()) {
+    throw new Error(`Configuração OAuth do Bling ausente: ${fieldName}`);
+  }
+  return value;
+}
+function getBlingAppConfig() {
+  return {
+    clientId: requireConfigValue(blingAppConfig.clientId, "clientId"),
+    clientSecret: requireConfigValue(blingAppConfig.clientSecret, "clientSecret"),
+    redirectUri: requireConfigValue(blingAppConfig.redirectUri, "redirectUri")
+  };
+}
 class IntegrationRepository {
   getByIntegrationId(integrationId) {
     const stmt = db.prepare(`
@@ -15755,13 +15773,6 @@ const integrationRepository = new IntegrationRepository();
 const BLING_AUTHORIZE_URL = "https://www.bling.com.br/Api/v3/oauth/authorize";
 const BLING_TOKEN_URL = "https://api.bling.com.br/Api/v3/oauth/token";
 const BLING_REVOKE_URL = "https://api.bling.com.br/oauth/revoke";
-function getRequiredEnv(name) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Variável de ambiente ausente: ${name}`);
-  }
-  return value;
-}
 function parseRedirectUri(redirectUri) {
   const url = new URL$1(redirectUri);
   if (url.protocol !== "http:") {
@@ -15800,8 +15811,7 @@ class BlingOAuthService {
     }
   }
   async connect() {
-    const clientId = getRequiredEnv("VITE_BLING_CLIENT_ID");
-    const redirectUri = getRequiredEnv("VITE_BLING_REDIRECT_URI");
+    const { clientId, redirectUri } = getBlingAppConfig();
     const state = generateRandomState(24);
     const code = await this.requestAuthorizationCode({
       clientId,
@@ -15815,8 +15825,7 @@ class BlingOAuthService {
     };
   }
   async disconnect() {
-    const clientId = getRequiredEnv("VITE_BLING_CLIENT_ID");
-    const clientSecret = getRequiredEnv("VITE_BLING_CLIENT_SECRET");
+    const { clientId, clientSecret } = getBlingAppConfig();
     const saved = integrationRepository.getByIntegrationId("bling");
     if (!saved) {
       return {
@@ -15973,9 +15982,7 @@ class BlingOAuthService {
     });
   }
   async exchangeCodeForToken(code) {
-    const clientId = getRequiredEnv("VITE_BLING_CLIENT_ID");
-    const clientSecret = getRequiredEnv("VITE_BLING_CLIENT_SECRET");
-    const redirectUri = getRequiredEnv("VITE_BLING_REDIRECT_URI");
+    const { clientId, clientSecret, redirectUri } = getBlingAppConfig();
     const body = new URLSearchParams({
       grant_type: "authorization_code",
       code,
@@ -15999,8 +16006,7 @@ class BlingOAuthService {
     this.persistToken(data);
   }
   async refreshAccessToken(refreshToken) {
-    const clientId = getRequiredEnv("VITE_BLING_CLIENT_ID");
-    const clientSecret = getRequiredEnv("VITE_BLING_CLIENT_SECRET");
+    const { clientId, clientSecret } = getBlingAppConfig();
     const body = new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: refreshToken

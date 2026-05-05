@@ -12,17 +12,9 @@
 
     ### 2. OBJETIVO DESTA TAREFA
 
-GPT o problema nao é mais errorHandler e sim "CERTIFICATE_READ_FAILED: Não foi possível validar o certificado digital informado".
+Certo defini o arqivo ./electron/application/integrations/config/bling-app.config.ts e declarei as variaveis em bling-oauth.service.ts, porem retorna que a const is declared but its value is never read. Vai funcionar mesmo assim?
 
-Ja validei que o certificado esta funcionando.
-    - ele consegue ser validado no cmd pelo openssl
-    - no linux ele conecta na SEFAZ e emite nfc-e no ambiente de homologacao.
 
-openssl esta instalado.
-    - Ele é chamado com sucesso com o comando openssl version -a no cmd.
 
-o caminho do certificado esta correto
-    - sem "" no path
-    - existe o certificado no local
 
-No linux tudo funciona porem no windows nao funciona.
+
