@@ -4,8 +4,6 @@ import {
   Database,
   LayoutDashboard,
   Settings,
-  ShieldCheck,
-  ShoppingBag,
   Zap,
   type LucideIcon,
 } from "lucide-react";
