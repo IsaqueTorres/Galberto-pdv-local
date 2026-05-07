@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import ConfigUsuarios from './ConfigUsuarios'
 import ConfigPrinters from './ConfigPrinters'
-import ConfigERP from './ConfigERP'
 import ConfigFiscal from './ConfigFiscal'
 import { Tab } from './components/Tab'
 import { AbaConfig } from './types/config.types'
@@ -33,12 +32,6 @@ export default function Config() {
       component: <ConfigPrinters />,
     },
     {
-      key: 'Integracoes / ERP',
-      label: 'Integracoes / ERP',
-      permission: 'integrations:manage',
-      component: <ConfigERP />,
-    },
-    {
       key: 'Fiscal',
       label: 'Fiscal',
       permission: 'fiscal:manage',
@@ -63,7 +56,7 @@ export default function Config() {
             <div>
               <h1 className="text-2xl font-black tracking-tight text-blue-950">Configurações do sistema</h1>
               <p className="text-sm text-blue-800">
-                Gerencie usuários, impressoras e integrações do PDV.
+                Gerencie usuários, impressoras e configurações fiscais do PDV Local.
               </p>
             </div>
 

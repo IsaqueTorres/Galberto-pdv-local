@@ -139,6 +139,94 @@ export type ProductRecord = {
   raw_json: string | null;
 };
 
+export type LocalCategory = {
+  id: string;
+  name: string;
+  active: number;
+  integration_source?: string | null;
+  sync_status?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  deleted_at?: string | null;
+};
+
+export type LocalProductPayload = {
+  name: string;
+  sku?: string | null;
+  barcode?: string | null;
+  category_id?: string | null;
+  unit?: string | null;
+  sale_price_cents: number;
+  cost_price_cents?: number;
+  minimum_stock?: number;
+  maximum_stock?: number | null;
+  active?: number;
+  ncm?: string | null;
+  cfop?: string | null;
+  origin?: string | null;
+  cest?: string | null;
+  notes?: string | null;
+  situation?: string | null;
+  supplier_code?: string | null;
+  supplier_name?: string | null;
+  location?: string | null;
+  brand?: string | null;
+  product_group?: string | null;
+  short_description?: string | null;
+  complementary_description?: string | null;
+  additional_info?: string | null;
+};
+
+export type LocalStockMovementType = 'entry' | 'exit' | 'adjustment' | 'sale' | 'sale_cancel';
+
+export type LocalStockProduct = {
+  id: string;
+  name: string;
+  sku: string | null;
+  barcode: string | null;
+  unit: string | null;
+  current_stock: number;
+  minimum_stock: number;
+  maximum_stock: number | null;
+  active: number;
+  category_id: string | null;
+  category_name: string | null;
+  updated_at: string | null;
+};
+
+export type StockMovementInput = {
+  productId: string;
+  type: 'entry' | 'exit' | 'adjustment';
+  quantity?: number;
+  newStock?: number;
+  reason: string;
+  notes?: string | null;
+};
+
+export type StockMovementRecord = {
+  id: string;
+  product_id: string;
+  product_name: string;
+  sku: string | null;
+  barcode: string | null;
+  type: LocalStockMovementType;
+  quantity: number;
+  previous_stock: number;
+  new_stock: number;
+  reason: string;
+  notes: string | null;
+  reference_type: string | null;
+  reference_id: string | null;
+  created_at: string;
+};
+
+export type PaginatedResult<T> = {
+  data: T[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
 export interface StockMovementResult {
   success: boolean;
   movementId?: number;
@@ -178,8 +266,5 @@ export type ProdutoCarrinho = {
   quantidade: number
   imagem?: string
 }
-
-
-
 
 

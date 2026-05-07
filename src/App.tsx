@@ -6,6 +6,7 @@ import ProductsMainPage from "./pages/products/ProductsMainPage"
 import Config from "./pages/config/ConfigMainPage";
 import PdvRapido from "./pages/POS/PdvRapido";
 import SearchProduct from "./pages/products/SearchProducts";
+import ProdutoView from "./pages/products/ProdutoView";
 import ConfigUsuarios from "./pages/config/ConfigUsuarios"
 import ConfigPrinters from "./pages/config/ConfigPrinters"
 import UsuarioView from "./pages/config/UsuarioView";
@@ -39,6 +40,7 @@ export default function App() {
 
         {/* ROTAS DA PAGINA PRODUTOS */}
         <Route path="/products/search" element={<RequirePermission anyOf={["products:view"]}><SearchProduct /></RequirePermission>} />
+        <Route path="/products/:id" element={<RequirePermission anyOf={["products:view"]}><ProdutoView /></RequirePermission>} />
 
 
         {/* ROTAS DA PAGINA  VENDAS*/}

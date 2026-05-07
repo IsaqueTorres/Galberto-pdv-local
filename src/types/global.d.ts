@@ -1,4 +1,18 @@
-import { ProductFormData, ProductRecord, insertStockMovement, ProdutoInput, Produto, ProdutoCarrinho } from "../pages/products/types/products.types";
+import {
+    LocalCategory,
+    LocalProductPayload,
+    LocalStockMovementType,
+    LocalStockProduct,
+    PaginatedResult,
+    ProductFormData,
+    ProductRecord,
+    StockMovementInput,
+    StockMovementRecord,
+    insertStockMovement,
+    ProdutoInput,
+    Produto,
+    ProdutoCarrinho
+} from "../pages/products/types/products.types";
 import {
     CashMovementData,
     CashSessionActionResult,
@@ -94,13 +108,13 @@ declare global {
             retomarVendaNoPdv: (venda: unknown) => void
             onVendaRetomada: (callback: (venda: unknown) => void) => () => void
             removerProdutos?: () => void;
-            getProductById: (id: number) => Promise<ProductRecord | null>;
+            getProductById: (id: string | number) => Promise<ProductRecord | null>;
             buscarProdutoPorNome: (termo: string) => Promise<any>;
             buscarProdutoPorCodigoBarras: (termo: string) => Promise<any>;
             definirAlertasProduto?: () => void;
             relatoriosDeProduto?: () => void;
             alterarProduto: (dados: any) => Promise<number>;
-            openProductDetails: (id: number) => Promise<number>;
+            openProductDetails: (id: string | number) => Promise<number>;
 
             movimentarProduto?: () => void;
             alterarProdutos?: () => void;
@@ -125,6 +139,13 @@ declare global {
                 limit: number
                 total: number
             }>
+            createLocalProduct: (input: LocalProductPayload) => Promise<ProductRecord>;
+            updateLocalProduct: (id: string, input: LocalProductPayload) => Promise<ProductRecord>;
+            softDeleteLocalProduct: (id: string) => Promise<{ success: boolean }>;
+            listLocalCategories: (params?: { activeOnly?: boolean }) => Promise<LocalCategory[]>;
+            createLocalCategory: (input: { name: string; active: number }) => Promise<LocalCategory>;
+            updateLocalCategory: (id: string, input: { name: string; active: number }) => Promise<LocalCategory>;
+            softDeleteLocalCategory: (id: string) => Promise<{ success: boolean; deactivatedOnly?: boolean }>;
 
             listarUsuarios: (params: UsuarioFiltro) => Promise<UsuarioListagem>
             abrirCadastroUsuarios: () => void;
@@ -160,6 +181,27 @@ declare global {
             // ESTOQUE
 
             searchProductsForStockMovement: (term: string) => Promise<Product>; // validado
+            stock: {
+                listProducts: (params?: {
+                    term?: string;
+                    stockFilter?: 'all' | 'low' | 'out';
+                    active?: number;
+                    page?: number;
+                    limit?: number;
+                }) => Promise<PaginatedResult<LocalStockProduct>>;
+                getProductStock: (productId: string) => Promise<LocalStockProduct>;
+                createMovement: (input: StockMovementInput) => Promise<LocalStockProduct>;
+                listMovements: (params?: {
+                    productId?: string;
+                    type?: LocalStockMovementType;
+                    page?: number;
+                    limit?: number;
+                }) => Promise<PaginatedResult<StockMovementRecord>>;
+                listMovementsByProduct: (productId: string, params?: {
+                    page?: number;
+                    limit?: number;
+                }) => Promise<PaginatedResult<StockMovementRecord>>;
+            };
             insertProductIntoStock: (FormData: InsertStockMovementParams) => Promise<StockMovementResult>; // validado
 
 

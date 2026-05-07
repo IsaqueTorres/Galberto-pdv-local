@@ -1,5 +1,23 @@
 import { ipcMain } from "electron";
-import { listarProdutos, select_product_by_id, buscarProdutosPorNome, buscarProdutoPorCodigoBarras, selectSuggestionProduct} from "../database/db";
+import {
+  listarProdutos,
+  select_product_by_id,
+  buscarProdutosPorNome,
+  buscarProdutoPorCodigoBarras,
+  selectSuggestionProduct,
+  createLocalProduct,
+  updateLocalProduct,
+  softDeleteLocalProduct,
+  listLocalCategories,
+  createLocalCategory,
+  updateLocalCategory,
+  softDeleteLocalCategory,
+  listLocalStockProducts,
+  getLocalProductStock,
+  createStockMovement,
+  listStockMovements,
+  listStockMovementsByProduct,
+} from "../database/db";
 
 
 export default function registerProductHandlers() {
@@ -29,5 +47,59 @@ export default function registerProductHandlers() {
   ipcMain.handle("suggest-product-by-term", (_, term: string) =>{
     return selectSuggestionProduct(term)
   })
+
+  ipcMain.handle("produtos:create-local", (_, input) => {
+    return createLocalProduct(input);
+  });
+
+  ipcMain.handle("produtos:update-local", (_, id: string, input) => {
+    if (!id) throw new Error("ID inválido");
+    return updateLocalProduct(id, input);
+  });
+
+  ipcMain.handle("produtos:soft-delete-local", (_, id: string) => {
+    if (!id) throw new Error("ID inválido");
+    return softDeleteLocalProduct(id);
+  });
+
+  ipcMain.handle("categories:list-local", (_, params) => {
+    return listLocalCategories(params);
+  });
+
+  ipcMain.handle("categories:create-local", (_, input) => {
+    return createLocalCategory(input);
+  });
+
+  ipcMain.handle("categories:update-local", (_, id: string, input) => {
+    if (!id) throw new Error("ID inválido");
+    return updateLocalCategory(id, input);
+  });
+
+  ipcMain.handle("categories:soft-delete-local", (_, id: string) => {
+    if (!id) throw new Error("ID inválido");
+    return softDeleteLocalCategory(id);
+  });
+
+  ipcMain.handle("stock:list-products", (_, params) => {
+    return listLocalStockProducts(params);
+  });
+
+  ipcMain.handle("stock:get-product", (_, productId: string) => {
+    if (!productId) throw new Error("Produto inválido");
+    return getLocalProductStock(productId);
+  });
+
+  ipcMain.handle("stock:create-movement", (_, input) => {
+    return createStockMovement(input);
+  });
+
+  ipcMain.handle("stock:list-movements", (_, params) => {
+    return listStockMovements(params);
+  });
+
+  ipcMain.handle("stock:list-movements-by-product", (_, productId: string, params) => {
+    if (!productId) throw new Error("Produto inválido");
+    return listStockMovementsByProduct(productId, params);
+  });
 
 }

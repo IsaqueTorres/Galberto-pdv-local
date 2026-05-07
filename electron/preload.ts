@@ -43,7 +43,7 @@ contextBridge.exposeInMainWorld("api", {
   openEditUserWindow: (id: number) => ipcRenderer.send("window:open:edit-user", id),
 
   // Chamada IPC Segura: Abrir Janela Detalhes Produtos
-  openProductDetails: (id: number) => ipcRenderer.send("open:product-details-window", id),
+  openProductDetails: (id: string | number) => ipcRenderer.send("open:product-details-window", id),
 
   // FIM DAS PONTES QUE INTERAGEM COM JANELAS //
 
@@ -53,12 +53,26 @@ contextBridge.exposeInMainWorld("api", {
 
   // Chamada IPC Segura para interagir com a tabela produtos.
   listarProdutos: (params: any) => ipcRenderer.invoke("produtos:get", params),
+  createLocalProduct: (input: any) => ipcRenderer.invoke("produtos:create-local", input),
+  updateLocalProduct: (id: string, input: any) => ipcRenderer.invoke("produtos:update-local", id, input),
+  softDeleteLocalProduct: (id: string) => ipcRenderer.invoke("produtos:soft-delete-local", id),
   buscarProdutoPorCodigoBarras: (codigo: string) => ipcRenderer.invoke("produtos:buscar-por-codigo-de-barras", codigo),
   buscarProdutoPorNome: (termo: any) => ipcRenderer.invoke("produtos:buscar-por-nome", termo),
-  getProductById: (id: number) => ipcRenderer.invoke("get-products-by-id", id), // antes buscarProdutoPorID
+  getProductById: (id: string | number) => ipcRenderer.invoke("get-products-by-id", id), // antes buscarProdutoPorID
+  listLocalCategories: (params?: any) => ipcRenderer.invoke("categories:list-local", params),
+  createLocalCategory: (input: any) => ipcRenderer.invoke("categories:create-local", input),
+  updateLocalCategory: (id: string, input: any) => ipcRenderer.invoke("categories:update-local", id, input),
+  softDeleteLocalCategory: (id: string) => ipcRenderer.invoke("categories:soft-delete-local", id),
 
   // Chamada IPC Segura para interagir com estoque
   searchProductsForStockMovement: (term: string) => ipcRenderer.invoke("suggest-product-by-term", term),
+  stock: {
+    listProducts: (params?: any) => ipcRenderer.invoke("stock:list-products", params),
+    getProductStock: (productId: string) => ipcRenderer.invoke("stock:get-product", productId),
+    createMovement: (input: any) => ipcRenderer.invoke("stock:create-movement", input),
+    listMovements: (params?: any) => ipcRenderer.invoke("stock:list-movements", params),
+    listMovementsByProduct: (productId: string, params?: any) => ipcRenderer.invoke("stock:list-movements-by-product", productId, params),
+  },
 
 
   // Chamada IPC Segura para interagir com a tabela clientes.

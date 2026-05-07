@@ -5,6 +5,7 @@ import { currentUserHasPermission } from "../security/permission.guard";
 
 let viewVendaWindow: BrowserWindow | null = null;
 let viewUsuarioWindow: BrowserWindow | null = null;
+let viewProductWindow: BrowserWindow | null = null;
 let cadastrarUsuarioWindow: BrowserWindow | null = null;
 let editUserWindow: BrowserWindow | null = null;
 let searchProductWindow: BrowserWindow | null = null;
@@ -151,6 +152,28 @@ export default function registerWindowHandlers() {
     }
   }
 
+  function createViewProductWindow(id: string) {
+    viewProductWindow = new BrowserWindow({
+      width: 900,
+      height: 760,
+      title: `Produto #${id}`,
+      maximizable: false,
+      webPreferences: {
+        preload: path.join(__dirname, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    })
+
+    if (VITE_DEV_SERVER_URL) {
+      viewProductWindow.loadURL(`${VITE_DEV_SERVER_URL}#/products/${id}`)
+    } else {
+      viewProductWindow.loadFile(path.join('dist/index.html'), {
+        hash: `/products/${id}`,
+      })
+    }
+  }
+
   function createConfigWindow() {
     configAppWindow = new BrowserWindow({
       width: 764,
@@ -243,6 +266,18 @@ export default function registerWindowHandlers() {
       return;
     }
     createViewUsuarioWindow(id);
+  });
+
+  ipcMain.on("open:product-details-window", (_, id: string) => {
+    if (!currentUserHasPermission("products:view")) {
+      return;
+    }
+
+    if (viewProductWindow && !viewProductWindow.isDestroyed()) {
+      viewProductWindow.focus();
+      return;
+    }
+    createViewProductWindow(String(id));
   });
 
   ipcMain.on("window:open:create-user", () => {

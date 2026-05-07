@@ -1,12 +1,11 @@
 import { ipcMain } from 'electron';
 import { blingOAuthService } from '../../application/integrations/bling-oauth.service';
 import { blingApiService } from '../../application/integrations/bling-api.service';
-import { syncAllFromBlingService } from '../../application/integrations/services/SyncAllFromBlingService';
-import { syncProductsFromBlingService } from '../../application/integrations/services/SyncProductsFromBlingService';
-import { syncCategoriesFromBlingService } from '../../application/integrations/services/SyncCategoriesFromBlingService';
 import { syncStateRepository } from '../database/repositories/syncState.repository';
 import { syncLogRepository } from '../database/repositories/syncLog.repository';
 import { assertCurrentUserPermission } from '../security/permission.guard';
+
+const LOCAL_CATALOG_MODE_MESSAGE = 'Integração Bling desativada nesta versão local. O catálogo é gerenciado no SQLite do PDV.';
 
 export default function registerIntegrationHandlers() {
   ipcMain.handle('integrations:status', async (_event, integrationId: string) => {
@@ -22,12 +21,7 @@ export default function registerIntegrationHandlers() {
     if (integrationId !== 'bling') {
       return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
     }
-    try {
-      return await blingOAuthService.connect();
-    } catch (error) {
-      console.error('[integrations:connect]', error);
-      return { success: false, message: error instanceof Error ? error.message : 'Erro ao conectar com o Bling.' };
-    }
+    return { success: false, message: LOCAL_CATALOG_MODE_MESSAGE };
   });
 
   ipcMain.handle('integrations:disconnect', async (_event, integrationId: string) => {
@@ -35,57 +29,25 @@ export default function registerIntegrationHandlers() {
     if (integrationId !== 'bling') {
       return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
     }
-    try {
-      return await blingOAuthService.disconnect();
-    } catch (error) {
-      console.error('[integrations:disconnect]', error);
-      return { success: false, message: error instanceof Error ? error.message : 'Erro ao desconectar Bling.' };
-    }
+    return { success: false, message: LOCAL_CATALOG_MODE_MESSAGE };
   });
 
   // Sync completo: categorias → produtos (ordem obrigatória)
   ipcMain.handle('integrations:bling:sync-all', async () => {
     assertCurrentUserPermission('integrations:manage');
-    try {
-      const result = await syncAllFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error('[integrations:bling:sync-all]', error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Erro ao sincronizar.',
-      };
-    }
+    return { success: false, message: LOCAL_CATALOG_MODE_MESSAGE };
   });
 
   // Sync individual: apenas produtos
   ipcMain.handle('integrations:bling:sync', async () => {
     assertCurrentUserPermission('integrations:manage');
-    try {
-      const result = await syncProductsFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error('[integrations:bling:sync]', error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Erro ao sincronizar produtos.',
-      };
-    }
+    return { success: false, message: LOCAL_CATALOG_MODE_MESSAGE };
   });
 
   // Sync individual: apenas categorias
   ipcMain.handle('integrations:bling:sync-categories', async () => {
     assertCurrentUserPermission('integrations:manage');
-    try {
-      const result = await syncCategoriesFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error('[integrations:bling:sync-categories]', error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Erro ao sincronizar categorias.',
-      };
-    }
+    return { success: false, message: LOCAL_CATALOG_MODE_MESSAGE };
   });
 
   // Estados de sync

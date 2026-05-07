@@ -39,12 +39,26 @@ electron.contextBridge.exposeInMainWorld("api", {
   // PONTES QUE INTERAGEM COM O BANCO DE DADOS //
   // Chamada IPC Segura para interagir com a tabela produtos.
   listarProdutos: (params) => electron.ipcRenderer.invoke("produtos:get", params),
+  createLocalProduct: (input) => electron.ipcRenderer.invoke("produtos:create-local", input),
+  updateLocalProduct: (id, input) => electron.ipcRenderer.invoke("produtos:update-local", id, input),
+  softDeleteLocalProduct: (id) => electron.ipcRenderer.invoke("produtos:soft-delete-local", id),
   buscarProdutoPorCodigoBarras: (codigo) => electron.ipcRenderer.invoke("produtos:buscar-por-codigo-de-barras", codigo),
   buscarProdutoPorNome: (termo) => electron.ipcRenderer.invoke("produtos:buscar-por-nome", termo),
   getProductById: (id) => electron.ipcRenderer.invoke("get-products-by-id", id),
   // antes buscarProdutoPorID
+  listLocalCategories: (params) => electron.ipcRenderer.invoke("categories:list-local", params),
+  createLocalCategory: (input) => electron.ipcRenderer.invoke("categories:create-local", input),
+  updateLocalCategory: (id, input) => electron.ipcRenderer.invoke("categories:update-local", id, input),
+  softDeleteLocalCategory: (id) => electron.ipcRenderer.invoke("categories:soft-delete-local", id),
   // Chamada IPC Segura para interagir com estoque
   searchProductsForStockMovement: (term) => electron.ipcRenderer.invoke("suggest-product-by-term", term),
+  stock: {
+    listProducts: (params) => electron.ipcRenderer.invoke("stock:list-products", params),
+    getProductStock: (productId) => electron.ipcRenderer.invoke("stock:get-product", productId),
+    createMovement: (input) => electron.ipcRenderer.invoke("stock:create-movement", input),
+    listMovements: (params) => electron.ipcRenderer.invoke("stock:list-movements", params),
+    listMovementsByProduct: (productId, params) => electron.ipcRenderer.invoke("stock:list-movements-by-product", productId, params)
+  },
   // Chamada IPC Segura para interagir com a tabela clientes.
   listarClientes: (params) => electron.ipcRenderer.invoke("clientes:get", params),
   addCliente: (dados) => electron.ipcRenderer.invoke("clientes:add", dados),

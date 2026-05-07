@@ -11,7 +11,7 @@ import * as fs$1 from "node:fs";
 import * as path$1 from "node:path";
 import path__default from "node:path";
 import Database from "better-sqlite3";
-import crypto$1, { X509Certificate, createHash, createSign } from "node:crypto";
+import crypto$1, { randomUUID, X509Certificate, createHash, createSign } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import * as https from "node:https";
 import http from "node:http";
@@ -1087,7 +1087,7 @@ function runFiscalPersistenceMigrations(database) {
   ensureFiscalSettingsSchema(database);
   backfillFiscalSettings(database);
 }
-const dbPath = path__default.join(app.getPath("userData"), "galberto.db");
+const dbPath = path__default.join(app.getPath("userData"), "superpdv-galberto.db");
 console.log("SQLite path: ", dbPath);
 console.log("isPackaged:", app.isPackaged);
 console.log("app.getPath(userData):", app.getPath("userData"));
@@ -1333,53 +1333,6 @@ CREATE INDEX IF NOT EXISTS idx_categories_name
   `;
   db.exec(sqlComand);
   logger.info("-> Tabela 'categories' checada/criada");
-}
-function createTableTaxProfile() {
-  const sqlComand = `
-    CREATE TABLE IF NOT EXISTS tax_profiles (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-      name TEXT NOT NULL UNIQUE,
-
-      -- Regime / enquadramento fiscal do item
-      regime_tributario TEXT NOT NULL CHECK (regime_tributario IN ('SIMPLES_NACIONAL', 'REGIME_NORMAL')),
-      origin_code TEXT NOT NULL, -- 0..8 conforme tabela de origem da mercadoria
-
-      -- Operação padrão
-      cfop_padrao_saida_interna TEXT,
-      cfop_padrao_saida_interestadual TEXT,
-
-      -- ICMS
-      csosn TEXT,                -- usar quando Simples Nacional
-      icms_cst TEXT,             -- usar quando regime normal
-      mod_bc_icms TEXT,
-      red_bc_icms REAL DEFAULT 0,
-      icms_aliquota REAL DEFAULT 0,
-      icms_st INTEGER NOT NULL DEFAULT 0,
-      mod_bc_icms_st TEXT,
-      red_bc_icms_st REAL DEFAULT 0,
-      icms_st_aliquota REAL DEFAULT 0,
-      mva_st REAL DEFAULT 0,
-      fcp_aliquota REAL DEFAULT 0,
-      fcp_st_aliquota REAL DEFAULT 0,
-
-      -- PIS / COFINS
-      pis_cst TEXT NOT NULL,
-      pis_aliquota REAL DEFAULT 0,
-      cofins_cst TEXT NOT NULL,
-      cofins_aliquota REAL DEFAULT 0,
-      pis_cofins_monofasico INTEGER NOT NULL DEFAULT 0,
-
-      -- Regras complementares
-      cest_obrigatorio INTEGER NOT NULL DEFAULT 0,
-      ativo INTEGER NOT NULL DEFAULT 1,
-
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'tax_profiles' checada/criada");
 }
 function createTableFornecedores() {
   const sqlComand = `
@@ -1810,45 +1763,50 @@ function createTableSession() {
   logger.info("-> Tabela 'sessions' checada/criada");
 }
 function createTableStockMoviments() {
-  const sqlComand = `CREATE TABLE IF NOT EXISTS stock_movements (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  var _a;
+  const existing = db.prepare(`
+    SELECT name FROM sqlite_master
+    WHERE type = 'table' AND name = 'stock_movements'
+  `).get();
+  if (existing) {
+    const columns = db.prepare(`PRAGMA table_info(stock_movements)`).all();
+    const columnNames = new Set(columns.map((column) => column.name));
+    const idColumn = columns.find((column) => column.name === "id");
+    const isLegacySchema = !columnNames.has("type") || !columnNames.has("previous_stock") || ((_a = idColumn == null ? void 0 : idColumn.type) == null ? void 0 : _a.toUpperCase()) === "INTEGER";
+    if (isLegacySchema) {
+      const backupName = `stock_movements_legacy_${Date.now()}`;
+      db.exec(`ALTER TABLE stock_movements RENAME TO ${backupName};`);
+      logger.info(`-> Tabela 'stock_movements' legada preservada como '${backupName}'`);
+    }
+  }
+  const sqlComand = `
+    CREATE TABLE IF NOT EXISTS stock_movements (
+      id TEXT PRIMARY KEY,
+      product_id TEXT NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('entry', 'exit', 'adjustment', 'sale', 'sale_cancel')),
+      quantity REAL NOT NULL,
+      previous_stock REAL NOT NULL,
+      new_stock REAL NOT NULL,
+      reason TEXT NOT NULL,
+      notes TEXT,
+      reference_type TEXT,
+      reference_id TEXT,
+      created_at TEXT NOT NULL,
+      deleted_at TEXT,
+      FOREIGN KEY (product_id) REFERENCES products(id)
+    );
 
-  product_id TEXT NOT NULL,
-  movement_type TEXT NOT NULL CHECK (movement_type IN ('ENTRY', 'EXIT')),
+    CREATE INDEX IF NOT EXISTS idx_stock_movements_product_id
+      ON stock_movements(product_id);
 
-  reason_code TEXT NOT NULL,
-  reason_note TEXT,
+    CREATE INDEX IF NOT EXISTS idx_stock_movements_created_at
+      ON stock_movements(created_at);
 
-  quantity REAL NOT NULL,
-  stock_before REAL NOT NULL,
-  stock_after REAL NOT NULL,
-
-  unit_cost REAL,
-
-  document_type TEXT,
-  document_number TEXT,
-  document_key TEXT,
-
-  supplier_id INTEGER,
-  batch_number TEXT,
-  expiration_date TEXT,
-
-  performed_by_user_id INTEGER NOT NULL,
-
-  reversed_at DATETIME,
-  reversed_by_user_id INTEGER,
-  reversal_reason TEXT,
-
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-  FOREIGN KEY (product_id) REFERENCES products(id),
-  FOREIGN KEY (supplier_id) REFERENCES fornecedores(id),
-  FOREIGN KEY (performed_by_user_id) REFERENCES usuarios(id),
-  FOREIGN KEY (reversed_by_user_id) REFERENCES usuarios(id)
-);
-`;
-  logger.info("-> Tabela 'stock_movements' checada/criada");
+    CREATE INDEX IF NOT EXISTS idx_stock_movements_type
+      ON stock_movements(type);
+  `;
   db.exec(sqlComand);
+  logger.info("-> Tabela 'stock_movements' checada/criada");
 }
 function createTableCashRegisterSessions() {
   const sqlComand = `
@@ -2076,7 +2034,6 @@ createTablePrinters();
 ensurePrintersColumns();
 createTablePrinterLogs();
 createTableSession();
-createTableTaxProfile();
 createTableSaleItemTaxSnapshot();
 createTableStockMoviments();
 createTableVendaPagamento();
@@ -2116,7 +2073,7 @@ function getSaleItemSnapshot(productId) {
   const product = db.prepare(`
     SELECT id, barcode, name, unit, sale_price_cents, ncm, cfop, origin, cest
     FROM products
-    WHERE id = ? AND deleted_at IS NULL
+    WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL AND active = 1
     LIMIT 1
   `).get(productId);
   if (!product) {
@@ -2414,14 +2371,14 @@ function finalizarVendaComBaixaEstoque(vendaPayload) {
   const selectSaldo = db.prepare(
     `SELECT current_stock
      FROM products
-     WHERE id = ? AND deleted_at IS NULL
+     WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
      LIMIT 1`
   );
   const atualizarEstoque = db.prepare(
     `UPDATE products
      SET current_stock = current_stock - ?,
          updated_at = datetime('now')
-     WHERE id = ?`
+     WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL`
   );
   const atualizarEstoqueLegado = db.prepare(
     `UPDATE produtos
@@ -2457,11 +2414,25 @@ function finalizarVendaComBaixaEstoque(vendaPayload) {
       if (!saldo) {
         throw new Error(`Produto da venda não encontrado: ${item.produto_id}`);
       }
-      if (Number(saldo.current_stock ?? 0) < Number(item.quantidade ?? 0)) {
+      const previousStock = Number(saldo.current_stock ?? 0);
+      const quantity2 = Number(item.quantidade ?? 0);
+      if (previousStock < quantity2) {
         throw new Error(`Estoque insuficiente para o produto ${item.produto_id}`);
       }
-      atualizarEstoque.run(item.quantidade, item.produto_id);
-      atualizarEstoqueLegado.run(item.quantidade, item.produto_id);
+      const newStock = previousStock - quantity2;
+      atualizarEstoque.run(quantity2, item.produto_id);
+      atualizarEstoqueLegado.run(quantity2, item.produto_id);
+      insertStockMovementRecord({
+        productId: item.produto_id,
+        type: "sale",
+        quantity: quantity2,
+        previousStock,
+        newStock,
+        reason: "Venda",
+        notes: null,
+        referenceType: "sale",
+        referenceId: String(vendaId)
+      });
     }
     const valorProdutos = typeof vendaPayload === "number" ? Number(vendaAtual.valor_produtos ?? 0) : Number(vendaPayload.valorProdutos ?? vendaAtual.valor_produtos ?? 0);
     const valorDesconto = typeof vendaPayload === "number" ? Number(vendaAtual.valor_desconto ?? 0) : Number(vendaPayload.valorDesconto ?? vendaAtual.valor_desconto ?? 0);
@@ -2662,7 +2633,7 @@ function buscarVendaPorId(vendaId) {
 }
 function listarProdutos({ nome, codigo, ativo, page = 1, limit = 20 }) {
   const offset = (page - 1) * limit;
-  let where = [];
+  let where = [`integration_source = 'local'`, `deleted_at IS NULL`];
   let params = [];
   if (nome) {
     where.push("name LIKE ?");
@@ -2679,22 +2650,21 @@ function listarProdutos({ nome, codigo, ativo, page = 1, limit = 20 }) {
   const data = db.prepare(`
       SELECT
         id,
+        sku,
         barcode AS codigo_barras,
         name AS nome,
         ROUND(sale_price_cents / 100.0, 2) AS preco_venda,
         current_stock AS estoque_atual,
         active AS ativo
       FROM products
-      WHERE deleted_at IS NULL
-      ${where.length ? `AND ${where.join(" AND ")}` : ""}
+      WHERE ${where.join(" AND ")}
       ORDER BY name
     LIMIT ? OFFSET ?
       `).all(...params, limit, offset);
   const total = db.prepare(`
       SELECT COUNT(*) as total
       FROM products
-      WHERE deleted_at IS NULL
-      ${where.length ? `AND ${where.join(" AND ")}` : ""}
+      WHERE ${where.join(" AND ")}
     `).get(...params);
   return {
     data,
@@ -2769,7 +2739,7 @@ function select_product_by_id(id) {
       ROUND(COALESCE(icms_st_retention_base_cents, 0) / 100.0, 2) AS valor_base_icms_st_retencao,
       ROUND(COALESCE(icms_st_retention_value_cents, 0) / 100.0, 2) AS valor_icms_st_retencao,
       ROUND(COALESCE(icms_substitute_own_value_cents, 0) / 100.0, 2) AS valor_icms_proprio_substituto,
-      product_category_name,
+      COALESCE(category_lookup.local_category_name, product_category_name) AS product_category_name,
       additional_info,
       integration_source,
       remote_created_at,
@@ -2781,10 +2751,354 @@ function select_product_by_id(id) {
       deleted_at,
       raw_json
     FROM products
-    WHERE id = ? AND deleted_at IS NULL
+    LEFT JOIN (
+      SELECT id AS cat_join_id, name AS local_category_name
+      FROM categories
+    ) category_lookup ON category_lookup.cat_join_id = products.category_id
+    WHERE products.id = ? AND products.integration_source = 'local' AND products.deleted_at IS NULL
     LIMIT 1;
   `);
   return stmt.get(id);
+}
+function nullableText(value) {
+  if (value === void 0 || value === null) return null;
+  const text = String(value).trim();
+  return text.length > 0 ? text : null;
+}
+function numberOrDefault(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+function getLocalProductForStock(productId) {
+  return db.prepare(`
+    SELECT
+      id,
+      name,
+      sku,
+      barcode,
+      unit,
+      current_stock,
+      minimum_stock,
+      maximum_stock,
+      active,
+      deleted_at,
+      integration_source
+    FROM products
+    WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+    LIMIT 1
+  `).get(productId);
+}
+function insertStockMovementRecord(input) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  db.prepare(`
+    INSERT INTO stock_movements (
+      id, product_id, type, quantity, previous_stock, new_stock,
+      reason, notes, reference_type, reference_id, created_at, deleted_at
+    ) VALUES (
+      @id, @product_id, @type, @quantity, @previous_stock, @new_stock,
+      @reason, @notes, @reference_type, @reference_id, @created_at, NULL
+    )
+  `).run({
+    id: randomUUID(),
+    product_id: input.productId,
+    type: input.type,
+    quantity: input.quantity,
+    previous_stock: input.previousStock,
+    new_stock: input.newStock,
+    reason: input.reason,
+    notes: nullableText(input.notes),
+    reference_type: input.referenceType ?? null,
+    reference_id: input.referenceId ?? null,
+    created_at: now
+  });
+  return now;
+}
+function listLocalStockProducts({
+  term,
+  stockFilter = "all",
+  active,
+  page = 1,
+  limit = 100
+} = {}) {
+  const offset = (page - 1) * limit;
+  const where = [`p.integration_source = 'local'`, `p.deleted_at IS NULL`];
+  const params = [];
+  if (term == null ? void 0 : term.trim()) {
+    where.push(`(LOWER(p.name) LIKE LOWER(?) OR LOWER(COALESCE(p.sku, '')) LIKE LOWER(?) OR LOWER(COALESCE(p.barcode, '')) LIKE LOWER(?))`);
+    const like = `%${term.trim()}%`;
+    params.push(like, like, like);
+  }
+  if (active !== void 0) {
+    where.push(`p.active = ?`);
+    params.push(active);
+  }
+  if (stockFilter === "low") {
+    where.push(`p.minimum_stock > 0 AND p.current_stock <= p.minimum_stock`);
+  }
+  if (stockFilter === "out") {
+    where.push(`p.current_stock <= 0`);
+  }
+  const data = db.prepare(`
+    SELECT
+      p.id,
+      p.name,
+      p.sku,
+      p.barcode,
+      p.unit,
+      p.current_stock,
+      p.minimum_stock,
+      p.maximum_stock,
+      p.active,
+      p.category_id,
+      c.name AS category_name,
+      p.updated_at
+    FROM products p
+    LEFT JOIN categories c ON c.id = p.category_id
+    WHERE ${where.join(" AND ")}
+    ORDER BY p.name
+    LIMIT ? OFFSET ?
+  `).all(...params, limit, offset);
+  const total = db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM products p
+    WHERE ${where.join(" AND ")}
+  `).get(...params);
+  return { data, page, limit, total: total.total };
+}
+function getLocalProductStock(productId) {
+  const product = getLocalProductForStock(productId);
+  if (!product) throw new Error("Produto local não encontrado.");
+  return product;
+}
+function createStockMovement(input) {
+  const productId = nullableText(input.productId);
+  if (!productId) throw new Error("Produto inválido.");
+  const reason = nullableText(input.reason);
+  if (!reason) throw new Error("Informe uma justificativa.");
+  const type = input.type;
+  if (!["entry", "exit", "adjustment"].includes(type)) {
+    throw new Error("Tipo de movimentação inválido.");
+  }
+  const transaction = db.transaction(() => {
+    const product = getLocalProductForStock(productId);
+    if (!product) throw new Error("Produto local não encontrado.");
+    if (Number(product.active) !== 1) throw new Error("Não é possível movimentar estoque de produto inativo.");
+    const previousStock = Number(product.current_stock ?? 0);
+    let movementQuantity = 0;
+    let newStock = previousStock;
+    if (type === "entry") {
+      movementQuantity = numberOrDefault(input.quantity, NaN);
+      if (!Number.isFinite(movementQuantity) || movementQuantity <= 0) {
+        throw new Error("Informe uma quantidade maior que zero.");
+      }
+      newStock = previousStock + movementQuantity;
+    }
+    if (type === "exit") {
+      movementQuantity = numberOrDefault(input.quantity, NaN);
+      if (!Number.isFinite(movementQuantity) || movementQuantity <= 0) {
+        throw new Error("Informe uma quantidade maior que zero.");
+      }
+      newStock = previousStock - movementQuantity;
+      if (newStock < 0) throw new Error("Não é possível deixar estoque negativo.");
+    }
+    if (type === "adjustment") {
+      newStock = numberOrDefault(input.newStock, NaN);
+      if (!Number.isFinite(newStock) || newStock < 0) {
+        throw new Error("Informe um novo saldo válido.");
+      }
+      movementQuantity = newStock - previousStock;
+    }
+    insertStockMovementRecord({
+      productId,
+      type,
+      quantity: movementQuantity,
+      previousStock,
+      newStock,
+      reason,
+      notes: input.notes,
+      referenceType: "manual",
+      referenceId: null
+    });
+    db.prepare(`
+      UPDATE products
+      SET current_stock = ?, updated_at = ?
+      WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+    `).run(newStock, (/* @__PURE__ */ new Date()).toISOString(), productId);
+    db.prepare(`
+      UPDATE produtos
+      SET estoque_atual = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(newStock, productId);
+    return getLocalProductStock(productId);
+  });
+  return transaction();
+}
+function listStockMovements({
+  productId,
+  type,
+  page = 1,
+  limit = 100
+} = {}) {
+  const offset = (page - 1) * limit;
+  const where = [`sm.deleted_at IS NULL`];
+  const params = [];
+  if (productId) {
+    where.push(`sm.product_id = ?`);
+    params.push(productId);
+  }
+  if (type) {
+    where.push(`sm.type = ?`);
+    params.push(type);
+  }
+  const data = db.prepare(`
+    SELECT
+      sm.id,
+      sm.product_id,
+      p.name AS product_name,
+      p.sku,
+      p.barcode,
+      sm.type,
+      sm.quantity,
+      sm.previous_stock,
+      sm.new_stock,
+      sm.reason,
+      sm.notes,
+      sm.reference_type,
+      sm.reference_id,
+      sm.created_at
+    FROM stock_movements sm
+    INNER JOIN products p ON p.id = sm.product_id
+    WHERE ${where.join(" AND ")}
+      AND p.integration_source = 'local'
+    ORDER BY sm.created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(...params, limit, offset);
+  const total = db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM stock_movements sm
+    INNER JOIN products p ON p.id = sm.product_id
+    WHERE ${where.join(" AND ")}
+      AND p.integration_source = 'local'
+  `).get(...params);
+  return { data, page, limit, total: total.total };
+}
+function listStockMovementsByProduct(productId, params = {}) {
+  return listStockMovements({ ...params, productId });
+}
+function validateLocalProduct(input) {
+  const name = nullableText(input.name);
+  if (!name) throw new Error("Informe o nome do produto.");
+  const salePriceCents = Math.round(numberOrDefault(input.sale_price_cents, NaN));
+  if (!Number.isFinite(salePriceCents) || salePriceCents < 0) {
+    throw new Error("Informe um preço de venda válido.");
+  }
+  return {
+    ...input,
+    name,
+    sale_price_cents: salePriceCents,
+    cost_price_cents: Math.round(numberOrDefault(input.cost_price_cents)),
+    minimum_stock: numberOrDefault(input.minimum_stock),
+    maximum_stock: input.maximum_stock === null || input.maximum_stock === void 0 || input.maximum_stock === "" ? null : numberOrDefault(input.maximum_stock),
+    active: input.active === false || input.active === 0 ? 0 : 1,
+    unit: nullableText(input.unit) ?? "UN",
+    category_id: nullableText(input.category_id),
+    sku: nullableText(input.sku),
+    barcode: nullableText(input.barcode),
+    ncm: nullableText(input.ncm),
+    cfop: nullableText(input.cfop),
+    origin: nullableText(input.origin),
+    notes: nullableText(input.notes),
+    situation: nullableText(input.situation),
+    supplier_code: nullableText(input.supplier_code),
+    supplier_name: nullableText(input.supplier_name),
+    location: nullableText(input.location),
+    brand: nullableText(input.brand),
+    product_group: nullableText(input.product_group),
+    cest: nullableText(input.cest),
+    short_description: nullableText(input.short_description),
+    complementary_description: nullableText(input.complementary_description),
+    additional_info: nullableText(input.additional_info)
+  };
+}
+function createLocalProduct(input) {
+  const product = validateLocalProduct(input);
+  const id = randomUUID();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  db.prepare(`
+    INSERT INTO products (
+      id, external_id, integration_source, sku, barcode, category_id, name, unit,
+      sale_price_cents, cost_price_cents, current_stock, minimum_stock, active,
+      sync_status, raw_json, ncm, cfop, origin, notes, situation, supplier_code,
+      supplier_name, location, maximum_stock, complementary_description,
+      product_group, brand, cest, short_description, additional_info,
+      created_at, updated_at, deleted_at
+    ) VALUES (
+      @id, NULL, 'local', @sku, @barcode, @category_id, @name, @unit,
+      @sale_price_cents, @cost_price_cents, 0, @minimum_stock, @active,
+      'local', @raw_json, @ncm, @cfop, @origin, @notes, @situation, @supplier_code,
+      @supplier_name, @location, @maximum_stock, @complementary_description,
+      @product_group, @brand, @cest, @short_description, @additional_info,
+      @created_at, @updated_at, NULL
+    )
+  `).run({
+    ...product,
+    id,
+    raw_json: JSON.stringify({ source: "local", createdManually: true }),
+    created_at: now,
+    updated_at: now
+  });
+  return select_product_by_id(id);
+}
+function updateLocalProduct(id, input) {
+  const current = db.prepare(`
+    SELECT id FROM products
+    WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+    LIMIT 1
+  `).get(id);
+  if (!current) throw new Error("Produto local não encontrado ou não editável.");
+  const product = validateLocalProduct(input);
+  db.prepare(`
+    UPDATE products SET
+      sku = @sku,
+      barcode = @barcode,
+      category_id = @category_id,
+      name = @name,
+      unit = @unit,
+      sale_price_cents = @sale_price_cents,
+      cost_price_cents = @cost_price_cents,
+      minimum_stock = @minimum_stock,
+      maximum_stock = @maximum_stock,
+      active = @active,
+      ncm = @ncm,
+      cfop = @cfop,
+      origin = @origin,
+      notes = @notes,
+      situation = @situation,
+      supplier_code = @supplier_code,
+      supplier_name = @supplier_name,
+      location = @location,
+      complementary_description = @complementary_description,
+      product_group = @product_group,
+      brand = @brand,
+      cest = @cest,
+      short_description = @short_description,
+      additional_info = @additional_info,
+      updated_at = @updated_at
+    WHERE id = @id AND integration_source = 'local' AND deleted_at IS NULL
+  `).run({
+    ...product,
+    id,
+    updated_at: (/* @__PURE__ */ new Date()).toISOString()
+  });
+  return select_product_by_id(id);
+}
+function softDeleteLocalProduct(id) {
+  const result = db.prepare(`
+    UPDATE products
+    SET deleted_at = ?, active = 0, updated_at = ?
+    WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+  `).run((/* @__PURE__ */ new Date()).toISOString(), (/* @__PURE__ */ new Date()).toISOString(), id);
+  return { success: result.changes > 0 };
 }
 function buscarProdutosPorNome(termo) {
   const stmt = db.prepare(`
@@ -2795,7 +3109,9 @@ function buscarProdutosPorNome(termo) {
       ROUND(sale_price_cents / 100.0, 2) AS preco_venda,
       current_stock AS estoque
     FROM products
-    WHERE deleted_at IS NULL
+    WHERE integration_source = 'local'
+      AND deleted_at IS NULL
+      AND active = 1
       AND LOWER(name) LIKE LOWER(?)
     ORDER BY name
     LIMIT 50
@@ -2811,7 +3127,9 @@ function buscarProdutoPorCodigoBarras(codigo) {
       ROUND(sale_price_cents / 100.0, 2) AS preco_venda,
       current_stock AS estoque_atual
     FROM products
-    WHERE deleted_at IS NULL
+    WHERE integration_source = 'local'
+      AND deleted_at IS NULL
+      AND active = 1
       AND barcode = ?
     LIMIT 1;
   `);
@@ -2821,7 +3139,8 @@ function selectSuggestionProduct(term) {
   const stmt = db.prepare(`
     SELECT *
     FROM products
-    WHERE deleted_at IS NULL
+    WHERE integration_source = 'local'
+    AND deleted_at IS NULL
     AND active = 1
     AND(
       sku = ?
@@ -2847,6 +3166,95 @@ function selectSuggestionProduct(term) {
     controlsExpiration: false,
     controlsBatch: false
   }));
+}
+function listLocalCategories({ activeOnly = false } = {}) {
+  const activeClause = activeOnly ? "AND active = 1" : "";
+  return db.prepare(`
+    SELECT
+      id,
+      name,
+      active,
+      integration_source,
+      sync_status,
+      created_at,
+      updated_at,
+      deleted_at
+    FROM categories
+    WHERE integration_source = 'local'
+      AND deleted_at IS NULL
+      ${activeClause}
+    ORDER BY name
+  `).all();
+}
+function validateLocalCategory(input) {
+  const name = nullableText(input.name);
+  if (!name) throw new Error("Informe o nome da categoria.");
+  return {
+    name,
+    active: input.active === false || input.active === 0 ? 0 : 1
+  };
+}
+function createLocalCategory(input) {
+  const category = validateLocalCategory(input);
+  const id = randomUUID();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  db.prepare(`
+    INSERT INTO categories (
+      id, external_id, integration_source, name, active, sync_status,
+      raw_json, created_at, updated_at, deleted_at
+    ) VALUES (
+      @id, NULL, 'local', @name, @active, 'local',
+      @raw_json, @created_at, @updated_at, NULL
+    )
+  `).run({
+    ...category,
+    id,
+    raw_json: JSON.stringify({ source: "local", createdManually: true }),
+    created_at: now,
+    updated_at: now
+  });
+  return db.prepare(`SELECT * FROM categories WHERE id = ?`).get(id);
+}
+function updateLocalCategory(id, input) {
+  const category = validateLocalCategory(input);
+  const result = db.prepare(`
+    UPDATE categories
+    SET name = @name,
+        active = @active,
+        updated_at = @updated_at
+    WHERE id = @id AND integration_source = 'local' AND deleted_at IS NULL
+  `).run({
+    ...category,
+    id,
+    updated_at: (/* @__PURE__ */ new Date()).toISOString()
+  });
+  if (result.changes === 0) throw new Error("Categoria local não encontrada ou não editável.");
+  return db.prepare(`SELECT * FROM categories WHERE id = ?`).get(id);
+}
+function softDeleteLocalCategory(id) {
+  const linkedProducts = db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM products
+    WHERE category_id = ?
+      AND integration_source = 'local'
+      AND deleted_at IS NULL
+  `).get(id);
+  if (linkedProducts.total > 0) {
+    const now2 = (/* @__PURE__ */ new Date()).toISOString();
+    db.prepare(`
+      UPDATE categories
+      SET active = 0, updated_at = ?
+      WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+    `).run(now2, id);
+    return { success: true, deactivatedOnly: true };
+  }
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const result = db.prepare(`
+    UPDATE categories
+    SET deleted_at = ?, active = 0, updated_at = ?
+    WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+  `).run(now, now, id);
+  return { success: result.changes > 0, deactivatedOnly: false };
 }
 console.log(db);
 function addPrinter(dados) {
@@ -15208,6 +15616,7 @@ function registerSalesHandlers() {
 }
 let viewVendaWindow = null;
 let viewUsuarioWindow = null;
+let viewProductWindow = null;
 let cadastrarUsuarioWindow = null;
 let editUserWindow = null;
 let searchProductWindow = null;
@@ -15330,6 +15739,26 @@ function registerWindowHandlers() {
       });
     }
   }
+  function createViewProductWindow(id) {
+    viewProductWindow = new BrowserWindow({
+      width: 900,
+      height: 760,
+      title: `Produto #${id}`,
+      maximizable: false,
+      webPreferences: {
+        preload: path__default.join(__dirname$2, "preload.mjs"),
+        contextIsolation: true,
+        nodeIntegration: false
+      }
+    });
+    if (VITE_DEV_SERVER_URL) {
+      viewProductWindow.loadURL(`${VITE_DEV_SERVER_URL}#/products/${id}`);
+    } else {
+      viewProductWindow.loadFile(path__default.join("dist/index.html"), {
+        hash: `/products/${id}`
+      });
+    }
+  }
   function createConfigWindow() {
     configAppWindow = new BrowserWindow({
       width: 764,
@@ -15400,6 +15829,16 @@ function registerWindowHandlers() {
       return;
     }
     createViewUsuarioWindow(id);
+  });
+  ipcMain.on("open:product-details-window", (_, id) => {
+    if (!currentUserHasPermission("products:view")) {
+      return;
+    }
+    if (viewProductWindow && !viewProductWindow.isDestroyed()) {
+      viewProductWindow.focus();
+      return;
+    }
+    createViewProductWindow(String(id));
   });
   ipcMain.on("window:open:create-user", () => {
     if (!currentUserHasPermission("users:manage")) {
@@ -15480,6 +15919,48 @@ function registerProductHandlers() {
   });
   ipcMain.handle("suggest-product-by-term", (_, term) => {
     return selectSuggestionProduct(term);
+  });
+  ipcMain.handle("produtos:create-local", (_, input) => {
+    return createLocalProduct(input);
+  });
+  ipcMain.handle("produtos:update-local", (_, id, input) => {
+    if (!id) throw new Error("ID inválido");
+    return updateLocalProduct(id, input);
+  });
+  ipcMain.handle("produtos:soft-delete-local", (_, id) => {
+    if (!id) throw new Error("ID inválido");
+    return softDeleteLocalProduct(id);
+  });
+  ipcMain.handle("categories:list-local", (_, params) => {
+    return listLocalCategories(params);
+  });
+  ipcMain.handle("categories:create-local", (_, input) => {
+    return createLocalCategory(input);
+  });
+  ipcMain.handle("categories:update-local", (_, id, input) => {
+    if (!id) throw new Error("ID inválido");
+    return updateLocalCategory(id, input);
+  });
+  ipcMain.handle("categories:soft-delete-local", (_, id) => {
+    if (!id) throw new Error("ID inválido");
+    return softDeleteLocalCategory(id);
+  });
+  ipcMain.handle("stock:list-products", (_, params) => {
+    return listLocalStockProducts(params);
+  });
+  ipcMain.handle("stock:get-product", (_, productId) => {
+    if (!productId) throw new Error("Produto inválido");
+    return getLocalProductStock(productId);
+  });
+  ipcMain.handle("stock:create-movement", (_, input) => {
+    return createStockMovement(input);
+  });
+  ipcMain.handle("stock:list-movements", (_, params) => {
+    return listStockMovements(params);
+  });
+  ipcMain.handle("stock:list-movements-by-product", (_, productId, params) => {
+    if (!productId) throw new Error("Produto inválido");
+    return listStockMovementsByProduct(productId, params);
   });
 }
 function registerPrinterhandlers() {
@@ -16130,105 +16611,6 @@ function randomId() {
 function nowIso() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
-function subtractMinutes(isoDate, minutes) {
-  const dt = new Date(isoDate);
-  dt.setMinutes(dt.getMinutes() - minutes);
-  return dt.toISOString();
-}
-class CategoryRepository {
-  countByIntegrationSource(integrationSource) {
-    const row = db.prepare(`
-      SELECT COUNT(*) as count FROM categories
-      WHERE integration_source = ? AND deleted_at IS NULL
-    `).get(integrationSource);
-    return row.count;
-  }
-  upsert(category) {
-    if (!(category == null ? void 0 : category.externalId) || !(category == null ? void 0 : category.name)) {
-      console.warn("[CategoryRepository] Pulando categoria inválida:", category);
-      return;
-    }
-    const now = nowIso();
-    db.prepare(`
-      INSERT INTO categories (
-        id, external_id, integration_source, name, active,
-        remote_updated_at, last_synced_at, sync_status,
-        raw_json, created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(integration_source, external_id) DO UPDATE SET
-        name              = excluded.name,
-        active            = excluded.active,
-        remote_updated_at = excluded.remote_updated_at,
-        last_synced_at    = excluded.last_synced_at,
-        sync_status       = excluded.sync_status,
-        raw_json          = excluded.raw_json,
-        updated_at        = excluded.updated_at
-    `).run(
-      category.id ?? randomId(),
-      category.externalId,
-      category.integrationSource,
-      category.name,
-      category.active ?? 1,
-      category.remoteUpdatedAt ?? null,
-      category.lastSyncedAt,
-      category.syncStatus ?? "synced",
-      category.raw ? JSON.stringify(category.raw) : null,
-      category.createdAt ?? now,
-      category.updatedAt ?? now
-    );
-  }
-  upsertMany(categories) {
-    const run = db.transaction((items) => {
-      for (const item of items) this.upsert(item);
-    });
-    run(categories);
-  }
-  getExternalIdsBySource(integrationSource, externalIds) {
-    if (externalIds.length === 0) return [];
-    const placeholders = externalIds.map(() => "?").join(",");
-    const rows = db.prepare(`
-      SELECT external_id FROM categories
-      WHERE integration_source = ? AND external_id IN (${placeholders})
-    `).all(integrationSource, ...externalIds);
-    return rows.map((r) => r.external_id);
-  }
-  /**
-   * Retorna um Map de externalId -> localId para todas as categorias de uma fonte.
-   * Usado pelo sync de produtos para linkar category_id sem fazer N queries.
-   */
-  getAllExternalIdMap(integrationSource) {
-    const rows = db.prepare(`
-      SELECT id, external_id FROM categories
-      WHERE integration_source = ? AND deleted_at IS NULL
-    `).all(integrationSource);
-    return new Map(rows.map((r) => [r.external_id, r.id]));
-  }
-  mapRow(row) {
-    let raw = null;
-    if (row.raw_json) {
-      try {
-        raw = JSON.parse(row.raw_json);
-      } catch {
-        raw = row.raw_json;
-      }
-    }
-    return {
-      id: row.id,
-      externalId: row.external_id,
-      integrationSource: row.integration_source,
-      name: row.name,
-      active: row.active,
-      remoteUpdatedAt: row.remote_updated_at,
-      lastSyncedAt: row.last_synced_at ?? "",
-      syncStatus: row.sync_status,
-      raw,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
-  }
-}
-const categoryRepository = new CategoryRepository();
 class SyncStateRepository {
   get(integrationId, resource) {
     const row = db.prepare(`
@@ -16380,832 +16762,7 @@ class SyncLogRepository {
   }
 }
 const syncLogRepository = new SyncLogRepository();
-async function sleep(ms) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
-const INTEGRATION_ID$1 = "bling";
-const RESOURCE$1 = "categories";
-const PAGE_LIMIT$1 = 100;
-function getCategoryName(category) {
-  const candidates = [
-    category.nome,
-    category.descricao,
-    category.description
-  ];
-  for (const value of candidates) {
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-  return null;
-}
-function mapBlingCategory(category, now) {
-  if (category == null) return null;
-  if (!category.id) return null;
-  const name = getCategoryName(category);
-  if (!name) return null;
-  return {
-    externalId: String(category.id),
-    integrationSource: INTEGRATION_ID$1,
-    name,
-    active: 1,
-    lastSyncedAt: now,
-    syncStatus: "synced",
-    raw: category,
-    updatedAt: now
-  };
-}
-class SyncCategoriesFromBlingService {
-  async execute() {
-    const state = syncStateRepository.get(INTEGRATION_ID$1, RESOURCE$1);
-    const localCount = categoryRepository.countByIntegrationSource(INTEGRATION_ID$1);
-    const isInitial = !state || !state.lastSuccessAt || localCount === 0;
-    const mode = isInitial ? "initial" : "incremental";
-    syncStateRepository.markRunning(INTEGRATION_ID$1, RESOURCE$1);
-    const startedAt = nowIso();
-    const logId = syncLogRepository.start({
-      integrationId: INTEGRATION_ID$1,
-      resource: RESOURCE$1,
-      mode,
-      startedAt
-    });
-    let totalProcessed = 0;
-    let totalCreated = 0;
-    let totalUpdated = 0;
-    let totalFailed = 0;
-    try {
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const response = await blingApiService.getCategories({ page, limit: PAGE_LIMIT$1 });
-        const rawItems = Array.isArray(response.data) ? response.data : [];
-        const validRaw = rawItems.filter((c) => c != null);
-        const nullsInResponse = rawItems.length - validRaw.length;
-        totalFailed += nullsInResponse;
-        if (validRaw.length === 0 && page === 1) {
-          hasMore = false;
-          break;
-        }
-        const now = nowIso();
-        const allMapped = validRaw.map((c) => mapBlingCategory(c, now));
-        const mapped = allMapped.filter((c) => c != null);
-        totalFailed += allMapped.length - mapped.length;
-        totalProcessed += rawItems.length;
-        if (rawItems.length > 0 && mapped.length === 0) {
-          console.warn("[SyncCategoriesFromBlingService] Nenhuma categoria válida mapeada. Exemplo de payload:", rawItems[0]);
-        }
-        if (mapped.length > 0) {
-          const externalIds = mapped.map((c) => c.externalId);
-          const existingIds = new Set(
-            categoryRepository.getExternalIdsBySource(INTEGRATION_ID$1, externalIds)
-          );
-          for (const c of mapped) {
-            if (existingIds.has(c.externalId)) {
-              totalUpdated++;
-            } else {
-              totalCreated++;
-            }
-          }
-          categoryRepository.upsertMany(mapped);
-        }
-        if (rawItems.length < PAGE_LIMIT$1) {
-          hasMore = false;
-        } else {
-          page++;
-          await sleep(350);
-        }
-      }
-      const finishedAt = nowIso();
-      syncStateRepository.markSuccess(INTEGRATION_ID$1, RESOURCE$1);
-      syncLogRepository.finish({
-        id: logId,
-        status: "success",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed
-      });
-      return { mode, processed: totalProcessed, created: totalCreated, updated: totalUpdated, failed: totalFailed };
-    } catch (error) {
-      const finishedAt = nowIso();
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      syncStateRepository.markError(INTEGRATION_ID$1, RESOURCE$1, errorMessage);
-      syncLogRepository.finish({
-        id: logId,
-        status: "failed",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed,
-        errorMessage
-      });
-      throw error;
-    }
-  }
-}
-const syncCategoriesFromBlingService = new SyncCategoriesFromBlingService();
-class ProductRepository {
-  countByIntegrationSource(integrationSource) {
-    const row = db.prepare(`
-      SELECT COUNT(*) as count FROM products
-      WHERE integration_source = ? AND deleted_at IS NULL
-    `).get(integrationSource);
-    return row.count;
-  }
-  upsert(product) {
-    const now = nowIso();
-    const localId = product.id ?? randomId();
-    db.prepare(`
-      INSERT INTO products (
-        id, external_id, integration_source, sku, barcode, category_id,
-        name, unit, sale_price_cents, cost_price_cents, current_stock, minimum_stock,
-        ncm, cfop, origin, fixed_ipi_value_cents, notes, situation, supplier_code, supplier_name,
-        location, maximum_stock, net_weight_kg, gross_weight_kg, packaging_barcode,
-        width_cm, height_cm, depth_cm, expiration_date, supplier_product_description,
-        complementary_description, items_per_box, is_variation, production_type,
-        ipi_tax_class, service_list_code, item_type, tags_group, tags, taxes_json,
-        parent_code, integration_code, product_group, brand, cest, volumes,
-        short_description, cross_docking_days, external_image_urls, external_link,
-        supplier_warranty_months, clone_parent_data, product_condition, free_shipping,
-        fci_number, department, measurement_unit, purchase_price_cents,
-        icms_st_retention_base_cents, icms_st_retention_value_cents,
-        icms_substitute_own_value_cents, product_category_name, additional_info, active,
-        remote_created_at, remote_updated_at, last_synced_at, sync_status,
-        raw_json, created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(integration_source, external_id) DO UPDATE SET
-        sku               = excluded.sku,
-        barcode           = excluded.barcode,
-        category_id       = excluded.category_id,
-        name              = excluded.name,
-        unit              = excluded.unit,
-        sale_price_cents  = excluded.sale_price_cents,
-        cost_price_cents  = excluded.cost_price_cents,
-        current_stock     = excluded.current_stock,
-        minimum_stock     = excluded.minimum_stock,
-        ncm               = excluded.ncm,
-        cfop              = excluded.cfop,
-        origin            = excluded.origin,
-        fixed_ipi_value_cents = excluded.fixed_ipi_value_cents,
-        notes             = excluded.notes,
-        situation         = excluded.situation,
-        supplier_code     = excluded.supplier_code,
-        supplier_name     = excluded.supplier_name,
-        location          = excluded.location,
-        maximum_stock     = excluded.maximum_stock,
-        net_weight_kg     = excluded.net_weight_kg,
-        gross_weight_kg   = excluded.gross_weight_kg,
-        packaging_barcode = excluded.packaging_barcode,
-        width_cm          = excluded.width_cm,
-        height_cm         = excluded.height_cm,
-        depth_cm          = excluded.depth_cm,
-        expiration_date   = excluded.expiration_date,
-        supplier_product_description = excluded.supplier_product_description,
-        complementary_description = excluded.complementary_description,
-        items_per_box     = excluded.items_per_box,
-        is_variation      = excluded.is_variation,
-        production_type   = excluded.production_type,
-        ipi_tax_class     = excluded.ipi_tax_class,
-        service_list_code = excluded.service_list_code,
-        item_type         = excluded.item_type,
-        tags_group        = excluded.tags_group,
-        tags              = excluded.tags,
-        taxes_json        = excluded.taxes_json,
-        parent_code       = excluded.parent_code,
-        integration_code  = excluded.integration_code,
-        product_group     = excluded.product_group,
-        brand             = excluded.brand,
-        cest              = excluded.cest,
-        volumes           = excluded.volumes,
-        short_description = excluded.short_description,
-        cross_docking_days = excluded.cross_docking_days,
-        external_image_urls = excluded.external_image_urls,
-        external_link     = excluded.external_link,
-        supplier_warranty_months = excluded.supplier_warranty_months,
-        clone_parent_data = excluded.clone_parent_data,
-        product_condition = excluded.product_condition,
-        free_shipping     = excluded.free_shipping,
-        fci_number        = excluded.fci_number,
-        department        = excluded.department,
-        measurement_unit  = excluded.measurement_unit,
-        purchase_price_cents = excluded.purchase_price_cents,
-        icms_st_retention_base_cents = excluded.icms_st_retention_base_cents,
-        icms_st_retention_value_cents = excluded.icms_st_retention_value_cents,
-        icms_substitute_own_value_cents = excluded.icms_substitute_own_value_cents,
-        product_category_name = excluded.product_category_name,
-        additional_info   = excluded.additional_info,
-        active            = excluded.active,
-        remote_created_at = excluded.remote_created_at,
-        remote_updated_at = excluded.remote_updated_at,
-        last_synced_at    = excluded.last_synced_at,
-        sync_status       = excluded.sync_status,
-        raw_json          = excluded.raw_json,
-        updated_at        = excluded.updated_at
-    `).run(
-      localId,
-      product.externalId,
-      product.integrationSource,
-      product.sku ?? null,
-      product.barcode ?? null,
-      product.categoryId ?? null,
-      product.name,
-      product.unit ?? null,
-      product.salePriceCents,
-      product.costPriceCents,
-      product.currentStock ?? 0,
-      product.minimumStock ?? 0,
-      product.ncm ?? null,
-      product.cfop ?? null,
-      product.origin ?? null,
-      product.fixedIpiValueCents ?? null,
-      product.notes ?? null,
-      product.situation ?? null,
-      product.supplierCode ?? null,
-      product.supplierName ?? null,
-      product.location ?? null,
-      product.maximumStock ?? null,
-      product.netWeightKg ?? null,
-      product.grossWeightKg ?? null,
-      product.packagingBarcode ?? null,
-      product.widthCm ?? null,
-      product.heightCm ?? null,
-      product.depthCm ?? null,
-      product.expirationDate ?? null,
-      product.supplierProductDescription ?? null,
-      product.complementaryDescription ?? null,
-      product.itemsPerBox ?? null,
-      product.isVariation ?? null,
-      product.productionType ?? null,
-      product.ipiTaxClass ?? null,
-      product.serviceListCode ?? null,
-      product.itemType ?? null,
-      product.tagsGroup ?? null,
-      product.tags ?? null,
-      product.taxesJson ?? null,
-      product.parentCode ?? null,
-      product.integrationCode ?? null,
-      product.productGroup ?? null,
-      product.brand ?? null,
-      product.cest ?? null,
-      product.volumes ?? null,
-      product.shortDescription ?? null,
-      product.crossDockingDays ?? null,
-      product.externalImageUrls ?? null,
-      product.externalLink ?? null,
-      product.supplierWarrantyMonths ?? null,
-      product.cloneParentData ?? null,
-      product.productCondition ?? null,
-      product.freeShipping ?? null,
-      product.fciNumber ?? null,
-      product.department ?? null,
-      product.measurementUnit ?? null,
-      product.purchasePriceCents ?? null,
-      product.icmsStRetentionBaseCents ?? null,
-      product.icmsStRetentionValueCents ?? null,
-      product.icmsSubstituteOwnValueCents ?? null,
-      product.productCategoryName ?? null,
-      product.additionalInfo ?? null,
-      product.active,
-      product.remoteCreatedAt ?? null,
-      product.remoteUpdatedAt ?? null,
-      product.lastSyncedAt,
-      product.syncStatus ?? "synced",
-      product.raw ? JSON.stringify(product.raw) : null,
-      product.createdAt ?? now,
-      product.updatedAt ?? now
-    );
-    db.prepare(`
-      INSERT INTO produtos (
-        id, internal_code, gtin, nome, marca, preco_custo, preco_venda,
-        estoque_atual, estoque_minimo, unidade_medida, ncm, ativo, created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        internal_code = excluded.internal_code,
-        gtin = excluded.gtin,
-        nome = excluded.nome,
-        marca = excluded.marca,
-        preco_custo = excluded.preco_custo,
-        preco_venda = excluded.preco_venda,
-        estoque_atual = excluded.estoque_atual,
-        estoque_minimo = excluded.estoque_minimo,
-        unidade_medida = excluded.unidade_medida,
-        ncm = excluded.ncm,
-        ativo = excluded.ativo,
-        updated_at = excluded.updated_at
-    `).run(
-      localId,
-      product.sku ?? null,
-      product.barcode ?? null,
-      product.name,
-      product.brand ?? null,
-      product.costPriceCents / 100,
-      product.salePriceCents / 100,
-      product.currentStock ?? 0,
-      product.minimumStock ?? 0,
-      product.measurementUnit ?? product.unit ?? null,
-      product.ncm ?? null,
-      product.active,
-      product.createdAt ?? now,
-      product.updatedAt ?? now
-    );
-  }
-  upsertMany(products) {
-    const run = db.transaction((items) => {
-      for (const item of items) this.upsert(item);
-    });
-    run(products);
-  }
-  getExternalIdsBySource(integrationSource, externalIds) {
-    if (externalIds.length === 0) return [];
-    const placeholders = externalIds.map(() => "?").join(",");
-    const rows = db.prepare(`
-      SELECT external_id FROM products
-      WHERE integration_source = ? AND external_id IN (${placeholders})
-    `).all(integrationSource, ...externalIds);
-    return rows.map((r) => r.external_id);
-  }
-  getByExternalId(integrationSource, externalId) {
-    const row = db.prepare(`
-      SELECT * FROM products
-      WHERE integration_source = ? AND external_id = ?
-      LIMIT 1
-    `).get(integrationSource, externalId);
-    return row ? this.mapRow(row) : null;
-  }
-  listByIntegrationSource(integrationSource) {
-    const rows = db.prepare(`
-      SELECT * FROM products
-      WHERE integration_source = ? AND deleted_at IS NULL
-      ORDER BY name ASC
-    `).all(integrationSource);
-    return rows.map((row) => this.mapRow(row));
-  }
-  mapRow(row) {
-    let raw = null;
-    if (row.raw_json) {
-      try {
-        raw = JSON.parse(row.raw_json);
-      } catch {
-        raw = row.raw_json;
-      }
-    }
-    return {
-      id: row.id,
-      externalId: row.external_id,
-      integrationSource: row.integration_source,
-      sku: row.sku,
-      barcode: row.barcode,
-      categoryId: row.category_id,
-      name: row.name,
-      unit: row.unit,
-      salePriceCents: row.sale_price_cents,
-      costPriceCents: row.cost_price_cents,
-      currentStock: row.current_stock,
-      minimumStock: row.minimum_stock,
-      ncm: row.ncm,
-      cfop: row.cfop,
-      origin: row.origin,
-      fixedIpiValueCents: row.fixed_ipi_value_cents,
-      notes: row.notes,
-      situation: row.situation,
-      supplierCode: row.supplier_code,
-      supplierName: row.supplier_name,
-      location: row.location,
-      maximumStock: row.maximum_stock,
-      netWeightKg: row.net_weight_kg,
-      grossWeightKg: row.gross_weight_kg,
-      packagingBarcode: row.packaging_barcode,
-      widthCm: row.width_cm,
-      heightCm: row.height_cm,
-      depthCm: row.depth_cm,
-      expirationDate: row.expiration_date,
-      supplierProductDescription: row.supplier_product_description,
-      complementaryDescription: row.complementary_description,
-      itemsPerBox: row.items_per_box,
-      isVariation: row.is_variation,
-      productionType: row.production_type,
-      ipiTaxClass: row.ipi_tax_class,
-      serviceListCode: row.service_list_code,
-      itemType: row.item_type,
-      tagsGroup: row.tags_group,
-      tags: row.tags,
-      taxesJson: row.taxes_json,
-      parentCode: row.parent_code,
-      integrationCode: row.integration_code,
-      productGroup: row.product_group,
-      brand: row.brand,
-      cest: row.cest,
-      volumes: row.volumes,
-      shortDescription: row.short_description,
-      crossDockingDays: row.cross_docking_days,
-      externalImageUrls: row.external_image_urls,
-      externalLink: row.external_link,
-      supplierWarrantyMonths: row.supplier_warranty_months,
-      cloneParentData: row.clone_parent_data,
-      productCondition: row.product_condition,
-      freeShipping: row.free_shipping,
-      fciNumber: row.fci_number,
-      department: row.department,
-      measurementUnit: row.measurement_unit,
-      purchasePriceCents: row.purchase_price_cents,
-      icmsStRetentionBaseCents: row.icms_st_retention_base_cents,
-      icmsStRetentionValueCents: row.icms_st_retention_value_cents,
-      icmsSubstituteOwnValueCents: row.icms_substitute_own_value_cents,
-      productCategoryName: row.product_category_name,
-      additionalInfo: row.additional_info,
-      active: row.active,
-      remoteCreatedAt: row.remote_created_at,
-      remoteUpdatedAt: row.remote_updated_at,
-      lastSyncedAt: row.last_synced_at ?? "",
-      syncStatus: row.sync_status,
-      raw,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
-  }
-}
-const productRepository = new ProductRepository();
-const INTEGRATION_ID = "bling";
-const RESOURCE = "products";
-const PAGE_LIMIT = 100;
-const PRODUCT_LIST_CRITERION = "5";
-function getNestedValue(source, path2) {
-  if (!source || typeof source !== "object") return void 0;
-  let current = source;
-  for (const key of path2.split(".")) {
-    if (!current || typeof current !== "object" || !(key in current)) return void 0;
-    current = current[key];
-  }
-  return current;
-}
-function pickValue(source, paths) {
-  for (const path2 of paths) {
-    const value = getNestedValue(source, path2);
-    if (value !== void 0 && value !== null && value !== "") {
-      return value;
-    }
-  }
-  return void 0;
-}
-function toNullableString(value) {
-  if (value === void 0 || value === null) return null;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-  }
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return null;
-}
-function normalizeNcm(value) {
-  var _a;
-  const digits = ((_a = toNullableString(value)) == null ? void 0 : _a.replace(/\D/g, "")) ?? null;
-  return digits && digits.length > 0 ? digits : null;
-}
-function normalizeCest(value) {
-  var _a;
-  const digits = ((_a = toNullableString(value)) == null ? void 0 : _a.replace(/\D/g, "")) ?? null;
-  return digits && digits.length > 0 ? digits : null;
-}
-function normalizeOrigin(value) {
-  if (typeof value === "number") {
-    return Number.isInteger(value) && value >= 0 && value <= 8 ? String(value) : null;
-  }
-  const text = toNullableString(value);
-  if (text === null) return null;
-  const match = text.match(/[0-8]/);
-  return (match == null ? void 0 : match[0]) ?? null;
-}
-function toNullableNumber(value) {
-  if (value === void 0 || value === null || value === "") return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    const normalized = trimmed.includes(",") ? trimmed.replace(/\./g, "").replace(",", ".") : trimmed;
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-function toMoneyCents(value) {
-  const parsed = toNullableNumber(value);
-  return parsed == null ? null : Math.round(parsed * 100);
-}
-function toNullableInteger(value) {
-  const parsed = toNullableNumber(value);
-  return parsed == null ? null : Math.round(parsed);
-}
-function toNullableBooleanInt(value) {
-  if (value === void 0 || value === null || value === "") return null;
-  if (typeof value === "boolean") return value ? 1 : 0;
-  if (typeof value === "number") return value === 0 ? 0 : 1;
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (["1", "true", "t", "sim", "s", "y", "yes", "a", "ativo"].includes(normalized)) return 1;
-    if (["0", "false", "f", "nao", "não", "n", "no", "i", "inativo"].includes(normalized)) return 0;
-  }
-  return null;
-}
-function serializeStructuredValue(value) {
-  if (value === void 0 || value === null || value === "") return null;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-  }
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return null;
-  }
-}
-function resolveCategoryExternalId(product) {
-  const categoryId = pickValue(product, [
-    "categoria.id",
-    "categoriaProduto.id",
-    "categoriaProdutoId"
-  ]);
-  return toNullableString(categoryId);
-}
-function toBlingDateTime(value) {
-  return value.replace("T", " ").slice(0, 19);
-}
-function getIncrementalCursor(state) {
-  const baseCursor = (state == null ? void 0 : state.checkpointCursor) ?? (state == null ? void 0 : state.lastSuccessAt);
-  if (!baseCursor) return void 0;
-  const cursorDate = baseCursor.includes("T") ? subtractMinutes(baseCursor, 2) : subtractMinutes(baseCursor.replace(" ", "T") + "Z", 2);
-  return toBlingDateTime(cursorDate);
-}
-function mapBlingProduct(product, now, categoryIdMap) {
-  const categoryExternalId = resolveCategoryExternalId(product);
-  const salePriceCents = toMoneyCents(pickValue(product, ["preco"])) ?? 0;
-  const costPriceCents = toMoneyCents(pickValue(product, ["precoCusto"])) ?? 0;
-  const purchasePriceCents = toMoneyCents(pickValue(product, ["precoCompra", "precoCusto"]));
-  const currentStock = toNullableNumber(pickValue(product, [
-    "estoque.saldoVirtualTotal",
-    "estoque.saldoFisicoTotal",
-    "estoque"
-  ])) ?? 0;
-  const minimumStock = toNullableNumber(pickValue(product, [
-    "estoque.minimo",
-    "estoqueMinimo"
-  ])) ?? 0;
-  const activeFlag = toNullableBooleanInt(pickValue(product, ["situacao"])) ?? 0;
-  const supplierName = toNullableString(pickValue(product, [
-    "fornecedor.nome",
-    "fornecedor"
-  ]));
-  const categoryName = toNullableString(pickValue(product, [
-    "categoria.nome",
-    "categoriaProduto.nome",
-    "categoriaProduto"
-  ]));
-  return {
-    // Identificação do produto no Bling e origem da integração.
-    externalId: String(product.id),
-    integrationSource: INTEGRATION_ID,
-    // Dados comerciais e de identificação. Campos ausentes viram null para manter padrão local.
-    sku: toNullableString(pickValue(product, ["codigo"])) ?? null,
-    barcode: toNullableString(pickValue(product, ["gtin", "codigo"])) ?? null,
-    categoryId: categoryExternalId ? categoryIdMap.get(categoryExternalId) ?? null : null,
-    name: product.nome,
-    unit: toNullableString(pickValue(product, ["unidade", "unidadeMedida"])) ?? null,
-    // Valores monetários são armazenados em centavos para evitar problemas com ponto flutuante.
-    salePriceCents,
-    costPriceCents,
-    purchasePriceCents,
-    // Estoque e limites locais.
-    currentStock,
-    minimumStock,
-    maximumStock: toNullableNumber(pickValue(product, [
-      "estoque.maximo",
-      "estoqueMaximo"
-    ])),
-    // Espelho ampliado do Bling.
-    ncm: normalizeNcm(pickValue(product, ["ncm", "tributacao.ncm", "tributos.ncm"])),
-    cfop: toNullableString(pickValue(product, ["cfop", "tributacao.cfop", "tributos.cfop", "cfopPadrao"])),
-    origin: normalizeOrigin(pickValue(product, ["origem", "tributacao.origem", "tributos.origem"])),
-    fixedIpiValueCents: toMoneyCents(pickValue(product, ["valorIpiFixo"])),
-    notes: toNullableString(pickValue(product, ["observacoes", "observacao"])),
-    situation: toNullableString(pickValue(product, ["situacao"])),
-    supplierCode: toNullableString(pickValue(product, ["codigoFornecedor"])),
-    supplierName,
-    location: toNullableString(pickValue(product, ["localizacao"])),
-    netWeightKg: toNullableNumber(pickValue(product, ["pesoLiquido"])),
-    grossWeightKg: toNullableNumber(pickValue(product, ["pesoBruto"])),
-    packagingBarcode: toNullableString(pickValue(product, ["gtinEmbalagem"])),
-    widthCm: toNullableNumber(pickValue(product, ["larguraProduto", "largura"])),
-    heightCm: toNullableNumber(pickValue(product, ["alturaProduto", "altura"])),
-    depthCm: toNullableNumber(pickValue(product, ["profundidadeProduto", "profundidade"])),
-    expirationDate: toNullableString(pickValue(product, ["dataValidade"])),
-    supplierProductDescription: toNullableString(pickValue(product, [
-      "descricaoFornecedor",
-      "descricaoProdutoFornecedor"
-    ])),
-    complementaryDescription: toNullableString(pickValue(product, ["descricaoComplementar"])),
-    itemsPerBox: toNullableNumber(pickValue(product, ["itensPorCaixa"])),
-    isVariation: toNullableBooleanInt(pickValue(product, ["produtoVariacao", "variacao"])),
-    productionType: toNullableString(pickValue(product, ["tipoProducao"])),
-    ipiTaxClass: toNullableString(pickValue(product, ["classeEnquadramentoIpi"])),
-    serviceListCode: toNullableString(pickValue(product, ["codigoListaServicos"])),
-    itemType: toNullableString(pickValue(product, ["tipoItem", "tipo"])),
-    tagsGroup: serializeStructuredValue(pickValue(product, ["grupoTags", "grupoDeTags"])),
-    tags: serializeStructuredValue(pickValue(product, ["tags"])),
-    taxesJson: serializeStructuredValue(pickValue(product, ["tributos"])),
-    parentCode: toNullableString(pickValue(product, ["codigoPai"])),
-    integrationCode: toNullableString(pickValue(product, ["codigoIntegracao"])),
-    productGroup: toNullableString(pickValue(product, ["grupoProdutos", "grupoProduto"])),
-    brand: toNullableString(pickValue(product, ["marca"])),
-    cest: normalizeCest(pickValue(product, ["cest", "tributacao.cest", "tributos.cest"])),
-    volumes: toNullableNumber(pickValue(product, ["volumes"])),
-    shortDescription: toNullableString(pickValue(product, ["descricaoCurta"])),
-    crossDockingDays: toNullableInteger(pickValue(product, ["crossDocking"])),
-    externalImageUrls: serializeStructuredValue(pickValue(product, ["urlImagensExternas", "imagensURL", "imagemURL"])),
-    externalLink: toNullableString(pickValue(product, ["linkExterno"])),
-    supplierWarrantyMonths: toNullableInteger(pickValue(product, ["mesesGarantiaFornecedor"])),
-    cloneParentData: toNullableBooleanInt(pickValue(product, ["clonarDadosPai"])),
-    productCondition: toNullableString(pickValue(product, ["condicaoProduto"])),
-    freeShipping: toNullableBooleanInt(pickValue(product, ["freteGratis"])),
-    fciNumber: toNullableString(pickValue(product, ["numeroFci", "numeroFCI"])),
-    department: toNullableString(pickValue(product, ["departamento"])),
-    measurementUnit: toNullableString(pickValue(product, ["unidadeMedida", "unidade"])),
-    icmsStRetentionBaseCents: toMoneyCents(pickValue(product, ["valorBaseIcmsStRetencao"])),
-    icmsStRetentionValueCents: toMoneyCents(pickValue(product, ["valorIcmsStRetencao"])),
-    icmsSubstituteOwnValueCents: toMoneyCents(pickValue(product, ["valorIcmsProprioSubstituto"])),
-    productCategoryName: categoryName,
-    additionalInfo: toNullableString(pickValue(product, ["informacoesAdicionais"])),
-    // No Bling, "A" representa produto ativo.
-    active: activeFlag,
-    // Datas e metadados de sincronização.
-    remoteCreatedAt: toNullableString(pickValue(product, ["dataCriacao"])),
-    remoteUpdatedAt: toNullableString(pickValue(product, ["dataAlteracao"])),
-    lastSyncedAt: now,
-    syncStatus: "synced",
-    // Guarda o payload original para auditoria/debug e futuras evoluções do mapeamento.
-    raw: product,
-    updatedAt: now
-  };
-}
-function normalizeBlingProduct(item) {
-  if (!item || typeof item !== "object") return null;
-  const candidate = "produto" in item && item.produto && typeof item.produto === "object" ? item.produto : item;
-  if (!candidate || typeof candidate !== "object") return null;
-  const product = candidate;
-  if (!product.id || typeof product.nome !== "string" || !product.nome.trim()) {
-    return null;
-  }
-  return product;
-}
-class SyncProductsFromBlingService {
-  /**
-   * Executa a sincronização de produtos do Bling para o banco local.
-   *
-   * Fluxo geral:
-   * 1. Lê o estado da última sincronização.
-   * 2. Decide se a execução será inicial ou incremental.
-   * 3. Busca produtos paginados na API do Bling.
-   * 4. Normaliza, mapeia e faz upsert dos produtos.
-   * 5. Atualiza estado e log de sincronização.
-   */
-  async execute() {
-    const state = syncStateRepository.get(INTEGRATION_ID, RESOURCE);
-    const localCount = productRepository.countByIntegrationSource(INTEGRATION_ID);
-    const isInitial = !state || !state.lastSuccessAt || localCount === 0;
-    const mode = isInitial ? "initial" : "incremental";
-    const dataAlteracaoInicial = isInitial ? void 0 : getIncrementalCursor(state);
-    syncStateRepository.markRunning(INTEGRATION_ID, RESOURCE);
-    const startedAt = nowIso();
-    const logId = syncLogRepository.start({
-      integrationId: INTEGRATION_ID,
-      resource: RESOURCE,
-      mode,
-      startedAt
-    });
-    let totalProcessed = 0;
-    let totalCreated = 0;
-    let totalUpdated = 0;
-    let totalFailed = 0;
-    let checkpointCursor = (state == null ? void 0 : state.checkpointCursor) ?? null;
-    try {
-      const categoryIdMap = categoryRepository.getAllExternalIdMap(INTEGRATION_ID);
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const response = await blingApiService.getProducts({
-          page,
-          limit: PAGE_LIMIT,
-          criterio: PRODUCT_LIST_CRITERION,
-          dataAlteracaoInicial
-        });
-        const rawItems = Array.isArray(response.data) ? response.data : [];
-        const normalizedProducts = rawItems.map(normalizeBlingProduct);
-        const validRaw = normalizedProducts.filter((item) => item != null);
-        totalFailed += normalizedProducts.length - validRaw.length;
-        if (validRaw.length === 0) {
-          if (rawItems.length > 0) {
-            console.warn("[SyncProductsFromBlingService] Nenhum produto válido encontrado na página. Exemplo de payload:", rawItems[0]);
-          }
-          hasMore = false;
-          break;
-        }
-        const detailedProducts = [];
-        for (const product of validRaw) {
-          try {
-            const detailResponse = await blingApiService.getProductById(product.id);
-            const detailed = normalizeBlingProduct(detailResponse.data) ?? product;
-            detailedProducts.push({ ...product, ...detailed });
-            await sleep(120);
-          } catch (detailError) {
-            console.warn(`[SyncProductsFromBlingService] Falha ao buscar detalhe do produto ${product.id}. Usando payload da listagem.`, detailError);
-            detailedProducts.push(product);
-          }
-        }
-        const now = nowIso();
-        const mapped = detailedProducts.map((product) => mapBlingProduct(product, now, categoryIdMap));
-        const missingFiscal = mapped.filter((product) => !product.ncm || !product.origin);
-        if (missingFiscal.length > 0) {
-          console.warn("[SyncProductsFromBlingService] Produtos sem NCM/origem apos detalhe do Bling:", missingFiscal.slice(0, 5).map((product) => ({
-            externalId: product.externalId,
-            sku: product.sku,
-            name: product.name,
-            ncm: product.ncm,
-            origin: product.origin,
-            rawKeys: product.raw && typeof product.raw === "object" ? Object.keys(product.raw) : [],
-            tributacao: product.raw && typeof product.raw === "object" ? product.raw.tributacao : void 0
-          })));
-        }
-        for (const product of mapped) {
-          if (product.remoteUpdatedAt && (!checkpointCursor || product.remoteUpdatedAt > checkpointCursor)) {
-            checkpointCursor = product.remoteUpdatedAt;
-          }
-        }
-        const externalIds = mapped.map((p) => p.externalId);
-        const existingIds = new Set(
-          productRepository.getExternalIdsBySource(INTEGRATION_ID, externalIds)
-        );
-        for (const p of mapped) {
-          if (existingIds.has(p.externalId)) {
-            totalUpdated++;
-          } else {
-            totalCreated++;
-          }
-        }
-        if (mapped.length > 0) {
-          productRepository.upsertMany(mapped);
-        }
-        totalProcessed += rawItems.length;
-        if (rawItems.length < PAGE_LIMIT) {
-          hasMore = false;
-        } else {
-          page++;
-          await sleep(350);
-        }
-      }
-      const finishedAt = nowIso();
-      syncStateRepository.markSuccess(
-        INTEGRATION_ID,
-        RESOURCE,
-        checkpointCursor ?? toBlingDateTime(finishedAt)
-      );
-      syncLogRepository.finish({
-        id: logId,
-        status: "success",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed
-      });
-      return { mode, processed: totalProcessed, created: totalCreated, updated: totalUpdated, failed: totalFailed };
-    } catch (error) {
-      const finishedAt = nowIso();
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      syncStateRepository.markError(INTEGRATION_ID, RESOURCE, errorMessage);
-      syncLogRepository.finish({
-        id: logId,
-        status: "failed",
-        finishedAt,
-        itemsProcessed: totalProcessed,
-        itemsCreated: totalCreated,
-        itemsUpdated: totalUpdated,
-        itemsFailed: totalFailed,
-        errorMessage
-      });
-      throw error;
-    }
-  }
-}
-const syncProductsFromBlingService = new SyncProductsFromBlingService();
-class SyncAllFromBlingService {
-  async execute() {
-    const categories = await syncCategoriesFromBlingService.execute();
-    const products = await syncProductsFromBlingService.execute();
-    return { categories, products };
-  }
-}
-const syncAllFromBlingService = new SyncAllFromBlingService();
+const LOCAL_CATALOG_MODE_MESSAGE = "Integração Bling desativada nesta versão local. O catálogo é gerenciado no SQLite do PDV.";
 function registerIntegrationHandlers() {
   ipcMain.handle("integrations:status", async (_event, integrationId) => {
     assertCurrentUserPermission("integrations:manage");
@@ -17219,63 +16776,26 @@ function registerIntegrationHandlers() {
     if (integrationId !== "bling") {
       return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
     }
-    try {
-      return await blingOAuthService.connect();
-    } catch (error) {
-      console.error("[integrations:connect]", error);
-      return { success: false, message: error instanceof Error ? error.message : "Erro ao conectar com o Bling." };
-    }
+    return { success: false, message: LOCAL_CATALOG_MODE_MESSAGE };
   });
   ipcMain.handle("integrations:disconnect", async (_event, integrationId) => {
     assertCurrentUserPermission("integrations:manage");
     if (integrationId !== "bling") {
       return { success: false, message: `Integração ${integrationId} ainda não implementada.` };
     }
-    try {
-      return await blingOAuthService.disconnect();
-    } catch (error) {
-      console.error("[integrations:disconnect]", error);
-      return { success: false, message: error instanceof Error ? error.message : "Erro ao desconectar Bling." };
-    }
+    return { success: false, message: LOCAL_CATALOG_MODE_MESSAGE };
   });
   ipcMain.handle("integrations:bling:sync-all", async () => {
     assertCurrentUserPermission("integrations:manage");
-    try {
-      const result = await syncAllFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error("[integrations:bling:sync-all]", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Erro ao sincronizar."
-      };
-    }
+    return { success: false, message: LOCAL_CATALOG_MODE_MESSAGE };
   });
   ipcMain.handle("integrations:bling:sync", async () => {
     assertCurrentUserPermission("integrations:manage");
-    try {
-      const result = await syncProductsFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error("[integrations:bling:sync]", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Erro ao sincronizar produtos."
-      };
-    }
+    return { success: false, message: LOCAL_CATALOG_MODE_MESSAGE };
   });
   ipcMain.handle("integrations:bling:sync-categories", async () => {
     assertCurrentUserPermission("integrations:manage");
-    try {
-      const result = await syncCategoriesFromBlingService.execute();
-      return { success: true, ...result };
-    } catch (error) {
-      console.error("[integrations:bling:sync-categories]", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Erro ao sincronizar categorias."
-      };
-    }
+    return { success: false, message: LOCAL_CATALOG_MODE_MESSAGE };
   });
   ipcMain.handle("integrations:bling:sync-status", () => {
     assertCurrentUserPermission("integrations:manage");

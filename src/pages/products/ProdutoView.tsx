@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import InfoRow from '../../components/ui/InfoRow'
 import DetailCard from '../../components/ui/DetailCard'
+import { getProductById } from './services/products.service'
 
 
 export default function ProdutoView() {
@@ -22,28 +23,9 @@ export default function ProdutoView() {
 
     useEffect(() => {
         if (!id) return
-        setTimeout(() => {
-            setProduto({
-                id: 31,
-                nome: 'Produto Exemplo',
-                marca: '',
-                ativo: true,
-                categoria: 'Geral',
-                preco_venda: 0.00,
-                preco_custo: 0.00,
-                estoque_atual: 0,
-                unidade_medida: 'un',
-                estoque_minimo: 0,
-                codigo_barras: '',
-                fornecedor_id: '',
-                ultima_atualizacao: '09/02/2026'
-            })
-        }, 500)
-        /*
-        window.api.buscarProdutoPorID(Number(id))
-            .then((data: any) => setProduto(data))
-            .catch((err: any) => console.error('Erro:', err))
-        */
+        getProductById(id)
+            .then((data) => setProduto(data))
+            .catch((err) => console.error('Erro:', err))
     }, [id])
 
     if (!produto) {
@@ -88,7 +70,7 @@ export default function ProdutoView() {
                         <div className="flex-1">
                             <div className="flex items-center gap-3 mb-1">
                                 <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">
-                                    {produto.categoria || 'GERAL'}
+                                {produto.product_category_name || 'Sem categoria'}
                                 </span>
                                 {produto.ativo ? (
                                     <span className="flex items-center gap-1 text-emerald-500 text-xs font-bold">
@@ -127,7 +109,7 @@ export default function ProdutoView() {
                             value={produto.preco_venda > 0 ? `${(((produto.preco_venda - produto.preco_custo) / produto.preco_venda) * 100).toFixed(1)}%` : '0%'}
                             highlight
                         />
-                        <InfoRow label="Fornecedor ID" value={produto.fornecedor_id} icon={Truck} />
+                        <InfoRow label="Fornecedor" value={produto.supplier_name || 'Não informado'} icon={Truck} />
                     </DetailCard>
 
                     {/* BLOCO: ESTOQUE */}
@@ -141,7 +123,7 @@ export default function ProdutoView() {
                     <DetailCard title="Identificação" icon={Barcode}>
                         <InfoRow label="Cód. de Barras" value={produto.codigo_barras} icon={Barcode} />
                         <InfoRow label="ID Interno" value={`#${id}`} />
-                        <InfoRow label="Última Atualização" value={produto.ultima_atualizacao || 'Hoje'} icon={Calendar} />
+                        <InfoRow label="Última Atualização" value={produto.updated_at || 'Hoje'} icon={Calendar} />
                     </DetailCard>
 
                 </div>

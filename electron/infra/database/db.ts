@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { app } from "electron";
 import { logger } from "../../logger/logger";
 import { VendaDTO } from '../../../src/types/itemCarrinho'
@@ -12,7 +13,7 @@ import { Usuario } from "../../../src/types/Usuario";
 
 
 // caminho seguro em Linux, Windows e Mac
-const dbPath = path.join(app.getPath("userData"), "galberto.db");
+const dbPath = path.join(app.getPath("userData"), "superpdv-galberto.db");
 console.log("SQLite path: ", dbPath);
 console.log('isPackaged:', app.isPackaged);
 console.log('app.getPath(userData):', app.getPath('userData'));
@@ -271,54 +272,6 @@ CREATE INDEX IF NOT EXISTS idx_categories_name
   `;
   db.exec(sqlComand);
   logger.info("-> Tabela 'categories' checada/criada");
-}
-
-function createTableTaxProfile() {
-  const sqlComand = `
-    CREATE TABLE IF NOT EXISTS tax_profiles (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-      name TEXT NOT NULL UNIQUE,
-
-      -- Regime / enquadramento fiscal do item
-      regime_tributario TEXT NOT NULL CHECK (regime_tributario IN ('SIMPLES_NACIONAL', 'REGIME_NORMAL')),
-      origin_code TEXT NOT NULL, -- 0..8 conforme tabela de origem da mercadoria
-
-      -- Operação padrão
-      cfop_padrao_saida_interna TEXT,
-      cfop_padrao_saida_interestadual TEXT,
-
-      -- ICMS
-      csosn TEXT,                -- usar quando Simples Nacional
-      icms_cst TEXT,             -- usar quando regime normal
-      mod_bc_icms TEXT,
-      red_bc_icms REAL DEFAULT 0,
-      icms_aliquota REAL DEFAULT 0,
-      icms_st INTEGER NOT NULL DEFAULT 0,
-      mod_bc_icms_st TEXT,
-      red_bc_icms_st REAL DEFAULT 0,
-      icms_st_aliquota REAL DEFAULT 0,
-      mva_st REAL DEFAULT 0,
-      fcp_aliquota REAL DEFAULT 0,
-      fcp_st_aliquota REAL DEFAULT 0,
-
-      -- PIS / COFINS
-      pis_cst TEXT NOT NULL,
-      pis_aliquota REAL DEFAULT 0,
-      cofins_cst TEXT NOT NULL,
-      cofins_aliquota REAL DEFAULT 0,
-      pis_cofins_monofasico INTEGER NOT NULL DEFAULT 0,
-
-      -- Regras complementares
-      cest_obrigatorio INTEGER NOT NULL DEFAULT 0,
-      ativo INTEGER NOT NULL DEFAULT 1,
-
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
-  db.exec(sqlComand);
-  logger.info("-> Tabela 'tax_profiles' checada/criada");
 }
 
 function createTableFornecedores() {
@@ -663,7 +616,6 @@ function createTableVendaPagamento() {
   logger.info("-> Tabela 'venda_pagamento' checada/criada");
 }
 
-
 function createTablePrinters() {
   const sqlComand = `
     CREATE TABLE IF NOT EXISTS printers (
@@ -765,45 +717,52 @@ function createTableSession() {
 
 
 function createTableStockMoviments() {
-  const sqlComand = `CREATE TABLE IF NOT EXISTS stock_movements (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  const existing = db.prepare(`
+    SELECT name FROM sqlite_master
+    WHERE type = 'table' AND name = 'stock_movements'
+  `).get();
 
-  product_id TEXT NOT NULL,
-  movement_type TEXT NOT NULL CHECK (movement_type IN ('ENTRY', 'EXIT')),
+  if (existing) {
+    const columns = db.prepare(`PRAGMA table_info(stock_movements)`).all() as Array<{ name: string; type: string }>;
+    const columnNames = new Set(columns.map(column => column.name));
+    const idColumn = columns.find(column => column.name === 'id');
+    const isLegacySchema = !columnNames.has('type') || !columnNames.has('previous_stock') || idColumn?.type?.toUpperCase() === 'INTEGER';
 
-  reason_code TEXT NOT NULL,
-  reason_note TEXT,
+    if (isLegacySchema) {
+      const backupName = `stock_movements_legacy_${Date.now()}`;
+      db.exec(`ALTER TABLE stock_movements RENAME TO ${backupName};`);
+      logger.info(`-> Tabela 'stock_movements' legada preservada como '${backupName}'`);
+    }
+  }
 
-  quantity REAL NOT NULL,
-  stock_before REAL NOT NULL,
-  stock_after REAL NOT NULL,
+  const sqlComand = `
+    CREATE TABLE IF NOT EXISTS stock_movements (
+      id TEXT PRIMARY KEY,
+      product_id TEXT NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('entry', 'exit', 'adjustment', 'sale', 'sale_cancel')),
+      quantity REAL NOT NULL,
+      previous_stock REAL NOT NULL,
+      new_stock REAL NOT NULL,
+      reason TEXT NOT NULL,
+      notes TEXT,
+      reference_type TEXT,
+      reference_id TEXT,
+      created_at TEXT NOT NULL,
+      deleted_at TEXT,
+      FOREIGN KEY (product_id) REFERENCES products(id)
+    );
 
-  unit_cost REAL,
+    CREATE INDEX IF NOT EXISTS idx_stock_movements_product_id
+      ON stock_movements(product_id);
 
-  document_type TEXT,
-  document_number TEXT,
-  document_key TEXT,
+    CREATE INDEX IF NOT EXISTS idx_stock_movements_created_at
+      ON stock_movements(created_at);
 
-  supplier_id INTEGER,
-  batch_number TEXT,
-  expiration_date TEXT,
-
-  performed_by_user_id INTEGER NOT NULL,
-
-  reversed_at DATETIME,
-  reversed_by_user_id INTEGER,
-  reversal_reason TEXT,
-
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-  FOREIGN KEY (product_id) REFERENCES products(id),
-  FOREIGN KEY (supplier_id) REFERENCES fornecedores(id),
-  FOREIGN KEY (performed_by_user_id) REFERENCES usuarios(id),
-  FOREIGN KEY (reversed_by_user_id) REFERENCES usuarios(id)
-);
-`;
-  logger.info("-> Tabela 'stock_movements' checada/criada");
+    CREATE INDEX IF NOT EXISTS idx_stock_movements_type
+      ON stock_movements(type);
+  `;
   db.exec(sqlComand)
+  logger.info("-> Tabela 'stock_movements' checada/criada");
 }
 
 function createTableCashRegisterSessions() {
@@ -1063,7 +1022,6 @@ createTablePrinters();
 ensurePrintersColumns();
 createTablePrinterLogs();
 createTableSession();
-createTableTaxProfile();
 createTableSaleItemTaxSnapshot();
 createTableStockMoviments();
 createTableVendaPagamento();
@@ -1112,7 +1070,7 @@ function getSaleItemSnapshot(productId: string | number) {
   const product = db.prepare(`
     SELECT id, barcode, name, unit, sale_price_cents, ncm, cfop, origin, cest
     FROM products
-    WHERE id = ? AND deleted_at IS NULL
+    WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL AND active = 1
     LIMIT 1
   `).get(productId) as {
     id: string;
@@ -1516,7 +1474,7 @@ export function finalizarVendaComBaixaEstoque(
   const selectSaldo = db.prepare(
     `SELECT current_stock
      FROM products
-     WHERE id = ? AND deleted_at IS NULL
+     WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
      LIMIT 1`
   );
 
@@ -1524,7 +1482,7 @@ export function finalizarVendaComBaixaEstoque(
     `UPDATE products
      SET current_stock = current_stock - ?,
          updated_at = datetime('now')
-     WHERE id = ?`
+     WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL`
   );
 
   const atualizarEstoqueLegado = db.prepare(
@@ -1572,12 +1530,27 @@ export function finalizarVendaComBaixaEstoque(
         throw new Error(`Produto da venda não encontrado: ${item.produto_id}`);
       }
 
-      if (Number(saldo.current_stock ?? 0) < Number(item.quantidade ?? 0)) {
+      const previousStock = Number(saldo.current_stock ?? 0);
+      const quantity = Number(item.quantidade ?? 0);
+
+      if (previousStock < quantity) {
         throw new Error(`Estoque insuficiente para o produto ${item.produto_id}`);
       }
 
-      atualizarEstoque.run(item.quantidade, item.produto_id);
-      atualizarEstoqueLegado.run(item.quantidade, item.produto_id);
+      const newStock = previousStock - quantity;
+      atualizarEstoque.run(quantity, item.produto_id);
+      atualizarEstoqueLegado.run(quantity, item.produto_id);
+      insertStockMovementRecord({
+        productId: item.produto_id,
+        type: 'sale',
+        quantity,
+        previousStock,
+        newStock,
+        reason: 'Venda',
+        notes: null,
+        referenceType: 'sale',
+        referenceId: String(vendaId),
+      });
     }
 
     const valorProdutos = typeof vendaPayload === 'number'
@@ -1875,7 +1848,7 @@ export function listarProdutos({ nome, codigo, ativo, page = 1, limit = 20 }: {
 
   const offset = (page - 1) * limit
 
-  let where = []
+  let where = [`integration_source = 'local'`, `deleted_at IS NULL`]
   let params: any[] = []
 
   if (nome) {
@@ -1897,14 +1870,14 @@ export function listarProdutos({ nome, codigo, ativo, page = 1, limit = 20 }: {
     .prepare(`
       SELECT
         id,
+        sku,
         barcode AS codigo_barras,
         name AS nome,
         ROUND(sale_price_cents / 100.0, 2) AS preco_venda,
         current_stock AS estoque_atual,
         active AS ativo
       FROM products
-      WHERE deleted_at IS NULL
-      ${where.length ? `AND ${where.join(' AND ')}` : ''}
+      WHERE ${where.join(' AND ')}
       ORDER BY name
     LIMIT ? OFFSET ?
       `)
@@ -1914,8 +1887,7 @@ export function listarProdutos({ nome, codigo, ativo, page = 1, limit = 20 }: {
     .prepare(`
       SELECT COUNT(*) as total
       FROM products
-      WHERE deleted_at IS NULL
-      ${where.length ? `AND ${where.join(' AND ')}` : ''}
+      WHERE ${where.join(' AND ')}
     `)
     .get(...params) as { total: number }
 
@@ -1993,7 +1965,7 @@ export function select_product_by_id(id: number | string) {
       ROUND(COALESCE(icms_st_retention_base_cents, 0) / 100.0, 2) AS valor_base_icms_st_retencao,
       ROUND(COALESCE(icms_st_retention_value_cents, 0) / 100.0, 2) AS valor_icms_st_retencao,
       ROUND(COALESCE(icms_substitute_own_value_cents, 0) / 100.0, 2) AS valor_icms_proprio_substituto,
-      product_category_name,
+      COALESCE(category_lookup.local_category_name, product_category_name) AS product_category_name,
       additional_info,
       integration_source,
       remote_created_at,
@@ -2005,10 +1977,477 @@ export function select_product_by_id(id: number | string) {
       deleted_at,
       raw_json
     FROM products
-    WHERE id = ? AND deleted_at IS NULL
+    LEFT JOIN (
+      SELECT id AS cat_join_id, name AS local_category_name
+      FROM categories
+    ) category_lookup ON category_lookup.cat_join_id = products.category_id
+    WHERE products.id = ? AND products.integration_source = 'local' AND products.deleted_at IS NULL
     LIMIT 1;
   `);
   return stmt.get(id);
+}
+
+type LocalProductInput = {
+  name?: string;
+  sku?: string | null;
+  barcode?: string | null;
+  category_id?: string | null;
+  unit?: string | null;
+  sale_price_cents?: number;
+  cost_price_cents?: number;
+  minimum_stock?: number;
+  maximum_stock?: number | null;
+  active?: number | boolean;
+  ncm?: string | null;
+  cfop?: string | null;
+  origin?: string | null;
+  notes?: string | null;
+  situation?: string | null;
+  supplier_code?: string | null;
+  supplier_name?: string | null;
+  location?: string | null;
+  brand?: string | null;
+  product_group?: string | null;
+  cest?: string | null;
+  short_description?: string | null;
+  complementary_description?: string | null;
+  additional_info?: string | null;
+};
+
+type LocalCategoryInput = {
+  name?: string;
+  active?: number | boolean;
+};
+
+function nullableText(value: unknown) {
+  if (value === undefined || value === null) return null;
+  const text = String(value).trim();
+  return text.length > 0 ? text : null;
+}
+
+function numberOrDefault(value: unknown, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+type StockMovementType = 'entry' | 'exit' | 'adjustment' | 'sale' | 'sale_cancel';
+
+type StockMovementInput = {
+  productId: string;
+  type: 'entry' | 'exit' | 'adjustment';
+  quantity?: number;
+  newStock?: number;
+  reason?: string;
+  notes?: string | null;
+};
+
+function getLocalProductForStock(productId: string) {
+  return db.prepare(`
+    SELECT
+      id,
+      name,
+      sku,
+      barcode,
+      unit,
+      current_stock,
+      minimum_stock,
+      maximum_stock,
+      active,
+      deleted_at,
+      integration_source
+    FROM products
+    WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+    LIMIT 1
+  `).get(productId) as {
+    id: string;
+    name: string;
+    sku: string | null;
+    barcode: string | null;
+    unit: string | null;
+    current_stock: number;
+    minimum_stock: number;
+    maximum_stock: number | null;
+    active: number;
+    deleted_at: string | null;
+    integration_source: string | null;
+  } | undefined;
+}
+
+function insertStockMovementRecord(input: {
+  productId: string;
+  type: StockMovementType;
+  quantity: number;
+  previousStock: number;
+  newStock: number;
+  reason: string;
+  notes?: string | null;
+  referenceType?: string | null;
+  referenceId?: string | null;
+}) {
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO stock_movements (
+      id, product_id, type, quantity, previous_stock, new_stock,
+      reason, notes, reference_type, reference_id, created_at, deleted_at
+    ) VALUES (
+      @id, @product_id, @type, @quantity, @previous_stock, @new_stock,
+      @reason, @notes, @reference_type, @reference_id, @created_at, NULL
+    )
+  `).run({
+    id: randomUUID(),
+    product_id: input.productId,
+    type: input.type,
+    quantity: input.quantity,
+    previous_stock: input.previousStock,
+    new_stock: input.newStock,
+    reason: input.reason,
+    notes: nullableText(input.notes),
+    reference_type: input.referenceType ?? null,
+    reference_id: input.referenceId ?? null,
+    created_at: now,
+  });
+
+  return now;
+}
+
+export function listLocalStockProducts({
+  term,
+  stockFilter = 'all',
+  active,
+  page = 1,
+  limit = 100,
+}: {
+  term?: string;
+  stockFilter?: 'all' | 'low' | 'out';
+  active?: number;
+  page?: number;
+  limit?: number;
+} = {}) {
+  const offset = (page - 1) * limit;
+  const where = [`p.integration_source = 'local'`, `p.deleted_at IS NULL`];
+  const params: unknown[] = [];
+
+  if (term?.trim()) {
+    where.push(`(LOWER(p.name) LIKE LOWER(?) OR LOWER(COALESCE(p.sku, '')) LIKE LOWER(?) OR LOWER(COALESCE(p.barcode, '')) LIKE LOWER(?))`);
+    const like = `%${term.trim()}%`;
+    params.push(like, like, like);
+  }
+
+  if (active !== undefined) {
+    where.push(`p.active = ?`);
+    params.push(active);
+  }
+
+  if (stockFilter === 'low') {
+    where.push(`p.minimum_stock > 0 AND p.current_stock <= p.minimum_stock`);
+  }
+
+  if (stockFilter === 'out') {
+    where.push(`p.current_stock <= 0`);
+  }
+
+  const data = db.prepare(`
+    SELECT
+      p.id,
+      p.name,
+      p.sku,
+      p.barcode,
+      p.unit,
+      p.current_stock,
+      p.minimum_stock,
+      p.maximum_stock,
+      p.active,
+      p.category_id,
+      c.name AS category_name,
+      p.updated_at
+    FROM products p
+    LEFT JOIN categories c ON c.id = p.category_id
+    WHERE ${where.join(' AND ')}
+    ORDER BY p.name
+    LIMIT ? OFFSET ?
+  `).all(...params, limit, offset);
+
+  const total = db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM products p
+    WHERE ${where.join(' AND ')}
+  `).get(...params) as { total: number };
+
+  return { data, page, limit, total: total.total };
+}
+
+export function getLocalProductStock(productId: string) {
+  const product = getLocalProductForStock(productId);
+  if (!product) throw new Error("Produto local não encontrado.");
+  return product;
+}
+
+export function createStockMovement(input: StockMovementInput) {
+  const productId = nullableText(input.productId);
+  if (!productId) throw new Error("Produto inválido.");
+
+  const reason = nullableText(input.reason);
+  if (!reason) throw new Error("Informe uma justificativa.");
+
+  const type = input.type;
+  if (!['entry', 'exit', 'adjustment'].includes(type)) {
+    throw new Error("Tipo de movimentação inválido.");
+  }
+
+  const transaction = db.transaction(() => {
+    const product = getLocalProductForStock(productId);
+    if (!product) throw new Error("Produto local não encontrado.");
+    if (Number(product.active) !== 1) throw new Error("Não é possível movimentar estoque de produto inativo.");
+
+    const previousStock = Number(product.current_stock ?? 0);
+    let movementQuantity = 0;
+    let newStock = previousStock;
+
+    if (type === 'entry') {
+      movementQuantity = numberOrDefault(input.quantity, NaN);
+      if (!Number.isFinite(movementQuantity) || movementQuantity <= 0) {
+        throw new Error("Informe uma quantidade maior que zero.");
+      }
+      newStock = previousStock + movementQuantity;
+    }
+
+    if (type === 'exit') {
+      movementQuantity = numberOrDefault(input.quantity, NaN);
+      if (!Number.isFinite(movementQuantity) || movementQuantity <= 0) {
+        throw new Error("Informe uma quantidade maior que zero.");
+      }
+      newStock = previousStock - movementQuantity;
+      if (newStock < 0) throw new Error("Não é possível deixar estoque negativo.");
+    }
+
+    if (type === 'adjustment') {
+      newStock = numberOrDefault(input.newStock, NaN);
+      if (!Number.isFinite(newStock) || newStock < 0) {
+        throw new Error("Informe um novo saldo válido.");
+      }
+      movementQuantity = newStock - previousStock;
+    }
+
+    insertStockMovementRecord({
+      productId,
+      type,
+      quantity: movementQuantity,
+      previousStock,
+      newStock,
+      reason,
+      notes: input.notes,
+      referenceType: 'manual',
+      referenceId: null,
+    });
+
+    db.prepare(`
+      UPDATE products
+      SET current_stock = ?, updated_at = ?
+      WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+    `).run(newStock, new Date().toISOString(), productId);
+
+    db.prepare(`
+      UPDATE produtos
+      SET estoque_atual = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(newStock, productId);
+
+    return getLocalProductStock(productId);
+  });
+
+  return transaction();
+}
+
+export function listStockMovements({
+  productId,
+  type,
+  page = 1,
+  limit = 100,
+}: {
+  productId?: string;
+  type?: StockMovementType;
+  page?: number;
+  limit?: number;
+} = {}) {
+  const offset = (page - 1) * limit;
+  const where = [`sm.deleted_at IS NULL`];
+  const params: unknown[] = [];
+
+  if (productId) {
+    where.push(`sm.product_id = ?`);
+    params.push(productId);
+  }
+
+  if (type) {
+    where.push(`sm.type = ?`);
+    params.push(type);
+  }
+
+  const data = db.prepare(`
+    SELECT
+      sm.id,
+      sm.product_id,
+      p.name AS product_name,
+      p.sku,
+      p.barcode,
+      sm.type,
+      sm.quantity,
+      sm.previous_stock,
+      sm.new_stock,
+      sm.reason,
+      sm.notes,
+      sm.reference_type,
+      sm.reference_id,
+      sm.created_at
+    FROM stock_movements sm
+    INNER JOIN products p ON p.id = sm.product_id
+    WHERE ${where.join(' AND ')}
+      AND p.integration_source = 'local'
+    ORDER BY sm.created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(...params, limit, offset);
+
+  const total = db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM stock_movements sm
+    INNER JOIN products p ON p.id = sm.product_id
+    WHERE ${where.join(' AND ')}
+      AND p.integration_source = 'local'
+  `).get(...params) as { total: number };
+
+  return { data, page, limit, total: total.total };
+}
+
+export function listStockMovementsByProduct(productId: string, params: { page?: number; limit?: number } = {}) {
+  return listStockMovements({ ...params, productId });
+}
+
+function validateLocalProduct(input: LocalProductInput) {
+  const name = nullableText(input.name);
+  if (!name) throw new Error("Informe o nome do produto.");
+
+  const salePriceCents = Math.round(numberOrDefault(input.sale_price_cents, NaN));
+  if (!Number.isFinite(salePriceCents) || salePriceCents < 0) {
+    throw new Error("Informe um preço de venda válido.");
+  }
+
+  return {
+    ...input,
+    name,
+    sale_price_cents: salePriceCents,
+    cost_price_cents: Math.round(numberOrDefault(input.cost_price_cents)),
+    minimum_stock: numberOrDefault(input.minimum_stock),
+    maximum_stock: input.maximum_stock === null || input.maximum_stock === undefined || input.maximum_stock === ''
+      ? null
+      : numberOrDefault(input.maximum_stock),
+    active: input.active === false || input.active === 0 ? 0 : 1,
+    unit: nullableText(input.unit) ?? "UN",
+    category_id: nullableText(input.category_id),
+    sku: nullableText(input.sku),
+    barcode: nullableText(input.barcode),
+    ncm: nullableText(input.ncm),
+    cfop: nullableText(input.cfop),
+    origin: nullableText(input.origin),
+    notes: nullableText(input.notes),
+    situation: nullableText(input.situation),
+    supplier_code: nullableText(input.supplier_code),
+    supplier_name: nullableText(input.supplier_name),
+    location: nullableText(input.location),
+    brand: nullableText(input.brand),
+    product_group: nullableText(input.product_group),
+    cest: nullableText(input.cest),
+    short_description: nullableText(input.short_description),
+    complementary_description: nullableText(input.complementary_description),
+    additional_info: nullableText(input.additional_info),
+  };
+}
+
+export function createLocalProduct(input: LocalProductInput) {
+  const product = validateLocalProduct(input);
+  const id = randomUUID();
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    INSERT INTO products (
+      id, external_id, integration_source, sku, barcode, category_id, name, unit,
+      sale_price_cents, cost_price_cents, current_stock, minimum_stock, active,
+      sync_status, raw_json, ncm, cfop, origin, notes, situation, supplier_code,
+      supplier_name, location, maximum_stock, complementary_description,
+      product_group, brand, cest, short_description, additional_info,
+      created_at, updated_at, deleted_at
+    ) VALUES (
+      @id, NULL, 'local', @sku, @barcode, @category_id, @name, @unit,
+      @sale_price_cents, @cost_price_cents, 0, @minimum_stock, @active,
+      'local', @raw_json, @ncm, @cfop, @origin, @notes, @situation, @supplier_code,
+      @supplier_name, @location, @maximum_stock, @complementary_description,
+      @product_group, @brand, @cest, @short_description, @additional_info,
+      @created_at, @updated_at, NULL
+    )
+  `).run({
+    ...product,
+    id,
+    raw_json: JSON.stringify({ source: "local", createdManually: true }),
+    created_at: now,
+    updated_at: now,
+  });
+
+  return select_product_by_id(id);
+}
+
+export function updateLocalProduct(id: string, input: LocalProductInput) {
+  const current = db.prepare(`
+    SELECT id FROM products
+    WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+    LIMIT 1
+  `).get(id);
+  if (!current) throw new Error("Produto local não encontrado ou não editável.");
+
+  const product = validateLocalProduct(input);
+  db.prepare(`
+    UPDATE products SET
+      sku = @sku,
+      barcode = @barcode,
+      category_id = @category_id,
+      name = @name,
+      unit = @unit,
+      sale_price_cents = @sale_price_cents,
+      cost_price_cents = @cost_price_cents,
+      minimum_stock = @minimum_stock,
+      maximum_stock = @maximum_stock,
+      active = @active,
+      ncm = @ncm,
+      cfop = @cfop,
+      origin = @origin,
+      notes = @notes,
+      situation = @situation,
+      supplier_code = @supplier_code,
+      supplier_name = @supplier_name,
+      location = @location,
+      complementary_description = @complementary_description,
+      product_group = @product_group,
+      brand = @brand,
+      cest = @cest,
+      short_description = @short_description,
+      additional_info = @additional_info,
+      updated_at = @updated_at
+    WHERE id = @id AND integration_source = 'local' AND deleted_at IS NULL
+  `).run({
+    ...product,
+    id,
+    updated_at: new Date().toISOString(),
+  });
+
+  return select_product_by_id(id);
+}
+
+export function softDeleteLocalProduct(id: string) {
+  const result = db.prepare(`
+    UPDATE products
+    SET deleted_at = ?, active = 0, updated_at = ?
+    WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+  `).run(new Date().toISOString(), new Date().toISOString(), id);
+
+  return { success: result.changes > 0 };
 }
 
 // Funcao para buscar produtos por ID
@@ -2021,7 +2460,9 @@ export function buscarProdutosPorNome(termo: string) {
       ROUND(sale_price_cents / 100.0, 2) AS preco_venda,
       current_stock AS estoque
     FROM products
-    WHERE deleted_at IS NULL
+    WHERE integration_source = 'local'
+      AND deleted_at IS NULL
+      AND active = 1
       AND LOWER(name) LIKE LOWER(?)
     ORDER BY name
     LIMIT 50
@@ -2040,7 +2481,9 @@ export function buscarProdutoPorCodigoBarras(codigo: string) {
       ROUND(sale_price_cents / 100.0, 2) AS preco_venda,
       current_stock AS estoque_atual
     FROM products
-    WHERE deleted_at IS NULL
+    WHERE integration_source = 'local'
+      AND deleted_at IS NULL
+      AND active = 1
       AND barcode = ?
     LIMIT 1;
   `);
@@ -2054,7 +2497,8 @@ export function selectSuggestionProduct(term: string) {
   const stmt = db.prepare(`
     SELECT *
     FROM products
-    WHERE deleted_at IS NULL
+    WHERE integration_source = 'local'
+    AND deleted_at IS NULL
     AND active = 1
     AND(
       sku = ?
@@ -2082,6 +2526,106 @@ export function selectSuggestionProduct(term: string) {
     controlsExpiration: false,
     controlsBatch: false,
   }));
+}
+
+export function listLocalCategories({ activeOnly = false }: { activeOnly?: boolean } = {}) {
+  const activeClause = activeOnly ? "AND active = 1" : "";
+  return db.prepare(`
+    SELECT
+      id,
+      name,
+      active,
+      integration_source,
+      sync_status,
+      created_at,
+      updated_at,
+      deleted_at
+    FROM categories
+    WHERE integration_source = 'local'
+      AND deleted_at IS NULL
+      ${activeClause}
+    ORDER BY name
+  `).all();
+}
+
+function validateLocalCategory(input: LocalCategoryInput) {
+  const name = nullableText(input.name);
+  if (!name) throw new Error("Informe o nome da categoria.");
+  return {
+    name,
+    active: input.active === false || input.active === 0 ? 0 : 1,
+  };
+}
+
+export function createLocalCategory(input: LocalCategoryInput) {
+  const category = validateLocalCategory(input);
+  const id = randomUUID();
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    INSERT INTO categories (
+      id, external_id, integration_source, name, active, sync_status,
+      raw_json, created_at, updated_at, deleted_at
+    ) VALUES (
+      @id, NULL, 'local', @name, @active, 'local',
+      @raw_json, @created_at, @updated_at, NULL
+    )
+  `).run({
+    ...category,
+    id,
+    raw_json: JSON.stringify({ source: "local", createdManually: true }),
+    created_at: now,
+    updated_at: now,
+  });
+
+  return db.prepare(`SELECT * FROM categories WHERE id = ?`).get(id);
+}
+
+export function updateLocalCategory(id: string, input: LocalCategoryInput) {
+  const category = validateLocalCategory(input);
+  const result = db.prepare(`
+    UPDATE categories
+    SET name = @name,
+        active = @active,
+        updated_at = @updated_at
+    WHERE id = @id AND integration_source = 'local' AND deleted_at IS NULL
+  `).run({
+    ...category,
+    id,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (result.changes === 0) throw new Error("Categoria local não encontrada ou não editável.");
+  return db.prepare(`SELECT * FROM categories WHERE id = ?`).get(id);
+}
+
+export function softDeleteLocalCategory(id: string) {
+  const linkedProducts = db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM products
+    WHERE category_id = ?
+      AND integration_source = 'local'
+      AND deleted_at IS NULL
+  `).get(id) as { total: number };
+
+  if (linkedProducts.total > 0) {
+    const now = new Date().toISOString();
+    db.prepare(`
+      UPDATE categories
+      SET active = 0, updated_at = ?
+      WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+    `).run(now, id);
+    return { success: true, deactivatedOnly: true };
+  }
+
+  const now = new Date().toISOString();
+  const result = db.prepare(`
+    UPDATE categories
+    SET deleted_at = ?, active = 0, updated_at = ?
+    WHERE id = ? AND integration_source = 'local' AND deleted_at IS NULL
+  `).run(now, now, id);
+
+  return { success: result.changes > 0, deactivatedOnly: false };
 }
 
 // Funcao para obter os perfis fiscais cadastrados, para popular dropdown de perfil fiscal na pagina produtos

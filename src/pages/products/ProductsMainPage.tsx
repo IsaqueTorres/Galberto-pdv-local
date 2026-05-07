@@ -1,12 +1,13 @@
 import { useState } from "react";
 import TabelaProdutos from "./TabelaProdutos";
 import StockDashboard from "./StockDashboard";
+import CategoriasLocais from "./CategoriasLocais";
 
 
 export default function ProductsMainPage() {
 
   const [abaAtiva, setAbaAtiva] = useState<AbaConfig>('Produtos')
-  type AbaConfig = 'Produtos' | 'Estoque' | 'Definir Alertas de produto'
+  type AbaConfig = 'Produtos' | 'Categorias' | 'Estoque' | 'Definir Alertas de produto'
 
   return (
 
@@ -18,6 +19,11 @@ export default function ProductsMainPage() {
             label="Produtos"
             ativa={abaAtiva === 'Produtos'}
             onClick={() => setAbaAtiva('Produtos')}
+          />
+          <Tab
+            label="Categorias"
+            ativa={abaAtiva === 'Categorias'}
+            onClick={() => setAbaAtiva('Categorias')}
           />
           <Tab
             label="Estoque"
@@ -35,6 +41,7 @@ export default function ProductsMainPage() {
         <div className="flex-1 overflow-auto bg-blue-50/40 px-6 py-8">
           <div className="max-w-350 mx-auto">
             {abaAtiva === 'Produtos' && <TabelaProdutos />}
+            {abaAtiva === 'Categorias' && <CategoriasLocais />}
             {abaAtiva === 'Estoque' && <StockDashboard />}
             {abaAtiva === 'Definir Alertas de produto' && <StockDashboard />}
           </div>
