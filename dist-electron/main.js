@@ -1097,6 +1097,53 @@ function enableForeignKeys() {
   db.exec("PRAGMA foreign_keys = ON;");
   logger.info("-> Foreign keys ativadas");
 }
+function createTableTaxProfile() {
+  const sqlComand = `
+    CREATE TABLE IF NOT EXISTS tax_profiles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      name TEXT NOT NULL UNIQUE,
+
+      -- Regime / enquadramento fiscal do item
+      regime_tributario TEXT NOT NULL CHECK (regime_tributario IN ('SIMPLES_NACIONAL', 'REGIME_NORMAL')),
+      origin_code TEXT NOT NULL, -- 0..8 conforme tabela de origem da mercadoria
+
+      -- Operação padrão
+      cfop_padrao_saida_interna TEXT,
+      cfop_padrao_saida_interestadual TEXT,
+
+      -- ICMS
+      csosn TEXT,                -- usar quando Simples Nacional
+      icms_cst TEXT,             -- usar quando regime normal
+      mod_bc_icms TEXT,
+      red_bc_icms REAL DEFAULT 0,
+      icms_aliquota REAL DEFAULT 0,
+      icms_st INTEGER NOT NULL DEFAULT 0,
+      mod_bc_icms_st TEXT,
+      red_bc_icms_st REAL DEFAULT 0,
+      icms_st_aliquota REAL DEFAULT 0,
+      mva_st REAL DEFAULT 0,
+      fcp_aliquota REAL DEFAULT 0,
+      fcp_st_aliquota REAL DEFAULT 0,
+
+      -- PIS / COFINS
+      pis_cst TEXT NOT NULL,
+      pis_aliquota REAL DEFAULT 0,
+      cofins_cst TEXT NOT NULL,
+      cofins_aliquota REAL DEFAULT 0,
+      pis_cofins_monofasico INTEGER NOT NULL DEFAULT 0,
+
+      -- Regras complementares
+      cest_obrigatorio INTEGER NOT NULL DEFAULT 0,
+      ativo INTEGER NOT NULL DEFAULT 1,
+
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+  db.exec(sqlComand);
+  logger.info("-> Tabela 'tax_profiles' checada/criada");
+}
 function createTableProducts() {
   const sqlComand = `
     CREATE TABLE IF NOT EXISTS products (
@@ -2021,6 +2068,7 @@ function createTableSyncLogs() {
   }
 }
 createTableProducts();
+createTableTaxProfile();
 ensureProductsColumns();
 syncLegacyProductsMirror();
 createTableCategories();
