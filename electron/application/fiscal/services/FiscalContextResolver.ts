@@ -20,6 +20,8 @@
  */
 
 import { logger } from '../../../logger/logger';
+import fs from 'node:fs';
+import path from 'node:path';
 import { fiscalSettingsRepository } from '../persistence/repositories/FiscalSettingsRepository';
 import { storeRepository } from '../persistence/repositories/StoreRepository';
 import type { FiscalSettingsRecord } from '../persistence/types/schema.types';
@@ -28,6 +30,30 @@ import { IntegrationFiscalSettingsService } from './IntegrationFiscalSettingsSer
 import { ensureActiveFiscalStore } from './FiscalStoreBootstrap';
 
 const LEGACY_INTEGRATION_ID = 'fiscal:nfce';
+const EMBEDDED_SEFAZ_CA_BUNDLE_FILENAME = 'sefaz-sp-ca-bundle.pem';
+
+function resolveEmbeddedSefazCaBundlePath(): string | null {
+  const candidates = [
+    // Caminho usado no app empacotado pelo electron-builder via extraResources.
+    process.resourcesPath
+      ? path.join(process.resourcesPath, 'fiscal-certs', EMBEDDED_SEFAZ_CA_BUNDLE_FILENAME)
+      : null,
+    // Caminho usado em desenvolvimento, rodando a partir da raiz do repositório.
+    path.join(process.cwd(), 'electron', 'application', 'fiscal', 'certs', EMBEDDED_SEFAZ_CA_BUNDLE_FILENAME),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
+function resolveEffectiveCaBundlePath(configuredPath: string | null | undefined): string | null {
+  const customPath = configuredPath?.trim();
+  if (customPath) {
+    return customPath;
+  }
+
+  // O bundle embarcado evita depender da store de certificados da máquina do cliente.
+  return resolveEmbeddedSefazCaBundlePath();
+}
 
 function normalizeUf(value: string | null | undefined): string {
   return (value ?? 'SP').trim().toUpperCase() || 'SP';
@@ -46,7 +72,7 @@ function mapSettingsToProviderConfig(context: FiscalContext): FiscalProviderConf
     certificatePath: context.certificatePath ?? null,
     certificatePassword: context.certificatePassword ?? null,
     certificateValidUntil: context.certificateValidUntil ?? null,
-    caBundlePath: context.caBundlePath ?? null,
+    caBundlePath: resolveEffectiveCaBundlePath(context.caBundlePath),
     tlsValidationMode: context.tlsValidationMode,
     cscId: context.cscId ?? null,
     cscToken: context.cscToken ?? null,

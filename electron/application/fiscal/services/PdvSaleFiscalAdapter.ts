@@ -5,11 +5,10 @@ import { salesRepository } from '../persistence/repositories/SalesRepository';
 import { fiscalDocumentRepository } from '../persistence/repositories/FiscalDocumentRepository';
 import { FiscalDocumentStatuses } from '../persistence/types/schema.types';
 import { fiscalNumberingService } from './FiscalNumberingService';
-import type { StoreRecord, TaxRegimeCode } from '../persistence/types/schema.types';
+import type { StoreRecord } from '../persistence/types/schema.types';
 
 type LegacySaleRow = {
   id: number;
-  ambiente: number;
   data_emissao: string;
   valor_produtos: number;
   valor_desconto: number;
@@ -51,26 +50,6 @@ type LegacyPaymentRow = {
   descricao_outro: string | null;
 };
 
-type LegacyCompanyRow = {
-  nome_fantasia: string;
-  razao_social: string;
-  cnpj: string;
-  inscricao_estadual: string;
-  crt: number;
-  rua: string;
-  numero: string;
-  bairro: string;
-  cidade: string;
-  uf: string;
-  cep: string;
-  cod_municipio_ibge: string;
-  ambiente_emissao: number;
-  serie_nfce: number | null;
-  proximo_numero_nfce: number | null;
-  csc_id: string | null;
-  csc_token: string | null;
-};
-
 function mapPaymentMethod(tpag: string): NfcePaymentMethod {
   const map: Record<string, NfcePaymentMethod> = {
     '01': 'DINHEIRO',
@@ -81,10 +60,6 @@ function mapPaymentMethod(tpag: string): NfcePaymentMethod {
   };
 
   return map[tpag] ?? 'OUTROS';
-}
-
-function mapEnvironment(ambiente: number): 'production' | 'homologation' {
-  return ambiente === 1 ? 'production' : 'homologation';
 }
 
 function resolvePrimaryPaymentMethod(payments: NfcePaymentInput[]): NfcePaymentMethod {
@@ -103,14 +78,6 @@ function taxValue(primary: string | null | undefined, fallback: string | null | 
 
 function isSimpleNationalStore(store: StoreRecord): boolean {
   return ['1', '4'].includes(String(store.taxRegimeCode ?? '').trim());
-}
-
-function toTaxRegimeCode(value: string | number | null | undefined): TaxRegimeCode {
-  const normalized = String(value ?? '').trim();
-  if (['1', '2', '3', '4'].includes(normalized)) {
-    return normalized as TaxRegimeCode;
-  }
-  throw new Error(`CRT/regime tributario invalido na company legada: ${normalized || 'vazio'}.`);
 }
 
 function resolveIcmsTaxForStore(store: StoreRecord, item: LegacySaleItemRow) {
@@ -149,72 +116,19 @@ function nowInIssuerFiscalIso(uf: string | null | undefined): string {
 }
 
 export class PdvSaleFiscalAdapter {
-  private loadActiveCompany(): LegacyCompanyRow | null {
-    const company = db.prepare(`
-      SELECT
-        nome_fantasia,
-        razao_social,
-        cnpj,
-        inscricao_estadual,
-        crt,
-        rua,
-        numero,
-        bairro,
-        cidade,
-        uf,
-        cep,
-        cod_municipio_ibge,
-        ambiente_emissao,
-        serie_nfce,
-        proximo_numero_nfce,
-        csc_id,
-        csc_token
-      FROM company
-      WHERE ativo = 1
-      LIMIT 1
-    `).get() as LegacyCompanyRow | undefined;
-
-    return company ?? null;
-  }
-
   private resolveActiveStore(): StoreRecord {
     const existingStore = storeRepository.findActive();
     if (existingStore) {
       return existingStore;
     }
 
-    const company = this.loadActiveCompany();
-    if (!company) {
-      throw new Error('Nenhuma store ativa encontrada e não existe company ativa para criar o espelho fiscal.');
-    }
-
-    return storeRepository.create({
-      code: 'MAIN',
-      name: company.nome_fantasia,
-      legalName: company.razao_social,
-      cnpj: company.cnpj,
-      stateRegistration: company.inscricao_estadual,
-      taxRegimeCode: toTaxRegimeCode(company.crt),
-      environment: mapEnvironment(company.ambiente_emissao),
-      cscId: company.csc_id,
-      cscToken: company.csc_token,
-      defaultSeries: Number(company.serie_nfce ?? 1),
-      nextNfceNumber: Number(company.proximo_numero_nfce ?? 1),
-      addressStreet: company.rua,
-      addressNumber: company.numero,
-      addressNeighborhood: company.bairro,
-      addressCity: company.cidade,
-      addressState: company.uf,
-      addressZipCode: company.cep,
-      addressCityIbgeCode: company.cod_municipio_ibge,
-      active: true,
-    });
+    throw new Error('Nenhuma store fiscal ativa encontrada. Cadastre os dados fiscais antes da emissão.');
   }
 
   private loadLegacySale(legacySaleId: number): LegacySaleRow {
     const sale = db.prepare(`
       SELECT
-        id, ambiente, data_emissao, valor_produtos, valor_desconto,
+        id, data_emissao, valor_produtos, valor_desconto,
         valor_total, valor_troco, cliente_nome, cpf_cliente, cnpj_cliente
       FROM vendas
       WHERE id = ?
@@ -298,7 +212,7 @@ export class PdvSaleFiscalAdapter {
       companyId: store.id,
       number,
       series,
-      environment: mapEnvironment(sale.ambiente),
+      environment: store.environment,
       paymentMethod: resolvePrimaryPaymentMethod(payments),
       payments,
       issuedAt: fiscalIssuedAt,

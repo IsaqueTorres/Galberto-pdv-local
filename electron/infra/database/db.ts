@@ -1091,15 +1091,20 @@ runFiscalPersistenceMigrations(db);
 //#region - FUNCOES PARA ATUAR NA PAGINA PDV RAPIDO
 
 function getSaleDefaults() {
-  const company = db.prepare(`
-    SELECT ambiente_emissao, serie_nfce
-    FROM company
-    WHERE ativo = 1
+  const store = db.prepare(`
+    SELECT environment, default_series
+    FROM stores
+    WHERE active = 1
+    ORDER BY id ASC
     LIMIT 1
-  `).get() as { ambiente_emissao?: number; serie_nfce?: number } | undefined;
+  `).get() as { environment?: 'production' | 'homologation'; default_series?: number } | undefined;
 
-  const ambiente = company?.ambiente_emissao ?? 2;
-  const serie = company?.serie_nfce ?? 1;
+  if (!store) {
+    throw new Error('Nenhuma store fiscal ativa encontrada. Cadastre os dados fiscais antes de iniciar vendas.');
+  }
+
+  const ambiente = store.environment === 'production' ? 1 : 2;
+  const serie = store.default_series ?? 1;
 
   const nextNumberRow = db.prepare(`
     SELECT COALESCE(MAX(numero), 0) + 1 AS nextNumber

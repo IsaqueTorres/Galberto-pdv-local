@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as https from 'node:https';
+import * as path from 'node:path';
 import { logger } from '../../../logger/logger';
 import type { FiscalProvider } from '../contracts/FiscalProvider';
 import { FiscalError } from '../errors/FiscalError';
@@ -27,6 +28,37 @@ const SP_NFCE_ENDPOINTS = {
     retAutorizacao: 'https://nfce.fazenda.sp.gov.br/ws/NFeRetAutorizacao4.asmx',
   },
 } as const;
+
+const EMBEDDED_SEFAZ_CA_BUNDLE_FILENAME = 'sefaz-sp-ca-bundle.pem';
+
+function resolveEmbeddedSefazCaBundlePath(): string | null {
+  const candidates = [
+    // Caminho usado no app empacotado pelo electron-builder via extraResources.
+    process.resourcesPath
+      ? path.join(process.resourcesPath, 'fiscal-certs', EMBEDDED_SEFAZ_CA_BUNDLE_FILENAME)
+      : null,
+    // Caminho usado em desenvolvimento, rodando a partir da raiz do repositório.
+    path.join(process.cwd(), 'electron', 'application', 'fiscal', 'certs', EMBEDDED_SEFAZ_CA_BUNDLE_FILENAME),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
+function readCertificateAuthorityBundle(config: FiscalProviderConfig): Buffer[] | undefined {
+  const caPaths = [
+    config.caBundlePath?.trim() || null,
+    resolveEmbeddedSefazCaBundlePath(),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  const uniquePaths = [...new Set(caPaths)];
+  const caBundles = uniquePaths
+    .filter((caPath) => fs.existsSync(caPath))
+    .map((caPath) => fs.readFileSync(caPath));
+
+  // Mesmo quando o cliente configura uma CA propria, somamos o bundle embarcado
+  // da SEFAZ/ICP-Brasil para nao depender da store TLS da maquina do cliente.
+  return caBundles.length > 0 ? caBundles : undefined;
+}
 
 const IBGE_UF_CODES: Record<string, string> = {
   SP: '35',
@@ -228,7 +260,7 @@ function postSoapWithCertificate(
         method: 'POST',
         pfx: fs.readFileSync(config.certificatePath as string),
         passphrase: config.certificatePassword ?? undefined,
-        ca: config.caBundlePath ? fs.readFileSync(config.caBundlePath) : undefined,
+        ca: readCertificateAuthorityBundle(config),
         rejectUnauthorized: options.allowUnauthorizedServerCertificate !== true,
         headers: {
           'content-type': `application/soap+xml; charset=utf-8; action="${soapAction}"`,

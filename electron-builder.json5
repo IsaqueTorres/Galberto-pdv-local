@@ -14,6 +14,13 @@
     "package.json"
   ],
 
+  extraResources: [
+    {
+      from: "electron/application/fiscal/certs/sefaz-sp-ca-bundle.pem",
+      to: "fiscal-certs/sefaz-sp-ca-bundle.pem"
+    }
+  ],
+
   linux: {
     target: [
       {
