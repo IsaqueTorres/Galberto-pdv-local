@@ -10,132 +10,11 @@ import {
   softDeleteLocalProduct,
   updateLocalProduct,
 } from "./services/products.service";
-import type { LocalCategory, LocalProductPayload, ProductRecord } from "./types/products.types";
-
-type ProductFormState = {
-  name: string;
-  sale_price: string;
-  sku: string;
-  barcode: string;
-  category_id: string;
-  unit: string;
-  cost_price: string;
-  minimum_stock: string;
-  maximum_stock: string;
-  active: number;
-  ncm: string;
-  cfop: string;
-  origin: string;
-  cest: string;
-  notes: string;
-  situation: string;
-  supplier_code: string;
-  supplier_name: string;
-  location: string;
-  brand: string;
-  product_group: string;
-  short_description: string;
-  complementary_description: string;
-  additional_info: string;
-};
-
-const emptyForm: ProductFormState = {
-  name: "",
-  sale_price: "",
-  sku: "",
-  barcode: "",
-  category_id: "",
-  unit: "UN",
-  cost_price: "",
-  minimum_stock: "0",
-  maximum_stock: "",
-  active: 1,
-  ncm: "",
-  cfop: "",
-  origin: "",
-  cest: "",
-  notes: "",
-  situation: "",
-  supplier_code: "",
-  supplier_name: "",
-  location: "",
-  brand: "",
-  product_group: "",
-  short_description: "",
-  complementary_description: "",
-  additional_info: "",
-};
-
-function centsFromMoney(value: string) {
-  const normalized = value.replace(/\./g, "").replace(",", ".");
-  const number = Number(normalized);
-  if (!Number.isFinite(number) || number < 0) return NaN;
-  return Math.round(number * 100);
-}
-
-function moneyInput(value: number | null | undefined) {
-  if (value === null || value === undefined) return "";
-  return Number(value).toFixed(2).replace(".", ",");
-}
-
-function recordToForm(product: ProductRecord): ProductFormState {
-  return {
-    ...emptyForm,
-    name: product.nome ?? "",
-    sale_price: moneyInput(product.preco_venda),
-    sku: product.sku ?? "",
-    barcode: product.codigo_barras ?? "",
-    category_id: product.categoria_id ?? "",
-    unit: product.unidade_medida ?? "UN",
-    cost_price: moneyInput(product.preco_custo),
-    minimum_stock: String(product.estoque_minimo ?? 0),
-    maximum_stock: product.estoque_maximo === null || product.estoque_maximo === undefined ? "" : String(product.estoque_maximo),
-    active: Number(product.ativo ?? 1),
-    ncm: product.ncm ?? "",
-    cfop: product.cfop ?? "",
-    origin: product.origem ?? "",
-    cest: product.cest ?? "",
-    notes: product.observacoes ?? "",
-    situation: product.situacao ?? "",
-    supplier_code: product.supplier_code ?? "",
-    supplier_name: product.supplier_name ?? "",
-    location: product.localizacao ?? "",
-    brand: product.brand ?? "",
-    product_group: product.product_group ?? "",
-    short_description: product.short_description ?? "",
-    complementary_description: product.complementary_description ?? "",
-    additional_info: product.additional_info ?? "",
-  };
-}
-
-function toPayload(form: ProductFormState): LocalProductPayload {
-  return {
-    name: form.name.trim(),
-    sale_price_cents: centsFromMoney(form.sale_price),
-    sku: form.sku,
-    barcode: form.barcode,
-    category_id: form.category_id || null,
-    unit: form.unit || "UN",
-    cost_price_cents: centsFromMoney(form.cost_price || "0"),
-    minimum_stock: Number(form.minimum_stock || 0),
-    maximum_stock: form.maximum_stock.trim() ? Number(form.maximum_stock) : null,
-    active: form.active,
-    ncm: form.ncm,
-    cfop: form.cfop,
-    origin: form.origin,
-    cest: form.cest,
-    notes: form.notes,
-    situation: form.situation,
-    supplier_code: form.supplier_code,
-    supplier_name: form.supplier_name,
-    location: form.location,
-    brand: form.brand,
-    product_group: form.product_group,
-    short_description: form.short_description,
-    complementary_description: form.complementary_description,
-    additional_info: form.additional_info,
-  };
-}
+import type { LocalCategory, ProductFormState } from "./types/products.types";
+import { recordToForm, emptyForm } from "./utils/recordToForm";
+import { toPayload } from "./utils/toPayload";
+import { Field } from "./components/Field";
+import { TextArea } from "./components/TextArea";
 
 export default function TabelaProdutos() {
   const [produtos, setProdutos] = useState<any[]>([]);
@@ -150,6 +29,33 @@ export default function TabelaProdutos() {
   const [form, setForm] = useState<ProductFormState>(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const fieldHints: Record<string, string> = {
+    name: "Nome comercial do produto usado no PDV e nas notas fiscais.",
+    sale_price: "Preço de venda do produto em reais; usado nas vendas e no cálculo de margem.",
+    sku: "Código interno para identificar o produto no estoque.",
+    barcode: "Código de barras utilizado por leitoras no ponto de venda.",
+    category_id: "Categoria do produto para organização e relatórios.",
+    unit: "Unidade de medida do produto (ex: UN, KG, PC).",
+    cost_price: "Preço de compra para controlar custo e margem.",
+    minimum_stock: "Quantidade mínima desejada em estoque antes de reposição.",
+    maximum_stock: "Quantidade máxima recomendada de estoque para evitar excesso.",
+    ncm: "Código NCM usado na emissão da nota fiscal.",
+    cfop: "Código CFOP que identifica a natureza da operação tributária.",
+    origin: "Origem do produto para tributação (ex: nacional, estrangeiro).",
+    cest: "Código CEST, usado quando há substituição tributária.",
+    situation: "Situação fiscal ou tributária do produto.",
+    active: "Status do produto: ativo para venda ou inativo somente para histórico.",
+    supplier_code: "Código do produto fornecido pelo fornecedor.",
+    supplier_name: "Nome do fornecedor ou fabricante do produto.",
+    location: "Localização física do produto no estoque ou prateleira.",
+    brand: "Marca do produto para facilitar buscas e relatórios.",
+    product_group: "Grupo ou família do produto dentro do cadastro.",
+    short_description: "Descrição curta exibida no PDV e em listagens.",
+    complementary_description: "Descrição adicional para controle interno.",
+    notes: "Observações extras que ajudam o operador ou a equipe de estoque.",
+    additional_info: "Informações suplementares importantes para o produto.",
+  };
 
   const title = useMemo(() => editingId ? "Editar produto" : "Novo produto", [editingId]);
 
@@ -327,9 +233,9 @@ export default function TabelaProdutos() {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-950/40 p-4">
-          <form onSubmit={handleSubmit} className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-2xl border border-blue-100 bg-white p-6 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-950/40 px-4 py-6 sm:px-6 sm:py-8">
+          <form onSubmit={handleSubmit} className="max-h-[90vh] w-full max-w-[1200px] min-w-[min(100%,48rem)] overflow-visible rounded-2xl border border-blue-100 bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-xl font-black text-blue-950">{title}</h3>
                 <p className="text-sm font-medium text-blue-700">O estoque atual é controlado somente pelos fluxos de estoque e venda.</p>
@@ -341,43 +247,59 @@ export default function TabelaProdutos() {
 
             {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Field label="Nome *" value={form.name} onChange={(v) => updateField("name", v)} className="md:col-span-2" />
-              <Field label="Preço de venda *" value={form.sale_price} onChange={(v) => updateField("sale_price", v)} placeholder="0,00" />
-              <Field label="SKU" value={form.sku} onChange={(v) => updateField("sku", v)} />
-              <Field label="Código de barras" value={form.barcode} onChange={(v) => updateField("barcode", v)} />
-              <label className="flex flex-col gap-1 text-sm font-bold text-blue-900">
-                Categoria
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-4">
+              <Field label="Nome *" value={form.name} onChange={(v) => updateField("name", v)} hint={fieldHints.name} className="md:col-span-2 xl:col-span-2" />
+              <Field label="Preço de venda *" value={form.sale_price} onChange={(v) => updateField("sale_price", v)} placeholder="0,00" hint={fieldHints.sale_price} />
+              <Field label="SKU" value={form.sku} onChange={(v) => updateField("sku", v)} hint={fieldHints.sku} />
+              <Field label="Código de barras" value={form.barcode} onChange={(v) => updateField("barcode", v)} hint={fieldHints.barcode} />
+              <label className="group flex flex-col gap-1 text-sm font-bold text-blue-900">
+                <div className="flex items-center gap-2">
+                  <span>Categoria</span>
+                  <span className="relative inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-700">
+                    ?
+                    <span className="pointer-events-none absolute left-1/2 top-full z-20 hidden w-64 -translate-x-1/2 rounded-2xl border border-blue-100 bg-white p-3 text-xs font-normal text-blue-900 shadow-lg group-hover:block">
+                      {fieldHints.category_id}
+                    </span>
+                  </span>
+                </div>
                 <select value={form.category_id} onChange={(e) => updateField("category_id", e.target.value)} className="rounded-lg border border-blue-100 px-3 py-2 font-medium outline-none focus:border-blue-500">
                   <option value="">Sem categoria</option>
                   {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                 </select>
               </label>
-              <Field label="Unidade" value={form.unit} onChange={(v) => updateField("unit", v)} />
-              <Field label="Preço de custo" value={form.cost_price} onChange={(v) => updateField("cost_price", v)} placeholder="0,00" />
-              <Field label="Estoque mínimo" value={form.minimum_stock} onChange={(v) => updateField("minimum_stock", v)} type="number" />
-              <Field label="Estoque máximo" value={form.maximum_stock} onChange={(v) => updateField("maximum_stock", v)} type="number" />
-              <Field label="NCM" value={form.ncm} onChange={(v) => updateField("ncm", v)} />
-              <Field label="CFOP" value={form.cfop} onChange={(v) => updateField("cfop", v)} />
-              <Field label="Origem" value={form.origin} onChange={(v) => updateField("origin", v)} />
-              <Field label="CEST" value={form.cest} onChange={(v) => updateField("cest", v)} />
-              <Field label="Situação" value={form.situation} onChange={(v) => updateField("situation", v)} />
-              <label className="flex flex-col gap-1 text-sm font-bold text-blue-900">
-                Status
+              <Field label="Unidade" value={form.unit} onChange={(v) => updateField("unit", v)} hint={fieldHints.unit} />
+              <Field label="Preço de custo" value={form.cost_price} onChange={(v) => updateField("cost_price", v)} placeholder="0,00" hint={fieldHints.cost_price} />
+              <Field label="Estoque mínimo" value={form.minimum_stock} onChange={(v) => updateField("minimum_stock", v)} type="number" hint={fieldHints.minimum_stock} />
+              <Field label="Estoque máximo" value={form.maximum_stock} onChange={(v) => updateField("maximum_stock", v)} type="number" hint={fieldHints.maximum_stock} />
+              <Field label="NCM" value={form.ncm} onChange={(v) => updateField("ncm", v)} hint={fieldHints.ncm} />
+              <Field label="CFOP" value={form.cfop} onChange={(v) => updateField("cfop", v)} hint={fieldHints.cfop} />
+              <Field label="Origem" value={form.origin} onChange={(v) => updateField("origin", v)} hint={fieldHints.origin} />
+              <Field label="CEST" value={form.cest} onChange={(v) => updateField("cest", v)} hint={fieldHints.cest} />
+              <Field label="Situação" value={form.situation} onChange={(v) => updateField("situation", v)} hint={fieldHints.situation} />
+              <label className="group flex flex-col gap-1 text-sm font-bold text-blue-900">
+                <div className="flex items-center gap-2">
+                  <span>Status</span>
+                  <span className="relative inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-700">
+                    ?
+                    <span className="pointer-events-none absolute left-1/2 top-full z-20 hidden w-64 -translate-x-1/2 rounded-2xl border border-blue-100 bg-white p-3 text-xs font-normal text-blue-900 shadow-lg group-hover:block">
+                      {fieldHints.active}
+                    </span>
+                  </span>
+                </div>
                 <select value={form.active} onChange={(e) => updateField("active", Number(e.target.value))} className="rounded-lg border border-blue-100 px-3 py-2 font-medium outline-none focus:border-blue-500">
                   <option value={1}>Ativo</option>
                   <option value={0}>Inativo</option>
                 </select>
               </label>
-              <Field label="Código fornecedor" value={form.supplier_code} onChange={(v) => updateField("supplier_code", v)} />
-              <Field label="Nome fornecedor" value={form.supplier_name} onChange={(v) => updateField("supplier_name", v)} />
-              <Field label="Localização" value={form.location} onChange={(v) => updateField("location", v)} />
-              <Field label="Marca" value={form.brand} onChange={(v) => updateField("brand", v)} />
-              <Field label="Grupo" value={form.product_group} onChange={(v) => updateField("product_group", v)} />
-              <Field label="Descrição curta" value={form.short_description} onChange={(v) => updateField("short_description", v)} />
-              <TextArea label="Descrição complementar" value={form.complementary_description} onChange={(v) => updateField("complementary_description", v)} />
-              <TextArea label="Observações" value={form.notes} onChange={(v) => updateField("notes", v)} />
-              <TextArea label="Informações adicionais" value={form.additional_info} onChange={(v) => updateField("additional_info", v)} />
+              <Field label="Código fornecedor" value={form.supplier_code} onChange={(v) => updateField("supplier_code", v)} hint={fieldHints.supplier_code} />
+              <Field label="Nome fornecedor" value={form.supplier_name} onChange={(v) => updateField("supplier_name", v)} hint={fieldHints.supplier_name} />
+              <Field label="Localização" value={form.location} onChange={(v) => updateField("location", v)} hint={fieldHints.location} />
+              <Field label="Marca" value={form.brand} onChange={(v) => updateField("brand", v)} hint={fieldHints.brand} />
+              <Field label="Grupo" value={form.product_group} onChange={(v) => updateField("product_group", v)} hint={fieldHints.product_group} />
+              <Field label="Descrição curta" value={form.short_description} onChange={(v) => updateField("short_description", v)} hint={fieldHints.short_description} />
+              <TextArea label="Descrição complementar" value={form.complementary_description} onChange={(v) => updateField("complementary_description", v)} hint={fieldHints.complementary_description} />
+              <TextArea label="Observações" value={form.notes} onChange={(v) => updateField("notes", v)} hint={fieldHints.notes} />
+              <TextArea label="Informações adicionais" value={form.additional_info} onChange={(v) => updateField("additional_info", v)} hint={fieldHints.additional_info} />
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
@@ -390,30 +312,5 @@ export default function TabelaProdutos() {
         </div>
       )}
     </section>
-  );
-}
-
-function Field({ label, value, onChange, type = "text", placeholder, className = "" }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  placeholder?: string;
-  className?: string;
-}) {
-  return (
-    <label className={`flex flex-col gap-1 text-sm font-bold text-blue-900 ${className}`}>
-      {label}
-      <input type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="rounded-lg border border-blue-100 px-3 py-2 font-medium outline-none focus:border-blue-500" />
-    </label>
-  );
-}
-
-function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="flex flex-col gap-1 text-sm font-bold text-blue-900 md:col-span-1">
-      {label}
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className="resize-none rounded-lg border border-blue-100 px-3 py-2 font-medium outline-none focus:border-blue-500" />
-    </label>
   );
 }

@@ -267,4 +267,29 @@ export type ProdutoCarrinho = {
   imagem?: string
 }
 
-
+export type ProductFormState = {
+  name: string;
+  sale_price: string;
+  sku: string;
+  barcode: string;
+  category_id: string;
+  unit: string;
+  cost_price: string;
+  minimum_stock: string;
+  maximum_stock: string;
+  active: number;
+  ncm: string;
+  cfop: string;
+  origin: string;
+  cest: string;
+  notes: string;
+  situation: string;
+  supplier_code: string;
+  supplier_name: string;
+  location: string;
+  brand: string;
+  product_group: string;
+  short_description: string;
+  complementary_description: string;
+  additional_info: string;
+};
